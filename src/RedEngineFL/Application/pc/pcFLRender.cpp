@@ -185,24 +185,29 @@ RedTexture* FLRenderer::pcGetReflectionTexture(char)
 // FUNCTION: SWBF2 0x006bf690
 void ReflectionRegion::_UpdateReflectionMatrix()
 {
-    const PblPlane& plane = m_reflectionPlane;
-    PblMatrix& m = m_reflectionMat;
-    m = gMatrixIdentity;
-    const float inverse =
-        1.0f / ((plane.GetA() * plane.GetA() + plane.GetB() * plane.GetB()) + plane.GetC() * plane.GetC());
+    m_reflectionMat = gMatrixIdentity;
+    const float inverse = 1.0f / ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() +
+                                   m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) +
+                                  m_reflectionPlane.GetC() * m_reflectionPlane.GetC());
     const float twice = inverse * -2.0f;
-    m.m[0][0] = ((plane.GetB() * plane.GetB() - plane.GetA() * plane.GetA()) + plane.GetC() * plane.GetC()) * inverse;
-    m.m[0][1] = (twice * plane.GetA()) * plane.GetB();
-    m.m[0][2] = (twice * plane.GetA()) * plane.GetC();
-    m.m[1][0] = (twice * plane.GetA()) * plane.GetB();
-    m.m[1][1] = ((plane.GetA() * plane.GetA() - plane.GetB() * plane.GetB()) + plane.GetC() * plane.GetC()) * inverse;
-    m.m[1][2] = (twice * plane.GetB()) * plane.GetC();
-    m.m[2][0] = (twice * plane.GetA()) * plane.GetC();
-    m.m[2][1] = (twice * plane.GetB()) * plane.GetC();
-    m.m[2][2] = ((plane.GetA() * plane.GetA() + plane.GetB() * plane.GetB()) - plane.GetC() * plane.GetC()) * inverse;
-    m.m[3][0] = (twice * plane.GetA()) * plane.GetD();
-    m.m[3][1] = (twice * plane.GetB()) * plane.GetD();
-    m.m[3][2] = (twice * plane.GetC()) * plane.GetD();
+    m_reflectionMat.m[0][0] = ((m_reflectionPlane.GetB() * m_reflectionPlane.GetB() -
+                                m_reflectionPlane.GetA() * m_reflectionPlane.GetA()) +
+                               m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
+    m_reflectionMat.m[0][1] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
+    m_reflectionMat.m[0][2] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[1][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
+    m_reflectionMat.m[1][1] = ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() -
+                                m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) +
+                               m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
+    m_reflectionMat.m[1][2] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[2][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[2][1] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[2][2] = ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() +
+                                m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) -
+                               m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
+    m_reflectionMat.m[3][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetD();
+    m_reflectionMat.m[3][1] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetD();
+    m_reflectionMat.m[3][2] = (twice * m_reflectionPlane.GetC()) * m_reflectionPlane.GetD();
 }
 
 // GLOBAL: SWBF2 0x008f6da0

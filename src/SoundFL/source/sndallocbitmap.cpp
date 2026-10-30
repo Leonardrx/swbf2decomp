@@ -206,7 +206,8 @@ void AllocBitmap::Reserve(unsigned int uiStartEntry, unsigned int uiNumEntries, 
 
         if (ucFrom == 0 && ucTo == 8)
         {
-            mBitmap[i] = ucValue ? 0xFF : 0x00;
+            // whole byte: 0xFF when reserving, 0x00 when freeing
+            mBitmap[i] = (unsigned char)~(ucValue - 1);
             continue;
         }
 

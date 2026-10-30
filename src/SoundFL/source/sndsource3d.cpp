@@ -111,6 +111,8 @@ void Source3D::CalculateGain(float& rfGain) const
 // FUNCTION: SWBF2 0x0073b1d0
 void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix) const
 {
+    const float fHalfPi = 1.57079637f;
+
     ::PblVector3 vDirection = mDistance;
     float fDistanceGain;
     CalculateGain(fDistanceGain);
@@ -127,25 +129,13 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
 
     float fRight;
     float fBack;
-    if (EngineBase::smSpeakerConfig == EngineBase::speakerConfig_Mono)
-    {
-        fRight = 0.5f;
-        fBack = 0.5f;
-    }
-    else
+    if (EngineBase::smSpeakerConfig != EngineBase::speakerConfig_Mono)
     {
         CalculateNormalizedDirection(vDirection);
 
         const ::PblVector3 vRight = mClosestListener->mRight;
-        float fDot = vDirection.x * vRight.x + vDirection.y * vRight.y + vDirection.z * vRight.z;
-        if (fDot < -1.0f)
-        {
-            fDot = -1.0f;
-        }
-        else if (fDot > 1.0f)
-        {
-            fDot = 1.0f;
-        }
+        const float fRawDot = vDirection.x * vRight.x + vDirection.y * vRight.y + vDirection.z * vRight.z;
+        const float fDot = (fRawDot < -1.0f) ? -1.0f : ((fRawDot > 1.0f) ? 1.0f : fRawDot);
 
         float fLeft = 0.5f - fDot * 0.5f;
         if (fLeft < 0.0f)
@@ -169,6 +159,11 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
         {
             fBack = 1.0f;
         }
+    }
+    else
+    {
+        fRight = 0.5f;
+        fBack = 0.5f;
     }
 
     const float fTotal = fDistanceGain * fGain;
@@ -211,12 +206,12 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
             }
             else
             {
-                fAngle = (PblMath::fHalfPi - fAngle) + (PblMath::fPi + PblMath::fHalfPi);
+                fAngle = (fHalfPi - fAngle) + (PblMath::fPi + fHalfPi);
             }
         }
         else if (fBack < 0.5f)
         {
-            fAngle = (PblMath::fHalfPi - fAngle) + PblMath::fHalfPi;
+            fAngle = (fHalfPi - fAngle) + fHalfPi;
         }
 
         if ((float)fabs((double)(fAngle - mPrevAngle)) > PblMath::fPi)
@@ -232,8 +227,8 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
         }
         mPrevAngle = fAngle;
 
-        const float fPan = fAngle * 0.5f + PblMath::fHalfPi * 0.5f;
-        rMatrix.frontLeft = PblMath::Sin(fPan + PblMath::fHalfPi) * fTotal;
+        const float fPan = fAngle * 0.5f + fHalfPi * 0.5f;
+        rMatrix.frontLeft = PblMath::Sin(fPan + fHalfPi) * fTotal;
         rMatrix.frontRight = PblMath::Sin(fPan) * fTotal;
         if (mFlags & 8)
         {

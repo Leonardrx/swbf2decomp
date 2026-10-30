@@ -470,7 +470,13 @@ bool DSBuffer::GetFormat(SampleInfo::Format& reFormat,
 // FUNCTION: SWBF2 0x00744540
 unsigned long DSBuffer::GetStatus()
 {
+    DSBCAPS caps;
     DWORD dwStatus;
+    DWORD dwBytes1;
+    DWORD dwBytes2;
+    void* pAudio1;
+    void* pAudio2;
+
     mBuffer->GetStatus(&dwStatus);
 
     if ((dwStatus & DSBSTATUS_BUFFERLOST) != 0)
@@ -479,15 +485,10 @@ unsigned long DSBuffer::GetStatus()
 
         if (mBuffer->Restore() >= 0)
         {
-            DSBCAPS caps;
             memset(&caps, 0, sizeof(caps));
             caps.dwSize = sizeof(DSBCAPS);
             mBuffer->GetCaps(&caps);
 
-            void* pAudio1 = 0;
-            void* pAudio2 = 0;
-            DWORD dwBytes1 = 0;
-            DWORD dwBytes2 = 0;
             HRESULT hr = mBuffer->Lock(0, caps.dwBufferBytes, &pAudio1,
                                        &dwBytes1, &pAudio2, &dwBytes2, 0);
             if (Engine::Succeeded(hr, "source\\win\\snddsbuffer.cpp", 810))

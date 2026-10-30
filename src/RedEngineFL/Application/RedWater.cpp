@@ -797,62 +797,47 @@ float RedWater::RayHit(const PblVector3& vStart, const PblVector3& vDir, float f
     if (m_waterMap)
     {
         float fHit = fLength + 100.0f;
-        float fDY = m_fWaterHeightOffset + m_waterHeight - vStart.y;
-        if (fDY > 0.0f)
+        float fDY = m_waterHeight + m_fWaterHeightOffset - vStart.y;
+        if (!(fDY > 0.0f))
         {
-            return 2.0f;
+            float t = fDY / vDir.y;
+            if (!(t < 0.0f))
+            {
+                float fX = vDir.x * t + vStart.x;
+                float fZ = vDir.z * t + vStart.z;
+                float fMax = (float)m_waterMapSize - 1.0f;
+                float fPatchX = (fX + m_worldCenterX) * m_patchesPerMeter;
+                if (fPatchX < 0.0f)
+                {
+                    fPatchX = 0.0f;
+                }
+                else if (fPatchX > fMax)
+                {
+                    fPatchX = fMax;
+                }
+                float fPatchZ = Clamp((m_worldCenterZ + fZ) * m_patchesPerMeter, 0.0f, fMax);
+                if (WaterExists((int)fPatchX, (int)fPatchZ))
+                {
+                    if (!(t > fLength))
+                    {
+                        if (t < fHit)
+                        {
+                            fHit = t;
+                        }
+                        if (fLength >= fHit)
+                        {
+                            if (pNormal)
+                            {
+                                pNormal->x = 0.0f;
+                                pNormal->y = 1.0f;
+                                pNormal->z = 0.0f;
+                            }
+                            return fHit / fLength;
+                        }
+                    }
+                }
+            }
         }
-        float t = fDY / vDir.y;
-        if (t < 0.0f)
-        {
-            return 2.0f;
-        }
-
-        float fX = vDir.x * t + vStart.x;
-        float fZ = vDir.z * t + vStart.z;
-        float fMax = (float)m_waterMapSize - 1.0f;
-        float fPatchX = (fX + m_worldCenterX) * m_patchesPerMeter;
-        if (fPatchX < 0.0f)
-        {
-            fPatchX = 0.0f;
-        }
-        else if (fPatchX > fMax)
-        {
-            fPatchX = fMax;
-        }
-        float fPatchZ = (m_worldCenterZ + fZ) * m_patchesPerMeter;
-        if (fPatchZ < 0.0f)
-        {
-            fPatchZ = 0.0f;
-        }
-        else if (fPatchZ > fMax)
-        {
-            fPatchZ = fMax;
-        }
-        if (!WaterExists((int)fPatchX, (int)fPatchZ))
-        {
-            return 2.0f;
-        }
-
-        if (t > fLength)
-        {
-            return 2.0f;
-        }
-        if (t < fHit)
-        {
-            fHit = t;
-        }
-        if (fLength < fHit)
-        {
-            return 2.0f;
-        }
-        if (pNormal)
-        {
-            pNormal->x = 0.0f;
-            pNormal->y = 1.0f;
-            pNormal->z = 0.0f;
-        }
-        return fHit / fLength;
     }
     return 2.0f;
 }

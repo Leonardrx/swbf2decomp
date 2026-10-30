@@ -364,34 +364,28 @@ int RedCreateHeap(void* start, void* end, unsigned int align, char const* name)
         memset(s, 0, size);
     }
 
-    int i;
-    for (i = 0; i < maxheaps; ++i)
+    for (int i = 0; i < maxheaps; ++i)
     {
         if (heapobj[i].size == 0)
         {
-            break;
+            Tag* tag = (Tag*)s;
+            tag->size = size;
+            tag->New();
+
+            HeapObj& heap = heapobj[i];
+            heap.start = s;
+            heap.free.first = tag;
+            heap.free.last = tag;
+            heap.size = size;
+            heap.used.first = 0;
+            heap.used.last = 0;
+            heap.align = align;
+            heap.name = name;
+            heap.frozen = false;
+            return i;
         }
     }
-    if (i >= maxheaps)
-    {
-        return -1;
-    }
-
-    Tag* tag = (Tag*)s;
-    tag->size = size;
-    tag->New();
-
-    HeapObj& heap = heapobj[i];
-    heap.start = s;
-    heap.free.first = tag;
-    heap.free.last = tag;
-    heap.size = size;
-    heap.used.first = 0;
-    heap.used.last = 0;
-    heap.align = align;
-    heap.name = name;
-    heap.frozen = false;
-    return i;
+    return -1;
 }
 
 // FUNCTION: SWBF2 0x006c39b0

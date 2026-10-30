@@ -5,6 +5,7 @@
 #include "PebbleFL/Common/PblMatrix.h"
 #include "PebbleFL/Common/PblPlane.h"
 #include <d3dx9math.h>
+#include <intrin.h>
 #include "pcRedDeviceEnumerator.h"
 #include "pcRedShader.h"
 #include "RedEngineFL/Graphics/RedLight.h"
@@ -3767,7 +3768,7 @@ void RedRenderer::pcSetRenderState(D3DRENDERSTATETYPE eState, unsigned long ulVa
 // FUNCTION: SWBF2 0x006b9e00
 void RedRenderer::pcSetViewport(const RedViewport& rViewport)
 {
-    IDirect3DSurface9* pTarget = 0;
+    IDirect3DSurface9* pTarget;
     m_pd3dDevice->GetRenderTarget(0, &pTarget);
 
     D3DSURFACE_DESC desc;
@@ -3775,9 +3776,8 @@ void RedRenderer::pcSetViewport(const RedViewport& rViewport)
     pTarget->Release();
 
     float fWidth = (float)(double)desc.Width;
-    float fHeight = (float)(double)desc.Height;
-
     m_viewport.X = (unsigned int)(fWidth * rViewport.fOffsetX);
+    float fHeight = (float)(double)desc.Height;
     m_viewport.Y = (unsigned int)(fHeight * rViewport.fOffsetY);
     m_viewport.Width = (unsigned int)(fWidth * rViewport.fWidth);
     m_viewport.Height = (unsigned int)(fHeight * rViewport.fHeight);
@@ -5859,7 +5859,8 @@ void RedRenderer::internalShaderBeginEnd(RenderItem* pItem, unsigned int uiShade
     prevId.id = (unsigned int)RedRenderer::m_PrevSortID;
     bool bNewID = prevId.id != sortId.id;
     bool bNewShader;
-    if (prevId.t_pass == sortId.t_pass && prevId.t_customID == sortId.t_customID)
+    unsigned int uiPrevPass = ((unsigned int)RedRenderer::m_PrevSortID >> 16) & 3;
+    if (uiPrevPass == sortId.t_pass && prevId.t_customID == sortId.t_customID)
     {
         bNewShader = false;
     }
@@ -5868,7 +5869,7 @@ void RedRenderer::internalShaderBeginEnd(RenderItem* pItem, unsigned int uiShade
         bNewShader = true;
         if (RedRenderer::m_pPrevShader)
         {
-            (RedRenderer::m_pPrevShader->*RedRenderer::m_pPrevShader->EndFunc)(RedRenderer::m_uiPrevShaderState, prevId.t_pass);
+            (RedRenderer::m_pPrevShader->*RedRenderer::m_pPrevShader->EndFunc)(RedRenderer::m_uiPrevShaderState, uiPrevPass);
             internalStateStackPop();
             RedRenderer::m_pPrevShader->Release();
         }
@@ -6088,6 +6089,10 @@ void dx::StateManager_DX::FlushState()
             m_pD3DDev->SetMaterial(&m_CurrentState.m_D3DMaterial);
             m_ChipState.m_D3DMaterial = m_CurrentState.m_D3DMaterial;
             break;
+        case 7:
+            m_pD3DDev->SetFVF(m_CurrentState.m_FVF);
+            m_ChipState.m_FVF = m_CurrentState.m_FVF;
+            break;
         case 5:
             if (m_bForce || m_ChipState.m_VertexShader != m_CurrentState.m_VertexShader)
             {
@@ -6100,10 +6105,6 @@ void dx::StateManager_DX::FlushState()
             m_pD3DDev->SetVertexDeclaration(m_CurrentState.m_VertexShaderDecl);
             m_ChipState.m_VertexShaderDecl = m_CurrentState.m_VertexShaderDecl;
             break;
-        case 7:
-            m_pD3DDev->SetFVF(m_CurrentState.m_FVF);
-            m_ChipState.m_FVF = m_CurrentState.m_FVF;
-            break;
         case 8:
             if (m_bForce || m_ChipState.m_PixelShader != m_CurrentState.m_PixelShader)
             {
@@ -6113,53 +6114,60 @@ void dx::StateManager_DX::FlushState()
             }
             break;
         case 9:
-        {
-            const unsigned long ulState = pState->m_dwValue0;
-            m_pD3DDev->SetTransform((D3DTRANSFORMSTATETYPE)ulState,
-                                    (const D3DMATRIX*)m_CurrentState.m_Matrices[ulState]);
-            memcpy(m_ChipState.m_Matrices[ulState], m_CurrentState.m_Matrices[ulState],
-                   sizeof(m_ChipState.m_Matrices[ulState]));
+            m_pD3DDev->SetTransform((D3DTRANSFORMSTATETYPE)pState->m_dwValue0,
+                                    (const D3DMATRIX*)m_CurrentState.m_Matrices[pState->m_dwValue0]);
+            memcpy(m_ChipState.m_Matrices[pState->m_dwValue0], m_CurrentState.m_Matrices[pState->m_dwValue0],
+                   sizeof(m_ChipState.m_Matrices[0]));
             break;
-        }
         case 10:
-        {
-            const unsigned long ulReg = pState->m_dwValue0;
-            const float* pChip = m_ChipState.m_VertexShaderConstants[ulReg];
-            const float* pCur = m_CurrentState.m_VertexShaderConstants[ulReg];
-            if (m_bForce || pChip[0] != pCur[0] || pChip[1] != pCur[1] || pChip[2] != pCur[2]
-                || pChip[3] != pCur[3])
+            if (m_bForce
+                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][0]
+                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][0]
+                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][1]
+                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][1]
+                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][2]
+                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][2]
+                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][3]
+                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][3])
             {
-                m_pD3DDev->SetVertexShaderConstantF(ulReg, pCur, 1);
-                memcpy(m_ChipState.m_VertexShaderConstants[ulReg], pCur, 16);
+                m_pD3DDev->SetVertexShaderConstantF(pState->m_dwValue0,
+                                                    m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 1);
+                memcpy(m_ChipState.m_VertexShaderConstants[pState->m_dwValue0],
+                       m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 16);
             }
             break;
-        }
         case 11:
-        {
-            const unsigned long ulReg = pState->m_dwValue0;
-            const float* pChip = m_ChipState.m_PixelShaderConstants[ulReg];
-            const float* pCur = m_CurrentState.m_PixelShaderConstants[ulReg];
-            if (m_bForce || pChip[0] != pCur[0] || pChip[1] != pCur[1] || pChip[2] != pCur[2]
-                || pChip[3] != pCur[3])
+            if (m_bForce
+                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][0]
+                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][0]
+                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][1]
+                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][1]
+                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][2]
+                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][2]
+                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][3]
+                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][3])
             {
-                m_pD3DDev->SetPixelShaderConstantF(ulReg, pCur, 1);
-                memcpy(m_ChipState.m_PixelShaderConstants[ulReg], pCur, 16);
+                m_pD3DDev->SetPixelShaderConstantF(pState->m_dwValue0,
+                                                   m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 1);
+                memcpy(m_ChipState.m_PixelShaderConstants[pState->m_dwValue0],
+                       m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 16);
             }
             break;
-        }
         case 12:
-        {
-            const unsigned long ulStream = pState->m_dwStage;
-            NVStreamData& rChip = m_ChipState.m_StreamData[ulStream];
-            const NVStreamData& rCur = m_CurrentState.m_StreamData[ulStream];
-            if (m_bForce || rChip.m_pStreamData != rCur.m_pStreamData || rChip.m_Stride != rCur.m_Stride)
+            if (m_bForce
+                || m_ChipState.m_StreamData[pState->m_dwStage].m_pStreamData
+                       != m_CurrentState.m_StreamData[pState->m_dwStage].m_pStreamData
+                || m_ChipState.m_StreamData[pState->m_dwStage].m_Stride
+                       != m_CurrentState.m_StreamData[pState->m_dwStage].m_Stride)
             {
                 COUNT_PERFRAME_VALUE("numSetStream");
-                m_pD3DDev->SetStreamSource(ulStream, rCur.m_pStreamData, rCur.m_Offset, rCur.m_Stride);
-                rChip = rCur;
+                m_pD3DDev->SetStreamSource(pState->m_dwStage,
+                                           m_CurrentState.m_StreamData[pState->m_dwStage].m_pStreamData,
+                                           m_CurrentState.m_StreamData[pState->m_dwStage].m_Offset,
+                                           m_CurrentState.m_StreamData[pState->m_dwStage].m_Stride);
+                m_ChipState.m_StreamData[pState->m_dwStage] = m_CurrentState.m_StreamData[pState->m_dwStage];
             }
             break;
-        }
         case 13:
             if (m_bForce
                 || m_ChipState.m_IndexData.m_pIndexData != m_CurrentState.m_IndexData.m_pIndexData
@@ -6189,9 +6197,11 @@ void dx::StateManager_DX::FlushStateEx_()
     {
         for (int i = 0; i < renderStates_.GetSize(); ++i)
         {
-            const D3DRENDERSTATETYPE eState = renderStates_[i].m_RenderStateType;
-            m_pD3DDev->SetRenderState(eState, m_CurrentState.m_RenderStates[eState]);
-            m_ChipState.m_RenderStates[eState] = m_CurrentState.m_RenderStates[eState];
+            const NVStateID& rId = renderStates_[i];
+            m_pD3DDev->SetRenderState(rId.m_RenderStateType,
+                                      m_CurrentState.m_RenderStates[rId.m_RenderStateType]);
+            m_ChipState.m_RenderStates[rId.m_RenderStateType] =
+                m_CurrentState.m_RenderStates[rId.m_RenderStateType];
         }
         for (int i = 0; i < textureStageStates_.GetSize(); ++i)
         {
@@ -6212,20 +6222,23 @@ void dx::StateManager_DX::FlushStateEx_()
         for (int i = 0; i < textureStates_.GetSize(); ++i)
         {
             COUNT_PERFRAME_VALUE("numSetTex");
-            const unsigned long ulStage = textureStates_[i].m_dwStage;
-            m_pD3DDev->SetTexture(ulStage, m_CurrentState.m_Textures[ulStage]);
-            m_ChipState.m_Textures[ulStage] = m_CurrentState.m_Textures[ulStage];
+            const NVStateID& rId = textureStates_[i];
+            m_pD3DDev->SetTexture(rId.m_dwStage, m_CurrentState.m_Textures[rId.m_dwStage]);
+            m_ChipState.m_Textures[rId.m_dwStage] = m_CurrentState.m_Textures[rId.m_dwStage];
         }
     }
     else
     {
         for (int i = 0; i < renderStates_.GetSize(); ++i)
         {
-            const D3DRENDERSTATETYPE eState = renderStates_[i].m_RenderStateType;
-            if (m_ChipState.m_RenderStates[eState] != m_CurrentState.m_RenderStates[eState])
+            const NVStateID& rId = renderStates_[i];
+            if (m_ChipState.m_RenderStates[rId.m_RenderStateType] !=
+                m_CurrentState.m_RenderStates[rId.m_RenderStateType])
             {
-                m_pD3DDev->SetRenderState(eState, m_CurrentState.m_RenderStates[eState]);
-                m_ChipState.m_RenderStates[eState] = m_CurrentState.m_RenderStates[eState];
+                m_pD3DDev->SetRenderState(rId.m_RenderStateType,
+                                          m_CurrentState.m_RenderStates[rId.m_RenderStateType]);
+                m_ChipState.m_RenderStates[rId.m_RenderStateType] =
+                    m_CurrentState.m_RenderStates[rId.m_RenderStateType];
             }
         }
         for (int i = 0; i < textureStageStates_.GetSize(); ++i)
@@ -6254,12 +6267,12 @@ void dx::StateManager_DX::FlushStateEx_()
         }
         for (int i = 0; i < textureStates_.GetSize(); ++i)
         {
-            const unsigned long ulStage = textureStates_[i].m_dwStage;
-            if (m_ChipState.m_Textures[ulStage] != m_CurrentState.m_Textures[ulStage])
+            const NVStateID& rId = textureStates_[i];
+            if (m_ChipState.m_Textures[rId.m_dwStage] != m_CurrentState.m_Textures[rId.m_dwStage])
             {
                 COUNT_PERFRAME_VALUE("numSetTex");
-                m_pD3DDev->SetTexture(ulStage, m_CurrentState.m_Textures[ulStage]);
-                m_ChipState.m_Textures[ulStage] = m_CurrentState.m_Textures[ulStage];
+                m_pD3DDev->SetTexture(rId.m_dwStage, m_CurrentState.m_Textures[rId.m_dwStage]);
+                m_ChipState.m_Textures[rId.m_dwStage] = m_CurrentState.m_Textures[rId.m_dwStage];
             }
         }
     }
@@ -6621,6 +6634,8 @@ void RedRenderer::pcSetRenderTarget(RedTexture* pTarget, IDirect3DSurface9* pDep
     {
         if (m_curSetTextures[i] && m_curSetTextures[i] == m_curRenderTarget)
         {
+            // The game's code keeps a no-op here (a spot for a breakpoint).
+            __nop();
         }
     }
 

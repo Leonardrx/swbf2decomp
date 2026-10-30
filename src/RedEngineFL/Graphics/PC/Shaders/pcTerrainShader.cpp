@@ -845,17 +845,17 @@ static PblMatrix LayerTextureMatrix(unsigned int uiLayer)
     const PblVector4& v1 = pcTerrainShader::s_TextureTransform[uiLayer][1];
     return PblMatrix(PblVector3(v0.x, v1.x, 0.0f), PblVector3(v0.y, v1.y, 0.0f), PblVector3(v0.z, v1.z, 0.0f), PblVector3(v0.w, v1.w, 0.0f));
 }
-
 // FUNCTION: SWBF2 0x006faf00
 void pcTerrainShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) const
 {
     const unsigned int uiState = pItem->uiShaderState;
     if (uiState <= 1)
     {
-        s_d3dMat.Diffuse.r = pItem->tweakColor.r * kInv255;
-        s_d3dMat.Diffuse.g = pItem->tweakColor.g * kInv255;
-        s_d3dMat.Diffuse.b = pItem->tweakColor.b * kInv255;
-        s_d3dMat.Diffuse.a = pItem->tweakColor.a * kInv255;
+        const RedColorValue color = ToColorValue(pItem->tweakColor);
+        s_d3dMat.Diffuse.r = color.r;
+        s_d3dMat.Diffuse.g = color.g;
+        s_d3dMat.Diffuse.b = color.b;
+        s_d3dMat.Diffuse.a = color.a;
         s_d3dMat.Ambient = s_d3dMat.Diffuse;
         s_d3dMat.Emissive.r = 0.0f;
         s_d3dMat.Emissive.g = 0.0f;

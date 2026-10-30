@@ -840,6 +840,7 @@ int VidMode_GetNumMultiSampleQualityModes()
 // FUNCTION: SWBF2 0x006ea9c0
 void VidMode_Init(IDirect3D9* pD3D)
 {
+    IDirect3DDevice9* pDevice = 0;
     DWORD dwQualityLevels = 0;
 
     D3DCAPS9 caps;
@@ -901,20 +902,20 @@ void VidMode_Init(IDirect3D9* pD3D)
 
                 D3DPRESENT_PARAMETERS pp;
                 memset(&pp, 0, sizeof(pp));
+                pp.MultiSampleQuality = uiQuality;
+                pp.Windowed = TRUE;
+                pp.BackBufferCount = 1;
                 pp.BackBufferWidth = mode.Width;
                 pp.BackBufferHeight = mode.Height;
-                pp.BackBufferFormat = D3DFMT_A8R8G8B8;
-                pp.BackBufferCount = 1;
-                pp.MultiSampleType = (D3DMULTISAMPLE_TYPE)iMultiSampleType;
-                pp.MultiSampleQuality = uiQuality;
                 pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-                pp.Windowed = TRUE;
+                pp.BackBufferFormat = D3DFMT_A8R8G8B8;
                 pp.EnableAutoDepthStencil = TRUE;
                 pp.AutoDepthStencilFormat = D3DFMT_D24S8;
-                pp.FullScreen_RefreshRateInHz = 0;
                 pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+                pp.FullScreen_RefreshRateInHz = 0;
+                pp.MultiSampleType = (D3DMULTISAMPLE_TYPE)iMultiSampleType;
 
-                IDirect3DDevice9* pDevice = 0;
+                pDevice = 0;
                 if (m_pD3D->CreateDevice(0, D3DDEVTYPE_HAL, hGlobalWnd, dwBehaviorFlags,
                                          &pp, &pDevice) != D3D_OK)
                 {
@@ -974,7 +975,7 @@ void VidMode_Init(IDirect3D9* pD3D)
                     256, 256, 16, 2,
                     256, 64, 4, uiTexHeight
                 };
-                IDirect3DTexture9* apTextures[12] = {};
+                IDirect3DTexture9* apTextures[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
                 bool bAllSurfaces = true;
 

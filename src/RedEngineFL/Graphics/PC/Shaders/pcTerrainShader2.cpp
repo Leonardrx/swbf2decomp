@@ -411,7 +411,7 @@ unsigned int pcTerrainShader2::GetState_Prog1(const RenderItem* pItem) const
         {
             return 1;
         }
-        if (bShadow || bProjected || !((pItem->flags >> 17) & 1))
+        if (bShadow || bProjected || (~(pItem->flags >> 17) & 1))
         {
             return 1;
         }

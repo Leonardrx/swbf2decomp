@@ -1031,24 +1031,32 @@ static PblMatrix WaterTextureMatrix(const RedTextureTransform& t)
 // FUNCTION: SWBF2 0x007097c0
 void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) const
 {
-    RedColor refraction;
-    refraction.r = (unsigned char)(int)(s_refractionColor.r * 255.0f);
-    refraction.g = (unsigned char)(int)(s_refractionColor.g * 255.0f);
-    refraction.b = (unsigned char)(int)(s_refractionColor.b * 255.0f);
-    refraction.a = (unsigned char)(int)(s_refractionColor.a * 255.0f);
+    const RedColor refraction((unsigned char)(int)(s_refractionColor.r * 255.0f),
+                              (unsigned char)(int)(s_refractionColor.g * 255.0f),
+                              (unsigned char)(int)(s_refractionColor.b * 255.0f),
+                              (unsigned char)(int)(s_refractionColor.a * 255.0f));
     const RedColor color = pItem->tweakColor * refraction;
 
-    s_d3dMat.Diffuse.r = color.r * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.g = color.g * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.b = color.b * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.a = color.a * (1.0f / 255.0f);
+    const RedColorValue diffuse(color);
+    s_d3dMat.Diffuse.r = diffuse.r;
+    s_d3dMat.Diffuse.g = diffuse.g;
+    s_d3dMat.Diffuse.b = diffuse.b;
+    s_d3dMat.Diffuse.a = diffuse.a;
     s_d3dMat.Ambient = s_d3dMat.Diffuse;
     RedRenderer::pcGetDevice()->SetMaterial(&s_d3dMat);
 
     if (uiPass == 1)
     {
-        const PblMatrix m1 = WaterTextureMatrix(m_specularMaskTransform1);
-        const PblMatrix m2 = WaterTextureMatrix(m_specularMaskTransform2);
+        PblMatrix m1;
+        m1.SetXAxis(m_specularMaskTransform1(0, 0), m_specularMaskTransform1(0, 1), 0.0f, 0.0f);
+        m1.SetYAxis(m_specularMaskTransform1(1, 0), m_specularMaskTransform1(1, 1), 0.0f, 0.0f);
+        m1.SetZAxis(m_specularMaskTransform1(2, 0), m_specularMaskTransform1(2, 1), 0.0f, 0.0f);
+        m1.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
+        PblMatrix m2;
+        m2.SetXAxis(m_specularMaskTransform2(0, 0), m_specularMaskTransform2(0, 1), 0.0f, 0.0f);
+        m2.SetYAxis(m_specularMaskTransform2(1, 0), m_specularMaskTransform2(1, 1), 0.0f, 0.0f);
+        m2.SetZAxis(m_specularMaskTransform2(2, 0), m_specularMaskTransform2(2, 1), 0.0f, 0.0f);
+        m2.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
         RedRenderer::pcSetTexture(0, m_specularMask1);
         RedRenderer::pcSetTexture(1, m_specularMask2);
         RedRenderer::pcFFSetTextureTransform(0, m1);
@@ -1060,20 +1068,26 @@ void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
     {
         if (uiPass == 0)
         {
-            const PblMatrix m = WaterTextureMatrix(m_diffuseMapTransform2);
+            PblMatrix m;
+            m.SetXAxis(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f);
+            m.SetYAxis(m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f);
+            m.SetZAxis(m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f);
+            m.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
             RedRenderer::pcSetTexture(0, m_diffuseMap2);
             RedRenderer::pcFFSetTextureTransform(0, m);
-            const unsigned int uiBlend = (unsigned char)(int)(m_diffuseMapBlend * 255.0f);
-            RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR,
-                (uiBlend << 24) | (uiBlend << 16) | (uiBlend << 8) | uiBlend);
+            const RedColor blend((unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f));
+            RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, blend.GetARGB());
         }
 
         const RedColorValue& ambient = RedLight::GetGlobalAmbientLight()->m_color;
-        RedRenderer::pcSetRenderState(D3DRS_AMBIENT,
-            D3DCOLOR_ARGB((unsigned char)(int)(ambient.a * 255.0f),
-                          (unsigned char)(int)(ambient.r * 255.0f),
-                          (unsigned char)(int)(ambient.g * 255.0f),
-                          (unsigned char)(int)(ambient.b * 255.0f)));
+        const RedColor ambientColor((unsigned char)(int)(ambient.r * 255.0f),
+                                    (unsigned char)(int)(ambient.g * 255.0f),
+                                    (unsigned char)(int)(ambient.b * 255.0f),
+                                    (unsigned char)(int)(ambient.a * 255.0f));
+        RedRenderer::pcSetRenderState(D3DRS_AMBIENT, ambientColor.GetARGB());
         RedRenderer::pcGetDevice()->LightEnable(0, TRUE);
         RedRenderer::pcSetRenderState(D3DRS_LIGHTING, TRUE);
         RedRenderer::pcSetRenderState(D3DRS_COLORVERTEX, FALSE);

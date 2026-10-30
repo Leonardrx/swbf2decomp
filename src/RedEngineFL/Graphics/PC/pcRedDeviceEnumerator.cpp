@@ -372,7 +372,7 @@ void BuildMultiSampleTypeList(D3DDeviceCombo* pDeviceCombo)
     for (unsigned int ims = 0; ims < D3DMULTISAMPLE_16_SAMPLES + 1; ++ims)
     {
         const D3DMULTISAMPLE_TYPE msType = amsTypeArray[ims];
-        DWORD dwMSQuality = 0;
+        DWORD dwMSQuality;
 
         if (FAILED(m_pD3D->CheckDeviceMultiSampleType(pDeviceCombo->AdapterOrdinal,
                                                       pDeviceCombo->DevType,

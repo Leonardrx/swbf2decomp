@@ -147,7 +147,8 @@ unsigned int pcPerVertexDiffuseLightingShader::GetState_Fixed(const RenderItem*)
 // FUNCTION: SWBF2 0x00710920
 unsigned int pcPerVertexDiffuseLightingShader::GetState_Prog1(const RenderItem* pItem) const
 {
-    return (pItem->flags & 0x10) ? 0 : 4;
+    const unsigned char uiInverted = ~pItem->flags;
+    return (uiInverted >> 2) & 4;
 }
 
 // FUNCTION: SWBF2 0x00710940

@@ -176,9 +176,9 @@ void RedKeyboard::StaticInit()
     sRedKeyMap[DIK_MYCOMPUTER] = DIK_MYCOMPUTER; sRedKeyMap[DIK_MAIL] = DIK_MAIL;
     sRedKeyMap[DIK_MEDIASELECT] = DIK_MEDIASELECT;
 
-    int iRepeatDelay = 0;
+    int iRepeatDelay;
     SystemParametersInfoA(SPI_GETKEYBOARDDELAY, 0, &iRepeatDelay, 0);
-    int iRepeatSpeed = 0;
+    int iRepeatSpeed;
     SystemParametersInfoA(SPI_GETKEYBOARDSPEED, 0, &iRepeatSpeed, 0);
 
     s_keyRepeatDelay = ((iRepeatDelay + 1) * 250) / 1000.0f;
