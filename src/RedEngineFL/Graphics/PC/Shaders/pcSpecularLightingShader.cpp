@@ -251,15 +251,29 @@ unsigned int pcSpecularLightingShader::GetState_Prog1(const RenderItem* pItem) c
         {
             if (iNumLights)
             {
-                return bEnvMap ? 9 : 7;
+                if (bEnvMap)
+                {
+                    return 9;
+                }
             }
-            return bEnvMap ? 8 : 7;
+            else if (bEnvMap)
+            {
+                return 8;
+            }
+            return 7;
         }
         if (iNumLights)
         {
-            return bEnvMap ? 6 : 4;
+            if (bEnvMap)
+            {
+                return 6;
+            }
         }
-        return bEnvMap ? 5 : 4;
+        else if (bEnvMap)
+        {
+            return 5;
+        }
+        return 4;
     }
 
     if (bEnvMap)
@@ -296,27 +310,37 @@ void pcSpecularLightingShader::Begin_Prog1(unsigned int uiState, unsigned int) c
     RedRenderer::pcSetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
     RedRenderer::pcSetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     RedRenderer::pcSetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-    for (unsigned int i = 1; i < 4; i++)
-    {
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-    }
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
-    if (uiState > 3)
+    if (uiState <= 3)
     {
-        RedRenderer::pcSetTexture(3, RedTexture::Find(s_uiSpecularCubeMapHash));
+        RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+        RedRenderer::pcSetTexture(1, RedTexture::Find(s_uiSpecularSpotMapHash));
+        RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+        RedRenderer::pcSetTexture(2, RedTexture::Find(s_uiSpecularSpotMapHash));
+        RedRenderer::pcSetTextureStageState(3, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+        RedRenderer::pcSetTexture(3, RedTexture::Find(s_uiSpecularSpotMapHash));
     }
     else
     {
-        for (unsigned int i = 1; i < 4; i++)
-        {
-            RedRenderer::pcSetTextureStageState(i, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-            RedRenderer::pcSetTexture(i, RedTexture::Find(s_uiSpecularSpotMapHash));
-        }
+        RedRenderer::pcSetTexture(3, RedTexture::Find(s_uiSpecularCubeMapHash));
     }
 }
 
@@ -584,14 +608,20 @@ void pcSpecularLightingShader::Render_Prog1(const RenderItem* pItem, unsigned in
                                                    ? pMaterial->detailTexTransform
                                                    : pMaterial->diffuseTexTransform;
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 2);
-        pRegs[40].component[0] = transform(0, 0);
-        pRegs[40].component[1] = transform(1, 0);
+        const float f20 = transform(2, 0);
+        const float f10 = transform(1, 0);
+        const float f00 = transform(0, 0);
+        pRegs[40].component[0] = f00;
+        pRegs[40].component[1] = f10;
         pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = transform(2, 0);
-        pRegs[41].component[0] = transform(0, 1);
-        pRegs[41].component[1] = transform(1, 1);
+        pRegs[40].component[3] = f20;
+        const float f21 = transform(2, 1);
+        const float f11 = transform(1, 1);
+        const float f01 = transform(0, 1);
+        pRegs[41].component[0] = f01;
+        pRegs[41].component[1] = f11;
         pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = transform(2, 1);
+        pRegs[41].component[3] = f21;
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
         PerPixelLighting(pItem, uiPass);
     }
@@ -603,14 +633,20 @@ void pcSpecularLightingShader::Render_Prog1(const RenderItem* pItem, unsigned in
         RedRenderer::pcSetTexture(0, RedTexture::Find(uiDiffuseMap));
         const RedTextureTransform& transform = pMaterial->diffuseTexTransform;
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 2);
-        pRegs[40].component[0] = transform(0, 0);
-        pRegs[40].component[1] = transform(1, 0);
+        const float f20 = transform(2, 0);
+        const float f10 = transform(1, 0);
+        const float f00 = transform(0, 0);
+        pRegs[40].component[0] = f00;
+        pRegs[40].component[1] = f10;
         pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = transform(2, 0);
-        pRegs[41].component[0] = transform(0, 1);
-        pRegs[41].component[1] = transform(1, 1);
+        pRegs[40].component[3] = f20;
+        const float f21 = transform(2, 1);
+        const float f11 = transform(1, 1);
+        const float f01 = transform(0, 1);
+        pRegs[41].component[0] = f01;
+        pRegs[41].component[1] = f11;
         pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = transform(2, 1);
+        pRegs[41].component[3] = f21;
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
         PerVertexLighting(pItem, uiPass);
     }

@@ -287,10 +287,14 @@ void pcSkyFogShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     pRegs[41].component[1] = proj.m[1][2];
     pRegs[41].component[2] = -proj.m[2][2];
     pRegs[41].component[3] = proj.m[3][2];
-    pRegs[42].component[0] = viewport.fWidth;
-    pRegs[42].component[1] = viewport.fHeight;
-    pRegs[42].component[2] = viewport.fOffsetX;
-    pRegs[42].component[3] = viewport.fOffsetY;
+    const float fWidth = viewport.fWidth;
+    const float fHeight = viewport.fHeight;
+    const float fOffsetX = viewport.fOffsetX;
+    const float fOffsetY = viewport.fOffsetY;
+    pRegs[42].component[0] = fWidth;
+    pRegs[42].component[1] = fHeight;
+    pRegs[42].component[2] = fOffsetX;
+    pRegs[42].component[3] = fOffsetY;
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     RedRenderer::pcLoadFormat(m_pVertexInputFormat);

@@ -254,42 +254,30 @@ void pcOceanShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     static RedColor s_colorUnused = RedColor::BLACK;
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 5);
-    pRegs[39].component[0] = pItem->tweakColor.r * kInv255;
-    pRegs[39].component[1] = pItem->tweakColor.g * kInv255;
-    pRegs[39].component[2] = pItem->tweakColor.b * kInv255;
-    pRegs[39].component[3] = pItem->tweakColor.a * kInv255;
+    const RedColorValue tweak(pItem->tweakColor);
+    pRegs[39].SetFloats(tweak.r, tweak.g, tweak.b, tweak.a);
 
-    pRegs[40].component[0] = m_textureTransform(0, 0);
-    pRegs[40].component[1] = m_textureTransform(1, 0);
-    pRegs[40].component[2] = 0.0f;
-    pRegs[40].component[3] = m_textureTransform(2, 0);
-    pRegs[41].component[0] = m_textureTransform(0, 1);
-    pRegs[41].component[1] = m_textureTransform(1, 1);
-    pRegs[41].component[2] = 0.0f;
-    pRegs[41].component[3] = m_textureTransform(2, 1);
+    pRegs[40].SetFloats(m_textureTransform(0, 0), m_textureTransform(1, 0), 0.0f,
+                        m_textureTransform(2, 0));
+    pRegs[41].SetFloats(m_textureTransform(0, 1), m_textureTransform(1, 1), 0.0f,
+                        m_textureTransform(2, 1));
 
-    pRegs[42].component[0] = m_foamMapTransform(0, 0);
-    pRegs[42].component[1] = m_foamMapTransform(1, 0);
-    pRegs[42].component[2] = 0.0f;
-    pRegs[42].component[3] = m_foamMapTransform(2, 0);
-    pRegs[43].component[0] = m_foamMapTransform(0, 1);
-    pRegs[43].component[1] = m_foamMapTransform(1, 1);
-    pRegs[43].component[2] = 0.0f;
-    pRegs[43].component[3] = m_foamMapTransform(2, 1);
+    pRegs[42].SetFloats(m_foamMapTransform(0, 0), m_foamMapTransform(1, 0), 0.0f,
+                        m_foamMapTransform(2, 0));
+    pRegs[43].SetFloats(m_foamMapTransform(0, 1), m_foamMapTransform(1, 1), 0.0f,
+                        m_foamMapTransform(2, 1));
 
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     const RedDirectionalLight* pSun = RedLight::m_sGlobalDirectionals[0];
-    const float afLightDir[4] = { -pSun->m_vDirection.x, -pSun->m_vDirection.y,
-                                  -pSun->m_vDirection.z, 0.0f };
-    const float afLightColor[4] = { pSun->m_color.r, pSun->m_color.g,
-                                    pSun->m_color.b, pSun->m_color.a };
-    const RedColorValue& ambient = RedLight::m_sGlobalAmbient->m_color;
-    const float afAmbient[4] = { ambient.r, ambient.g, ambient.b, ambient.a };
+    const RedColorValue lightDir(-pSun->m_vDirection.x, -pSun->m_vDirection.y,
+                                 -pSun->m_vDirection.z, 0.0f);
+    const RedColorValue lightColor(pSun->m_color);
+    const RedColorValue ambient(RedLight::m_sGlobalAmbient->m_color);
 
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, afLightDir, 1);
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, afLightColor, 1);
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(2, afAmbient, 1);
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &lightDir.r, 1);
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, &lightColor.r, 1);
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(2, &ambient.r, 1);
 
     RedRenderer::pcSetTexture(0, m_baseMap);
     RedRenderer::pcSetTexture(1, m_foamMap);
@@ -320,10 +308,7 @@ void pcOceanShader::_Init(unsigned int uiFlags,
                           const RedColor&,
                           float)
 {
-    m_transmissiveColor.r = 0.0f;
-    m_transmissiveColor.g = 0.0f;
-    m_transmissiveColor.b = 0.0f;
-    m_transmissiveColor.a = 0.0f;
+    m_transmissiveColor = RedColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     m_foamMap = 0;
     m_reflectionMap = 0;
     m_textureTransform.m_bTransform = 0;

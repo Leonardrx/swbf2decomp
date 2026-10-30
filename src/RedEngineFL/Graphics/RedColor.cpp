@@ -56,14 +56,5 @@ RedColorValue RedColorValue::WHITE(1.0f, 1.0f, 1.0f, 1.0f);
 
 RedColorValue RedColorValue::BLACK(0.0f, 0.0f, 0.0f, 1.0f);
 
-// FUNCTION: SWBF2 0x004bd900
-RedColorValue::RedColorValue(const RedColor& color)
-{
-    const float kInv255 = 1.0f / 255.0f;
-    r = color.r * kInv255;
-    g = color.g * kInv255;
-    b = color.b * kInv255;
-    a = color.a * kInv255;
-}
 
 

@@ -76,10 +76,10 @@ PblMatrix pcShieldShader::_GetNearSceneFadeTextureTransform()
         fScale = -fInv;
     }
     PblMatrix m;
-    m.m[0][0] = 0.0f; m.m[0][1] = 0.0f; m.m[0][2] = 0.0f; m.m[0][3] = 0.0f;
-    m.m[1][0] = 0.0f; m.m[1][1] = 0.0f; m.m[1][2] = 0.0f; m.m[1][3] = 0.0f;
-    m.m[2][0] = fScale; m.m[2][1] = 0.0f; m.m[2][2] = 0.0f; m.m[2][3] = 0.0f;
-    m.m[3][0] = fOffset; m.m[3][1] = 0.0f; m.m[3][2] = 0.0f; m.m[3][3] = 1.0f;
+    m.m[3][3] = 1.0f; m.m[3][2] = 0.0f; m.m[3][1] = 0.0f; m.m[3][0] = fOffset;
+    m.m[2][3] = 0.0f; m.m[2][2] = 0.0f; m.m[2][1] = 0.0f; m.m[2][0] = fScale;
+    m.m[1][3] = 0.0f; m.m[1][2] = 0.0f; m.m[1][1] = 0.0f; m.m[1][0] = 0.0f;
+    m.m[0][3] = 0.0f; m.m[0][2] = 0.0f; m.m[0][1] = 0.0f; m.m[0][0] = 0.0f;
     return m;
 }
 
@@ -102,8 +102,32 @@ void pcShieldShader::Begin_Fixed(unsigned int uiState, unsigned int) const
     RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
-    if (uiState == 1)
+    switch (uiState)
     {
+    case 0:
+        RedRenderer::pcSetRenderState(D3DRS_COLORVERTEX, TRUE);
+        RedRenderer::pcSetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
+        RedRenderer::pcSetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
+        RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+        RedRenderer::pcSetRenderState(D3DRS_LIGHTING, TRUE);
+        RedRenderer::pcSetRenderState(D3DRS_SPECULARENABLE, TRUE);
+        RedRenderer::pcSetRenderState(D3DRS_SPECULARMATERIALSOURCE, D3DMCS_MATERIAL);
+        RedRenderer::pcSetTexture(0, RedTexture::Find(kuiLinearRamp));
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
+        RedRenderer::pcFFSetTextureTransform(0, pcShieldShader::_GetNearSceneFadeTextureTransform());
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE | D3DTA_ALPHAREPLICATE);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TFACTOR);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_ADDSMOOTH);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TFACTOR);
+        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+        RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+        break;
+    case 1:
         RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
         RedRenderer::pcSetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
         RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 1);
@@ -133,30 +157,7 @@ void pcShieldShader::Begin_Fixed(unsigned int uiState, unsigned int) const
         RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
         RedRenderer::pcSetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
         RedRenderer::pcSetTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-    }
-    else if (uiState == 0)
-    {
-        RedRenderer::pcSetRenderState(D3DRS_COLORVERTEX, TRUE);
-        RedRenderer::pcSetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
-        RedRenderer::pcSetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-        RedRenderer::pcSetRenderState(D3DRS_LIGHTING, TRUE);
-        RedRenderer::pcSetRenderState(D3DRS_SPECULARENABLE, TRUE);
-        RedRenderer::pcSetRenderState(D3DRS_SPECULARMATERIALSOURCE, D3DMCS_MATERIAL);
-        RedRenderer::pcSetTexture(0, RedTexture::Find(kuiLinearRamp));
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
-        RedRenderer::pcFFSetTextureTransform(0, pcShieldShader::_GetNearSceneFadeTextureTransform());
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE | D3DTA_ALPHAREPLICATE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TFACTOR);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_ADDSMOOTH);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TFACTOR);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+        break;
     }
 }
 
@@ -164,24 +165,32 @@ void pcShieldShader::Begin_Fixed(unsigned int uiState, unsigned int) const
 void pcShieldShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
 {
     bool bLight = false;
-    if (pItem->uiShaderState == 1 || pItem->uiShaderState == 0)
+    switch (pItem->uiShaderState)
     {
-        if (pItem->uiShaderState == 1)
-        {
-            RedRenderer::pcSetTexture(0, RedTexture::Find(m_uiTextureHash));
-            PblMatrix mOffset(PblVector3(1.0f, 0.0f, 0.0f), PblVector3(0.0f, 1.0f, 0.0f), PblVector3(m_fOffsetU, m_fOffsetV, 0.0f), PblVector3(0.0f, 0.0f, 0.0f));
-            RedRenderer::pcFFSetTextureTransform(0, mOffset);
-        }
-        else
-        {
-            const RedColor& tweak = pItem->tweakColor;
-            const unsigned char r = (unsigned char)(int)(m_colorDiffuse.r * (tweak.r * kInv255) + 0.5f) >> 1;
-            const unsigned char g = (unsigned char)(int)(m_colorDiffuse.g * (tweak.g * kInv255) + 0.5f) >> 1;
-            const unsigned char b = (unsigned char)(int)(m_colorDiffuse.b * (tweak.b * kInv255) + 0.5f) >> 1;
-            const unsigned char a = (unsigned char)(int)((1.0f - m_fViewAngleFactor) * 255.0f);
-            RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(a, r, g, b));
-        }
+    case 1:
+    {
+        RedRenderer::pcSetTexture(0, RedTexture::Find(m_uiTextureHash));
+        RedRenderer::pcFFSetTextureTransform(0, PblMatrix(PblVector3(1.0f, 0.0f, 0.0f), PblVector3(0.0f, 1.0f, 0.0f), PblVector3(m_fOffsetU, m_fOffsetV, 0.0f), PblVector3(0.0f, 0.0f, 0.0f)));
         bLight = true;
+        break;
+    }
+    case 0:
+    {
+        const RedColor& tweak = pItem->tweakColor;
+        unsigned char r = (unsigned char)(int)(m_colorDiffuse.r * (tweak.r * kInv255) + 0.5f);
+        unsigned char g = (unsigned char)(int)(m_colorDiffuse.g * (tweak.g * kInv255) + 0.5f);
+        unsigned char b = (unsigned char)(int)(m_colorDiffuse.b * (tweak.b * kInv255) + 0.5f);
+        const unsigned char a = (unsigned char)(int)((1.0f - m_fViewAngleFactor) * 255.0f);
+        r >>= 1;
+        g >>= 1;
+        b >>= 1;
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(a, r, g, b));
+        bLight = true;
+        break;
+    }
+    }
+    if (bLight)
+    {
         RedRenderer::pcSetRenderState(D3DRS_AMBIENT, D3DCOLOR_ARGB(RedColor::BLACK.a, RedColor::BLACK.r,
                                                                    RedColor::BLACK.g, RedColor::BLACK.b));
         D3DLIGHT9 light = RedLight::m_sGlobalDirectionals[0]->m_d3dLight;
@@ -244,14 +253,14 @@ void pcShieldShader::Begin_Prog1(unsigned int, unsigned int) const
 
         const float fLenSq = s_vLightX.x * s_vLightX.x + s_vLightX.y * s_vLightX.y +
                              s_vLightX.z * s_vLightX.z;
-        if (fLenSq < 1e-6f)
-        {
-            s_vLightX = PblVector3(1.0f, 0.0f, 0.0f);
-        }
-        else
+        if (fLenSq >= 1e-6f)
         {
             const float fInvLen = 1.0f / sqrtf(fLenSq);
             s_vLightX *= fInvLen;
+        }
+        else
+        {
+            s_vLightX = PblVector3(1.0f, 0.0f, 0.0f);
         }
 
         s_vLightY = PblVector3(s_vLightDir.y * s_vLightX.z - s_vLightDir.z * s_vLightX.y,
@@ -334,7 +343,7 @@ void pcShieldShader::InitFixedFunctionShaderDef() const
 // FUNCTION: SWBF2 0x006cd8e0
 void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
-    const RedColor& tweak = pItem->tweakColor;
+    const RedColor tweak = pItem->tweakColor;
     const unsigned char r = (unsigned char)(int)(m_colorDiffuse.r * (tweak.r * kInv255) + 0.5f);
     const unsigned char g = (unsigned char)(int)(m_colorDiffuse.g * (tweak.g * kInv255) + 0.5f);
     const unsigned char b = (unsigned char)(int)(m_colorDiffuse.b * (tweak.b * kInv255) + 0.5f);
@@ -343,10 +352,7 @@ void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     RedRenderer::pcSetTexture(0, m_uiTextureHash ? RedTexture::Find(m_uiTextureHash) : 0);
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 6);
-    pRegs[39].component[0] = r * kInv255;
-    pRegs[39].component[1] = g * kInv255;
-    pRegs[39].component[2] = b * kInv255;
-    pRegs[39].component[3] = a * kInv255;
+    pRegs[39].SetFloats(r * kInv255, g * kInv255, b * kInv255, a * kInv255);
 
     if (m_specPower < 4.0f)
     {
@@ -355,29 +361,21 @@ void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
         const unsigned char sg = (unsigned char)(int)(m_colorSpecular.g * fScale);
         const unsigned char sr = (unsigned char)(int)(m_colorSpecular.r * fScale);
         pRegs[40].component[3] = 1.0f;
-        pRegs[40].component[0] = sr * kInv255;
-        pRegs[40].component[1] = sg * kInv255;
-        pRegs[40].component[2] = sb * kInv255;
+        pRegs[40].SetFloats(sr * kInv255, sg * kInv255, sb * kInv255);
     }
     else
     {
-        pRegs[40].component[0] = m_colorSpecular.r * kInv255;
-        pRegs[40].component[1] = m_colorSpecular.g * kInv255;
-        pRegs[40].component[2] = m_colorSpecular.b * kInv255;
+        pRegs[40].SetFloats(m_colorSpecular.r * kInv255, m_colorSpecular.g * kInv255,
+                            m_colorSpecular.b * kInv255);
         pRegs[40].component[3] = m_colorSpecular.a * kInv255;
     }
 
-    pRegs[41].component[0] = s_vLightX.x * m_specSizeInv;
-    pRegs[41].component[1] = s_vLightX.y * m_specSizeInv;
-    pRegs[41].component[2] = s_vLightX.z * m_specSizeInv;
-    pRegs[42].component[0] = m_specSizeInv * s_vLightY.x;
-    pRegs[42].component[1] = m_specSizeInv * s_vLightY.y;
-    pRegs[42].component[2] = m_specSizeInv * s_vLightY.z;
+    pRegs[41].SetFloats(s_vLightX.x * m_specSizeInv, s_vLightX.y * m_specSizeInv,
+                        s_vLightX.z * m_specSizeInv);
+    pRegs[42].SetFloats(m_specSizeInv * s_vLightY.x, m_specSizeInv * s_vLightY.y,
+                        m_specSizeInv * s_vLightY.z);
 
-    pRegs[43].component[0] = m_fOffsetU;
-    pRegs[43].component[1] = m_fOffsetV;
-    pRegs[43].component[2] = m_fViewAngleFactor;
-    pRegs[43].component[3] = m_fVertexMinDistSqr;
+    pRegs[43].SetFloats(m_fOffsetU, m_fOffsetV, m_fViewAngleFactor, m_fVertexMinDistSqr);
 
     if (s_fFadeStart > 0.0f && s_fFadeEnd > s_fFadeStart)
     {

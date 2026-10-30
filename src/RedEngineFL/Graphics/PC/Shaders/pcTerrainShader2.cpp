@@ -374,8 +374,8 @@ unsigned short pcTerrainShader2::GetShaderChain(pcRedShader** const ppOut,
     if (sUseHighTierLighting && !sForceSimpleLighting && !bSpecial)
     {
         ppOut[0] = RedRenderer::pcGetSystemShader(SYSTEM_SHADER_PERPIXELDIFFUSELIGHTING);
-        ppOut[1] = this;
         m_lightingInSeparatePass = true;
+        ppOut[1] = this;
         return 2;
     }
     ppOut[0] = this;
@@ -407,7 +407,11 @@ unsigned int pcTerrainShader2::GetState_Prog1(const RenderItem* pItem) const
     }
     if (!sForceSimpleLighting && bLightingEnable)
     {
-        if (m_lightingInSeparatePass || bShadow || bProjected || !(pItem->flags & 0x20000))
+        if (m_lightingInSeparatePass)
+        {
+            return 1;
+        }
+        if (bShadow || bProjected || !((pItem->flags >> 17) & 1))
         {
             return 1;
         }
@@ -454,12 +458,28 @@ void pcTerrainShader2::Render_Prog1(const RenderItem* pItem, unsigned int uiPass
 {
     const unsigned int uiState = pItem->uiShaderState;
     RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    RedRenderer::SetMultiplicativeFog((uiState ? 2 : 1) + (m_lightingInSeparatePass ? 1 : 0));
+    int iFogMode = 1;
+    if (uiState)
+    {
+        iFogMode = 2;
+    }
+    if (m_lightingInSeparatePass)
+    {
+        ++iFogMode;
+    }
+    RedRenderer::SetMultiplicativeFog(iFogMode);
 
     if (uiPass == 0)
     {
         RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 0xf);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, m_lightingInSeparatePass != 0);
+        if (m_lightingInSeparatePass)
+        {
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        }
+        else
+        {
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        }
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 9);
         pRegs[40].component[2] = 0.0f;
@@ -478,15 +498,15 @@ void pcTerrainShader2::Render_Prog1(const RenderItem* pItem, unsigned int uiPass
         for (int i = 0; i < 3; i++)
         {
             const int iLayer = m_uiLayerIndex[i];
-            if (iLayer >= 16)
-            {
-                RedRenderer::pcSetTexture(i, 0);
-            }
-            else
+            if (iLayer < 16)
             {
                 RedRenderer::pcSetTexture(i, s_apTextures[iLayer]);
                 SetVector(pRegs[41 + 2 * i], s_TextureTransform[iLayer][0]);
                 SetVector(pRegs[42 + 2 * i], s_TextureTransform[iLayer][1]);
+            }
+            else
+            {
+                RedRenderer::pcSetTexture(i, 0);
             }
         }
 
@@ -529,7 +549,8 @@ void pcTerrainShader2::Render_Prog1(const RenderItem* pItem, unsigned int uiPass
                 pItem->pLightingState->pProjectedLight->m_uiProjTexHash));
 
             RedColorValue color = pItem->pLightingState->pProjectedLight->m_color;
-            color.a = (float)((pItem->pLightingState->pProjectedLight->m_uiFlags >> 1) & 1);
+            const bool bShadowCaster = (pItem->pLightingState->pProjectedLight->m_uiFlags >> 1) & 1;
+            color.a = (float)bShadowCaster;
             RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, &color.r, 1);
         }
         else
@@ -547,7 +568,10 @@ void pcTerrainShader2::Render_Prog1(const RenderItem* pItem, unsigned int uiPass
 void pcTerrainShader2::SetEnabled(bool bEnabled)
 {
     s_Enabled = bEnabled;
-    IsEnabled();
+    if (RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED)
+    {
+        s_Enabled = false;
+    }
 }
 
 // FUNCTION: SWBF2 0x006fd690
@@ -685,8 +709,9 @@ void pcTerrainShader2::_InitDiffuseMap(int iIndex, unsigned int uiHash, const Pb
 {
     s_diffuseTextures[iIndex] = uiHash ? RedTexture::Find(uiHash) : 0;
     const float fHalf = RedTerrain::_fMetersPerPoint * 0.5f;
-    PblVector4 scaleoff(vScale.x, vScale.y,
-                        fHalf - 0.5f + 0.0f, -0.5f - fHalf + 0.0f);
+    const float fOffsetX = fHalf - 0.5f;
+    const float fOffsetY = -0.5f - fHalf;
+    PblVector4 scaleoff(vScale.x, vScale.y, fOffsetX + 0.0f, fOffsetY + 0.0f);
     s_DiffuseTexTransform[iIndex] = scaleoff;
 }
 

@@ -167,15 +167,15 @@ void pcStencilShadowShader::Begin_Fixed(unsigned int, unsigned int uiPass) const
     RedRenderer::pcSetRenderState(D3DRS_STENCILREF, s_uiStencilMask);
     RedRenderer::pcSetRenderState(D3DRS_STENCILMASK, s_uiStencilMask);
     RedRenderer::pcSetRenderState(D3DRS_STENCILWRITEMASK, s_uiStencilMask);
-    if (uiPass)
-    {
-        RedRenderer::pcSetCullMode(PCREDCULL_BACK);
-        RedRenderer::pcSetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_DECR);
-    }
-    else
+    if (!uiPass)
     {
         RedRenderer::pcSetCullMode(PCREDCULL_FRONT);
         RedRenderer::pcSetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_INCR);
+    }
+    else
+    {
+        RedRenderer::pcSetCullMode(PCREDCULL_BACK);
+        RedRenderer::pcSetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_DECR);
     }
     RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
     RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
@@ -297,7 +297,14 @@ void pcStencilShadowShader::RenderVolume(const RenderItem* pItem, unsigned int) 
 {
     if (s_bDebugShadowVolumes)
     {
-        if (!((pItem->flags & 0x400) ? s_DrawFlaggedDebugVolumes : s_DrawUnflaggedDebugVolumes))
+        if (pItem->flags & 0x400)
+        {
+            if (!s_DrawFlaggedDebugVolumes)
+            {
+                return;
+            }
+        }
+        else if (!s_DrawUnflaggedDebugVolumes)
         {
             return;
         }
@@ -390,9 +397,8 @@ void pcStencilShadowShader::Render_Prog1(const RenderItem* pItem, unsigned int u
     RedRenderer::pcLoadFormat(m_pVertexFormat);
     const float fLength = pItem->fStencilShadowLength;
 
-    const bool bDirectional =
-        pItem->uiShaderState >= 11 ? uiPass == 0 : pItem->uiShaderState <= 5;
-    if (bDirectional)
+    if ((pItem->uiShaderState >= 11 && uiPass == 0) ||
+        (pItem->uiShaderState < 11 && pItem->uiShaderState <= 5))
     {
         for (int i = 0; pItem->pLightingState->pDirectionalLights[i] && i < 2; i++)
         {
@@ -477,8 +483,8 @@ void pcStencilShadowShader::_Init(unsigned int uiFlags,
 {
     if (uiFlags & 0x800)
     {
-        m_mode = MODE_GPU_EXTRUSION_FACENORMAL_SKINNEDHARD;
         m_pVertexFormat = s_pSkinnedInputFormat[0];
+        m_mode = MODE_GPU_EXTRUSION_FACENORMAL_SKINNEDHARD;
     }
     else
     {

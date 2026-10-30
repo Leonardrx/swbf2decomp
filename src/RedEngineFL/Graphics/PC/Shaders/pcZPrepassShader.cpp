@@ -199,18 +199,9 @@ void pcZPrepassShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
         RedTexture* pTexture = RedTexture::Find(m_material.diffuseMapHash);
         const RedTextureTransform& transform = m_material.diffuseTexTransform;
         PblMatrix mTransform = gMatrixIdentity;
-        mTransform.m[0][0] = transform(0, 0);
-        mTransform.m[0][1] = transform(0, 1);
-        mTransform.m[0][2] = 0.0f;
-        mTransform.m[0][3] = 0.0f;
-        mTransform.m[1][0] = transform(1, 0);
-        mTransform.m[1][1] = transform(1, 1);
-        mTransform.m[1][2] = 0.0f;
-        mTransform.m[1][3] = 0.0f;
-        mTransform.m[2][0] = transform(2, 0);
-        mTransform.m[2][1] = transform(2, 1);
-        mTransform.m[2][2] = 1.0f;
-        mTransform.m[2][3] = 0.0f;
+        mTransform.SetXAxis(transform(0, 0), transform(0, 1), 0.0f, 0.0f);
+        mTransform.SetYAxis(transform(1, 0), transform(1, 1), 0.0f, 0.0f);
+        mTransform.SetZAxis(transform(2, 0), transform(2, 1), 1.0f, 0.0f);
         RedRenderer::pcSetTexture(0, pTexture);
         RedRenderer::pcFFSetTextureTransform(0, mTransform);
     }
@@ -252,15 +243,8 @@ void pcZPrepassShader::_Init(unsigned int uiFlags,
 {
     memset(&m_material, 0, sizeof(m_material));
 
-    m_material.diffuseColor.r = color0.r * (1.0f / 255.0f);
-    m_material.diffuseColor.g = color0.g * (1.0f / 255.0f);
-    m_material.diffuseColor.b = color0.b * (1.0f / 255.0f);
-    m_material.diffuseColor.a = color0.a * (1.0f / 255.0f);
-
-    m_material.specularColor.r = color1.r * (1.0f / 255.0f);
-    m_material.specularColor.g = color1.g * (1.0f / 255.0f);
-    m_material.specularColor.b = color1.b * (1.0f / 255.0f);
-    m_material.specularColor.a = color1.a * (1.0f / 255.0f);
+    m_material.diffuseColor = RedColorValue(color0);
+    m_material.specularColor = RedColorValue(color1);
 
     m_material.materialFlags = uiMaterialFlags;
     m_material.diffuseTexTransform.m_bTransform = 0;

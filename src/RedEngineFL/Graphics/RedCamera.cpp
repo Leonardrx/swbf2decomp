@@ -19,17 +19,16 @@ RedCamera::VisibilityT RedCamera::ClassifyPoints(const PblVector3* pPoints, int 
         PblVector3 point;
         D3DXVec3TransformCoord((D3DXVECTOR3*)&point, (const D3DXVECTOR3*)&pPoints[i],
                                (const D3DXMATRIX*)&_MatrixInverse);
-        float depth = -point.z;
         int mask = 0;
-        if (depth >= _fNear)
+        if (-point.z >= _fNear)
         {
             mask |= 1;
         }
-        if (_fFar >= depth)
+        if (_fFar >= -point.z)
         {
             mask |= 2;
         }
-        float width = depth * _fTanHalfFOVWidth;
+        float width = -(point.z * _fTanHalfFOVWidth);
         if (width >= point.x)
         {
             mask |= 4;
@@ -38,7 +37,7 @@ RedCamera::VisibilityT RedCamera::ClassifyPoints(const PblVector3* pPoints, int 
         {
             mask |= 8;
         }
-        float height = depth * _fTanHalfFOVHeight;
+        float height = -(point.z * _fTanHalfFOVHeight);
         if (height >= point.y)
         {
             mask |= 16;
@@ -47,17 +46,21 @@ RedCamera::VisibilityT RedCamera::ClassifyPoints(const PblVector3* pPoints, int 
         {
             mask |= 32;
         }
-        if (mask == 63)
+        if (mask != 63)
         {
-            hasInside = true;
+            hasOutside = true;
+            if (hasInside)
+            {
+                return VISIBILITY_PARTIAL;
+            }
         }
         else
         {
-            hasOutside = true;
-        }
-        if (hasInside && hasOutside)
-        {
-            return VISIBILITY_PARTIAL;
+            hasInside = true;
+            if (hasOutside)
+            {
+                return VISIBILITY_PARTIAL;
+            }
         }
         sharedMask |= mask;
     }
@@ -146,8 +149,8 @@ RedCamera::RedCamera(const RedCamera& rCamera)
 // FUNCTION: SWBF2 0x006cb150
 void RedCamera::AddXZPlane(const PblVector3& rA, const PblVector3& rB)
 {
-    float fDZ = rB.z - rA.z;
     float fDX = rB.x - rA.x;
+    float fDZ = rB.z - rA.z;
     float fInvLen = 1.0f / sqrtf(fDZ * fDZ + fDX * fDX);
 
     _XZPlane[_iNumXZPlanes].x = -(fDZ * fInvLen);
@@ -248,11 +251,15 @@ RedCamera::VisibilityT RedCamera::ClassifyBoxInternal(const PblMatrix& rMatrix, 
 RedCamera::VisibilityT RedCamera::ClassifySphere(const PblVector3& vCenter, float fRadius, float fFar) const
 {
     VisibilityT eResult = VISIBILITY_FULL;
-    float fFarPlane = fFar >= 0.0f ? fFar : _fFar;
 
     float fDX = vCenter.x - _Matrix.m[3][0];
     float fDY = vCenter.y - _Matrix.m[3][1];
     float fDZ = vCenter.z - _Matrix.m[3][2];
+    float fFarPlane = _fFar;
+    if (fFar >= 0.0f)
+    {
+        fFarPlane = fFar;
+    }
 
     float fZ = -(_Matrix.m[2][0] * fDX + _Matrix.m[2][1] * fDY + _Matrix.m[2][2] * fDZ);
     if (fZ < _fNear + fRadius)
@@ -300,13 +307,16 @@ RedCamera::VisibilityT RedCamera::ClassifySphere(const PblVector3& vCenter, floa
 // FUNCTION: SWBF2 0x006cb700
 RedCamera::VisibilityT RedCamera::ClassifyPoint(const PblVector3& vPoint, float fFar) const
 {
-    float fFarPlane = fFar >= 0.0f ? fFar : _fFar;
-
     float fDX = vPoint.x - _Matrix.m[3][0];
     float fDY = vPoint.y - _Matrix.m[3][1];
     float fDZ = vPoint.z - _Matrix.m[3][2];
 
     float fZ = -(_Matrix.m[2][0] * fDX + _Matrix.m[2][1] * fDY + _Matrix.m[2][2] * fDZ);
+    float fFarPlane = _fFar;
+    if (fFar >= 0.0f)
+    {
+        fFarPlane = fFar;
+    }
     if (fZ < _fNear || fZ > fFarPlane)
     {
         return VISIBILITY_NONE;
@@ -331,9 +341,8 @@ RedCamera::VisibilityT RedCamera::ClassifyXZBox(const PblVector3& vCenter, const
     VisibilityT eResult = VISIBILITY_FULL;
     for (int i = 0; i < _iNumXZPlanes; ++i)
     {
-        const PblVector3& rPlane = _XZPlane[i];
-        float fDist = rPlane.x * vCenter.x + rPlane.z * vCenter.z + rPlane.y;
-        float fRadius = (float)fabs(rPlane.x * vExtents.x) + (float)fabs(rPlane.z * vExtents.z);
+        float fDist = _XZPlane[i].x * vCenter.x + _XZPlane[i].z * vCenter.z + _XZPlane[i].y;
+        float fRadius = (float)fabs(_XZPlane[i].x * vExtents.x) + (float)fabs(_XZPlane[i].z * vExtents.z);
         if (fDist > fRadius)
         {
             return VISIBILITY_NONE;
@@ -467,8 +476,8 @@ void RedCamera::SetZoom(float fZoom)
 // FUNCTION: SWBF2 0x006cbfe0
 const PblVector3 RedCamera::TransformCameraPointToProjectionSpace(const PblVector3& rPoint) const
 {
-    float fInvDepth = 1.0f / (_fNear - _fFar);
     float fW = -1.0f / rPoint.z;
+    float fInvDepth = 1.0f / (_fNear - _fFar);
     return PblVector3(rPoint.x / _fTanHalfFOVWidth * fW,
                       -(rPoint.y / _fTanHalfFOVHeight) * fW,
                       (-((_fFar + _fNear) * fInvDepth * rPoint.z) - _fNear * 2.0f * _fFar * fInvDepth) * fW);

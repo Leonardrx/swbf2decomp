@@ -133,15 +133,31 @@ void pcFilterCopyShader::Begin_Prog1(unsigned int, unsigned int) const
     RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
     RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
     RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-    for (unsigned int i = 0; i < 4; ++i)
-    {
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MAXMIPLEVEL, 0);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
-    }
+
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
 }
 
 // FUNCTION: SWBF2 0x0070fd00
@@ -217,10 +233,10 @@ void pcFilterCopyShader::InitFixedFunctionShaderDef() const
 // FUNCTION: SWBF2 0x0070fde0
 void pcFilterCopyShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
 {
+    RedViewport viewport;
     PblMatrix mTransform = gMatrixIdentity;
     RedTexture* pOldTarget = RedRenderer::pcGetRenderTarget();
     IDirect3DSurface9* pOldDepth = RedRenderer::pcGetDepthTarget();
-    RedViewport viewport;
     RedRenderer::pcGetViewport(viewport);
 
     RedRenderer::pcSetRenderTarget(m_destTex, 0);
@@ -231,22 +247,7 @@ void pcFilterCopyShader::Render_Fixed(const RenderItem* pItem, unsigned int) con
     {
         for (unsigned int i = 0; i < s_numSimultaneousTextures; ++i)
         {
-            if (m_curSample < m_numSamples)
-            {
-                RedRenderer::pcSetTexture(i, m_srcTex);
-                const float fValue = m_samples[m_curSample].fValue;
-                const D3DCOLOR weight = D3DCOLOR_ARGB((int)(fValue * 255.0f), (int)(fValue * 255.0f),
-                                                      (int)(fValue * 255.0f), (int)(fValue * 255.0f));
-                if (s_numSimultaneousTextures > 1)
-                {
-                    RedRenderer::pcSetTextureStageState(i, D3DTSS_CONSTANT, weight);
-                }
-                else
-                {
-                    RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, weight);
-                }
-            }
-            else
+            if (m_curSample >= m_numSamples)
             {
                 RedRenderer::pcSetTexture(i, 0);
                 if (s_numSimultaneousTextures > 1)
@@ -256,6 +257,24 @@ void pcFilterCopyShader::Render_Fixed(const RenderItem* pItem, unsigned int) con
                 else
                 {
                     RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, 0);
+                }
+            }
+            else
+            {
+                RedRenderer::pcSetTexture(i, m_srcTex);
+                const float fValue = m_samples[m_curSample].fValue;
+                const RedColor weightColor((unsigned char)(int)(fValue * 255.0f),
+                                           (unsigned char)(int)(fValue * 255.0f),
+                                           (unsigned char)(int)(fValue * 255.0f),
+                                           (unsigned char)(int)(fValue * 255.0f));
+                const D3DCOLOR weight = weightColor.GetARGB();
+                if (s_numSimultaneousTextures > 1)
+                {
+                    RedRenderer::pcSetTextureStageState(i, D3DTSS_CONSTANT, weight);
+                }
+                else
+                {
+                    RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, weight);
                 }
             }
             mTransform.m[2][0] = m_samples[m_curSample].fOffsetX / (float)m_srcTex->m_uiWidth;
@@ -283,7 +302,14 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
 
     RedRenderer::pcSetRenderTarget(m_destTex, 0);
     RedRenderer::pcLoadFormat(m_pVertexFormat);
-    RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, uiPass ? TRUE : FALSE);
+    if (uiPass)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+    }
 
     while (m_curSample < m_numSamples)
     {
@@ -291,18 +317,7 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
             RedRenderer::pcLockVertexShaderConstants(40, 4);
         for (unsigned int i = 0; i < 4; ++i, ++m_curSample)
         {
-            if (m_curSample < m_numSamples)
-            {
-                RedRenderer::pcSetTexture(i, m_srcTex);
-                const float fValue = m_samples[m_curSample].fValue;
-                const float afWeight[4] = { fValue, fValue, fValue, fValue };
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, afWeight, 1);
-                pRegs[40 + i].component[0] =
-                    m_samples[m_curSample].fOffsetX / (float)m_srcTex->m_uiWidth;
-                pRegs[40 + i].component[1] =
-                    m_samples[m_curSample].fOffsetY / (float)m_srcTex->m_uiHeight;
-            }
-            else
+            if (m_curSample >= m_numSamples)
             {
                 RedRenderer::pcSetTexture(i, 0);
                 const float afZero[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -310,8 +325,20 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
                 pRegs[40 + i].component[0] = 0.0f;
                 pRegs[40 + i].component[1] = 0.0f;
             }
-            pRegs[40 + i].component[2] = 0.0f;
+            else
+            {
+                RedRenderer::pcSetTexture(i, m_srcTex);
+                const float fValue = m_samples[m_curSample].fValue;
+                const float afWeight[4] = { fValue, fValue, fValue, fValue };
+                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, afWeight, 1);
+                const RedTexture* pSrc = m_srcTex;
+                pRegs[40 + i].component[1] =
+                    m_samples[m_curSample].fOffsetY / (float)pSrc->m_uiHeight;
+                pRegs[40 + i].component[0] =
+                    m_samples[m_curSample].fOffsetX / (float)pSrc->m_uiWidth;
+            }
             pRegs[40 + i].component[3] = 0.0f;
+            pRegs[40 + i].component[2] = 0.0f;
         }
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
         pItem->pPrim->Draw();

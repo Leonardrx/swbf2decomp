@@ -97,8 +97,7 @@ void RedSkeleton::SetupPose(RedPose& pose) const
 unsigned int RedSkeleton::_PostProcess(const PblMatrix& mParent, unsigned int uiBone)
 {
     unsigned int uiCount = 1;
-    PblMatrix mWorld = m_amDefaultPose[uiBone] * mParent;
-    m_amDefaultPose[uiBone] = mWorld;
+    m_amDefaultPose[uiBone] = m_amDefaultPose[uiBone] * mParent;
     m_amDefaultPoseInv[uiBone] = m_amDefaultPose[uiBone].GetInverseFast();
     for (int iChild = m_aConnections[uiBone].iChild; iChild >= 0;
          iChild = m_aConnections[iChild].iSibling)

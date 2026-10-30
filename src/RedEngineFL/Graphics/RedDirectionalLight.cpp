@@ -44,28 +44,28 @@ void RedDirectionalLight::DebugDraw() const
         return;
     }
 
-    RedColor color;
-    color.r = (unsigned char)(int)(m_color.r * 255.0f);
-    color.g = (unsigned char)(int)(m_color.g * 255.0f);
-    color.b = (unsigned char)(int)(m_color.b * 255.0f);
-    color.a = (unsigned char)(int)(m_color.a * 255.0f);
-
-    const PblMatrix& m = m_boundingRegion->mMatrix;
-    const PblVector4& size = m_boundingRegion->mSize;
-
     switch (m_boundingRegion->mType)
     {
     case PblRegion::type_sphere:
-        RedDebug::DrawSphere(PblVector3(m.m[3][0], m.m[3][1], m.m[3][2]), size.w, color);
+        RedDebug::DrawSphere(m_boundingRegion->mMatrix.GetTranslation(),
+                             m_boundingRegion->mSize.w,
+                             RedColor((unsigned char)(int)(m_color.r * 255.0f),
+                                      (unsigned char)(int)(m_color.g * 255.0f),
+                                      (unsigned char)(int)(m_color.b * 255.0f),
+                                      (unsigned char)(int)(m_color.a * 255.0f)));
         break;
 
     case PblRegion::type_box:
     case PblRegion::type_box_aligned:
     {
-        PblBox box;
-        box._vMin = PblVector3(-size.x, -size.y, -size.z);
-        box._vMax = PblVector3(size.x, size.y, size.z);
-        RedDebug::DrawOBB(box, m, color);
+        RedDebug::DrawOBB(PblBox(-m_boundingRegion->mSize.x, -m_boundingRegion->mSize.y,
+                                 -m_boundingRegion->mSize.z, m_boundingRegion->mSize.x,
+                                 m_boundingRegion->mSize.y, m_boundingRegion->mSize.z),
+                          m_boundingRegion->mMatrix,
+                          RedColor((unsigned char)(int)(m_color.r * 255.0f),
+                                   (unsigned char)(int)(m_color.g * 255.0f),
+                                   (unsigned char)(int)(m_color.b * 255.0f),
+                                   (unsigned char)(int)(m_color.a * 255.0f)));
         break;
     }
 
@@ -74,12 +74,15 @@ void RedDirectionalLight::DebugDraw() const
     case PblRegion::type_cylinder_yaligned:
     case PblRegion::type_cylinder_zaligned:
     {
-        PblMatrix mBase = m;
-        mBase.m[3][0] = m.m[3][0] - m.m[1][0] * size.y;
-        mBase.m[3][1] = m.m[3][1] - m.m[1][1] * size.y;
-        mBase.m[3][2] = m.m[3][2] - m.m[1][2] * size.y;
-        mBase.m[3][3] = 1.0f;
-        RedDebug::DrawCone(mBase, size.y * 2.0f, size.x, size.x, color);
+        PblMatrix mBase = m_boundingRegion->mMatrix;
+        mBase.SetTranslation(m_boundingRegion->mMatrix.GetTranslation() -
+                             m_boundingRegion->mMatrix.GetYAxis() * m_boundingRegion->mSize.y);
+        RedDebug::DrawCone(mBase, m_boundingRegion->mSize.y * 2.0f, m_boundingRegion->mSize.x,
+                           m_boundingRegion->mSize.x,
+                           RedColor((unsigned char)(int)(m_color.r * 255.0f),
+                                    (unsigned char)(int)(m_color.g * 255.0f),
+                                    (unsigned char)(int)(m_color.b * 255.0f),
+                                    (unsigned char)(int)(m_color.a * 255.0f)));
         break;
     }
 
@@ -126,7 +129,7 @@ void RedDirectionalLight::SetDirection(const PblVector3& vDirection)
 // FUNCTION: SWBF2 0x006d9090
 void RedDirectionalLight::_RecalculateProjectionMatrix() const
 {
-    PblVector3 vU = (gVectorUnitX - m_vDirection * m_vDirection.x) / m_fProjTexTileU;
+    PblVector3 vU = (gVectorUnitX - m_vDirection.x * m_vDirection) / m_fProjTexTileU;
     PblVector3 vV = (gVectorUnitZ - m_vDirection * m_vDirection.z) / m_fProjTexTileV;
 
     m_mProjection.SetXAxis(vU.x, vV.x, 0.0f, 0.0f);

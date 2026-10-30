@@ -72,15 +72,15 @@ void pcNormalMapAdderShader::Begin_Prog1(unsigned int uiBlend, unsigned int) con
     RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
     RedRenderer::pcSetRenderState(D3DRS_ZENABLE, FALSE);
     RedRenderer::pcSetRenderState(D3DRS_FOGENABLE, FALSE);
-    if (uiBlend)
+    if (!uiBlend)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+    }
+    else
     {
         RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
         RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    }
-    else
-    {
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     }
     RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
     RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
@@ -174,8 +174,8 @@ void pcNormalMapAdderShader::Render_Prog1(const RenderItem* pItem, unsigned int)
         RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
         RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         RedRenderer::pcSetTexture(1, m_normalMap2);
-        const float afBlend[4] = { m_blend, m_blend, m_blend, m_blend };
-        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(3, afBlend, 1);
+        const D3DXVECTOR4 blend(m_blend, m_blend, m_blend, m_blend);
+        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(3, &blend.x, 1);
     }
     else
     {
@@ -192,24 +192,10 @@ void pcNormalMapAdderShader::Render_Prog1(const RenderItem* pItem, unsigned int)
     {
         pcRedVertexShaderConstantRegister* pRegs =
             RedRenderer::pcLockVertexShaderConstants(40, 4);
-        const RedTextureTransform& t1 = m_textureTransform1;
-        const RedTextureTransform& t2 = m_textureTransform2;
-        pRegs[40].component[0] = t1(0, 0);
-        pRegs[40].component[1] = t1(1, 0);
-        pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = t1(2, 0);
-        pRegs[41].component[0] = t1(0, 1);
-        pRegs[41].component[1] = t1(1, 1);
-        pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = t1(2, 1);
-        pRegs[42].component[0] = t2(0, 0);
-        pRegs[42].component[1] = t2(1, 0);
-        pRegs[42].component[2] = 0.0f;
-        pRegs[42].component[3] = t2(2, 0);
-        pRegs[43].component[0] = t2(0, 1);
-        pRegs[43].component[1] = t2(1, 1);
-        pRegs[43].component[2] = 0.0f;
-        pRegs[43].component[3] = t2(2, 1);
+        pRegs[40].SetFloats(m_textureTransform1(0, 0), m_textureTransform1(1, 0), 0.0f, m_textureTransform1(2, 0));
+        pRegs[41].SetFloats(m_textureTransform1(0, 1), m_textureTransform1(1, 1), 0.0f, m_textureTransform1(2, 1));
+        pRegs[42].SetFloats(m_textureTransform2(0, 0), m_textureTransform2(1, 0), 0.0f, m_textureTransform2(2, 0));
+        pRegs[43].SetFloats(m_textureTransform2(0, 1), m_textureTransform2(1, 1), 0.0f, m_textureTransform2(2, 1));
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
     }
 

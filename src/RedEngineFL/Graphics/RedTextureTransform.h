@@ -9,11 +9,11 @@ public:
 
     float operator()(int iRow, int iCol) const
     {
-        if (m_bTransform)
+        if (!m_bTransform)
         {
-            return m_Transform[iRow][iCol];
+            return (iRow == iCol) ? 1.0f : 0.0f;
         }
-        return (iRow == iCol) ? 1.0f : 0.0f;
+        return m_Transform[iRow][iCol];
     }
 
     void SetScale(float fScaleX, float fScaleY)

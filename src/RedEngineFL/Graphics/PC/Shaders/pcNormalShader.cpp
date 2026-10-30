@@ -127,7 +127,11 @@ void pcNormalShader::_Init(unsigned int uiFlags,
 {
     s_pNullDetailMap = RedTexture::s_textureHashTable.Find(PblHash("null_detailmap"));
 
-    unsigned int uiState = (uiFlags & 0x20) ? 0x22 : 2;
+    unsigned int uiState = 2;
+    if (uiFlags & 0x20)
+    {
+        uiState = 0x22;
+    }
     if (uiFlags & 0x1c)
     {
         uiState |= (uiFlags & 0x1c);
@@ -139,15 +143,19 @@ void pcNormalShader::_Init(unsigned int uiFlags,
 
     memset(&m_material, 0, sizeof(m_material));
 
-    m_material.diffuseColor.r = color0.r * (1.0f / 255.0f);
-    m_material.diffuseColor.g = color0.g * (1.0f / 255.0f);
-    m_material.diffuseColor.b = color0.b * (1.0f / 255.0f);
-    m_material.diffuseColor.a = color0.a * (1.0f / 255.0f);
+    RedColorValue diffuse;
+    diffuse.r = color0.r * (1.0f / 255.0f);
+    diffuse.g = color0.g * (1.0f / 255.0f);
+    diffuse.b = color0.b * (1.0f / 255.0f);
+    diffuse.a = color0.a * (1.0f / 255.0f);
+    m_material.diffuseColor = diffuse;
 
-    m_material.specularColor.r = color1.r * (1.0f / 255.0f);
-    m_material.specularColor.g = color1.g * (1.0f / 255.0f);
-    m_material.specularColor.b = color1.b * (1.0f / 255.0f);
-    m_material.specularColor.a = color1.a * (1.0f / 255.0f);
+    RedColorValue specular;
+    specular.r = color1.r * (1.0f / 255.0f);
+    specular.g = color1.g * (1.0f / 255.0f);
+    specular.b = color1.b * (1.0f / 255.0f);
+    specular.a = color1.a * (1.0f / 255.0f);
+    m_material.specularColor = specular;
 
     m_material.materialFlags = uiMaterialFlags;
     m_material.specularPower = fSpecularPower;
@@ -416,7 +424,7 @@ unsigned short pcNormalShader::GetShaderChain(pcRedShader** const ppOut, unsigne
 
     if (RedRenderer::pcGetRenderOptions().specularQuality)
     {
-        if (((pMaterial->materialFlags & 0x80) && pItem->pLightingState->numSpecularLights) ||
+        if (((pMaterial->materialFlags & 0x80) && pItem->pLightingState->numSpecularLights > 0) ||
             (pMaterial->materialFlags & 0x100))
         {
             ppOut[uiCount++] = RedRenderer::pcGetSystemShader(SYSTEM_SHADER_SPECULARLIGHTING);
@@ -499,7 +507,7 @@ int pcNormalShader::GetDiffuseMapHash(int iItem, int)
 // FUNCTION: SWBF2 0x006ff980
 unsigned int pcNormalShader::GetZPrepassState() const
 {
-    return (m_material.materialFlags >> 1) & 1;
+    return ((unsigned char)m_material.materialFlags >> 1) & 1;
 }
 
 // FUNCTION: SWBF2 0x006ff9b0
@@ -519,7 +527,14 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
 {
     const RedMaterial* pMaterial = pItem->pRootShader->m_material;
     RedRenderer::pcSetCullMode((pMaterial->materialFlags & 0x10000) ? PCREDCULL_NONE : PCREDCULL_BACK);
-    RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (pItem->flags & 0x20) ? FALSE : TRUE);
+    if (pItem->flags & 0x20)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+    }
 
     if (GetZPrepassState() == 1)
     {
@@ -528,7 +543,7 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
         const unsigned int uiDiffuseMap = pItem->pShadingState
                                               ? pItem->pShadingState->GetIntParam(0x891891e9)
                                               : pMaterial->diffuseMapHash;
-        const RedTexture* pTexture = 0;
+        const RedTexture* pTexture;
         if (uiDiffuseMap)
         {
             pTexture = RedTexture::Find(uiDiffuseMap);
@@ -537,6 +552,10 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
                 RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
                 RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
             }
+        }
+        else
+        {
+            pTexture = 0;
         }
         RedRenderer::pcSetTexture(0, pTexture);
 
@@ -559,9 +578,9 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
         RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
 
         RedColor color;
-        color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
-        color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
         color.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
+        color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
+        color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
         color.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
         color = color * pItem->tweakColor;
 
@@ -572,13 +591,19 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
         pRegs[39].component[3] = color.a * kInv255;
         if (pTransform)
         {
-            pRegs[40].component[0] = (*pTransform)(0, 0);
-            pRegs[40].component[1] = (*pTransform)(1, 0);
+            const float fTx = (*pTransform)(2, 0);
+            const float fYx = (*pTransform)(1, 0);
+            const float fXx = (*pTransform)(0, 0);
+            pRegs[40].component[0] = fXx;
+            pRegs[40].component[1] = fYx;
             pRegs[40].component[2] = 0.0f;
-            pRegs[40].component[3] = (*pTransform)(2, 0);
-            pRegs[41].component[0] = (*pTransform)(0, 1);
-            pRegs[41].component[1] = (*pTransform)(1, 1);
-            pRegs[41].component[3] = (*pTransform)(2, 1);
+            pRegs[40].component[3] = fTx;
+            const float fXy = (*pTransform)(0, 1);
+            const float fYy = (*pTransform)(1, 1);
+            const float fTy = (*pTransform)(2, 1);
+            pRegs[41].component[0] = fXy;
+            pRegs[41].component[1] = fYy;
+            pRegs[41].component[3] = fTy;
         }
         else
         {
@@ -661,27 +686,27 @@ void pcNormalShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) cons
         return;
 
     case 2:
-        if (uiPass != 0)
+        if (uiPass == 0)
         {
-            break;
+            RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+            return;
         }
-        RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-        return;
+        break;
 
     case 3:
         RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
@@ -718,56 +743,53 @@ void pcNormalShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) cons
 
     case 4:
     {
-        if (uiPass != 0)
+        if (uiPass == 0)
         {
-            break;
+            RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+            RedRenderer::pcSetTexture(1, RedShadowMap::GetShadowMapTexture());
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, RedShadowMap::GetShadowMapWrapMode());
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, RedShadowMap::GetShadowMapWrapMode());
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS,
+                                                D3DTTFF_COUNT3 | D3DTTFF_PROJECTED);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
+
+            PblMatrix mCamera = RedRenderer::GetCamera()->GetMatrix();
+            mCamera.m[2][0] = -mCamera.m[2][0];
+            mCamera.m[2][1] = -mCamera.m[2][1];
+            mCamera.m[2][2] = -mCamera.m[2][2];
+            mCamera.m[2][3] = 0.0f;
+            const PblVector4& vU = RedShadowMap::_vShadowMapTransformU;
+            const PblVector4& vV = RedShadowMap::_vShadowMapTransformV;
+            const PblVector4& vW = RedShadowMap::_vShadowMapTransformW;
+            PblMatrix mShadow(PblVector3(vU.x, vV.x, vW.x), PblVector3(vU.y, vV.y, vW.y),
+                              PblVector3(vU.z, vV.z, vW.z), PblVector3(vU.w, vV.w, vW.w));
+            PblMatrix mTexture;
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mShadow));
+            RedRenderer::pcFFSetTextureTransform(1, mTexture);
+
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+            return;
         }
-        RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-        RedRenderer::pcSetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
-        RedRenderer::pcSetTexture(1, RedShadowMap::GetShadowMapTexture());
-        RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, RedShadowMap::GetShadowMapWrapMode());
-        RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, RedShadowMap::GetShadowMapWrapMode());
-        RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS,
-                                            D3DTTFF_COUNT3 | D3DTTFF_PROJECTED);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
-
-        PblMatrix mCamera = RedRenderer::GetCamera()->GetMatrix();
-        mCamera.m[2][0] = -mCamera.m[2][0];
-        mCamera.m[2][1] = -mCamera.m[2][1];
-        mCamera.m[2][2] = -mCamera.m[2][2];
-        mCamera.m[2][3] = 0.0f;
-        const PblVector4& vU = RedShadowMap::_vShadowMapTransformU;
-        const PblVector4& vV = RedShadowMap::_vShadowMapTransformV;
-        const PblVector4& vW = RedShadowMap::_vShadowMapTransformW;
-        PblMatrix mShadow;
-        mShadow.m[0][0] = vU.x; mShadow.m[0][1] = vV.x; mShadow.m[0][2] = vW.x; mShadow.m[0][3] = 0.0f;
-        mShadow.m[1][0] = vU.y; mShadow.m[1][1] = vV.y; mShadow.m[1][2] = vW.y; mShadow.m[1][3] = 0.0f;
-        mShadow.m[2][0] = vU.z; mShadow.m[2][1] = vV.z; mShadow.m[2][2] = vW.z; mShadow.m[2][3] = 0.0f;
-        mShadow.m[3][0] = vU.w; mShadow.m[3][1] = vV.w; mShadow.m[3][2] = vW.w; mShadow.m[3][3] = 1.0f;
-        PblMatrix mTexture;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mShadow));
-        RedRenderer::pcFFSetTextureTransform(1, mTexture);
-
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-        RedRenderer::pcSetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
-        RedRenderer::pcSetTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-        return;
+        break;
     }
 
     default:
@@ -833,10 +855,15 @@ void pcNormalShader::Begin_Prog1(unsigned int uiState, unsigned int) const
     }
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 6);
-    pRegs[39].component[0] = RedColor::WHITE.r * kInv255;
-    pRegs[39].component[1] = RedColor::WHITE.g * kInv255;
-    pRegs[39].component[2] = RedColor::WHITE.b * kInv255;
-    pRegs[39].component[3] = RedColor::WHITE.a * kInv255;
+    RedColorValue white;
+    white.r = RedColor::WHITE.r * kInv255;
+    white.g = RedColor::WHITE.g * kInv255;
+    white.b = RedColor::WHITE.b * kInv255;
+    white.a = RedColor::WHITE.a * kInv255;
+    pRegs[39].component[0] = white.r;
+    pRegs[39].component[1] = white.g;
+    pRegs[39].component[2] = white.b;
+    pRegs[39].component[3] = white.a;
     pRegs[40].component[0] = 1.0f;
     pRegs[40].component[1] = 0.0f;
     pRegs[40].component[2] = 0.0f;
@@ -870,9 +897,9 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
     const RedMaterial* pMaterial = pItem->pRootShader->m_material;
 
     RedColor color;
-    color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
-    color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
     color.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
+    color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
+    color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
     color.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
     color = color * pItem->tweakColor;
 
@@ -897,10 +924,8 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
         RedRenderer::pcSetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
         RedRenderer::pcSetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
         RedRenderer::pcSetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
-        const D3DCOLOR ambient = D3DCOLOR_ARGB(color.a, color.r, color.g, color.b);
-        if (ambient != D3DCOLOR_ARGB(RedColor::WHITE.a, RedColor::WHITE.r, RedColor::WHITE.g,
-                                     RedColor::WHITE.b) &&
-            !(pItem->uiEnvState & 0x1f))
+        const D3DCOLOR ambient = color.GetARGB();
+        if (ambient != RedColor::WHITE.GetARGB() && !(pItem->uiEnvState & 0x1f))
         {
             RedRenderer::pcSetRenderState(D3DRS_AMBIENT, ambient);
         }
@@ -923,7 +948,8 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
         const bool bTransparent = (uiMatFlags & 0x46) != 0;
         if (bBlend)
         {
-            RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, !bTransparent && !(pItem->flags & 0x20));
+            const bool bZWrite = !bTransparent && !(pItem->flags & 0x20);
+            RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, bZWrite ? TRUE : FALSE);
             RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
             RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
             if (pMaterial->materialFlags & 0x40)
@@ -969,7 +995,8 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
     {
         const bool bAlphaTest = ((pMaterial->materialFlags >> 1) & 1) != 0;
         const bool bTransparent = (pMaterial->materialFlags & 0x46) != 0;
-        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, !bTransparent && !(pItem->flags & 0x20));
+        const bool bZWrite = !bTransparent && !(pItem->flags & 0x20);
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, bZWrite ? TRUE : FALSE);
         if (pMaterial->materialFlags & 0x40)
         {
             RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
@@ -998,7 +1025,7 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
             bTexture = false;
             break;
         }
-        if (pMaterial->materialFlags & 2)
+        if ((pMaterial->materialFlags >> 1) & 1)
         {
             RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
             RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
@@ -1257,7 +1284,8 @@ void pcNormalShader::SetData(const RedShaderData& data)
 {
     if (m_material.materialFlags & 0xf000000)
     {
-        m_material.animationData = new RedMaterialAnimationData();
+        m_material.animationData = new RedMaterialAnimationData;
+        memset(m_material.animationData, 0, sizeof(RedMaterialAnimationData));
         m_material.animationData->diffuseColor = m_material.diffuseColor;
         m_material.animationData->scrollRateU = 0;
         m_material.animationData->scrollRateV = 0;
@@ -1276,7 +1304,7 @@ void pcNormalShader::SetData(const RedShaderData& data)
         }
         else if (m_material.materialFlags & 0x4000000)
         {
-            m_material.animationData->numRows = (unsigned char)(int)(float)sqrt((double)(float)data.uiData0);
+            m_material.animationData->numRows = (unsigned char)(int)sqrt((float)data.uiData0);
             m_material.animationData->numCols = m_material.animationData->numRows;
             m_material.animationData->frameRate = data.uiData1;
         }
@@ -1325,13 +1353,11 @@ void pcNormalShader::UpdateAnimation()
     }
     else if (m_material.materialFlags & 0x4000000)
     {
-        const int iNumRows = pAnim->numRows;
-        const int iNumCols = pAnim->numCols;
-        const int iFrame = (int)(pAnim->frameRate * fTime) % (iNumRows * iNumCols);
-        const int iRow = iFrame / iNumCols;
-        const int iCol = iFrame % iNumCols;
-        fScrollU += (float)iCol / (float)iNumCols;
-        fScrollV += (float)iRow / (float)iNumRows;
+        const int iFrame = (int)(pAnim->frameRate * fTime) % (pAnim->numRows * pAnim->numCols);
+        const int iRow = iFrame / pAnim->numCols;
+        const int iCol = iFrame - pAnim->numCols * iRow;
+        fScrollU += (float)iCol / (float)pAnim->numCols;
+        fScrollV += (float)iRow / (float)pAnim->numRows;
     }
     else if (m_material.materialFlags & 0x2000000)
     {

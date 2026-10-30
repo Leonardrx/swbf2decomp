@@ -176,7 +176,14 @@ void pcInterfaceShader::Render_Fixed(const RenderItem* pItem, unsigned int) cons
 
     RedRenderer::pcSetTexture(0, m_textureHash ? RedTexture::Find(m_textureHash) : 0);
     RedRenderer::pcSetTexture(1, m_bitmapMaskHash ? RedTexture::Find(m_bitmapMaskHash) : 0);
-    RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, (m_materialFlags & 0x40) ? D3DBLEND_ONE : D3DBLEND_INVSRCALPHA);
+    if (m_materialFlags & 0x40)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    }
 
     switch (m_mode)
     {
@@ -242,9 +249,8 @@ void pcInterfaceShader::Render_Fixed(const RenderItem* pItem, unsigned int) cons
         mShadow.m[3][0] += 1.5f;
         mShadow.m[3][1] -= 1.5f;
         RedRenderer::pcSetTransform(D3DTS_WORLD, mShadow);
-        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR,
-                                      D3DCOLOR_ARGB(pItem->tweakColor.a >> 1, RedColor::BLACK.r,
-                                                    RedColor::BLACK.g, RedColor::BLACK.b));
+        const RedColor shadowColor(RedColor::BLACK, pItem->tweakColor.a >> 1);
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, shadowColor.GetARGB());
         pItem->pPrim->Draw();
     }
     RedRenderer::pcSetTransform(D3DTS_WORLD, *pItem->pmObjWorld);
@@ -296,12 +302,12 @@ void pcInterfaceShader::Render_Prog1(const RenderItem* pItem, unsigned int) cons
         pRegs[40].component[3] = -2.0f;
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
-        float shadowColor[4];
-        shadowColor[0] = RedColor::BLACK.r * (1.0f / 255.0f);
-        shadowColor[1] = RedColor::BLACK.g * (1.0f / 255.0f);
-        shadowColor[2] = RedColor::BLACK.b * (1.0f / 255.0f);
-        shadowColor[3] = (unsigned char)(pItem->tweakColor.a >> 1) * (1.0f / 255.0f);
-        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, shadowColor, 1);
+        PblVector4 shadowColor;
+        shadowColor.x = RedColor::BLACK.r * (1.0f / 255.0f);
+        shadowColor.y = RedColor::BLACK.g * (1.0f / 255.0f);
+        shadowColor.z = RedColor::BLACK.b * (1.0f / 255.0f);
+        shadowColor.w = (unsigned char)(pItem->tweakColor.a >> 1) * (1.0f / 255.0f);
+        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &shadowColor.x, 1);
         pItem->pPrim->Draw();
     }
 
@@ -314,12 +320,12 @@ void pcInterfaceShader::Render_Prog1(const RenderItem* pItem, unsigned int) cons
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     const RedColor& c = pItem->tweakColor;
-    float color[4];
-    color[0] = c.r * (1.0f / 255.0f);
-    color[1] = c.g * (1.0f / 255.0f);
-    color[2] = c.b * (1.0f / 255.0f);
-    color[3] = c.a * (1.0f / 255.0f);
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, color, 1);
+    PblVector4 color;
+    color.x = c.r * (1.0f / 255.0f);
+    color.y = c.g * (1.0f / 255.0f);
+    color.z = c.b * (1.0f / 255.0f);
+    color.w = c.a * (1.0f / 255.0f);
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &color.x, 1);
     pItem->pPrim->Draw();
 }
 

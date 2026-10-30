@@ -274,15 +274,15 @@ pcRedShaderDef* pcWaterShader::GetShaderDef() const
 // FUNCTION: SWBF2 0x007096c0
 unsigned int pcWaterShader::GetState_Fixed(const RenderItem*) const
 {
-    if (!RedRenderer::pcIsNearScene())
+    if (RedRenderer::pcIsNearScene())
     {
-        return 0;
+        if (s_specularEnable && RedRenderer::pcGetRenderOptions().waterQuality == QUALITY_HIGH)
+        {
+            return 2;
+        }
+        return 1;
     }
-    if (s_specularEnable && RedRenderer::pcGetRenderOptions().waterQuality == QUALITY_HIGH)
-    {
-        return 2;
-    }
-    return 1;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00709700
@@ -462,58 +462,35 @@ void pcWaterShader::Render_Prog2(const RenderItem* pItem, unsigned int uiPass) c
         if (uiPass == 1)
         {
             pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 4);
-            pRegs[40].component[0] = -s_vSpecularDirection.x;
-            pRegs[40].component[1] = -s_vSpecularDirection.y;
-            pRegs[40].component[2] = -s_vSpecularDirection.z;
             pRegs[40].component[3] = 0.5f;
-            pRegs[41].component[0] = _IdentityMatrix._11;
-            pRegs[41].component[1] = _IdentityMatrix._21;
-            pRegs[41].component[2] = 0.0f;
-            pRegs[41].component[3] = 1.0f;
-            pRegs[42].component[0] = _IdentityMatrix._12;
-            pRegs[42].component[1] = _IdentityMatrix._22;
-            pRegs[42].component[2] = 0.0f;
-            pRegs[42].component[3] = 1.0f;
-            pRegs[43].component[0] = 0.0f;
-            pRegs[43].component[1] = 0.5f;
-            pRegs[43].component[2] = -0.5f;
-            pRegs[43].component[3] = 0.0f;
+            pRegs[40].SetFloats(-s_vSpecularDirection.x, -s_vSpecularDirection.y, -s_vSpecularDirection.z);
+            pRegs[41].SetFloats(_IdentityMatrix._11, _IdentityMatrix._21, 0.0f, 1.0f);
+            pRegs[42].SetFloats(_IdentityMatrix._12, _IdentityMatrix._22, 0.0f, 1.0f);
+            pRegs[43].SetFloats(0.0f, 0.5f, -0.5f, 0.0f);
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
             RedRenderer::pcSetTexture(0, m_projectedNormalMap);
             RedRenderer::pcSetTexture(1, m_reflectionMap);
 
-            const float afScale[4] = { 0.03f, 0.03f, 0.03f, 0.03f };
-            RedRenderer::pcGetDevice()->SetPixelShaderConstantF(7, afScale, 1);
+            const RedColorValue scale(0.03f, 0.03f, 0.03f, 0.03f);
+            RedRenderer::pcGetDevice()->SetPixelShaderConstantF(7, &scale.r, 1);
         }
     }
     else if (pItem->uiShaderState == 5 && uiPass == 1)
     {
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 6);
-        pRegs[40].component[0] = -s_vSpecularDirection.x;
-        pRegs[40].component[1] = -s_vSpecularDirection.y;
-        pRegs[40].component[2] = -s_vSpecularDirection.z;
         pRegs[40].component[3] = 32.0f;
-        pRegs[41].component[0] = 0.0f;
-        pRegs[41].component[1] = 0.5f;
-        pRegs[41].component[2] = -0.5f;
+        pRegs[40].SetFloats(-s_vSpecularDirection.x, -s_vSpecularDirection.y, -s_vSpecularDirection.z);
         pRegs[41].component[3] = 0.0f;
-        pRegs[42].component[0] = m_normalMapTransform1(0, 0);
-        pRegs[42].component[1] = m_normalMapTransform1(1, 0);
-        pRegs[42].component[2] = 0.0f;
+        pRegs[41].SetFloats(0.0f, 0.5f, -0.5f);
         pRegs[42].component[3] = m_normalMapTransform1(2, 0);
-        pRegs[43].component[0] = m_normalMapTransform1(0, 1);
-        pRegs[43].component[1] = m_normalMapTransform1(1, 1);
-        pRegs[43].component[2] = 0.0f;
+        pRegs[42].SetFloats(m_normalMapTransform1(0, 0), m_normalMapTransform1(1, 0), 0.0f);
         pRegs[43].component[3] = m_normalMapTransform1(2, 1);
-        pRegs[44].component[0] = m_normalMapTransform2(0, 0);
-        pRegs[44].component[1] = m_normalMapTransform2(1, 0);
-        pRegs[44].component[2] = 0.0f;
+        pRegs[43].SetFloats(m_normalMapTransform1(0, 1), m_normalMapTransform1(1, 1), 0.0f);
         pRegs[44].component[3] = m_normalMapTransform2(2, 0);
-        pRegs[45].component[0] = m_normalMapTransform2(0, 1);
-        pRegs[45].component[1] = m_normalMapTransform2(1, 1);
-        pRegs[45].component[2] = 0.0f;
+        pRegs[44].SetFloats(m_normalMapTransform2(0, 0), m_normalMapTransform2(1, 0), 0.0f);
         pRegs[45].component[3] = m_normalMapTransform2(2, 1);
+        pRegs[45].SetFloats(m_normalMapTransform2(0, 1), m_normalMapTransform2(1, 1), 0.0f);
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         RedRenderer::pcSetTexture(0, m_normalMap1);
@@ -521,9 +498,9 @@ void pcWaterShader::Render_Prog2(const RenderItem* pItem, unsigned int uiPass) c
         RedRenderer::pcSetTexture(2, m_reflectionMap);
         RedRenderer::pcSetTexture(3, RedTexture::Find(kuiCubeNormalizationMap));
 
-        const float afBlend[4] = { m_normalMapBlend, m_normalMapBlend,
-                                   m_normalMapBlend, m_normalMapBlend };
-        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(7, afBlend, 1);
+        const RedColorValue blend(m_normalMapBlend, m_normalMapBlend,
+                                  m_normalMapBlend, m_normalMapBlend);
+        RedRenderer::pcGetDevice()->SetPixelShaderConstantF(7, &blend.r, 1);
     }
 
     RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &s_refractionColor.r, 1);
@@ -790,13 +767,10 @@ void pcWaterShader::_Read(PblFileChunk& chunk) const
 // FUNCTION: SWBF2 0x0070af20
 void pcWaterShader::_StaticInit() const
 {
-    static const RedColorValue kWhite(1.0f, 1.0f, 1.0f, 1.0f);
-    static const RedColorValue kFresnel(0.0f, 0.0f, 0.0f, 1.0f);
-
-    s_refractionColor = kWhite;
-    s_reflectionColor = kWhite;
     s_vSpecularDirection = PblVector3(1.0f, 0.0f, 0.0f);
-    s_fresnelMinMax = kFresnel;
+    s_refractionColor = RedColorValue(1.0f, 1.0f, 1.0f, 1.0f);
+    s_reflectionColor = RedColorValue(1.0f, 1.0f, 1.0f, 1.0f);
+    s_fresnelMinMax = RedColorValue(0.0f, 0.0f, 0.0f, 1.0f);
     s_specularEnable = true;
 
     memset(&s_d3dMat, 0, sizeof(s_d3dMat));
@@ -859,6 +833,23 @@ void pcWaterShader::Begin_Prog2(unsigned int uiState, unsigned int uiPass) const
     RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
+    if (uiState == 3 && uiPass != 0)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        if (uiPass == 1)
+        {
+            const PblVector3 vForward = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
+            PblMatrix mFacing = gMatrixIdentity;
+            PblMatrix mScaled = gMatrixIdentity;
+            const float fAngle = (float)atan2((double)vForward.z, (double)vForward.x) - PblMath::fHalfPi;
+            mFacing.RotateZ(fAngle);
+            mScaled.Scale(0.03f, 0.03f, 0.03f);
+            _IdentityMatrix = D3DXMATRIXA16(&(mScaled * mFacing).m[0][0]);
+        }
+        return;
+    }
+
     if (uiPass == 0)
     {
         RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
@@ -868,21 +859,6 @@ void pcWaterShader::Begin_Prog2(unsigned int uiState, unsigned int uiPass) const
     }
     RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    if (uiState != 3 || uiPass != 1)
-    {
-        return;
-    }
-
-    const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
-    const float fAngle = (float)atan2((double)mCamera.m[2][2], (double)mCamera.m[2][0]) - PblMath::fHalfPi;
-    PblMatrix mFacing;
-    PblMatrix mScaled;
-    D3DXMatrixIdentity(reinterpret_cast<D3DXMATRIX*>(&mFacing));
-    D3DXMatrixIdentity(reinterpret_cast<D3DXMATRIX*>(&mScaled));
-    mFacing.RotateZ(fAngle);
-    mScaled.Scale(0.03f, 0.03f, 0.03f);
-    D3DXMatrixMultiply(&_IdentityMatrix, reinterpret_cast<const D3DXMATRIX*>(&mScaled),
-                       reinterpret_cast<const D3DXMATRIX*>(&mFacing));
 }
 
 // FUNCTION: SWBF2 0x00708c00

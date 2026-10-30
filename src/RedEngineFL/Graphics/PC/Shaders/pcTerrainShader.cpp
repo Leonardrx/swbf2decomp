@@ -784,23 +784,26 @@ unsigned int pcTerrainShader::GetState_Prog1(const RenderItem* pItem) const
         }
 
         unsigned int uiNumLights = uiEnvState & 3;
-        if (uiNumLights == 0)
+        if (uiNumLights != 0)
         {
-            return m_uiLayerIndex[2] < 16 ? 16 : 17;
+            if (uiNumLights == 3 && pItem->pLightingState->pOmniLights[3])
+            {
+                uiNumLights = 4;
+            }
+            if (s_uiOptions & 0x40000)
+            {
+                return (m_uiLayerIndex[2] >= 16) + 4 * uiNumLights + 16;
+            }
+            return (m_uiLayerIndex[2] >= 16) + 4 * uiNumLights + 14;
         }
-        if (uiNumLights == 3 && pItem->pLightingState->pOmniLights[3])
-        {
-            uiNumLights = 4;
-        }
-        if (s_uiOptions & 0x40000)
-        {
-            return (m_uiLayerIndex[2] >= 16) + 4 * uiNumLights + 16;
-        }
-        return (m_uiLayerIndex[2] >= 16) + 4 * uiNumLights + 14;
+        return (m_uiLayerIndex[2] >= 16) + 16;
     }
 
-    return ((s_uiOptions & 0x10000) ? 4 : 0) + ((m_uiOptions & 1) ? 4 : 2)
-           + (m_uiLayerIndex[2] >= 16);
+    if (m_uiOptions & 1)
+    {
+        return ((s_uiOptions & 0x10000) ? 4 : 0) + 4 + (m_uiLayerIndex[2] >= 16);
+    }
+    return ((s_uiOptions & 0x10000) ? 4 : 0) + 2 + (m_uiLayerIndex[2] >= 16);
 }
 
 // FUNCTION: SWBF2 0x006faea0
@@ -913,11 +916,7 @@ void pcTerrainShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPass)
     const unsigned int uiState = pItem->uiShaderState;
     unsigned int uiNumLayers = 0;
 
-    if (uiState <= 1 || (uiState > 9 && uiState <= 15))
-    {
-        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (pItem->flags & 0x20) == 0);
-    }
-    else if (uiState <= 9)
+    if (uiState > 1 && uiState <= 9)
     {
         if (uiPass == 0)
         {
@@ -935,6 +934,10 @@ void pcTerrainShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPass)
                 uiNumLayers = 3;
             }
         }
+    }
+    else if (uiState <= 15)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (pItem->flags & 0x20) == 0);
     }
     else if (uiState >= 18 && uiPass < GetShaderDef()->m_states[uiState].uiNumPasses - 1)
     {

@@ -4,11 +4,10 @@
 #include <stddef.h>
 #include <d3d9.h>
 
+#include "RedColor.h"
 #include "RedTextureTransform.h"
 
 struct RedMaterialAnimationData;
-
-class RedColor;
 
 class RedColorValue
 {
@@ -34,6 +33,16 @@ public:
 
     static RedColorValue BLACK;
 };
+
+// FUNCTION: SWBF2 0x004bd900
+inline RedColorValue::RedColorValue(const RedColor& color)
+{
+    const float kInv255 = 1.0f / 255.0f;
+    r = color.r * kInv255;
+    g = color.g * kInv255;
+    b = color.b * kInv255;
+    a = color.a * kInv255;
+}
  
  
  

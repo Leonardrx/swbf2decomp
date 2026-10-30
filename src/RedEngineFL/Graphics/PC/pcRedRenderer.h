@@ -889,6 +889,14 @@ struct pcRedVertexShaderConstantRegister
         component[2] = fZ;
     }
 
+    void SetFloats(float fX, float fY, float fZ, float fW)
+    {
+        component[0] = fX;
+        component[1] = fY;
+        component[2] = fZ;
+        component[3] = fW;
+    }
+
     float component[4];
 };
  

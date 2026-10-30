@@ -33,14 +33,13 @@ void RedPose::GetSkinMatrices(PblMatrix* pMatrices, unsigned char const* pIndice
     {
         unsigned int uiBone = pIndices[i];
         PblMatrix const& rBone = _GetBoneMatrix(uiBone);
-        if (&rBone == &_IdentityMatrix)
+        if (&rBone != &_IdentityMatrix)
         {
-            pMatrices[i] = m_pSkeleton->m_amDefaultPoseInv[uiBone];
+            pMatrices[i] = m_pSkeleton->m_amDefaultPoseInv[uiBone] * rBone;
         }
         else
         {
-            PblMatrix mSkin = m_pSkeleton->m_amDefaultPoseInv[uiBone] * rBone;
-            pMatrices[i] = mSkin;
+            pMatrices[i] = m_pSkeleton->m_amDefaultPoseInv[uiBone];
         }
     }
 }

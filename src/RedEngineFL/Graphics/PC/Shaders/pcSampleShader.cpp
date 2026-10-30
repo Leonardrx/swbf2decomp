@@ -211,19 +211,24 @@ void pcSampleShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
     mTexture.m[2][0] = 0.0f; mTexture.m[2][1] = 0.0f; mTexture.m[2][2] = 1.0f; mTexture.m[2][3] = 0.0f;
     mTexture.m[3][0] = 0.0f; mTexture.m[3][1] = 0.0f; mTexture.m[3][2] = 0.0f; mTexture.m[3][3] = 1.0f;
 
+    const float fOffsetX = 1.0f / (fMaxX - fMinX) * (m_outputX - 0.5f) - 1.0f;
+    const float fOffsetY = -(1.0f / (fMaxY - fMinY) * (m_outputY - 0.5f) - 1.0f);
+
     PblMatrix mProjection;
     memset(&mProjection, 0, 2 * sizeof(mProjection.m[0]));
     mProjection.m[2][0] = 0.0f; mProjection.m[2][1] = 0.0f; mProjection.m[2][2] = 1.0f; mProjection.m[2][3] = 0.0f;
-    mProjection.m[3][0] = 1.0f / (fMaxX - fMinX) * (m_outputX - 0.5f) - 1.0f;
-    mProjection.m[3][1] = -(1.0f / (fMaxY - fMinY) * (m_outputY - 0.5f) - 1.0f);
+    mProjection.m[3][0] = fOffsetX;
+    mProjection.m[3][1] = fOffsetY;
     mProjection.m[3][2] = 0.0f;
     mProjection.m[3][3] = 1.0f;
     RedRenderer::pcFFSetTextureTransform(0, mTexture);
     RedRenderer::pcSetTransform(D3DTS_PROJECTION, mProjection);
 
-    RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR,
-                                  D3DCOLOR_ARGB((int)(m_scale.a * 255.0f), (int)(m_scale.r * 255.0f),
-                                                (int)(m_scale.g * 255.0f), (int)(m_scale.b * 255.0f)));
+    const unsigned char ucB = (unsigned char)(int)(m_scale.b * 255.0f);
+    const unsigned char ucG = (unsigned char)(int)(m_scale.g * 255.0f);
+    const unsigned char ucR = (unsigned char)(int)(m_scale.r * 255.0f);
+    const unsigned char ucA = (unsigned char)(int)(m_scale.a * 255.0f);
+    RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(ucA, ucR, ucG, ucB));
     RedRenderer::pcSetTexture(0, m_inputTexture);
     RedRenderer::pcLoadFormat(m_pVertexFormat);
     pItem->pPrim->Draw();
@@ -254,10 +259,7 @@ void pcSampleShader::_Init(unsigned int uiFlags,
     m_uiMaterialFlags = uiMaterialFlags;
     m_pVertexFormat = pcRedVertexFormat::Create(uiFlags, uiFlags);
     m_inputTexture = 0;
-    m_scale.r = kInv255;
-    m_scale.g = kInv255;
-    m_scale.b = kInv255;
-    m_scale.a = kInv255;
+    m_scale = RedColorValue(kInv255, kInv255, kInv255, kInv255);
     m_outputX = 0.0f;
     m_outputY = 0.0f;
     m_inputOffsetX = 0.0f;

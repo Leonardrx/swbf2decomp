@@ -63,15 +63,30 @@ void pcHDRShader::Begin_Prog1(unsigned int, unsigned int) const
     RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     RedRenderer::pcSetRenderState(D3DRS_FOGENABLE, FALSE);
 
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MAXMIPLEVEL, 0);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        RedRenderer::pcSetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
-    }
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(2, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MAXMIPLEVEL, 0);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_POINT);
 }
 
 // FUNCTION: SWBF2 0x00713b80
@@ -88,10 +103,10 @@ void pcHDRShader::End_Fixed(unsigned int, unsigned int) const
 // FUNCTION: SWBF2 0x00713bb0
 void pcHDRShader::End_Prog1(unsigned int, unsigned int) const
 {
-    for (unsigned int i = 0; i < 4; i++)
-    {
-        RedRenderer::pcSetTexture(i, 0);
-    }
+    RedRenderer::pcSetTexture(0, 0);
+    RedRenderer::pcSetTexture(1, 0);
+    RedRenderer::pcSetTexture(2, 0);
+    RedRenderer::pcSetTexture(3, 0);
 }
 
 // FUNCTION: SWBF2 0x00713be0
@@ -194,7 +209,7 @@ void pcHDRShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 
     if (m_state == HDR_MODE_SCALEANDBLOOM)
     {
-        RedRenderer::pcSetTexture(0, RedTexture::Find(PblHash("white")));
+        RedRenderer::pcSetTexture(0, RedTexture::Find(0xde020766));
         RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
         RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);

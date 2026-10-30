@@ -191,11 +191,11 @@ void pcDecalShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
 void pcDecalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 1);
-    const RedColor& c = pItem->tweakColor;
-    pRegs[39].component[0] = c.r * (1.0f / 255.0f);
-    pRegs[39].component[1] = c.g * (1.0f / 255.0f);
-    pRegs[39].component[2] = c.b * (1.0f / 255.0f);
-    pRegs[39].component[3] = c.a * (1.0f / 255.0f);
+    const RedColorValue color(pItem->tweakColor);
+    pRegs[39].component[0] = color.r;
+    pRegs[39].component[1] = color.g;
+    pRegs[39].component[2] = color.b;
+    pRegs[39].component[3] = color.a;
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
     RedRenderer::pcLoadFormat(m_pVertexFormat);
 
@@ -213,13 +213,17 @@ void pcDecalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
         RedRenderer::pcSetTexture(0, RedTexture::s_textureHashTable.Find(m_uiBumpHash));
     }
 
-    float afConstants[2][4] = { { 0.5f, 0.5f, 0.5f, 0.5f } };
     const RedColorValue& light = RedLight::m_sGlobalDirectionals[0]->m_color;
-    afConstants[1][0] = light.r;
-    afConstants[1][1] = light.g;
-    afConstants[1][2] = light.b;
-    afConstants[1][3] = light.a;
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, afConstants[0], 2);
+    RedColorValue afConstants[2];
+    afConstants[0].r = 0.5f;
+    afConstants[0].g = 0.5f;
+    afConstants[0].b = 0.5f;
+    afConstants[0].a = 0.5f;
+    afConstants[1].r = light.r;
+    afConstants[1].g = light.g;
+    afConstants[1].b = light.b;
+    afConstants[1].a = light.a;
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &afConstants[0].r, 2);
 
     pItem->pPrim->Draw();
 }

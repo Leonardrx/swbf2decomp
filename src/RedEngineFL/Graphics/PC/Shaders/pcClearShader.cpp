@@ -209,11 +209,16 @@ void pcClearShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
     }
 
     RedRenderer::pcLoadFormat(m_pVertexFormat);
-    RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE,
-                                  (m_uiMaterialFlags & 0x80000)
-                                      ? D3DCOLORWRITEENABLE_ALPHA
-                                      : D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
-                                            D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
+    if (m_uiMaterialFlags & 0x80000)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE,
+                                      D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+                                          D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
+    }
     pItem->pPrim->Draw();
 }
 

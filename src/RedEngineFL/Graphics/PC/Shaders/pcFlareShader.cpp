@@ -170,7 +170,14 @@ void pcFlareShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
     color.b = (unsigned char)(int)(c.b * (1.0f / 255.0f) * m_colorDiffuse.b + 0.5f);
     color.a = (unsigned char)(int)(c.a * (1.0f / 255.0f) * m_colorDiffuse.a + 0.5f);
 
-    RedRenderer::pcSetRenderState(D3DRS_ZENABLE, (m_uiMaterialFlags & 0x20000) ? FALSE : TRUE);
+    if (m_uiMaterialFlags & 0x20000)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZENABLE, FALSE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZENABLE, TRUE);
+    }
 
     if (m_uiMaterialFlags & 0x100000)
     {
@@ -220,7 +227,14 @@ void pcFlareShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     color.b = (unsigned char)(int)(m_colorDiffuse.b * (c.b * (1.0f / 255.0f)) + 0.5f);
     color.a = (unsigned char)(int)(m_colorDiffuse.a * (c.a * (1.0f / 255.0f)) + 0.5f);
 
-    RedRenderer::pcSetRenderState(D3DRS_ZENABLE, (m_uiMaterialFlags & 0x20000) ? FALSE : TRUE);
+    if (m_uiMaterialFlags & 0x20000)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZENABLE, FALSE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZENABLE, TRUE);
+    }
 
     if (m_uiMaterialFlags & 0x100000)
     {
@@ -245,10 +259,14 @@ void pcFlareShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     }
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 1);
-    pRegs[39].component[0] = color.r * (1.0f / 255.0f);
-    pRegs[39].component[1] = color.g * (1.0f / 255.0f);
-    pRegs[39].component[2] = color.b * (1.0f / 255.0f);
-    pRegs[39].component[3] = color.a * (1.0f / 255.0f);
+    const float fR = color.r * (1.0f / 255.0f);
+    const float fG = color.g * (1.0f / 255.0f);
+    const float fB = color.b * (1.0f / 255.0f);
+    const float fA = color.a * (1.0f / 255.0f);
+    pRegs[39].component[0] = fR;
+    pRegs[39].component[1] = fG;
+    pRegs[39].component[2] = fB;
+    pRegs[39].component[3] = fA;
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     RedRenderer::pcSetTexture(0, m_texture);

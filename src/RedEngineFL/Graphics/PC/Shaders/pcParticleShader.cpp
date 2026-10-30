@@ -198,8 +198,22 @@ void pcParticleShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
         RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
         RedRenderer::pcSetFogForBlendMode(RedRenderer::FOGFORBLEND_NORMAL);
     }
-    RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, (m_uiMaterialFlags & 2) ? 0x7f : 1);
-    RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (m_uiMaterialFlags & 0x40000) ? TRUE : FALSE);
+    if (m_uiMaterialFlags & 2)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 1);
+    }
+    if (m_uiMaterialFlags & 0x40000)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    }
 
     const RedColor color = pItem->tweakColor;
     if (pItem->uiShaderState == 1)
@@ -249,11 +263,16 @@ unsigned int pcParticleShader::GetID(unsigned int uiPass) const
 // FUNCTION: SWBF2 0x007034a0
 RenderPhaseT pcParticleShader::GetRenderPhase(const RenderItem* pItem, unsigned int) const
 {
-    if (m_uiMaterialFlags & 0x44)
+    RenderPhaseT phase;
+    if ((m_uiMaterialFlags & 0x44) || pItem->tweakColor.a < 0xff)
     {
-        return RENDERPHASE_TRANSPARENT;
+        phase = RENDERPHASE_TRANSPARENT;
     }
-    return (pItem->tweakColor.a < 0xff) ? RENDERPHASE_TRANSPARENT : RENDERPHASE_OPAQUE;
+    else
+    {
+        phase = RENDERPHASE_OPAQUE;
+    }
+    return phase;
 }
 
 // FUNCTION: SWBF2 0x007034c0
@@ -319,20 +338,25 @@ void pcParticleShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
             RedRenderer::pcSetFogForBlendMode(RedRenderer::FOGFORBLEND_NORMAL);
         }
     }
-    RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, (m_uiMaterialFlags & 2) ? TRUE : FALSE);
-    RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (m_uiMaterialFlags & 0x40000) ? TRUE : FALSE);
-
-    float fFadeScale = 0.0f;
-    float fFadeOffset;
-    if (m_nearFadeEnable)
+    if (m_uiMaterialFlags & 2)
     {
-        fFadeScale = 1.0f / (s_FadeFarDistance - s_FadeNearDistance);
-        fFadeOffset = -(s_FadeNearDistance * fFadeScale);
+        RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
     }
     else
     {
-        fFadeOffset = 1.0f;
+        RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
     }
+    if (m_uiMaterialFlags & 0x40000)
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+    }
+    else
+    {
+        RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    }
+
+    const float fFadeScale = m_nearFadeEnable ? 1.0f / (s_FadeFarDistance - s_FadeNearDistance) : 0.0f;
+    const float fFadeOffset = m_nearFadeEnable ? -(s_FadeNearDistance * fFadeScale) : 1.0f;
 
     const RedColor& color = pItem->tweakColor;
     if (m_blurEnable)
@@ -340,18 +364,10 @@ void pcParticleShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
         RedRenderer::pcSetRenderState(D3DRS_FOGENABLE, FALSE);
         pcRedVertexShaderConstantRegister* pRegs =
             RedRenderer::pcLockVertexShaderConstants(39, 7);
-        pRegs[39].component[0] = color.r * (1.0f / 255.0f);
-        pRegs[39].component[1] = color.g * (1.0f / 255.0f);
-        pRegs[39].component[2] = color.b * (1.0f / 255.0f);
-        pRegs[39].component[3] = color.a * (1.0f / 255.0f);
-        pRegs[40].component[0] = fFadeScale;
-        pRegs[40].component[1] = fFadeOffset;
-        pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = 0.0f;
-        pRegs[41].component[0] = m_fTextureScale;
-        pRegs[41].component[1] = m_fTextureScale;
-        pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = 0.0f;
+        pRegs[39].SetFloats(color.r * (1.0f / 255.0f), color.g * (1.0f / 255.0f),
+                            color.b * (1.0f / 255.0f), color.a * (1.0f / 255.0f));
+        pRegs[40].SetFloats(fFadeScale, fFadeOffset, 0.0f, 0.0f);
+        pRegs[41].SetFloats(m_fTextureScale, m_fTextureScale, 0.0f, 0.0f);
         PblMatrix mTex = *pItem->pmObjWorld * s_blurTexMatrix;
         pRegs[42].SetMatrix4x4(mTex);
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
@@ -362,18 +378,10 @@ void pcParticleShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     {
         pcRedVertexShaderConstantRegister* pRegs =
             RedRenderer::pcLockVertexShaderConstants(39, 3);
-        pRegs[39].component[0] = color.r * (1.0f / 255.0f);
-        pRegs[39].component[1] = color.g * (1.0f / 255.0f);
-        pRegs[39].component[2] = color.b * (1.0f / 255.0f);
-        pRegs[39].component[3] = color.a * (1.0f / 255.0f);
-        pRegs[40].component[0] = fFadeScale;
-        pRegs[40].component[1] = fFadeOffset;
-        pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = 0.0f;
-        pRegs[41].component[0] = m_fTextureScale;
-        pRegs[41].component[1] = m_fTextureScale;
-        pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = 0.0f;
+        pRegs[39].SetFloats(color.r * (1.0f / 255.0f), color.g * (1.0f / 255.0f),
+                            color.b * (1.0f / 255.0f), color.a * (1.0f / 255.0f));
+        pRegs[40].SetFloats(fFadeScale, fFadeOffset, 0.0f, 0.0f);
+        pRegs[41].SetFloats(m_fTextureScale, m_fTextureScale, 0.0f, 0.0f);
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
         RedRenderer::pcSetTexture(0, RedTexture::s_textureHashTable.Find(m_uiTextureHash));
     }

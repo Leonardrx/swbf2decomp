@@ -185,12 +185,9 @@ void pcShadowQuadShader::Render_Fixed(const RenderItem* pItem, unsigned int) con
 void pcShadowQuadShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
     const RedColor& c = pItem->tweakColor;
-    float afColor[4];
-    afColor[0] = c.r * (1.0f / 255.0f);
-    afColor[1] = c.g * (1.0f / 255.0f);
-    afColor[2] = c.b * (1.0f / 255.0f);
-    afColor[3] = c.a * (1.0f / 255.0f);
-    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, afColor, 1);
+    PblVector4 vColor(c.r * (1.0f / 255.0f), c.g * (1.0f / 255.0f), c.b * (1.0f / 255.0f),
+                      c.a * (1.0f / 255.0f));
+    RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &vColor.x, 1);
     RedRenderer::pcLoadFormat(m_pVertexInputFormat);
     pItem->pPrim->Draw();
 }

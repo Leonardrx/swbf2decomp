@@ -173,9 +173,8 @@ void pcRainShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
     const PblMatrix& camAxes = RedRenderer::GetCamera()->GetMatrix();
     const PblMatrix& obj = *pItem->pmObjWorld;
     const PblMatrix& camPos = RedRenderer::GetCamera()->GetMatrix();
-    const float fDepth = camAxes.m[2][1] * (camPos.m[3][1] - obj.m[3][1])
-                       + camAxes.m[2][0] * (camPos.m[3][0] - obj.m[3][0])
-                       + camAxes.m[2][2] * (camPos.m[3][2] - obj.m[3][2]);
+    const float fDepth = DotProduct(camPos.GetTranslation() - obj.GetTranslation(),
+                                    camAxes.GetZAxis());
 
     const float fLineWidth = m_fLineWidth * fPixelsPerUnit;
     float fScale = m_fMaxPixelWidth;
@@ -216,9 +215,8 @@ void pcRainShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     const PblMatrix& camAxes = RedRenderer::GetCamera()->GetMatrix();
     const PblMatrix& obj = *pItem->pmObjWorld;
     const PblMatrix& camPos = RedRenderer::GetCamera()->GetMatrix();
-    const float fDepth = camAxes.m[2][1] * (camPos.m[3][1] - obj.m[3][1])
-                       + camAxes.m[2][0] * (camPos.m[3][0] - obj.m[3][0])
-                       + camAxes.m[2][2] * (camPos.m[3][2] - obj.m[3][2]);
+    const float fDepth = DotProduct(camAxes.GetZAxis(),
+                                    camPos.GetTranslation() - obj.GetTranslation());
 
     const float fLineWidth = m_fLineWidth * fPixelsPerUnit;
     float fScale = m_fMaxPixelWidth;

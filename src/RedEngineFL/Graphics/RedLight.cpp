@@ -1055,18 +1055,9 @@ void RedShadowMap::SetScreenSpaceShadowMap(RedTexture* pTexture, const PblMatrix
     _pShadowMapTexture = pTexture;
     RedShadowMap::_uiShadowMapHash = pTexture ? pTexture->GetName() : 0;
 
-    _vShadowMapTransformU.x = matrix.m[0][0];
-    _vShadowMapTransformU.y = matrix.m[1][0];
-    _vShadowMapTransformU.z = matrix.m[2][0];
-    _vShadowMapTransformU.w = matrix.m[3][0];
-    _vShadowMapTransformV.x = matrix.m[0][1];
-    _vShadowMapTransformV.y = matrix.m[1][1];
-    _vShadowMapTransformV.z = matrix.m[2][1];
-    _vShadowMapTransformV.w = matrix.m[3][1];
-    _vShadowMapTransformW.x = matrix.m[0][3];
-    _vShadowMapTransformW.y = matrix.m[1][3];
-    _vShadowMapTransformW.z = matrix.m[2][3];
-    _vShadowMapTransformW.w = matrix.m[3][3];
+    _vShadowMapTransformU = PblVector4(matrix.m[0][0], matrix.m[1][0], matrix.m[2][0], matrix.m[3][0]);
+    _vShadowMapTransformV = PblVector4(matrix.m[0][1], matrix.m[1][1], matrix.m[2][1], matrix.m[3][1]);
+    _vShadowMapTransformW = PblVector4(matrix.m[0][3], matrix.m[1][3], matrix.m[2][3], matrix.m[3][3]);
     RedRenderer::pcSetShadowMapTransform(_vShadowMapTransformU,
                                          _vShadowMapTransformV,
                                          _vShadowMapTransformW);
@@ -1098,16 +1089,16 @@ void RedLight::ReadGlobals(PblConfig& config)
         switch (data.GetId())
         {
         case 0xa710dc3c:
-            topColor.r = data.GetUint8Arg(0) * kf1by255;
-            topColor.g = data.GetUint8Arg(1) * kf1by255;
-            topColor.b = data.GetUint8Arg(2) * kf1by255;
-            topColor.a = 1.0f;
+            topColor = RedColorValue(data.GetUint8Arg(0) * kf1by255,
+                                     data.GetUint8Arg(1) * kf1by255,
+                                     data.GetUint8Arg(2) * kf1by255,
+                                     1.0f);
             break;
         case 0x4ea76b2a:
-            bottomColor.r = data.GetUint8Arg(0) * kf1by255;
-            bottomColor.g = data.GetUint8Arg(1) * kf1by255;
-            bottomColor.b = data.GetUint8Arg(2) * kf1by255;
-            bottomColor.a = 1.0f;
+            bottomColor = RedColorValue(data.GetUint8Arg(0) * kf1by255,
+                                        data.GetUint8Arg(1) * kf1by255,
+                                        data.GetUint8Arg(2) * kf1by255,
+                                        1.0f);
             break;
         case 0xbb6dd0da:
             uiEnvMap = PblHash(data.GetStringArg(0));
@@ -1163,14 +1154,25 @@ void RedLight::Read(PblFileChunk& chunk)
     {
         PblConfig::Data data = config.ReadNextData();
 
-        PblConfig scope(config.ReadNextScope(), true);
-        if (data.GetId() == 0xe29d1e2f)
+        switch (data.GetId())
         {
+        case 0xe29d1e2f: /* "LIGHT" */
+        {
+            PblConfig scope(config.ReadNextScope(), true);
             ReadLight(scope, PblHash(data.GetStringArg(0)));
+            break;
         }
-        else if (data.GetId() == 0xf7548f33)
+        case 0xf7548f33: /* "GlobalLights" */
         {
+            PblConfig scope(config.ReadNextScope(), true);
             ReadGlobals(scope);
+            break;
+        }
+        default:
+        {
+            PblConfig skipped(config.ReadNextScope(), true);
+            break;
+        }
         }
     }
 }
@@ -1180,11 +1182,6 @@ void RedLight::ReadLight(PblConfig& config, unsigned int uiName)
 {
     PblQuaternion qRotation(1.0f, 0.0f, 0.0f, 0.0f);
     PblVector3 vPosition;
-    RedColorValue color;
-    color.r = RedColor::BLACK.r * kf1by255;
-    color.g = RedColor::BLACK.g * kf1by255;
-    color.b = RedColor::BLACK.b * kf1by255;
-    color.a = RedColor::BLACK.a * kf1by255;
     unsigned int uiType = 0;
     unsigned int uiRegion = 0;
     unsigned int uiTexture = 0;
@@ -1202,6 +1199,11 @@ void RedLight::ReadLight(PblConfig& config, unsigned int uiName)
     bool bCastSpecular = false;
     bool bStatic = false;
     bool bOverbright = false;
+    RedColorValue color;
+    color.r = RedColor::BLACK.r * kf1by255;
+    color.g = RedColor::BLACK.g * kf1by255;
+    color.b = RedColor::BLACK.b * kf1by255;
+    color.a = RedColor::BLACK.a * kf1by255;
 
     while (!config.IsDone())
     {
@@ -1385,16 +1387,16 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
 
     for (PblList<RedLight>::Itor it(s_GlobalList); it != s_GlobalList.End(); ++it)
     {
-        if ((it->m_uiHideInView & (1 << uiView)) || !it->IsVisible(pCamera))
+        RedLight* pLight = it;
+        if ((pLight->m_uiHideInView & (1 << uiView)) || !pLight->IsVisible(pCamera))
         {
             continue;
         }
 
-        RedLight* pLight = it;
         switch (pLight->m_eType)
         {
         case TYPE_DIRECTIONAL:
-            if ((pLight->m_uiFlags & LIGHT_FLAG_STATIC) && !(pLight->m_uiFlags & LIGHT_FLAG_SPECULARCASTER))
+            if ((pLight->m_uiFlags & LIGHT_FLAG_STATIC) && !pLight->IsSpecularCaster())
             {
                 s_VisibleDirectionalLightList.AddLast(&pLight->m_VisibleNode, pLight);
             }
