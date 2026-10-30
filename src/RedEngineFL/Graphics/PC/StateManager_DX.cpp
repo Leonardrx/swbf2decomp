@@ -155,37 +155,52 @@ void StateManagerState::CaptureDeviceState(IDirect3DDevice9* pD3DDev)
 // FUNCTION: SWBF2 0x006b3240
 void StateManagerState::ResetState()
 {
-    memset(m_RenderStates, 0, sizeof(m_RenderStates));
-    memset(m_TextureStates, 0, sizeof(m_TextureStates));
+    for (int i = 0; i < 256; i++)
+    {
+        m_RenderStates[i] = 0;
+    }
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 128; j++)
+        {
+            m_TextureStates[i][j] = 0;
+        }
+    }
 
     for (int i = 0; i < 16; i++)
     {
-        m_StreamData[i].m_pStreamData = 0;
-        m_StreamData[i].m_Offset = 0;
-        m_StreamData[i].m_Stride = 0;
+        m_StreamData[i] = NVStreamData();
     }
     m_IndexData.m_pIndexData = 0;
     m_IndexData.m_BaseVertexIndex = 0;
-
-    for (int i = 0; i < 300; i++)
-    {
-        for (int j = 0; j < 16; j++)
-        {
-            m_Matrices[i][j] = 0.0f;
-        }
-        m_Matrices[i][0] = 1.0f;
-        m_Matrices[i][5] = 1.0f;
-        m_Matrices[i][10] = 1.0f;
-        m_Matrices[i][15] = 1.0f;
-    }
-
-    memset(m_VertexShaderConstants, 0, sizeof(m_VertexShaderConstants));
-    memset(m_PixelShaderConstants, 0, sizeof(m_PixelShaderConstants));
 
     for (int i = 0; i < 8; i++)
     {
         m_Textures[i] = 0;
     }
+
+    for (int i = 0; i < 300; i++)
+    {
+        float* m = m_Matrices[i];
+        m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0.0f;
+        m[0] = m[5] = m[10] = m[15] = 1.0f;
+    }
+
+    for (int i = 0; i < 1024; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            m_VertexShaderConstants[i][j] = 0.0f;
+        }
+    }
+    for (int i = 0; i < 1024; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            m_PixelShaderConstants[i][j] = 0.0f;
+        }
+    }
+
     m_FVF = 0;
     m_PixelShader = 0;
     m_VertexShader = 0;
@@ -229,6 +244,13 @@ StateManager_DX::~StateManager_DX()
         m_pD3DDev->Release();
     }
     m_pD3DDev = 0;
+}
+
+// FUNCTION: SWBF2 0x00715e40
+void StateManager_DX::ClearInstance()
+{
+    delete localInstance_;
+    localInstance_ = 0;
 }
 
 // FUNCTION: SWBF2 0x00715e60

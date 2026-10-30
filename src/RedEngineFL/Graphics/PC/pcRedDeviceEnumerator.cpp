@@ -64,20 +64,27 @@ unsigned int ColorChannelBits(D3DFORMAT fmt)
     switch (fmt)
     {
     case D3DFMT_R8G8B8:
+        return 8;
     case D3DFMT_A8R8G8B8:
+        return 8;
     case D3DFMT_X8R8G8B8:
         return 8;
     case D3DFMT_R5G6B5:
+        return 5;
     case D3DFMT_X1R5G5B5:
+        return 5;
     case D3DFMT_A1R5G5B5:
         return 5;
     case D3DFMT_A4R4G4B4:
-    case D3DFMT_X4R4G4B4:
         return 4;
     case D3DFMT_R3G3B2:
+        return 2;
     case D3DFMT_A8R3G3B2:
         return 2;
+    case D3DFMT_X4R4G4B4:
+        return 4;
     case D3DFMT_A2B10G10R10:
+        return 10;
     case D3DFMT_A2R10G10B10:
         return 10;
     default:
@@ -90,14 +97,28 @@ unsigned int AlphaChannelBits(D3DFORMAT fmt)
 {
     switch (fmt)
     {
+    case D3DFMT_R8G8B8:
+        return 0;
     case D3DFMT_A8R8G8B8:
-    case D3DFMT_A8R3G3B2:
         return 8;
+    case D3DFMT_X8R8G8B8:
+        return 0;
+    case D3DFMT_R5G6B5:
+        return 0;
+    case D3DFMT_X1R5G5B5:
+        return 0;
     case D3DFMT_A1R5G5B5:
         return 1;
     case D3DFMT_A4R4G4B4:
         return 4;
+    case D3DFMT_R3G3B2:
+        return 0;
+    case D3DFMT_A8R3G3B2:
+        return 8;
+    case D3DFMT_X4R4G4B4:
+        return 0;
     case D3DFMT_A2B10G10R10:
+        return 2;
     case D3DFMT_A2R10G10B10:
         return 2;
     default:
@@ -114,8 +135,10 @@ unsigned int DepthBits(D3DFORMAT fmt)
         return 16;
     case D3DFMT_D15S1:
         return 15;
-    case D3DFMT_D24S8:
     case D3DFMT_D24X8:
+        return 24;
+    case D3DFMT_D24S8:
+        return 24;
     case D3DFMT_D24X4S4:
         return 24;
     case D3DFMT_D32:
@@ -130,12 +153,18 @@ unsigned int StencilBits(D3DFORMAT fmt)
 {
     switch (fmt)
     {
+    case D3DFMT_D16:
+        return 0;
     case D3DFMT_D15S1:
         return 1;
+    case D3DFMT_D24X8:
+        return 0;
     case D3DFMT_D24S8:
         return 8;
     case D3DFMT_D24X4S4:
         return 4;
+    case D3DFMT_D32:
+        return 0;
     default:
         return 0;
     }
@@ -161,14 +190,32 @@ D3DDeviceCombo::~D3DDeviceCombo()
 // FUNCTION: SWBF2 0x00716290
 D3DDeviceInfo::~D3DDeviceInfo()
 {
-    DeviceComboList.Clear();
+    while (DeviceComboList.GetCount() > 0)
+    {
+        PblList<D3DDeviceCombo>::Node* pNode = DeviceComboList.GetFirst();
+        D3DDeviceCombo* pDeviceCombo = pNode->_pObject;
+        DeviceComboList.Remove(pNode);
+        delete pDeviceCombo;
+    }
 }
 
 // FUNCTION: SWBF2 0x00715fe0
 D3DAdapterInfo::~D3DAdapterInfo()
 {
-    DisplayModeList.Clear();
-    DeviceInfoList.Clear();
+    while (DisplayModeList.GetCount() > 0)
+    {
+        PblList<D3DDisplayMode>::Node* pNode = DisplayModeList.GetFirst();
+        D3DDisplayMode* pDisplayMode = pNode->_pObject;
+        DisplayModeList.Remove(pNode);
+        delete pDisplayMode;
+    }
+    while (DeviceInfoList.GetCount() > 0)
+    {
+        PblList<D3DDeviceInfo>::Node* pNode = DeviceInfoList.GetFirst();
+        D3DDeviceInfo* pDeviceInfo = pNode->_pObject;
+        DeviceInfoList.Remove(pNode);
+        delete pDeviceInfo;
+    }
 }
 
 namespace pcRedDeviceEnumerator
@@ -275,12 +322,12 @@ void BuildDepthStencilFormatList(D3DDeviceCombo* pDeviceCombo)
 void BuildMultiSampleTypeList(D3DDeviceCombo* pDeviceCombo)
 {
     D3DMULTISAMPLE_TYPE amsTypeArray[D3DMULTISAMPLE_16_SAMPLES + 1];
-    for (int i = 0; i <= D3DMULTISAMPLE_16_SAMPLES; ++i)
+    for (int i = 0; i < D3DMULTISAMPLE_16_SAMPLES + 1; ++i)
     {
         amsTypeArray[i] = (D3DMULTISAMPLE_TYPE)i;
     }
 
-    for (unsigned int ims = 0; ims <= (unsigned int)D3DMULTISAMPLE_16_SAMPLES; ++ims)
+    for (unsigned int ims = 0; ims < D3DMULTISAMPLE_16_SAMPLES + 1; ++ims)
     {
         const D3DMULTISAMPLE_TYPE msType = amsTypeArray[ims];
         DWORD dwMSQuality = 0;
@@ -609,39 +656,38 @@ void Enumerate(unsigned int uiMinColorChannelBits, unsigned int uiMinAlphaChanne
             D3DDisplayMode* pDisplayMode = new D3DDisplayMode;
             pDisplayMode->displayMode = displayMode;
 
-            PblList<D3DDisplayMode>& modeList = pAdapterInfo->DisplayModeList;
-            for (PblList<D3DDisplayMode>::Node* pAt = modeList.GetFirst();
-                 pAt->_pObject != modeList._head._pObject;
+            for (PblList<D3DDisplayMode>::Node* pAt = pAdapterInfo->DisplayModeList.GetFirst();
+                 pAt->_pObject != pAdapterInfo->DisplayModeList._head._pObject;
                  pAt = pAt->_pNext)
             {
                 const D3DDISPLAYMODE& mode = pAt->_pObject->displayMode;
-                if (mode.Width != displayMode.Width)
+                if (mode.Width != pDisplayMode->displayMode.Width)
                 {
-                    if (mode.Width > displayMode.Width)
+                    if (mode.Width > pDisplayMode->displayMode.Width)
                     {
-                        modeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
+                        pAdapterInfo->DisplayModeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
                         break;
                     }
                     continue;
                 }
-                if (mode.Height != displayMode.Height)
+                if (mode.Height != pDisplayMode->displayMode.Height)
                 {
-                    if (mode.Height > displayMode.Height)
+                    if (mode.Height > pDisplayMode->displayMode.Height)
                     {
-                        modeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
+                        pAdapterInfo->DisplayModeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
                         break;
                     }
                     continue;
                 }
-                if (mode.RefreshRate >= displayMode.RefreshRate)
+                if (mode.RefreshRate >= pDisplayMode->displayMode.RefreshRate)
                 {
-                    modeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
+                    pAdapterInfo->DisplayModeList.AddBefore(pAt, &pDisplayMode->mNode, pDisplayMode);
                     break;
                 }
             }
             if (pDisplayMode->mNode._pList == 0)
             {
-                modeList.AddLast(&pDisplayMode->mNode, pDisplayMode);
+                pAdapterInfo->DisplayModeList.AddLast(&pDisplayMode->mNode, pDisplayMode);
             }
 
             bool bFound = false;
@@ -675,7 +721,13 @@ void Enumerate(unsigned int uiMinColorChannelBits, unsigned int uiMinAlphaChanne
         }
     }
 
-    adapterFormatList.Clear();
+    while (adapterFormatList.GetCount() > 0)
+    {
+        PblList<D3DFormat>::Node* pNode = adapterFormatList.GetFirst();
+        D3DFormat* pFormat = pNode->_pObject;
+        adapterFormatList.Remove(pNode);
+        delete pFormat;
+    }
 }
 
 // FUNCTION: SWBF2 0x007171f0

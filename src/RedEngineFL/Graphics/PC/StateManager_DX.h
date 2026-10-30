@@ -119,6 +119,8 @@ public:
     // SYNTHETIC: SWBF2 0x00715e10
     // dx::StateManager_DX::`scalar deleting destructor'
 
+    static void ClearInstance();
+
     static void CreateInstance(IDirect3DDevice9* pD3DDev);
 
     static StateManager_DX& GetInstance();
@@ -183,7 +185,8 @@ inline void dx::StateManager_DX::SetTransform(D3DTRANSFORMSTATETYPE State, const
     if (pMatrix)
     {
         m_DirtyStates.Add(NVStateID(9, State, 0));
-        memcpy(m_CurrentState.m_Matrices[State], pMatrix, sizeof(D3DMATRIX));
+        const D3DMATRIX matrix = *pMatrix;
+        memcpy(m_CurrentState.m_Matrices[State], &matrix, sizeof(D3DMATRIX));
     }
 }
 

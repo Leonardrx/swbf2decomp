@@ -60,7 +60,7 @@ public:
     unsigned int GetBoneIndex(unsigned int uiName) const;
 
     static bool pc_shareBuffers;
-    static bool pcGetShareBufferEnable();
+    static bool pcGetShareBufferEnable() { return pc_shareBuffers; }
 
     static void pcSetShareBufferEnable(bool bEnable) { pc_shareBuffers = bEnable; }
 

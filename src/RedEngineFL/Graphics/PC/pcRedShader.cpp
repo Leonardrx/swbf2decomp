@@ -35,29 +35,29 @@ pcRedShader::pcRedShader()
 // FUNCTION: SWBF2 0x006ac5e0
 pcRedShaderDef::pcRedShaderDef(const char* pcName)
     : m_uiNameHash(PblHash(pcName))
-    , m_states(0)
     , m_uiNumStates(0)
-    , m_pixelShaderPool(0)
-    , m_vertexShaderPool(0)
     , m_uiVertexFormatSupport(0)
     , m_supportedPipeline(PIPELINE_FIXED)
-    , m_uiNumShadersToBind(0)
-    , m_apShadersToBind(0)
 {
+    m_states = 0;
+    m_pixelShaderPool = 0;
+    m_vertexShaderPool = 0;
+    m_uiNumShadersToBind = 0;
+    m_apShadersToBind = 0;
 }
 
 // FUNCTION: SWBF2 0x006ac640
 pcRedShaderDef::pcRedShaderDef()
     : m_uiNameHash(0)
-    , m_states(0)
     , m_uiNumStates(0)
-    , m_pixelShaderPool(0)
-    , m_vertexShaderPool(0)
     , m_uiVertexFormatSupport(0)
     , m_supportedPipeline(PIPELINE_FIXED)
-    , m_uiNumShadersToBind(0)
-    , m_apShadersToBind(0)
 {
+    m_states = 0;
+    m_pixelShaderPool = 0;
+    m_vertexShaderPool = 0;
+    m_uiNumShadersToBind = 0;
+    m_apShadersToBind = 0;
 }
 
 // FUNCTION: SWBF2 0x006ac6a0
@@ -113,12 +113,12 @@ pcRedShader* __cdecl pcRedShader::Create(unsigned int uiNameHash,
                                          float fArg7)
 {
     const pcRedShader* pFactory = s_ShaderFactoryByRenderType.Find(uiNameHash);
-    if (!pFactory)
+    if (pFactory)
     {
-        return 0;
+        return pFactory->_Create(uiFlags, pParams, uiArg3, uiArg4, color0, color1, fArg7);
     }
 
-    return pFactory->_Create(uiFlags, pParams, uiArg3, uiArg4, color0, color1, fArg7);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x006ac820
@@ -158,12 +158,10 @@ void __cdecl pcRedShader::Init()
     for (PblHashTable<const pcRedShader, FACTORY_SLOTS>::Itor it = s_ShaderFactoryByRenderType.Begin();
          it != s_ShaderFactoryByRenderType.End(); ++it)
     {
-        const pcRedShader* pFactory = it;
-
-        pFactory->_StaticInit();
-        if (uiPipeline == 0 || pFactory->GetShaderDef()->m_uiNameHash == 0)
+        (*it)._StaticInit();
+        if (uiPipeline == 0 || (*it).GetShaderDef()->m_uiNameHash == 0)
         {
-            pFactory->InitFixedFunctionShaderDef();
+            (*it).InitFixedFunctionShaderDef();
         }
     }
 }
@@ -187,9 +185,10 @@ void pcRedShaderDef::InitFixedFunction(unsigned int uiVertexFormatSupport,
     for (unsigned int i = 0; i < uiNumStates; ++i)
     {
         m_states[i].uiID = ++s_IDCount;
-        m_states[i].uiNumPasses = pStates[i].uiNumPasses;
+        const unsigned int uiNumPasses = pStates[i].uiNumPasses;
+        m_states[i].uiNumPasses = uiNumPasses;
 
-        for (unsigned int p = 0; p < pStates[i].uiNumPasses; ++p)
+        for (unsigned int p = 0; p < uiNumPasses; ++p)
         {
             m_states[i].pass[p].uiPassCaps = pStates[i].uiPassCaps[p];
             m_states[i].pass[p].apVertexShaders = 0;
@@ -208,16 +207,15 @@ bool pcRedShader::IsTransparent() const
 void pcRedShaderDef::LoadVertexAndPixelShader(unsigned int uiState, unsigned int uiPass,
                                               unsigned int uiVertexShader) const
 {
-    if (m_supportedPipeline != PIPELINE_FIXED)
-    {
-        const PassT& pass = m_states[uiState].pass[uiPass];
-        RedRenderer::pcLoadVertexShader(pass.apVertexShaders[uiVertexShader]);
-        RedRenderer::pcLoadPixelShader(pass.pPixelShader);
-    }
-    else
+    if (m_supportedPipeline == PIPELINE_FIXED)
     {
         RedRenderer::pcLoadVertexShader(0);
         RedRenderer::pcLoadPixelShader(0);
+    }
+    else
+    {
+        RedRenderer::pcLoadVertexShader(m_states[uiState].pass[uiPass].apVertexShaders[uiVertexShader]);
+        RedRenderer::pcLoadPixelShader(m_states[uiState].pass[uiPass].pPixelShader);
     }
 }
 
@@ -259,14 +257,15 @@ void pcRedShaderDef::Read(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x45504950)
+        switch (child._iId)
         {
+        case 0x45504950:
             ReadPipeline(child, uiNumPipelines);
-        }
-        else if (child._iId == 0x4f464e49)
-        {
+            break;
+        case 0x4f464e49:
             uiNumPipelines = (unsigned int)child._pFile->Read32();
             m_uiVertexFormatSupport = child._pFile->Read8();
+            break;
         }
     }
 
@@ -354,40 +353,50 @@ void pcRedShaderDef::ReadState(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x4f464e49)
+        switch (child._iId)
         {
-            iState = child._pFile->Read32();
-            m_states[iState].uiNumPasses = (unsigned int)child._pFile->Read32();
-            m_states[iState].uiID = ++s_IDCount;
-        }
-        else if (child._iId == 0x53534150)
-        {
+        case 0x53534150:
             while (child.HasMoreChildren())
             {
                 PblFileChunk item = child.ReadNextChild();
-                if (item._iId == 0x4f464e49)
+                switch (item._iId)
                 {
-                    ++iPass;
-                    PassT& pass = m_states[iState].pass[iPass];
-                    pass.uiPassCaps = 0;
-                    pass.apVertexShaders = 0;
-                    pass.pPixelShader = 0;
-                    pass.uiPassCaps = (unsigned int)item._pFile->Read32();
-                    pass.apVertexShaders = new pcRedVertexShader*[255];
-                    memset(pass.apVertexShaders, 0, 255 * sizeof(pcRedVertexShader*));
-                }
-                else if (item._iId == 0x5f535050)
-                {
-                    m_states[iState].pass[iPass].pPixelShader =
-                        m_pixelShaderPool[item._pFile->Read32()];
-                }
-                else if (item._iId == 0x5f535650)
+                case 0x5f535650:
                 {
                     const int iSlot = item._pFile->Read32();
                     const int iProgram = item._pFile->Read32();
                     m_states[iState].pass[iPass].apVertexShaders[iSlot] = m_vertexShaderPool[iProgram];
+                    break;
+                }
+
+                case 0x5f535050:
+                    m_states[iState].pass[iPass].pPixelShader =
+                        m_pixelShaderPool[item._pFile->Read32()];
+                    break;
+
+                case 0x4f464e49:
+                {
+                    ++iPass;
+                    m_states[iState].pass[iPass].uiPassCaps = 0;
+                    m_states[iState].pass[iPass].apVertexShaders = 0;
+                    m_states[iState].pass[iPass].pPixelShader = 0;
+                    m_states[iState].pass[iPass].uiPassCaps = (unsigned int)item._pFile->Read32();
+                    m_states[iState].pass[iPass].apVertexShaders = new pcRedVertexShader*[255];
+                    memset(m_states[iState].pass[iPass].apVertexShaders, 0, 255 * sizeof(pcRedVertexShader*));
+                    break;
+                }
                 }
             }
+            break;
+
+        case 0x4f464e49:
+        {
+            iState = child._pFile->Read32();
+            const unsigned int uiNumPasses = (unsigned int)child._pFile->Read32();
+            m_states[iState].uiNumPasses = uiNumPasses;
+            m_states[iState].uiID = ++s_IDCount;
+            break;
+        }
         }
     }
 }
@@ -450,15 +459,18 @@ void pcRedShader::_BindPipeline(const GetStateFuncT* pGetState,
 {
     const int iPipeline = (int)RedRenderer::pcGetRenderCaps().pipeline;
 
-    if (iPipeline != 0 && GetShaderDef()->m_uiNameHash != 0 &&
-        GetShaderDef()->m_uiNumStates == 0)
+    if (iPipeline != 0)
     {
-        GetStateFunc = 0;
-        BeginFunc = 0;
-        EndFunc = 0;
-        RenderFunc = 0;
-        GetShaderDef()->BindOnRead(this);
-        return;
+        const pcRedShaderDef* pDef = GetShaderDef();
+        if (pDef->m_uiNameHash != 0 && pDef->m_uiNumStates == 0)
+        {
+            GetStateFunc = 0;
+            BeginFunc = 0;
+            EndFunc = 0;
+            RenderFunc = 0;
+            GetShaderDef()->BindOnRead(this);
+            return;
+        }
     }
 
     for (int i = PIPELINE_PROG2; i >= PIPELINE_FIXED; --i)

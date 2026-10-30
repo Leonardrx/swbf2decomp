@@ -22,8 +22,8 @@ pcRedVertexBuffer::pcRedVertexBuffer(unsigned int uiMaxVertices,
 
     memset(&m_desc, 0, sizeof(m_desc));
     m_desc.Format = D3DFMT_VERTEXDATA;
-    m_desc.Type = D3DRTYPE_VERTEXBUFFER;
     m_desc.Size = uiMaxVertices * uiVertexSize;
+    m_desc.Type = D3DRTYPE_VERTEXBUFFER;
     m_desc.Pool = bStatic ? D3DPOOL_MANAGED : D3DPOOL_DEFAULT;
     m_desc.FVF = 0;
     if (bStatic)
@@ -148,22 +148,17 @@ pcRedVertexBuffer* pcRedVertexBuffer::Create(unsigned int uiNumVertices,
     PblList<pcRedVertexBuffer>* pList =
         bStatic ? sStaticVertexBufferHashTable.Find(uiVertexSize) : sDynamicVertexBufferHashTable.Find(uiVertexSize);
 
-    unsigned int uiBytes = uiNumVertices * uiVertexSize;
-
     if (pList)
     {
-
-        for (PblList<pcRedVertexBuffer>::Node* pNode = pList->GetFirst();
-             pNode->_pObject != pList->_head._pObject;
-             pNode = pNode->_pNext)
+        const unsigned int uiBytes = uiNumVertices * uiVertexSize;
+        for (PblList<pcRedVertexBuffer>::Itor it = pList->Begin();
+             (pcRedVertexBuffer*)it != (pcRedVertexBuffer*)pList->End(); ++it)
         {
-            pcRedVertexBuffer* pFound = pNode->_pObject;
-            if (pFound->m_shared &&
-                pFound->m_numBytesUsed + uiBytes <= pFound->m_desc.Size)
+            if (it->m_shared && it->m_numBytesUsed + uiBytes <= it->m_desc.Size)
             {
-                pFound->m_numBytesUsed += uiBytes;
-                pFound->AddRef();
-                return pFound;
+                it->m_numBytesUsed += uiBytes;
+                it->AddRef();
+                return it;
             }
         }
 
@@ -189,10 +184,9 @@ pcRedVertexBuffer* pcRedVertexBuffer::Create(unsigned int uiNumVertices,
 
     pcRedVertexBuffer* pBuffer =
         new pcRedVertexBuffer(uiCount, uiVertexSize, bStatic, bShared);
+    pBuffer->m_numBytesUsed = uiNumVertices * uiVertexSize;
 
     PblList<pcRedVertexBuffer>* pNewList = new PblList<pcRedVertexBuffer>;
-
-    pBuffer->m_numBytesUsed = uiNumVertices * uiVertexSize;
     pNewList->AddFirst(&pBuffer->m_listNode, pBuffer);
 
     if (bStatic)
@@ -226,36 +220,36 @@ void* pcRedVertexBuffer::Lock(unsigned int uiNumVertices,
 {
     void* pData = 0;
 
-    if (!m_buffer)
+    if (m_buffer)
     {
-        return 0;
+        DWORD dwFlags;
+        if (!m_static)
+        {
+            dwFlags = D3DLOCK_NOOVERWRITE;
+            if (m_flush || m_appendPos + uiNumVertices > m_maxVertices)
+            {
+                m_flush = false;
+                dwFlags = D3DLOCK_DISCARD;
+                m_appendPos = 0;
+            }
+        }
+        else
+        {
+            dwFlags = D3DLOCK_NOSYSLOCK;
+        }
+
+        if (m_buffer->Lock(m_appendPos * m_vertexSize,
+                           m_vertexSize * uiNumVertices, &pData, dwFlags) == D3D_OK)
+        {
+            ++m_locked;
+            ruiStartVertex = m_appendPos;
+            m_appendPos += uiNumVertices;
+        }
+
+        return pData;
     }
 
-    DWORD dwFlags;
-    if (m_static)
-    {
-        dwFlags = D3DLOCK_NOSYSLOCK;
-    }
-    else if (!m_flush && m_appendPos + uiNumVertices <= m_maxVertices)
-    {
-        dwFlags = D3DLOCK_NOOVERWRITE;
-    }
-    else
-    {
-        m_flush = false;
-        dwFlags = D3DLOCK_DISCARD;
-        m_appendPos = 0;
-    }
-
-    if (SUCCEEDED(m_buffer->Lock(m_appendPos * m_vertexSize,
-                                 m_vertexSize * uiNumVertices, &pData, dwFlags)))
-    {
-        ++m_locked;
-        ruiStartVertex = m_appendPos;
-        m_appendPos += uiNumVertices;
-    }
-
-    return pData;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x006caee0
@@ -281,9 +275,8 @@ void pcRedVertexBuffer::FlushAllDynamicVertexBuffers()
     for (PblHashTable<PblList<pcRedVertexBuffer>, 1024>::Itor it = sDynamicVertexBufferHashTable.Begin();
          (PblList<pcRedVertexBuffer>*)it != (PblList<pcRedVertexBuffer>*)sDynamicVertexBufferHashTable.End(); ++it)
     {
-        PblList<pcRedVertexBuffer>* pList = it;
-        for (PblList<pcRedVertexBuffer>::Itor li = pList->Begin();
-             (pcRedVertexBuffer*)li != (pcRedVertexBuffer*)pList->End(); ++li)
+        for (PblList<pcRedVertexBuffer>::Itor li = (*it).Begin();
+             (pcRedVertexBuffer*)li != (pcRedVertexBuffer*)(*it).End(); ++li)
         {
             li->Flush();
         }

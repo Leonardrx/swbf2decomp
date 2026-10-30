@@ -114,11 +114,15 @@ public:
 
 // FUNCTION: SWBF2 0x00717980
 inline pcSoftwareSkinnedShaderSegment::pcSoftwareSkinnedShaderSegment()
-    : m_pVertexData(0), m_puiSkinData(0), m_uiSkinNumBones(0),
-      m_pIndexBuffer(0), m_PrimType(5), m_uiStartIndex(0),
-      m_uiPrimCount(0), m_uiNumVertices(0), m_uiNumIndices(0),
-      m_pShader(0), m_uiSegmentRenderFlags(0)
 {
+    m_pVertexData = 0;
+    m_puiSkinData = 0;
+    m_uiSkinNumBones = 0;
+    m_pIndexBuffer = 0;
+    m_PrimType = 5;
+    m_uiStartIndex = m_uiPrimCount = m_uiNumVertices = m_uiNumIndices = 0;
+    m_pShader = 0;
+    m_uiSegmentRenderFlags = 0;
 }
 
 #endif

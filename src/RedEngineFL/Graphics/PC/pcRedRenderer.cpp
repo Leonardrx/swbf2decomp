@@ -1963,7 +1963,7 @@ void RedRenderer::pcRegisterResetFunction(void(__cdecl* pFunction)(ResetFlagsT))
     }
 
     m_resetFunctions[uiCount] = pFunction;
-    m_numResetFunctions = uiCount + 1;
+    ++m_numResetFunctions;
 }
 
 // FUNCTION: SWBF2 0x006b9f50
@@ -2058,7 +2058,6 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
                                     RedShadingState* pShadingState)
 {
 
-    pcRedShader* const pZPrepass = m_systemShaders[1];
     if (!sLightingEnable)
     {
         uiFlags |= 0x10;
@@ -2204,7 +2203,7 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
 
             unsigned int uiZState = pItem->pRootShader->GetZPrepassState();
             unsigned int uiZPassCaps =
-                pZPrepass->GetShaderDef()->m_states[uiZState].pass[0].uiPassCaps;
+                m_systemShaders[SYSTEM_SHADER_ZPREPASS]->GetShaderDef()->m_states[uiZState].pass[0].uiPassCaps;
             unsigned int copyCount = m_curRenderItemOffset;
             RenderItem* pCopy = &m_renderItemPool[copyCount];
             m_curRenderItemOffset = copyCount + 1;
@@ -2216,7 +2215,7 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
             }
             pCopy->pRootShader = pItem->pRootShader;
             pCopy->pRootShader->AddRef();
-            pCopy->pShaderChain[0] = pZPrepass;
+            pCopy->pShaderChain[0] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
             pCopy->pShaderChain[0]->AddRef();
             pCopy->uiShaderChainSize = 1;
             pCopy->uiCurrentShader = 0;
@@ -2276,13 +2275,13 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
                 unsigned int uiZState = pItem->pRootShader->GetZPrepassState();
                 if (uiZState != (unsigned int)-1)
                 {
-                    unsigned int uiZPassCaps = pZPrepass->GetPassCaps(uiZState, 0);
+                    unsigned int uiZPassCaps = m_systemShaders[SYSTEM_SHADER_ZPREPASS]->GetPassCaps(uiZState, 0);
                     unsigned char low = (unsigned char)internalGetTransformAndLightingID(
                         uiRVF, uiEnvState, uiZPassCaps);
                     RenderSortKey queryKey;
                     queryKey.id = 0;
                     queryKey.opaque.material =
-                        ((GetShaderID_(pZPrepass, pItem, uiZState) & 0xff) << 8) | low;
+                        ((GetShaderID_(m_systemShaders[SYSTEM_SHADER_ZPREPASS], pItem, uiZState) & 0xff) << 8) | low;
                     if (m_iImmediateMode == 1)
                     {
 
@@ -2439,7 +2438,7 @@ inline TransparentHeap<ITEM, KEY>::TransparentHeap(unsigned int uiMaxSize)
 }
 
 template <class ITEM, class KEY>
-TransparentHeap<ITEM, KEY>::~TransparentHeap()
+inline TransparentHeap<ITEM, KEY>::~TransparentHeap()
 {
     delete[] m_aNodePool;
 }
@@ -2590,11 +2589,10 @@ void RedRenderer::Init()
     GetClientRect(GetDesktopWindow(), &desktop);
 
     const int iWidth = rc.right - rc.left;
+    const int iX = (desktop.left - iWidth + desktop.right) / 2;
     const int iHeight = rc.bottom - rc.top;
-    SetWindowPos(hGlobalWnd, 0,
-                 (desktop.left - iWidth + desktop.right) / 2,
-                 (desktop.top - iHeight + desktop.bottom) / 2,
-                 iWidth, iHeight, uFlags);
+    const int iY = (desktop.top - iHeight + desktop.bottom) / 2;
+    SetWindowPos(hGlobalWnd, 0, iX, iY, iWidth, iHeight, uFlags);
 
     HRESULT hr = m_pd3dDevice->Reset(&m_d3dpp);
 
@@ -2678,25 +2676,17 @@ void RedRenderer::Init()
         uiPow2Height > 0x200 ? 0x200 : uiPow2Height,
         D3DFMT_A8R8G8B8, 1, D3DUSAGE_RENDERTARGET, D3DPOOL_DEFAULT, 0);
 
-    const unsigned int uiSmallWidth =
-        uiPow2Width > 0x100 ? 0x100 : uiPow2Width;
-    const unsigned int uiSmallHeight =
-        uiPow2Height > 0x100 ? 0x100 : uiPow2Height;
-    m_buffers[2] = new RedTexture(uiSmallWidth, uiSmallHeight,
-                                  D3DFMT_A8R8G8B8, 1, D3DUSAGE_RENDERTARGET,
-                                  D3DPOOL_DEFAULT, 0);
+    m_buffers[2] = new RedTexture(
+        uiPow2Width > 0x100 ? 0x100 : uiPow2Width,
+        uiPow2Height > 0x100 ? 0x100 : uiPow2Height,
+        D3DFMT_A8R8G8B8, 1, D3DUSAGE_RENDERTARGET, D3DPOOL_DEFAULT, 0);
 
     RedRenderer::m_camera = 0;
     RedRenderer::m_frameNumber = 0;
     RedRenderer::m_fStencilShadowLength = 500.0f;
     RedRenderer::m_bStencilShadowZFail = true;
-    m_systemShaders[0] = 0;
-    m_systemShaders[1] = 0;
-    m_systemShaders[2] = 0;
-    m_systemShaders[3] = 0;
+    memset(m_systemShaders, 0, sizeof(m_systemShaders));
     RedRenderer::m_bScreenSpaceShadows = false;
-    m_systemShaders[4] = 0;
-    m_systemShaders[5] = 0;
     RedRenderer::m_iImmediateMode = 0;
     RedRenderer::m_bFogEnable = false;
     RedRenderer::m_colorFog = RedColor::BLACK;
@@ -2712,23 +2702,19 @@ void RedRenderer::Init()
     pcRedIndexBuffer::Init();
     pcRedShader::Init();
 
-    memset(&RedRenderer::m_aLightingStatePool[2048], 0, sizeof(RedLightingState));
-    memset(&RedRenderer::m_aLightingStatePool[2049], 0, sizeof(RedLightingState));
-    memset(&RedRenderer::m_aLightingStatePool[2050], 0, sizeof(RedLightingState));
-
     RedRenderer::m_curRenderItemOffset = 0;
     RedRenderer::m_uiCurMatrixPoolOffset = 0;
     RedRenderer::m_uiCurLightingStatePoolOffset = 0;
 
-    memcpy((unsigned char*)&RedRenderer::m_aLightingStatePool[2048] + 4,
-           (const unsigned char*)&RedAmbientLight::BLACK + 4, 0x6C);
-    *(void**)((unsigned char*)&RedRenderer::m_aLightingStatePool[2048] + 0x70) =
-        &RedDirectionalLight::BLACK;
+    memset(&RedRenderer::m_aLightingStatePool[2048], 0, sizeof(RedLightingState));
+    memset(&RedRenderer::m_aLightingStatePool[2049], 0, sizeof(RedLightingState));
+    memset(&RedRenderer::m_aLightingStatePool[2050], 0, sizeof(RedLightingState));
 
-    memcpy((unsigned char*)&RedRenderer::m_aLightingStatePool[2049] + 4,
-           (const unsigned char*)&RedAmbientLight::WHITE + 4, 0x6C);
-    *(void**)((unsigned char*)&RedRenderer::m_aLightingStatePool[2049] + 0x70) =
-        &RedDirectionalLight::BLACK;
+    RedRenderer::m_aLightingStatePool[2048].ambientLight = RedAmbientLight::BLACK;
+    RedRenderer::m_aLightingStatePool[2048].pDirectionalLights[0] = &RedDirectionalLight::BLACK;
+
+    RedRenderer::m_aLightingStatePool[2049].ambientLight = RedAmbientLight::WHITE;
+    RedRenderer::m_aLightingStatePool[2049].pDirectionalLights[0] = &RedDirectionalLight::BLACK;
 
     RedRenderer::m_pLightingState = &RedRenderer::m_aLightingStatePool[2048];
 
@@ -2738,7 +2724,7 @@ void RedRenderer::Init()
 
     m_systemShaders[0] = 0;
 
-    m_systemShaders[1] = pcRedShader::Create(PblHash("zprepass"), 0x1002, 0, 0, 0,
+    m_systemShaders[SYSTEM_SHADER_ZPREPASS] = pcRedShader::Create(PblHash("zprepass"), 0x1002, 0, 0, 0,
                                              RedColor::WHITE, RedColor::BLACK,
                                              32.0f);
     m_systemShaders[2] = pcRedShader::Create(PblHash("pervertexdiffuselighting"),
@@ -2767,7 +2753,7 @@ void RedRenderer::InitStatic()
     }
     else
     {
-        m_pD3D = new FakeD3D;
+        m_pD3D = CreateFakeD3D();
     }
 
     if (!m_pD3D)
@@ -2836,11 +2822,11 @@ void RedRenderer::InitStatic()
 
         D3DCAPS9 caps;
         m_pD3D->GetDeviceCaps(0, D3DDEVTYPE_HAL, &caps);
-        DWORD dwBehaviorFlags = (caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT)
-                                    ? D3DCREATE_HARDWARE_VERTEXPROCESSING
-                                    : D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 
-        hr = m_pD3D->CreateDevice(0, D3DDEVTYPE_HAL, hGlobalWnd, dwBehaviorFlags,
+        hr = m_pD3D->CreateDevice(0, D3DDEVTYPE_HAL, hGlobalWnd,
+                                  (caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT)
+                                      ? D3DCREATE_HARDWARE_VERTEXPROCESSING
+                                      : D3DCREATE_SOFTWARE_VERTEXPROCESSING,
                                   &m_d3dpp, &m_pd3dDevice);
 
         HRESULT hrIdentifier = m_pD3D->GetAdapterIdentifier(0, 0, &m_adaptorIdentifier);
@@ -2860,7 +2846,7 @@ void RedRenderer::InitStatic()
     {
 
         m_pd3dDevice = 0;
-        m_pd3dDevice = new FakeD3DDevice;
+        m_pd3dDevice = CreateFakeDevice();
         memset(&m_adaptorIdentifier, 0, sizeof(m_adaptorIdentifier));
     }
 
@@ -2939,14 +2925,14 @@ void RedRenderer::internalSetupCaps()
     m_renderCaps.cubemaps = ((m_deviceCaps.TextureCaps >> 11) & 1) != 0;
     m_renderCaps.volumemaps = ((m_deviceCaps.TextureCaps >> 13) & 1) != 0;
 
-    if (m_deviceCaps.TextureCaps & D3DPTEXTURECAPS_POW2)
+    if (!(m_deviceCaps.TextureCaps & D3DPTEXTURECAPS_POW2))
     {
-        m_renderCaps.nonpow2textures =
-            (TextureNonPow2SupportT)((m_deviceCaps.TextureCaps >> 8) & 1);
+        m_renderCaps.nonpow2textures = TEXTURE_NONPOW2_ALWAYS;
     }
     else
     {
-        m_renderCaps.nonpow2textures = TEXTURE_NONPOW2_ALWAYS;
+        m_renderCaps.nonpow2textures =
+            (TextureNonPow2SupportT)((m_deviceCaps.TextureCaps >> 8) & 1);
     }
 
     RedVideoConfig::VidMode_ApplyRenderCapOverrides(m_renderCaps);
@@ -2961,16 +2947,18 @@ void RedRenderer::pcSetCursorImage(RedTexture const* pTexture, unsigned int uiX,
         return;
     }
 
+    const unsigned int uiHeight = pTexture->m_uiHeight;
+    const unsigned int uiWidth = pTexture->m_uiWidth;
     IDirect3DSurface9* pSurface = 0;
     ((IDirect3DTexture9*)pTexture->m_pTexture)->GetSurfaceLevel(0, &pSurface);
 
-    if (uiX >= pTexture->m_uiWidth)
+    if (uiX >= uiWidth)
     {
-        uiX = pTexture->m_uiWidth;
+        uiX = uiWidth;
     }
-    if (uiY >= pTexture->m_uiHeight)
+    if (uiY >= uiHeight)
     {
-        uiY = pTexture->m_uiHeight;
+        uiY = uiHeight;
     }
 
     m_pd3dDevice->SetCursorProperties(uiX, uiY, pSurface);
@@ -2986,10 +2974,10 @@ void RedRenderer::pcSetDisplayMode(unsigned int uiWidth, unsigned int uiHeight,
                                    D3DMULTISAMPLE_TYPE msType, unsigned long ulMSQuality)
 {
     m_d3dpp.BackBufferWidth = uiWidth;
+    m_d3dpp.Windowed = bWindowed ? TRUE : FALSE;
     m_d3dpp.BackBufferHeight = uiHeight;
     m_d3dpp.MultiSampleType = msType;
     m_d3dpp.MultiSampleQuality = ulMSQuality;
-    m_d3dpp.Windowed = bWindowed;
     m_d3dpp.PresentationInterval =
         bVSync ? D3DPRESENT_INTERVAL_DEFAULT : D3DPRESENT_INTERVAL_IMMEDIATE;
 
@@ -3179,12 +3167,18 @@ pcRedPrimitive* RedRenderer::m_occlusionQueryShapes[4];
 IDirect3DQuery9* RedRenderer::internalGetD3DVisibilityQuery()
 {
     const unsigned int i = RedRenderer::m_curVisibilityIndex;
-    if (i < 2024 ? i == 2023 : i - 2024 >= 2023)
+    if (i >= 2024)
+    {
+        if (i - 2024 >= 2023)
+        {
+            return 0;
+        }
+    }
+    else if (i == 2023)
     {
         return 0;
     }
-    RedRenderer::m_curVisibilityIndex = i + 1;
-    return m_pVisibility[i];
+    return m_pVisibility[RedRenderer::m_curVisibilityIndex++];
 }
 
 // FUNCTION: SWBF2 0x006b4460
@@ -3235,10 +3229,10 @@ void RedRenderer::internalInitOcclusionQuery()
     sOcclusionQuerySubmitIndex = 0;
     RedRenderer::m_occlusionQueryFlushOffset = 0;
 
-    float fSin;
-    float fCos;
-    float fSinTheta;
-    float fCosTheta;
+    float fSin = 0.0f;
+    float fCos = 0.0f;
+    float fSinTheta = 0.0f;
+    float fCosTheta = 0.0f;
     unsigned int i;
     float* pVertex;
 
@@ -3389,7 +3383,7 @@ void RedRenderer::internalInitOcclusionQuery()
 
     RedRenderer::m_occlusionQueryShapes[0]->EndVertexData();
 
-    static const unsigned int auiCorners[20] = {
+    const unsigned int auiCorners[20] = {
         0, 1, 2, 3,
         6, 7, 7, 3,
         5, 1, 4, 0,
@@ -3470,10 +3464,10 @@ void RedRenderer::internalResetState()
 
     for (int i = 0; i < 64; i++)
     {
-
-        if (m_opaqueQueues._elements[i].Reserve_(0, true))
+        SortHeap& rQueue = m_opaqueQueues._elements[i];
+        if (rQueue.Reserve_(0, true))
         {
-            m_opaqueQueues._elements[i]._numElements = 0;
+            rQueue._numElements = 0;
         }
         m_opaqueQueues._elements[i].globalPass_ = i;
     }
@@ -3488,10 +3482,9 @@ void RedRenderer::internalResetState()
     RedRenderer::m_bSetTransform_Projection = true;
     RedRenderer::m_bSetTransform_View = true;
 
+    m_screenAspectRatio = (float)m_d3dpp.BackBufferHeight / (float)m_d3dpp.BackBufferWidth;
     RedInterfaceScreen::s_screenFull.SetDimensions(m_d3dpp.BackBufferWidth,
                                                    m_d3dpp.BackBufferHeight);
-    m_screenAspectRatio = (float)((double)m_d3dpp.BackBufferHeight
-                                  / (double)m_d3dpp.BackBufferWidth);
     RedInterfaceScreen::s_fScreenBottomV = 1.0f;
 
     RedInterfaceScreen::s_screenFull.SetSafeZone(0.9f);
@@ -3576,12 +3569,8 @@ void RedRenderer::internalResetState()
     memset(m_curStream, 0, sizeof(m_curStream));
     memset(m_VSConstants.m_Registers, 0, sizeof(m_VSConstants.m_Registers));
 
-    m_clearColor.b = 0;
-    m_clearColor.g = 0;
-    m_clearColor.r = 0;
-    m_clearColor.a = 0;
-    D3DCOLOR dwClear = (D3DCOLOR)(((((unsigned int)m_clearColor.a << 8)
-                                    | m_clearColor.r) << 8 | m_clearColor.g) << 8);
+    m_clearColor = RedColor(0, 0, 0, 0);
+    D3DCOLOR dwClear = m_clearColor.GetARGB();
 
     m_VSConstants.m_iMinConstantSet = 0x60;
     m_VSConstants.m_iMaxConstantSet = 0;
@@ -3759,18 +3748,19 @@ void RedRenderer::pcSetRenderState(D3DRENDERSTATETYPE eState, unsigned long ulVa
 
     m_curRenderStateMode[eState] = ulValue;
 
-    if (!stateManagerEnabled_)
+    if (stateManagerEnabled_)
+    {
+        dx::StateManager_DX& rSM = dx::StateManager_DX::GetInstance();
+        if (rSM.m_bForce || rSM.m_CurrentState.m_RenderStates[eState] != ulValue)
+        {
+
+            rSM.renderStates_.Add(dx::NVStateID(1, eState, 0));
+            rSM.m_CurrentState.m_RenderStates[eState] = ulValue;
+        }
+    }
+    else
     {
         m_pd3dDevice->SetRenderState(eState, ulValue);
-        return;
-    }
-
-    dx::StateManager_DX& rSM = dx::StateManager_DX::GetInstance();
-    if (rSM.m_bForce || rSM.m_CurrentState.m_RenderStates[eState] != ulValue)
-    {
-
-        rSM.renderStates_.Add(dx::NVStateID(1, eState, 0));
-        rSM.m_CurrentState.m_RenderStates[eState] = ulValue;
     }
 }
 
@@ -3814,8 +3804,8 @@ inline void pcRedVertexShaderConstants::Update()
             m_iMaxConstantSet - m_iMinConstantSet + 1);
     }
 
-    m_iMaxConstantSet = 0;
     m_iMinConstantSet = 0x60;
+    m_iMaxConstantSet = 0;
 }
 
 // FUNCTION: SWBF2 0x006b8120
@@ -3934,7 +3924,7 @@ void RedRenderer::pcSetTransform(D3DTRANSFORMSTATETYPE eState, const PblMatrix& 
         rView = rMatrix;
         for (int row = 0; row < 4; ++row)
         {
-            rView.m[row][2] = -rView.m[row][2];
+            rView.m[row][2] *= -1.0f;
         }
     }
     else if (eState == D3DTS_PROJECTION)
@@ -4046,7 +4036,7 @@ void RedRenderer::internalShaderBeginEnd()
 {
     if (RedRenderer::m_pPrevShader)
     {
-        (RedRenderer::m_pPrevShader->*RedRenderer::m_pPrevShader->EndFunc)(RedRenderer::m_uiPrevShaderState, (RedRenderer::m_PrevSortID >> 16) & 3);
+        (RedRenderer::m_pPrevShader->*RedRenderer::m_pPrevShader->EndFunc)(RedRenderer::m_uiPrevShaderState, ((unsigned int)RedRenderer::m_PrevSortID >> 16) & 3);
         internalStateStackPop();
         RedRenderer::m_pPrevShader->Release();
     }
@@ -4203,10 +4193,10 @@ void RedRenderer::internalUpdateSceneConstants()
 
     if (RedRenderer::m_userNearClipPlaneEnable)
     {
-        PblMatrix mViewProj;
-        D3DXMatrixMultiply((D3DXMATRIX*)&mViewProj, (const D3DXMATRIX*)&rView,
+        PblMatrix mClip;
+        D3DXMatrixMultiply((D3DXMATRIX*)&mClip, (const D3DXMATRIX*)&rView,
                            (const D3DXMATRIX*)&rProj);
-        PblMatrix mClip = mViewProj.GetInverse();
+        mClip = mClip.GetInverse();
         mClip.Transpose4x4();
 
         PblVector4 vPlane(RedRenderer::m_userNearClipPlane.GetA(),
@@ -4410,8 +4400,9 @@ PblMatrix* RedRenderer::AllocBoneMatricesInCache(unsigned int uiCount)
 // FUNCTION: SWBF2 0x006b02a0
 RedLightingState* RedRenderer::AllocLightingStateInCache()
 {
-    RedLightingState* pState = &m_aLightingStatePool[RedRenderer::m_uiCurLightingStatePoolOffset];
-    RedRenderer::m_uiCurLightingStatePoolOffset = RedRenderer::m_uiCurLightingStatePoolOffset + 1 < 2048 ? RedRenderer::m_uiCurLightingStatePoolOffset + 1 : 1;
+    unsigned int uiIndex = RedRenderer::m_uiCurLightingStatePoolOffset;
+    RedLightingState* pState = &m_aLightingStatePool[uiIndex];
+    RedRenderer::m_uiCurLightingStatePoolOffset = (uiIndex + 1 < 2048 ? uiIndex : 0) + 1;
     memset(pState, 0, sizeof(RedLightingState));
     return pState;
 }
@@ -4424,8 +4415,8 @@ const PblMatrix* RedRenderer::AllocMatrixInCache(const PblMatrix& mat)
     {
         RedRenderer::m_uiCurMatrixPoolOffset = 0;
     }
-    RedRenderer::m_uiCurMatrixPoolOffset = RedRenderer::m_uiCurMatrixPoolOffset + 1;
     *pMatrix = mat;
+    RedRenderer::m_uiCurMatrixPoolOffset = RedRenderer::m_uiCurMatrixPoolOffset + 1;
     return pMatrix;
 }
 
@@ -4453,10 +4444,10 @@ void RedRenderer::BeginFrame()
         internalReset();
     }
 
-    D3DCOLOR clearColor = (((((unsigned int)m_clearColor.a << 8) | m_clearColor.r) << 8
-                            | m_clearColor.g) << 8) | m_clearColor.b;
     m_pd3dDevice->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL,
-                        clearColor, 1.0f, 0);
+                        (((((unsigned int)m_clearColor.a << 8) | m_clearColor.r) << 8
+                          | m_clearColor.g) << 8) | m_clearColor.b,
+                        1.0f, 0);
 
     ++RedRenderer::m_frameNumber;
     RedRenderer::m_occlusionQueryFlushOffset = 0;
@@ -4519,20 +4510,22 @@ void RedRenderer::Cleanup()
     }
     m_pDepthSurface = 0;
 
-    for (int i = 0; i < 3; ++i)
-    {
-        delete m_buffers[i];
-        m_buffers[i] = 0;
-    }
+    delete m_buffers[0];
+    m_buffers[0] = 0;
+    delete m_buffers[1];
+    m_buffers[1] = 0;
+    delete m_buffers[2];
+    m_buffers[2] = 0;
 
     RedRenderer::m_camera = 0;
     RedRenderer::m_frameNumber = 0;
 
     for (int i = 0; i < 64; ++i)
     {
-        if (m_opaqueQueues._elements[i].Reserve_(0, true))
+        SortHeap& rQueue = m_opaqueQueues._elements[i];
+        if (rQueue.Reserve_(0, true))
         {
-            m_opaqueQueues._elements[i]._numElements = 0;
+            rQueue._numElements = 0;
         }
     }
     if (m_opaqueQueues.Reserve_(0, true))
@@ -4558,11 +4551,7 @@ void RedRenderer::Cleanup()
     memset(&RedRenderer::m_aLightingStatePool[2050], 0, sizeof(RedLightingState));
     RedRenderer::m_pLightingState = &RedRenderer::m_aLightingStatePool[2048];
 
-    if (dx::localInstance_)
-    {
-        delete dx::localInstance_;
-    }
-    dx::localInstance_ = 0;
+    dx::StateManager_DX::ClearInstance();
 }
 
 // FUNCTION: SWBF2 0x006b08f0
@@ -4659,15 +4648,14 @@ void RedRenderer::FlushOcclusionQueries()
         return;
     }
 
-    pcRedShader* pShader = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
-    unsigned int uiCaps = pShader->GetPassCaps(0, 0);
+    unsigned int uiCaps = m_systemShaders[SYSTEM_SHADER_ZPREPASS]->GetShaderDef()->m_states[0].pass[0].uiPassCaps;
 
     RenderItem* pItem = &m_renderItemPool[RedRenderer::m_curRenderItemOffset++];
     pItem->pBoneMatrices = 0;
     pItem->numBoneMatrices = 0;
     pItem->pShadingState = 0;
     pItem->pRootShader = m_systemShaders[SYSTEM_SHADER_NORMAL];
-    pItem->pShaderChain[0] = pShader;
+    pItem->pShaderChain[0] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
     pItem->uiShaderChainSize = 1;
     pItem->uiCurrentShader = 0;
     pItem->uiShaderState = 0;
@@ -4676,21 +4664,27 @@ void RedRenderer::FlushOcclusionQueries()
     pItem->uiEnvState = 0;
     pItem->pVisibilityQuery = 0;
 
-    unsigned char ucTL = (unsigned char)internalGetTransformAndLightingID(0x1002, 0, uiCaps);
-    unsigned short usID = (unsigned short)(((GetShaderID_(pShader, pItem, 0) & 0xff) << 8) | ucTL);
+    SortIdT sortId;
+    sortId.id = 0;
+    sortId.o_tnl = internalGetTransformAndLightingID(0x1002, 0, uiCaps);
+    sortId.o_customID = GetShaderID_(m_systemShaders[SYSTEM_SHADER_ZPREPASS], pItem, 0);
 
-    unsigned int uiBase = sOcclusionQuerySubmitIndex < 700 ? 0 : 700;
+    unsigned int uiBase = 0;
+    if (sOcclusionQuerySubmitIndex >= 700)
+    {
+        uiBase = 700;
+    }
     for (unsigned int i = uiBase + RedRenderer::m_occlusionQueryFlushOffset; i < sOcclusionQuerySubmitIndex; ++i)
     {
         OcclusionQueryT& rQuery = m_occlusionQueries[i];
         pItem->pmObjWorld = &rQuery.worldMat;
         pItem->pPrim = m_occlusionQueryShapes[rQuery.shape];
         rQuery.pVisibilityQuery->Issue(D3DISSUE_BEGIN);
-        internalRenderZPrepassProg1(pItem, usID);
+        internalRenderZPrepassProg1(pItem, sortId.o_shaderID);
         rQuery.pVisibilityQuery->Issue(D3DISSUE_END);
     }
-    --RedRenderer::m_curRenderItemOffset;
     RedRenderer::m_occlusionQueryFlushOffset = sOcclusionQuerySubmitIndex - uiBase;
+    --RedRenderer::m_curRenderItemOffset;
 }
 
 // FUNCTION: SWBF2 0x006b0ed0
@@ -4781,8 +4775,11 @@ bool RedRenderer::GetOcclusionQueryPixelCount(unsigned int uiQuery, unsigned int
     {
         return false;
     }
-    return m_occlusionQueries[uiQuery].pVisibilityQuery->GetData(&uiPixelCount, sizeof(uiPixelCount), 0)
-           == S_OK;
+    if (m_occlusionQueries[uiQuery].pVisibilityQuery->GetData(&uiPixelCount, sizeof(uiPixelCount), 0) == S_OK)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006b1570
@@ -4794,13 +4791,16 @@ unsigned int pcRedShader::GetPassCaps(unsigned int uiState, unsigned int uiPass)
 // FUNCTION: SWBF2 0x006b15a0
 int GetPhasePass_(RenderPhaseT ePhase)
 {
-    switch (ePhase)
+    if (ePhase == RENDERPHASE_OPAQUE)
     {
-    case RENDERPHASE_OPAQUE:
         return 0;
-    case RENDERPHASE_SHADOW:
+    }
+    if (ePhase == RENDERPHASE_SHADOW)
+    {
         return 4;
-    case RENDERPHASE_POSTSHADOW:
+    }
+    if (ePhase == RENDERPHASE_POSTSHADOW)
+    {
         return 6;
     }
     return ePhase == RENDERPHASE_TRANSPARENT ? 20 : 0;
@@ -4830,8 +4830,8 @@ const PblMatrix& RedRenderer::GetProjectionMatrix()
     rProj.m[3][3] = 0.0f;
     rProj.m[0][0] = fNear * 2.0f / fWidth;
     rProj.m[1][1] = fNear * -2.0f / fHeight;
-    rProj.m[3][2] = fNear * -PROJECTION_FAR_PLANE / (PROJECTION_FAR_PLANE - fNear);
     rProj.m[2][2] = -PROJECTION_FAR_PLANE / (PROJECTION_FAR_PLANE - fNear);
+    rProj.m[3][2] = fNear * -PROJECTION_FAR_PLANE / (PROJECTION_FAR_PLANE - fNear);
     return rProj;
 }
 
@@ -4926,7 +4926,7 @@ void RedRenderer::SetFilterColor(RedColor color, int iAmount)
 void RedRenderer::SetFogColor(const RedColor& color)
 {
     RedRenderer::m_colorFog = color;
-    RedColor c = m_lightingScaleColor * RedRenderer::m_colorFog;
+    RedColor c = RedRenderer::m_colorFog * m_lightingScaleColor;
     pcSetRenderState(D3DRS_FOGCOLOR,
                      (((((unsigned int)c.a << 8) | c.r) << 8 | c.g) << 8) | c.b);
 }
@@ -4949,11 +4949,12 @@ void RedRenderer::SetMultiplicativeFog(int iPower)
     grey.a = ucGrey;
     RedColor c = grey * RedRenderer::m_colorFog;
 
+    RedColorValue value(c);
     float fExp = 1.0f / (float)iPower;
-    float fR = (float)pow((double)(c.r * (1.0f / 255.0f)), (double)fExp);
-    float fG = (float)pow((double)(c.g * (1.0f / 255.0f)), (double)fExp);
-    float fB = (float)pow((double)(c.b * (1.0f / 255.0f)), (double)fExp);
-    float fA = (float)pow((double)(c.a * (1.0f / 255.0f)), (double)fExp);
+    float fR = (float)pow((double)value.r, (double)fExp);
+    float fG = (float)pow((double)value.g, (double)fExp);
+    float fB = (float)pow((double)value.b, (double)fExp);
+    float fA = (float)pow((double)value.a, (double)fExp);
 
     pcSetRenderState(D3DRS_FOGCOLOR,
                      ((((((unsigned int)(unsigned char)(int)(fA * 255.0f) << 8)
@@ -5052,13 +5053,15 @@ void dx::StateManager_DX::SetSamplerState(unsigned long ulSampler, D3DSAMPLERSTA
 void dx::StateManager_DX::SetStreamSource(unsigned int uiStream, IDirect3DVertexBuffer9* pStreamData,
                                           unsigned int uiOffset, unsigned int uiStride)
 {
-    NVStreamData& rData = m_CurrentState.m_StreamData[uiStream];
-    if (m_bForce || rData.m_pStreamData != pStreamData || rData.m_Stride != 0)
+    if (m_bForce || m_CurrentState.m_StreamData[uiStream].m_pStreamData != pStreamData
+        || m_CurrentState.m_StreamData[uiStream].m_Stride != 0)
     {
         m_DirtyStates.Add(NVStateID(12, uiStream, 0));
-        rData.m_pStreamData = pStreamData;
-        rData.m_Offset = uiOffset;
-        rData.m_Stride = uiStride;
+        NVStreamData newData;
+        newData.m_pStreamData = pStreamData;
+        newData.m_Offset = uiOffset;
+        newData.m_Stride = uiStride;
+        m_CurrentState.m_StreamData[uiStream] = newData;
     }
 }
 
@@ -5099,38 +5102,40 @@ void dx::StateManager_DX::SetVertexShader(IDirect3DVertexShader9* pShader)
 unsigned int RedRenderer::SubmitOcclusionQuery(const PblMatrix& mWorld, OcclusionQueryShapeT eShape,
                                                const PblVector3& vScale, bool)
 {
-    if (!g_bNoRender || !sEnableOcclusionQueries)
+    if (!g_bNoRender)
+    {
+        return (unsigned int)-1;
+    }
+    if (!sEnableOcclusionQueries)
     {
         return (unsigned int)-1;
     }
 
     unsigned int uiIndex = sOcclusionQuerySubmitIndex;
-    if (uiIndex < 700)
+    if (uiIndex >= 700)
     {
-        if (uiIndex == 699)
+        if (uiIndex - 700 >= 699)
         {
             return (unsigned int)-1;
         }
     }
-    else if (uiIndex - 700 >= 699)
+    else if (uiIndex == 699)
     {
         return (unsigned int)-1;
     }
 
-    OcclusionQueryT& rQuery = m_occlusionQueries[uiIndex];
-    rQuery.pVisibilityQuery = internalGetD3DVisibilityQuery();
-    if (!rQuery.pVisibilityQuery)
+    m_occlusionQueries[uiIndex].pVisibilityQuery = internalGetD3DVisibilityQuery();
+    if (!m_occlusionQueries[uiIndex].pVisibilityQuery)
     {
         return (unsigned int)-1;
     }
 
-    rQuery.worldMat = mWorld;
-    rQuery.worldMat.m[0][0] = vScale.x * rQuery.worldMat.m[0][0];
-    rQuery.worldMat.m[1][1] = vScale.y * rQuery.worldMat.m[1][1];
-    rQuery.worldMat.m[2][2] = vScale.z * rQuery.worldMat.m[2][2];
-    sOcclusionQuerySubmitIndex = uiIndex + 1;
-    rQuery.shape = eShape;
-    return uiIndex;
+    m_occlusionQueries[uiIndex].worldMat = mWorld;
+    m_occlusionQueries[uiIndex].worldMat.m[0][0] = vScale.x * m_occlusionQueries[uiIndex].worldMat.m[0][0];
+    m_occlusionQueries[uiIndex].worldMat.m[1][1] = vScale.y * m_occlusionQueries[uiIndex].worldMat.m[1][1];
+    m_occlusionQueries[uiIndex].worldMat.m[2][2] = vScale.z * m_occlusionQueries[uiIndex].worldMat.m[2][2];
+    m_occlusionQueries[uiIndex].shape = eShape;
+    return sOcclusionQuerySubmitIndex++;
 }
 
 // FUNCTION: SWBF2 0x006b41b0
@@ -5348,23 +5353,17 @@ void __cdecl RedRenderer::internalRenderFixed(RenderItem* pItem, unsigned int ui
     if ((uiTnl & 0x1f) && !(pItem->flags & 0x10) && (uiPassCaps & 6))
     {
         const RedLightingState* pLS = pItem->pLightingState;
-        const bool bNormals = (uiRVF & 0x100) != 0;
-        const bool bAmbient = !bNormals && (uiPassCaps & 2);
-        const bool bDirectional = pLS->pDirectionalLights[0] && (!bNormals || (uiPassCaps & 4));
+        const unsigned int uiNormals = uiRVF & 0x100;
+        const bool bAmbient = !uiNormals && (uiPassCaps & 2);
+        const bool bDirectional = pLS->pDirectionalLights[0] && (!uiNormals || (uiPassCaps & 4));
         if (bDirectional || pLS->pOmniLights[0])
         {
             const PblMatrix mWorldInverse = pItem->pmObjWorld->GetInverseFast();
         }
 
-        if (bAmbient)
-        {
-            pcSetRenderState(D3DRS_AMBIENT,
-                             ToD3DColor_(pLS->ambientLight.m_color));
-        }
-        else
-        {
-            pcSetRenderState(D3DRS_AMBIENT, *(const unsigned int*)&RedColor::BLACK);
-        }
+        const unsigned int uiAmbient = bAmbient ? ToD3DColor_(pLS->ambientLight.m_color)
+                                                : *(const unsigned int*)&RedColor::BLACK;
+        pcSetRenderState(D3DRS_AMBIENT, uiAmbient);
 
         if (bDirectional)
         {
@@ -5762,19 +5761,18 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
 void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int uiShaderID)
 {
     const unsigned int uiRVF = pItem->pPrim->m_vertexFormat->m_uiVertexBufferRVF;
-    const unsigned short iShader = pItem->uiCurrentShader;
-    pcRedShader* pShader = pItem->pShaderChain[iShader];
+    pcRedShader* pShader = pItem->pShaderChain[pItem->uiCurrentShader];
     const unsigned int uiState = pItem->uiShaderState;
 
-    pItem->pShaderChain[iShader] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
+    pItem->pShaderChain[pItem->uiCurrentShader] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
     pItem->uiShaderState = pItem->pRootShader->GetZPrepassState();
     internalShaderBeginEnd(pItem, uiShaderID, 0);
-    pItem->pShaderChain[iShader] = pShader;
+    pItem->pShaderChain[pItem->uiCurrentShader] = pShader;
     pItem->uiShaderState = uiState;
 
     pcRedVertexShaderConstantRegister* pRegs;
     if (pItem->pBoneMatrices &&
-        pItem->pBoneMatrices != RedRenderer::m_pmBoneMatricesPrev)
+        RedRenderer::m_pmBoneMatricesPrev != pItem->pBoneMatrices)
     {
         RedRenderer::m_pmBoneMatricesPrev = pItem->pBoneMatrices;
         pRegs = m_VSConstants.GetRegisterArray(51, 3 * pItem->numBoneMatrices);
@@ -5785,27 +5783,34 @@ void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int ui
         m_VSConstants.Update();
     }
 
-    if (pItem->pPrim != RedRenderer::m_pPrimPrev)
+    if (RedRenderer::m_pPrimPrev != pItem->pPrim)
     {
         RedRenderer::m_pPrimPrev = pItem->pPrim;
         pRegs = m_VSConstants.GetRegisterArray(12, 4);
-        pRegs[12].component[0] = (uiRVF & 0x4000) ? 2.0f : 1.0f;
-        pRegs[12].component[1] = (uiRVF & 0x4000) ? -1.0f : 0.0f;
-        pRegs[12].component[2] = (uiRVF & 0x8000) ? 1.0f / 2048.0f : 1.0f;
+        if (uiRVF & 0x4000)
+        {
+            pRegs[12].component[0] = 2.0f;
+            pRegs[12].component[1] = -1.0f;
+        }
+        else
+        {
+            pRegs[12].component[0] = 1.0f;
+            pRegs[12].component[1] = 0.0f;
+        }
+        pRegs[12].component[2] = 1.0f / 2048.0f;
+        if (!(uiRVF & 0x8000))
+        {
+            pRegs[12].component[2] = 1.0f;
+        }
         pRegs[12].component[3] = 1.0f;
 
         if (uiRVF & 0x1000)
         {
             const PblBox& box = pItem->pPrim->m_bbox;
-            const float scale = 1.0f / 65534.0f;
-            pRegs[13].component[0] = (box._vMax.x - box._vMin.x) * scale;
-            pRegs[13].component[1] = (box._vMax.y - box._vMin.y) * scale;
-            pRegs[13].component[2] = (box._vMax.z - box._vMin.z) * scale;
-            pRegs[13].component[3] = 0.0f;
-            pRegs[14].component[0] = (box._vMax.x + box._vMin.x) * 0.5f;
-            pRegs[14].component[1] = (box._vMax.y + box._vMin.y) * 0.5f;
-            pRegs[14].component[2] = (box._vMax.z + box._vMin.z) * 0.5f;
-            pRegs[14].component[3] = 1.0f;
+            const PblVector3 vSize = (box._vMax - box._vMin) * (1.0f / 65534.0f);
+            const PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
+            pRegs[13].SetFloats(vSize.x, vSize.y, vSize.z, 0.0f);
+            pRegs[14].SetFloats(vCenter.x, vCenter.y, vCenter.z, 1.0f);
         }
         else
         {
@@ -5818,13 +5823,17 @@ void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int ui
             pRegs[14].component[2] = 0.0f;
             pRegs[14].component[3] = 1.0f;
         }
-        pRegs[15].component[0] = (uiRVF & 0x80) ? 0.0f : 1.0f;
-        pRegs[15].component[1] = (uiRVF & 0x80) ? 1.0f : 0.0f;
-        pRegs[15].component[2] = 0.0f;
-        pRegs[15].component[3] = 1.0f;
+        if (uiRVF & 0x80)
+        {
+            pRegs[15].SetFloats(0.0f, 1.0f, 0.0f, 1.0f);
+        }
+        else
+        {
+            pRegs[15].SetFloats(1.0f, 0.0f, 0.0f, 1.0f);
+        }
     }
 
-    if (pItem->pmObjWorld != RedRenderer::m_pmObjWorldPrev)
+    if (RedRenderer::m_pmObjWorldPrev != pItem->pmObjWorld)
     {
         RedRenderer::m_pmObjWorldPrev = pItem->pmObjWorld;
         pRegs = m_VSConstants.GetRegisterArray(16, 3);
@@ -5929,37 +5938,36 @@ void RedRenderer::pcLoadPixelShader(const pcRedPixelShader* pShader)
 void RedRenderer::pcSetSamplerState(unsigned int uiSampler, D3DSAMPLERSTATETYPE eType,
                                     unsigned int uiValue)
 {
-    unsigned long ulOld = m_curSamplerState[uiSampler][eType];
-    if (uiValue == ulOld)
+    if (uiValue == m_curSamplerState[uiSampler][eType])
     {
         return;
     }
 
     if (m_iStateStackFrame != 0 && !m_bIsSamplerStateUndo[uiSampler][eType])
     {
-        unsigned int uiSlot = m_uiNumSamplerStateUndo;
         m_bIsSamplerStateUndo[uiSampler][eType] = true;
-        m_SamplerStateUndo[uiSlot].sampler = uiSampler;
-        m_SamplerStateUndo[uiSlot].type = eType;
-        m_SamplerStateUndo[uiSlot].value = ulOld;
-        m_uiNumSamplerStateUndo = uiSlot + 1;
+        m_SamplerStateUndo[m_uiNumSamplerStateUndo].sampler = uiSampler;
+        m_SamplerStateUndo[m_uiNumSamplerStateUndo].type = eType;
+        m_SamplerStateUndo[m_uiNumSamplerStateUndo].value = m_curSamplerState[uiSampler][eType];
+        ++m_uiNumSamplerStateUndo;
     }
 
     m_curSamplerState[uiSampler][eType] = uiValue;
-    if (!stateManagerEnabled_)
+    if (stateManagerEnabled_)
+    {
+        dx::StateManager_DX::GetInstance().SetSamplerState(uiSampler, eType, uiValue);
+    }
+    else
     {
         m_pd3dDevice->SetSamplerState(uiSampler, eType, uiValue);
-        return;
     }
-    dx::StateManager_DX::GetInstance().SetSamplerState(uiSampler, eType, uiValue);
 }
 
 // FUNCTION: SWBF2 0x006b9ac0
 void RedRenderer::pcSetTextureStageState(unsigned int uiStage, D3DTEXTURESTAGESTATETYPE eType,
                                          unsigned long ulValue)
 {
-    unsigned long ulOld = m_curTextureStageState[uiStage][eType];
-    if (ulValue == ulOld)
+    if (ulValue == m_curTextureStageState[uiStage][eType])
     {
         return;
     }
@@ -5970,17 +5978,19 @@ void RedRenderer::pcSetTextureStageState(unsigned int uiStage, D3DTEXTURESTAGEST
         m_bIsTextureStageStateUndo[uiStage][eType] = true;
         m_TextureStageStateUndo[uiSlot].stage = uiStage;
         m_TextureStageStateUndo[uiSlot].type = eType;
-        m_TextureStageStateUndo[uiSlot].value = ulOld;
-        m_uiNumTextureStageStateUndo = uiSlot + 1;
+        m_TextureStageStateUndo[uiSlot].value = m_curTextureStageState[uiStage][eType];
+        ++m_uiNumTextureStageStateUndo;
     }
 
     m_curTextureStageState[uiStage][eType] = ulValue;
-    if (!stateManagerEnabled_)
+    if (stateManagerEnabled_)
+    {
+        dx::StateManager_DX::GetInstance().SetTextureStageState(uiStage, eType, ulValue);
+    }
+    else
     {
         m_pd3dDevice->SetTextureStageState(uiStage, eType, ulValue);
-        return;
     }
-    dx::StateManager_DX::GetInstance().SetTextureStageState(uiStage, eType, ulValue);
 }
 
 // FUNCTION: SWBF2 0x006b8760
@@ -6386,15 +6396,15 @@ void RedRenderer::internalRenderFromHeap(HEAP& heap)
         pItem->pVisibilityQuery = internalGetD3DVisibilityQuery();
         unsigned int uiFlags = pItem->flags;
         pItem->flags = uiFlags & ~0x20;
-        if (pItem->pVisibilityQuery)
+        if (!pItem->pVisibilityQuery)
+        {
+            internalRenderZPrepassProg1(pItem, sortId.o_shaderID);
+        }
+        else
         {
             pItem->pVisibilityQuery->Issue(D3DISSUE_BEGIN);
             internalRenderZPrepassProg1(pItem, sortId.o_shaderID);
             pItem->pVisibilityQuery->Issue(D3DISSUE_END);
-        }
-        else
-        {
-            internalRenderZPrepassProg1(pItem, sortId.o_shaderID);
         }
         pItem->flags = uiFlags & ~0x1000;
         return;

@@ -168,18 +168,18 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
 
     if (uiVertexBufferRVF & 0x1C)
     {
-        const unsigned int uiBufWeights = (uiVertexBufferRVF >> 2) & 7;
-        unsigned int uiInWeights = (uiVertexInputRVF >> 2) & 7;
-        if ((unsigned short)uiInWeights > (unsigned short)uiBufWeights)
+        const unsigned short usBufWeights = (unsigned short)((uiVertexBufferRVF >> 2) & 7);
+        unsigned short usInWeights = (unsigned short)((uiVertexInputRVF >> 2) & 7);
+        if (usInWeights > usBufWeights)
         {
-            uiInWeights = uiBufWeights;
+            usInWeights = usBufWeights;
         }
 
-        if (uiBufWeights > 1)
+        if (usBufWeights > 1)
         {
             if (uiVertexBufferRVF & 0x2000)
             {
-                if ((unsigned short)uiInWeights > 1)
+                if (usInWeights > 1)
                 {
                     aElements[uiCount].Type = D3DDECLTYPE_D3DCOLOR;
                     aElements[uiCount].Offset = usOffset;
@@ -191,20 +191,20 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
             }
             else
             {
-                if ((unsigned short)uiInWeights > 1)
+                if (usInWeights > 1)
                 {
                     aElements[uiCount].Offset = usOffset;
                     aElements[uiCount].Usage = D3DDECLUSAGE_BLENDWEIGHT;
                     aElements[uiCount].UsageIndex = 0;
 
-                    aElements[uiCount].Type = kVertexDeclarationTypes[uiInWeights - 1];
+                    aElements[uiCount].Type = kVertexDeclarationTypes[usInWeights - 1];
                     ++uiCount;
                 }
-                usOffset = (unsigned short)(usOffset + uiBufWeights * 4 - 4);
+                usOffset = (unsigned short)(usOffset + usBufWeights * 4 - 4);
             }
         }
 
-        if ((unsigned short)uiInWeights != 0)
+        if (usInWeights != 0)
         {
             aElements[uiCount].Type = D3DDECLTYPE_D3DCOLOR;
             aElements[uiCount].Offset = usOffset;
@@ -249,14 +249,16 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
         {
             if (uiVertexInputRVF & 0x40)
             {
-                aElements[uiCount].Type = D3DDECLTYPE_D3DCOLOR;
-                aElements[uiCount].Offset = usOffset;
-                aElements[uiCount].Usage = D3DDECLUSAGE_TANGENT;
-                aElements[uiCount].UsageIndex = 0;
-                aElements[uiCount + 1].Offset = (unsigned short)(usOffset + 4);
-                aElements[uiCount + 1].Type = D3DDECLTYPE_D3DCOLOR;
-                aElements[uiCount + 1].Usage = D3DDECLUSAGE_BINORMAL;
-                aElements[uiCount + 1].UsageIndex = 0;
+                D3DVERTEXELEMENT9& tangent = aElements[uiCount];
+                D3DVERTEXELEMENT9& binormal = aElements[uiCount + 1];
+                tangent.Type = D3DDECLTYPE_D3DCOLOR;
+                tangent.Offset = usOffset;
+                tangent.Usage = D3DDECLUSAGE_TANGENT;
+                tangent.UsageIndex = 0;
+                binormal.Offset = (unsigned short)(usOffset + 4);
+                binormal.Type = D3DDECLTYPE_D3DCOLOR;
+                binormal.Usage = D3DDECLUSAGE_BINORMAL;
+                binormal.UsageIndex = 0;
                 uiCount += 2;
             }
             usOffset = (unsigned short)(usOffset + 8);
@@ -265,14 +267,16 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
         {
             if (uiVertexInputRVF & 0x40)
             {
-                aElements[uiCount].Type = D3DDECLTYPE_FLOAT3;
-                aElements[uiCount].Offset = usOffset;
-                aElements[uiCount].Usage = D3DDECLUSAGE_TANGENT;
-                aElements[uiCount].UsageIndex = 0;
-                aElements[uiCount + 1].Offset = (unsigned short)(usOffset + 12);
-                aElements[uiCount + 1].Type = D3DDECLTYPE_FLOAT3;
-                aElements[uiCount + 1].Usage = D3DDECLUSAGE_BINORMAL;
-                aElements[uiCount + 1].UsageIndex = 0;
+                D3DVERTEXELEMENT9& tangent = aElements[uiCount];
+                D3DVERTEXELEMENT9& binormal = aElements[uiCount + 1];
+                tangent.Type = D3DDECLTYPE_FLOAT3;
+                tangent.Offset = usOffset;
+                tangent.Usage = D3DDECLUSAGE_TANGENT;
+                tangent.UsageIndex = 0;
+                binormal.Offset = (unsigned short)(usOffset + 12);
+                binormal.Type = D3DDECLTYPE_FLOAT3;
+                binormal.Usage = D3DDECLUSAGE_BINORMAL;
+                binormal.UsageIndex = 0;
                 uiCount += 2;
             }
             usOffset = (unsigned short)(usOffset + 24);
@@ -338,12 +342,8 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
         }
     }
 
-    aElements[uiCount].Stream = 0xFF;
-    aElements[uiCount].Offset = 0;
-    aElements[uiCount].Type = D3DDECLTYPE_UNUSED;
-    aElements[uiCount].Method = 0;
-    aElements[uiCount].Usage = 0;
-    aElements[uiCount].UsageIndex = 0;
+    const D3DVERTEXELEMENT9 kEnd = D3DDECL_END();
+    aElements[uiCount] = kEnd;
 
     IDirect3DVertexDeclaration9* pDeclaration = 0;
     RedRenderer::pcGetDevice()->CreateVertexDeclaration(aElements, &pDeclaration);
@@ -353,6 +353,8 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
 // FUNCTION: SWBF2 0x00714910
 unsigned int pcRedVertexFormat::RVFtoFVF(unsigned int uiRVF)
 {
+    unsigned int uiFVF = 0;
+
     if (uiRVF & 0x800)
     {
         return 0;
@@ -365,8 +367,6 @@ unsigned int pcRedVertexFormat::RVFtoFVF(unsigned int uiRVF)
     {
         return 0;
     }
-
-    unsigned int uiFVF = 0;
 
     const unsigned int uiPosition = uiRVF & 3;
     if (uiPosition == 1)
@@ -436,8 +436,9 @@ void pcRedVertexFormat::Cleanup()
         PblList<pcRedVertexFormat>::Node* pNode = s_vertexFormatList.GetFirst();
         pcRedVertexFormat* pFormat = pNode->_pObject;
         s_vertexFormatList.Remove(pNode);
-        while (pFormat->Release())
-            ;
+        while (pFormat->Release() > 0)
+        {
+        }
     }
     s_vertexFormatList.RemoveAll();
 }

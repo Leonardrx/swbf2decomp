@@ -28,11 +28,6 @@
 
 void __cdecl PblTraceP(const char* Format, ...);
 
-static const D3DXMATRIXA16 _IdentityMatrix(1.0f, 0.0f, 0.0f, 0.0f,
-                                           0.0f, 1.0f, 0.0f, 0.0f,
-                                           0.0f, 0.0f, 1.0f, 0.0f,
-                                           0.0f, 0.0f, 0.0f, 1.0f);
-
 static const float kInv255 = 1.0f / 255.0f;
 
 // GLOBAL: SWBF2 0x007dfa84
@@ -86,39 +81,34 @@ PblVector3 ShadowRenderable::s_vProjectionLit;
 // FUNCTION: SWBF2 0x006e7f70
 void ShadowRenderable::SetWorldMatrix(const PblMatrix& matrix)
 {
-    PblMatrix inverse = matrix.GetInverseFast();
-    PblVector3 unlit;
-    D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&unlit),
-                            reinterpret_cast<const D3DXVECTOR3*>(&s_vProjectionUnlit),
-                            reinterpret_cast<const D3DXMATRIX*>(&inverse));
+    const PblVector3 unlit = matrix.GetInverseFast().ApplyRotation(s_vProjectionUnlit);
 
     if (!m_bSilhouetteChanged || !m_bProjectionChanged)
     {
+        const PblVector3& oldUnlit = m_vProjectionUnlitLocal;
         PblVector3 oldDirection;
         PblVector3 newDirection;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&oldDirection),
-                          reinterpret_cast<const D3DXVECTOR3*>(&m_vProjectionUnlitLocal));
+                          reinterpret_cast<const D3DXVECTOR3*>(&oldUnlit));
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&newDirection),
                           reinterpret_cast<const D3DXVECTOR3*>(&unlit));
-        const float cosine = oldDirection.x * newDirection.x
-                           + oldDirection.y * newDirection.y
-                           + oldDirection.z * newDirection.z;
-        const float difference = 1.0f - cosine;
-        if (!m_bSilhouetteChanged && difference > 0.0009f)
+        const float cosine = D3DXVec3Dot(reinterpret_cast<const D3DXVECTOR3*>(&newDirection),
+                                         reinterpret_cast<const D3DXVECTOR3*>(&oldDirection));
+        if (!m_bSilhouetteChanged && 1.0f - cosine > 0.0009f)
         {
             m_bSilhouetteChanged = true;
             m_bProjectionChanged = true;
         }
-        else if (difference > 0.0f)
+        else if (1.0f - cosine > 0.0f)
         {
             m_bProjectionChanged = true;
         }
 
         if (!m_bProjectionChanged)
         {
-            const float dx = m_vProjectionUnlitLocal.x - unlit.x;
-            const float dy = m_vProjectionUnlitLocal.y - unlit.y;
-            const float dz = m_vProjectionUnlitLocal.z - unlit.z;
+            const float dx = oldUnlit.x - unlit.x;
+            const float dy = oldUnlit.y - unlit.y;
+            const float dz = oldUnlit.z - unlit.z;
             if (dy * dy + dx * dx + dz * dz > 1.0f)
             {
                 m_bProjectionChanged = true;
@@ -128,10 +118,7 @@ void ShadowRenderable::SetWorldMatrix(const PblMatrix& matrix)
 
     m_mWorldMatrix = matrix;
     m_vProjectionUnlitLocal = unlit;
-    inverse = matrix.GetInverseFast();
-    D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&m_vProjectionLitLocal),
-                            reinterpret_cast<const D3DXVECTOR3*>(&s_vProjectionLit),
-                            reinterpret_cast<const D3DXMATRIX*>(&inverse));
+    m_vProjectionLitLocal = matrix.GetInverseFast().ApplyRotation(s_vProjectionLit);
 }
 
 // FUNCTION: SWBF2 0x006e6a60
@@ -254,21 +241,30 @@ void RedStencilShadow::ShadowSegment::Render(const PblMatrix* pMatrix,
                                               const PblMatrix* pBoneMatrices,
                                               int iNumBones, unsigned int uiFlags) const
 {
-    if (m_pPrimitive)
+    if (m_uiNumBones > 0)
     {
-        RedRenderer::pcRenderPrimitive(m_pPrimitive,
-                                       m_pGPUShadowShader,
-                                       *pMatrix,
-                                       RedColor::WHITE,
-                                       0, iNumBones ? pBoneMatrices : 0,
-                                       iNumBones ? iNumBones : 0, 0);
+        if (m_pPrimitive)
+        {
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pGPUShadowShader, *pMatrix,
+                                           RedColor::WHITE, 0, pBoneMatrices, iNumBones, 0);
+        }
+        else
+        {
+            m_pShadowRenderable->Render(m_pCPUShadowShader, *pMatrix, pBoneMatrices, iNumBones,
+                                        uiFlags);
+        }
     }
     else
     {
-        m_pShadowRenderable->Render(m_pCPUShadowShader, *pMatrix,
-                                    iNumBones ? pBoneMatrices : 0,
-                                    iNumBones ? iNumBones : 0,
-                                    iNumBones ? uiFlags : 0);
+        if (m_pPrimitive)
+        {
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pGPUShadowShader, *pMatrix,
+                                           RedColor::WHITE, 0, 0, 0, 0);
+        }
+        else
+        {
+            m_pShadowRenderable->Render(m_pCPUShadowShader, *pMatrix, 0, 0, 0);
+        }
     }
 }
 
@@ -283,26 +279,41 @@ void RedStencilShadow::Render(const PblMatrix* pMatrix,
     }
 
     const PblVector3& direction = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
-    const float fOffset = s_fShadowVolumeOffset;
-    const float fLength = RedRenderer::GetStencilShadowLength() + fOffset;
-    ShadowRenderable::s_vProjectionLit = PblVector3(direction.x * fOffset,
-                                                      direction.y * fOffset,
-                                                      direction.z * fOffset);
-    ShadowRenderable::s_vProjectionUnlit = PblVector3(direction.x * fLength,
-                                                        direction.y * fLength,
-                                                        direction.z * fLength);
+    const PblVector3 vLit = direction * s_fShadowVolumeOffset;
+    const float fLength = RedRenderer::GetStencilShadowLength() + s_fShadowVolumeOffset;
+    ShadowRenderable::s_vProjectionUnlit = direction * fLength;
+    ShadowRenderable::s_vProjectionLit = vLit;
 
     PblMatrix aSkinMatrices[128];
-    for (PblList<ShadowSegment>::Node* pNode = m_segmentList.GetFirst();
-         pNode->_pObject; pNode = pNode->_pNext)
+    for (PblList<ShadowSegment>::Itor it(m_segmentList); it != m_segmentList.End(); ++it)
     {
-        const ShadowSegment* pSegment = pNode->_pObject;
         const PblMatrix* pWorld = pMatrix;
         PblMatrix* pSkin = 0;
-        const unsigned int uNumBones = pSegment->m_uiNumBones;
-        if (!uNumBones)
+        const unsigned int uNumBones = it->m_uiNumBones;
+        if (uNumBones)
         {
-            const unsigned int uBone = pSegment->m_uiBoneIndex;
+            pSkin = it->m_puiBoneIndexMap ?
+                RedRenderer::AllocBoneMatricesInCache(uNumBones) : aSkinMatrices;
+            if (pPose)
+            {
+                if (it->m_hardSkin)
+                {
+                    pPose->GetHardSkinMatrices(pSkin, it->m_puiBoneIndexMap, uNumBones);
+                }
+                else
+                {
+                    pPose->GetSkinMatrices(pSkin, it->m_puiBoneIndexMap, uNumBones);
+                }
+            }
+            else
+            {
+                m_pModel->GetSkeleton()->GetSkinMatrices(pSkin, it->m_puiBoneIndexMap,
+                                                         uNumBones);
+            }
+        }
+        else
+        {
+            const unsigned int uBone = it->m_uiBoneIndex;
             if (pPose)
             {
                 if (ppBoneMatrices)
@@ -325,28 +336,7 @@ void RedStencilShadow::Render(const PblMatrix* pMatrix,
                 pWorld = ppBoneMatrices[uBone];
             }
         }
-        else
-        {
-            pSkin = pSegment->m_puiBoneIndexMap ?
-                RedRenderer::AllocBoneMatricesInCache(uNumBones) : aSkinMatrices;
-            if (pPose)
-            {
-                if (pSegment->m_hardSkin)
-                {
-                    pPose->GetHardSkinMatrices(pSkin, pSegment->m_puiBoneIndexMap, uNumBones);
-                }
-                else
-                {
-                    pPose->GetSkinMatrices(pSkin, pSegment->m_puiBoneIndexMap, uNumBones);
-                }
-            }
-            else
-            {
-                m_pModel->GetSkeleton()->GetSkinMatrices(pSkin, pSegment->m_puiBoneIndexMap,
-                                                         uNumBones);
-            }
-        }
-        pSegment->Render(pWorld, pSkin, uNumBones, 4);
+        it->Render(pWorld, pSkin, uNumBones, 4);
     }
 }
 
@@ -439,7 +429,13 @@ RedStencilShadow::ShadowSegment::ShadowSegment()
 // FUNCTION: SWBF2 0x006e5070
 RedStencilShadow::~RedStencilShadow()
 {
-    m_segmentList.Clear();
+    while (m_segmentList.GetCount() != 0)
+    {
+        PblList<ShadowSegment>::Node* pNode = m_segmentList.GetFirst();
+        ShadowSegment* pSegment = pNode->_pObject;
+        m_segmentList.Remove(pNode);
+        delete pSegment;
+    }
 }
 
 // FUNCTION: SWBF2 0x006e50d0
@@ -612,7 +608,7 @@ void ShadowRenderable::CreateSilhouette()
 unsigned short ShadowData::GenerateSilhouette(const PblMatrix* pMatrix, const PblVector3& vLight)
 {
     _silhouetteCount = 0;
-    if (!_iNumVertices || !_edgeCount || !_pVertices || !_edgeList)
+    if (_iNumVertices <= 0 || _edgeCount <= 0 || !_pVertices || !_edgeList)
     {
         return 0;
     }
@@ -624,8 +620,8 @@ unsigned short ShadowData::GenerateSilhouette(const PblMatrix* pMatrix, const Pb
     for (unsigned short i = 0; i < _faceCount; ++i)
     {
         const PblVector4& plane = _facePlanes[i];
-        const unsigned short uiFirst = _facePlanesEntry[i];
         const bool bVisible = plane.x * lx + plane.y * ly + plane.z * lz < 0.0f;
+        const unsigned short uiFirst = _facePlanesEntry[i];
         unsigned short e = uiFirst;
         do
         {
@@ -688,7 +684,7 @@ unsigned short ShadowData::GenerateSilhouette(const PblMatrix* pMatrix, const Pb
 void ShadowData::GenerateSkin(const PblMatrix* pBoneMatrices, int iNumBoneMatrices,
                               unsigned int uiMaxBones)
 {
-    if (!_iNumVertices || !_edgeCount || !_pVertices || !_pSkinnedVertices || !_puiSkinData ||
+    if (!_iNumVertices || _edgeCount <= 0 || !_pVertices || !_pSkinnedVertices || !_puiSkinData ||
         !_edgeList)
     {
         return;
@@ -727,12 +723,11 @@ void ShadowData::GenerateSkin(const PblMatrix* pBoneMatrices, int iNumBoneMatric
         _edgeList[uiNext].mark = 0x80;
         _edgeList[i].mark = 0x80;
 
-        const float d1x = pV[a].x - pV[b].x, d1y = pV[a].y - pV[b].y, d1z = pV[a].z - pV[b].z;
-        const float d2x = pV[c].x - pV[b].x, d2y = pV[c].y - pV[b].y, d2z = pV[c].z - pV[b].z;
-        PblVector4 plane;
-        plane.x = d2y * d1z - d2z * d1y;
-        plane.y = d2z * d1x - d1z * d2x;
-        plane.z = d1y * d2x - d2y * d1x;
+        const PblVector3 d1 = pV[a] - pV[b];
+        const PblVector3 d2 = pV[c] - pV[b];
+        const float nx = d2.y * d1.z - d2.z * d1.y;
+        const float ny = d2.z * d1.x - d1.z * d2.x;
+        const float nz = d1.y * d2.x - d2.y * d1.x;
         do
         {
             _edgeList[e].mark = 0x80;
@@ -741,7 +736,11 @@ void ShadowData::GenerateSkin(const PblMatrix* pBoneMatrices, int iNumBoneMatric
             b = c;
             c = _edgeList[e].vertex;
         } while (e != i);
-        plane.w = -(pV[a].x * plane.x + pV[a].y * plane.y + pV[a].z * plane.z);
+        PblVector4 plane;
+        plane.x = nx;
+        plane.y = ny;
+        plane.z = nz;
+        plane.w = -(pV[a].x * nx + pV[a].y * ny + pV[a].z * nz);
         _facePlanes[iPlane++] = plane;
     }
 }
@@ -770,27 +769,26 @@ void ShadowRenderable::ProjectEdges()
     const float py = m_vProjectionUnlitLocal.y - m_vProjectionLitLocal.y;
     const float pz = m_vProjectionUnlitLocal.z - m_vProjectionLitLocal.z;
     PblVector3* pOut = m_pSilhouetteVertices;
+    const ShadowData::SilhouetteVertex* pSilhouette = m_pShadowData->_silhouette;
     for (unsigned short i = 0; i < m_pShadowData->_silhouetteCount; ++i)
     {
-        const ShadowData::SilhouetteVertex& sv = m_pShadowData->_silhouette[i];
-        const PblVector3& v = pVertices[sv.vertex];
-        if (i && sv.bStartSilhouette)
+        const PblVector3& v = pVertices[pSilhouette[i].vertex];
+        if (i && pSilhouette[i].bStartSilhouette)
         {
-            pOut[0] = pOut[-1];
-            pOut[1] = v;
-            pOut += 2;
+            *pOut = *(pOut - 1);
+            ++pOut;
+            *pOut++ = v;
         }
-        pOut[0] = v;
-        pOut[1] = PblVector3(v.x + px, v.y + py, v.z + pz);
-        pOut += 2;
+        *pOut++ = v;
+        *pOut++ = PblVector3(v.x + px, v.y + py, v.z + pz);
     }
 }
 
 // FUNCTION: SWBF2 0x006e5b50
 void RedStencilShadow::Read(PblFileChunk& chunk)
 {
-    unsigned int uiNumBones = 0;
     unsigned int uiBoneIndex = 0;
+    unsigned int uiNumBones = 0;
     unsigned char* puiBoneIndexMap = 0;
     ShadowSegment* pSegment = new ShadowSegment;
     const RenderCapsT& caps = RedRenderer::pcGetRenderCaps();
@@ -844,9 +842,7 @@ void RedStencilShadow::Read(PblFileChunk& chunk)
 // FUNCTION: SWBF2 0x006e5d30
 void ShadowData::Read(PblFileChunk& chunk)
 {
-    PblBox box;
-    box._vMin = PblVector3(FLT_MAX, FLT_MAX, FLT_MAX);
-    box._vMax = PblVector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    PblBox box(FLT_MAX, FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
     PblVector3* pVertices = 0;
     ShadowEdge* pEdges = 0;
     unsigned char* puiSkinData = 0;
@@ -1024,49 +1020,48 @@ void RedStencilShadow::ReadCPUShadowData(PblFileChunk& chunk, ShadowSegment* pSe
 void RedStencilShadow::ReadGPUShadowData(PblFileChunk& chunk, ShadowSegment* pSegment)
 {
     unsigned int uiVertexFormat = 0;
-    pcRedVertexBuffer* pVertexBuffer = 0;
-    pcRedIndexBuffer* pIndexBuffer = 0;
-    int iSkinType = 0;
-    int iNormalMode = 0;
     unsigned int uiPrimType = 0;
     unsigned int uiPrimCount = 0;
     unsigned int uiNumVertices = 0;
     unsigned int uiStartVertex = 0;
     unsigned int uiStartIndex = 0;
+    pcRedVertexBuffer* pVertexBuffer = 0;
+    pcRedIndexBuffer* pIndexBuffer = 0;
+    int iSkinType = 0;
+    int iNormalMode = 0;
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        PblFile* pFile = child._pFile;
         switch (child._iId)
         {
         case 0x4F464E49:
-            iSkinType = pFile->Read32();
-            iNormalMode = pFile->Read32();
+            iSkinType = child._pFile->Read32();
+            iNormalMode = child._pFile->Read32();
             if (iSkinType && iNormalMode != 2)
             {
                 return;
             }
-            uiPrimType = pFile->Read32();
-            uiNumVertices = pFile->Read32();
-            uiPrimCount = pFile->Read32();
+            uiPrimType = child._pFile->Read32();
+            uiNumVertices = child._pFile->Read32();
+            uiPrimCount = child._pFile->Read32();
             break;
         case 0x46554256:
         {
-            unsigned int uiCount = pFile->Read32();
-            unsigned int uiSize = pFile->Read32();
-            uiVertexFormat = pFile->Read32();
+            unsigned int uiCount = child._pFile->Read32();
+            unsigned int uiSize = child._pFile->Read32();
+            uiVertexFormat = child._pFile->Read32();
             pVertexBuffer = pcRedVertexBuffer::Create(uiCount, uiSize, true, true);
             void* pData = pVertexBuffer->Lock(uiCount, uiStartVertex);
-            pFile->ReadData(pData, uiSize * uiCount);
+            child._pFile->ReadData(pData, uiSize * uiCount);
             pVertexBuffer->Unlock();
             break;
         }
         case 0x46554249:
         {
-            unsigned int uiNumIndices = pFile->Read32();
+            unsigned int uiNumIndices = child._pFile->Read32();
             pIndexBuffer = pcRedIndexBuffer::Create(uiNumIndices, true, true);
             void* pData = pIndexBuffer->Lock(uiNumIndices, uiStartIndex);
-            pFile->ReadData(pData, uiNumIndices * 2);
+            child._pFile->ReadData(pData, uiNumIndices * 2);
             pIndexBuffer->Unlock();
             break;
         }
@@ -1209,7 +1204,7 @@ void RedStencilShadow::SetVisibilityTestCamera(const RedCamera* pCamera)
 static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned char* puiWeights,
                                 const unsigned char* puiIndices, const PblMatrix* pMatrices)
 {
-    static PblMatrix s_mSkin = *(const PblMatrix*)&_IdentityMatrix;
+    static PblMatrix s_mSkin = gMatrixIdentity;
 
     if (uiNumBones == 1 || puiWeights[0] == 0xFF)
     {
@@ -1219,12 +1214,10 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
     unsigned int i = 1;
     float fWeight = puiWeights[0] * kInv255;
     const PblMatrix* pBone = &pMatrices[puiIndices[0]];
-    for (int r = 0; r < 4; ++r)
-    {
-        s_mSkin.m[r][0] = pBone->m[r][0] * fWeight;
-        s_mSkin.m[r][1] = pBone->m[r][1] * fWeight;
-        s_mSkin.m[r][2] = pBone->m[r][2] * fWeight;
-    }
+    s_mSkin[0] = (*pBone)[0] * fWeight;
+    s_mSkin[1] = (*pBone)[1] * fWeight;
+    s_mSkin[2] = (*pBone)[2] * fWeight;
+    s_mSkin[3] = (*pBone)[3] * fWeight;
 
     for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i - 1])
     {
@@ -1233,21 +1226,17 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
         if (i >= uiNumBones - 1)
         {
             const float fScale = (1.0f - fWeight) / (uiTotal * kInv255);
-            for (int r = 0; r < 4; ++r)
-            {
-                s_mSkin.m[r][0] = s_mSkin.m[r][0] * fScale + pBone->m[r][0] * fWeight;
-                s_mSkin.m[r][1] = s_mSkin.m[r][1] * fScale + pBone->m[r][1] * fWeight;
-                s_mSkin.m[r][2] = s_mSkin.m[r][2] * fScale + pBone->m[r][2] * fWeight;
-            }
+            s_mSkin[0] = s_mSkin[0] * fScale + (*pBone)[0] * fWeight;
+            s_mSkin[1] = s_mSkin[1] * fScale + (*pBone)[1] * fWeight;
+            s_mSkin[2] = s_mSkin[2] * fScale + (*pBone)[2] * fWeight;
+            s_mSkin[3] = s_mSkin[3] * fScale + (*pBone)[3] * fWeight;
             break;
         }
         ++i;
-        for (int r = 0; r < 4; ++r)
-        {
-            s_mSkin.m[r][0] += pBone->m[r][0] * fWeight;
-            s_mSkin.m[r][1] += pBone->m[r][1] * fWeight;
-            s_mSkin.m[r][2] += pBone->m[r][2] * fWeight;
-        }
+        s_mSkin[0] += (*pBone)[0] * fWeight;
+        s_mSkin[1] += (*pBone)[1] * fWeight;
+        s_mSkin[2] += (*pBone)[2] * fWeight;
+        s_mSkin[3] += (*pBone)[3] * fWeight;
     }
     return s_mSkin;
 }

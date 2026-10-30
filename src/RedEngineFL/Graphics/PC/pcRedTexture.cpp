@@ -24,57 +24,55 @@ const char* kLOCALIZE_TEXTURE_PREFIX = "_LOCALIZE_";
 RedTexture::RedTexture(unsigned int uiWidth, unsigned int uiHeight, _D3DFORMAT format,
                        unsigned int uiLevels, unsigned int uiUsage, _D3DPOOL pool,
                        unsigned int uiNameHash)
+    : m_uiLastFrameUsed(0)
+    , m_uiNameHash(0)
+    , m_uiHeight(0)
+    , m_uiWidth(0)
+    , m_uiDepth(0)
+    , m_uiNumMipMaps(0)
+    , m_format((_D3DFORMAT)0)
+    , m_type(PC_REDTEXTURE_TYPE_NONE)
+    , m_pTexture(0)
+    , m_pool(pool)
+    , m_usage(uiUsage)
+    , m_sizeInBytes(0)
 {
-    m_uiLastFrameUsed = 0;
-    m_uiNameHash = 0;
-    m_uiHeight = 0;
-    m_uiWidth = 0;
-    m_uiDepth = 0;
-    m_uiNumMipMaps = 0;
-    m_format = (_D3DFORMAT)0;
-    m_type = PC_REDTEXTURE_TYPE_NONE;
-    m_pTexture = 0;
-    m_pool = pool;
-    m_usage = uiUsage;
-    m_sizeInBytes = 0;
-
     pcInit(uiWidth, uiHeight, format, uiLevels, uiUsage, pool, uiNameHash);
 }
 
 // FUNCTION: SWBF2 0x006ba030
 RedTexture::RedTexture(IDirect3DTexture9* pTexture, unsigned int uiNameHash)
+    : m_uiLastFrameUsed(0)
+    , m_uiNameHash(0)
+    , m_uiHeight(0)
+    , m_uiWidth(0)
+    , m_uiDepth(0)
+    , m_uiNumMipMaps(0)
+    , m_format((_D3DFORMAT)0)
+    , m_type(PC_REDTEXTURE_TYPE_NONE)
+    , m_pTexture(0)
+    , m_pool(D3DPOOL_MANAGED)
+    , m_usage(0)
+    , m_sizeInBytes(0)
 {
-    m_uiLastFrameUsed = 0;
-    m_uiNameHash = 0;
-    m_uiHeight = 0;
-    m_uiWidth = 0;
-    m_uiDepth = 0;
-    m_uiNumMipMaps = 0;
-    m_format = (_D3DFORMAT)0;
-    m_type = PC_REDTEXTURE_TYPE_NONE;
-    m_pTexture = 0;
-    m_pool = D3DPOOL_MANAGED;
-    m_usage = 0;
-    m_sizeInBytes = 0;
-
     pcInit(pTexture, uiNameHash);
 }
 
 // FUNCTION: SWBF2 0x006ba0c0
 RedTexture::RedTexture()
+    : m_uiLastFrameUsed(0)
+    , m_uiNameHash(0)
+    , m_uiHeight(0)
+    , m_uiWidth(0)
+    , m_uiDepth(0)
+    , m_uiNumMipMaps(0)
+    , m_format((_D3DFORMAT)0)
+    , m_type(PC_REDTEXTURE_TYPE_NONE)
+    , m_pTexture(0)
+    , m_pool(D3DPOOL_MANAGED)
+    , m_usage(0)
+    , m_sizeInBytes(0)
 {
-    m_uiLastFrameUsed = 0;
-    m_uiNameHash = 0;
-    m_uiHeight = 0;
-    m_uiWidth = 0;
-    m_uiDepth = 0;
-    m_uiNumMipMaps = 0;
-    m_format = (_D3DFORMAT)0;
-    m_type = PC_REDTEXTURE_TYPE_NONE;
-    m_pTexture = 0;
-    m_pool = D3DPOOL_MANAGED;
-    m_usage = 0;
-    m_sizeInBytes = 0;
 }
 
 // FUNCTION: SWBF2 0x006ba140
@@ -186,15 +184,15 @@ bool RedTexture::_Read(PblFileChunk& chunk)
                 const char* pcLanguage = RedLocalizeDB::GetLanguageStr();
                 const size_t uiLanguage = strlen(pcLanguage);
                 char* pcRest = acName + uiPrefix;
-                if (!_strnicmp(pcRest, pcLanguage, uiLanguage))
+                if (_strnicmp(pcRest, pcLanguage, uiLanguage))
+                {
+                    bResult = false;
+                }
+                else
                 {
                     char acTemp[256];
                     strlcpy(acTemp, pcRest + uiLanguage + 1, 256);
                     strlcpy(acName, acTemp, 256);
-                }
-                else
-                {
-                    bResult = false;
                 }
             }
 
@@ -349,8 +347,8 @@ int RedTexture::pcGetBytesFromFormat(_D3DFORMAT format)
 {
     switch (format)
     {
-    case D3DFMT_R8G8B8:
-        return 3;
+    case D3DFMT_A16B16G16R16:
+        return 8;
 
     case D3DFMT_A8R8G8B8:
     case D3DFMT_X8R8G8B8:
@@ -360,6 +358,9 @@ int RedTexture::pcGetBytesFromFormat(_D3DFORMAT format)
     case D3DFMT_G16R16:
     case D3DFMT_A2R10G10B10:
         return 4;
+
+    case D3DFMT_R8G8B8:
+        return 3;
 
     case D3DFMT_R5G6B5:
     case D3DFMT_X1R5G5B5:
@@ -376,9 +377,6 @@ int RedTexture::pcGetBytesFromFormat(_D3DFORMAT format)
     case D3DFMT_L8:
     case D3DFMT_A4L4:
         return 1;
-
-    case D3DFMT_A16B16G16R16:
-        return 8;
 
     default:
         return 0;
@@ -407,14 +405,26 @@ void RedTexture::pcInit(IDirect3DBaseTexture9* pTexture, unsigned int uiNameHash
     }
 
     m_pTexture = pTexture;
-    pTexture->AddRef();
+    m_pTexture->AddRef();
 
     m_uiNumMipMaps = m_pTexture->GetLevelCount();
 
-    D3DRESOURCETYPE eResourceType = m_pTexture->GetType();
-
-    switch (eResourceType)
+    switch (m_pTexture->GetType())
     {
+    case D3DRTYPE_CUBETEXTURE:
+    {
+        D3DSURFACE_DESC desc;
+        m_type = PC_REDTEXTURE_TYPE_CUBEMAP;
+        ((IDirect3DCubeTexture9*)m_pTexture)->GetLevelDesc(0, &desc);
+        m_uiWidth = desc.Width;
+        m_uiHeight = desc.Height;
+        m_format = desc.Format;
+        m_usage = desc.Usage;
+        m_uiDepth = 1;
+        m_pool = desc.Pool;
+        break;
+    }
+
     case D3DRTYPE_VOLUMETEXTURE:
     {
         D3DVOLUME_DESC desc;
@@ -430,11 +440,9 @@ void RedTexture::pcInit(IDirect3DBaseTexture9* pTexture, unsigned int uiNameHash
     }
 
     case D3DRTYPE_TEXTURE:
-    case D3DRTYPE_CUBETEXTURE:
     {
         D3DSURFACE_DESC desc;
-        m_type = (eResourceType == D3DRTYPE_TEXTURE) ? PC_REDTEXTURE_TYPE_TEXTURE
-                                                     : PC_REDTEXTURE_TYPE_CUBEMAP;
+        m_type = PC_REDTEXTURE_TYPE_TEXTURE;
         ((IDirect3DTexture9*)m_pTexture)->GetLevelDesc(0, &desc);
         m_uiWidth = desc.Width;
         m_uiHeight = desc.Height;
@@ -498,19 +506,9 @@ void RedTexture::pcReadFormat(PblFileChunk& chunk, _D3DFORMAT format)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x45434146u)
+        switch (child._iId)
         {
-            ++iFace;
-            while (child.HasMoreChildren())
-            {
-                PblFileChunk level = child.ReadNextChild();
-                if (level._iId == 0x5F4C564Cu)
-                {
-                    pcReadLevel(level, uiSkip, iFace);
-                }
-            }
-        }
-        else if (child._iId == 0x4F464E49u)
+        case 0x4F464E49:
         {
             const _D3DFORMAT fileFormat = (_D3DFORMAT)child._pFile->Read32();
             if (fileFormat != format)
@@ -534,7 +532,7 @@ void RedTexture::pcReadFormat(PblFileChunk& chunk, _D3DFORMAT format)
             }
             else
             {
-                unsigned int uiSize = m_uiHeight * m_uiDepth * m_uiWidth;
+                unsigned int uiSize = m_uiWidth * m_uiDepth * m_uiHeight;
                 if (m_format == D3DFMT_DXT1)
                 {
                     uiSize >>= 1;
@@ -544,7 +542,7 @@ void RedTexture::pcReadFormat(PblFileChunk& chunk, _D3DFORMAT format)
                     uiSize *= pcGetBytesFromFormat(m_format);
                 }
 
-                const unsigned int uiLimit = textureDetail ? 0x80000 : 0x40000;
+                const unsigned int uiLimit = (textureDetail == QUALITY_LOW) ? 0x40000 : 0x80000;
                 for (uiSize >>= uiBias; uiSize > uiLimit; uiSize >>= 2)
                 {
                     uiSkip++;
@@ -574,49 +572,52 @@ void RedTexture::pcReadFormat(PblFileChunk& chunk, _D3DFORMAT format)
             }
 
             HRESULT hr;
-            switch (m_type)
-            {
-            case PC_REDTEXTURE_TYPE_VOLUME:
+            if (m_type == PC_REDTEXTURE_TYPE_VOLUME)
             {
                 IDirect3DVolumeTexture9* pVolume;
                 hr = RedRenderer::pcGetDevice()->CreateVolumeTexture(
                     m_uiWidth, m_uiHeight, m_uiDepth, m_uiNumMipMaps, 0, m_format,
                     D3DPOOL_MANAGED, &pVolume, 0);
                 m_pTexture = pVolume;
-                if (FAILED(hr))
-                {
-                    return;
-                }
-                break;
             }
-
-            case PC_REDTEXTURE_TYPE_CUBEMAP:
+            else if (m_type == PC_REDTEXTURE_TYPE_CUBEMAP)
             {
                 IDirect3DCubeTexture9* pCube;
                 hr = RedRenderer::pcGetDevice()->CreateCubeTexture(
                     m_uiWidth, m_uiNumMipMaps, 0, m_format, D3DPOOL_MANAGED, &pCube, 0);
                 m_pTexture = pCube;
-                if (FAILED(hr))
-                {
-                    return;
-                }
-                break;
             }
-
-            case PC_REDTEXTURE_TYPE_TEXTURE:
+            else if (m_type == PC_REDTEXTURE_TYPE_TEXTURE)
             {
                 IDirect3DTexture9* pTexture;
                 hr = RedRenderer::pcGetDevice()->CreateTexture(
                     m_uiWidth, m_uiHeight, m_uiNumMipMaps, 0, m_format, D3DPOOL_MANAGED,
                     &pTexture, 0);
                 m_pTexture = pTexture;
-                if (FAILED(hr))
-                {
-                    return;
-                }
+            }
+            else
+            {
                 break;
             }
+
+            if (FAILED(hr))
+            {
+                return;
             }
+            break;
+        }
+
+        case 0x45434146:
+            ++iFace;
+            while (child.HasMoreChildren())
+            {
+                PblFileChunk level = child.ReadNextChild();
+                if (level._iId == 0x5F4C564C)
+                {
+                    pcReadLevel(level, uiSkip, iFace);
+                }
+            }
+            break;
         }
     }
 }
@@ -630,7 +631,9 @@ void RedTexture::pcReadLevel(PblFileChunk& chunk, unsigned int uiSkip, int iFace
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x4F464E49u)
+        switch (child._iId)
+        {
+        case 0x4F464E49:
         {
             const unsigned int uiFileLevel = child._pFile->Read32();
             iSize = child._pFile->Read32();
@@ -639,12 +642,12 @@ void RedTexture::pcReadLevel(PblFileChunk& chunk, unsigned int uiSkip, int iFace
                 return;
             }
             uiLevel = uiFileLevel - uiSkip;
+            break;
         }
-        else if (child._iId == 0x59444F42u)
+
+        case 0x59444F42:
         {
-            switch (m_type)
-            {
-            case PC_REDTEXTURE_TYPE_VOLUME:
+            if (m_type == PC_REDTEXTURE_TYPE_VOLUME)
             {
                 IDirect3DVolumeTexture9* pVolume = static_cast<IDirect3DVolumeTexture9*>(m_pTexture);
                 D3DLOCKED_BOX box;
@@ -680,10 +683,8 @@ void RedTexture::pcReadLevel(PblFileChunk& chunk, unsigned int uiSkip, int iFace
                 }
 
                 pVolume->UnlockBox(uiLevel);
-                break;
             }
-
-            case PC_REDTEXTURE_TYPE_CUBEMAP:
+            else if (m_type == PC_REDTEXTURE_TYPE_CUBEMAP)
             {
                 IDirect3DCubeTexture9* pCube = static_cast<IDirect3DCubeTexture9*>(m_pTexture);
                 D3DLOCKED_RECT rect;
@@ -712,10 +713,8 @@ void RedTexture::pcReadLevel(PblFileChunk& chunk, unsigned int uiSkip, int iFace
                 }
 
                 pCube->UnlockRect((D3DCUBEMAP_FACES)iFace, uiLevel);
-                break;
             }
-
-            case PC_REDTEXTURE_TYPE_TEXTURE:
+            else if (m_type == PC_REDTEXTURE_TYPE_TEXTURE)
             {
                 IDirect3DTexture9* pTexture = static_cast<IDirect3DTexture9*>(m_pTexture);
                 D3DLOCKED_RECT rect;
@@ -744,9 +743,9 @@ void RedTexture::pcReadLevel(PblFileChunk& chunk, unsigned int uiSkip, int iFace
                 }
 
                 pTexture->UnlockRect(uiLevel);
-                break;
             }
-            }
+            break;
+        }
         }
     }
 }

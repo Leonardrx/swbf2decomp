@@ -8,13 +8,13 @@
 pcRedIndexBuffer::pcRedIndexBuffer(unsigned int uiNumIndices, bool bStatic,
                                    bool bShared)
 {
-
+    unsigned int uiSize = uiNumIndices * 2;
 
     memset(&m_desc, 0, sizeof(m_desc));
+    m_desc.Size = uiSize;
     m_desc.Format = D3DFMT_INDEX16;
-    m_desc.Type = D3DRTYPE_INDEXBUFFER;
-    m_desc.Size = uiNumIndices * 2;
     m_desc.Pool = bStatic ? D3DPOOL_MANAGED : D3DPOOL_DEFAULT;
+    m_desc.Type = D3DRTYPE_INDEXBUFFER;
     if (bStatic)
     {
         m_desc.Usage = D3DUSAGE_WRITEONLY;
@@ -33,7 +33,7 @@ pcRedIndexBuffer::pcRedIndexBuffer(unsigned int uiNumIndices, bool bStatic,
     m_numIndicesReserved = 0;
     m_buffer = 0;
 
-    RedRenderer::pcGetDevice()->CreateIndexBuffer(m_desc.Size, m_desc.Usage,
+    RedRenderer::pcGetDevice()->CreateIndexBuffer(uiSize, m_desc.Usage,
                                                   m_desc.Format, m_desc.Pool,
                                                   &m_buffer, 0);
 }
@@ -83,17 +83,14 @@ pcRedIndexBuffer* pcRedIndexBuffer::Create(unsigned int uiNumIndices,
     PblList<pcRedIndexBuffer>& rList =
         bStatic ? s_staticIndexBufferList : s_dynamicIndexBufferList;
 
-    for (PblList<pcRedIndexBuffer>::Node* pNode = rList.GetFirst();
-         pNode->_pObject != rList._head._pObject;
-         pNode = pNode->_pNext)
+    for (PblList<pcRedIndexBuffer>::Itor it = rList.Begin();
+         (pcRedIndexBuffer*)it != (pcRedIndexBuffer*)rList.End(); ++it)
     {
-        pcRedIndexBuffer* pFound = pNode->_pObject;
-        if (pFound->m_shared &&
-            pFound->m_numIndicesReserved + uiNumIndices <= pFound->m_maxIndices)
+        if (it->m_shared && it->m_numIndicesReserved + uiNumIndices <= it->m_maxIndices)
         {
-            pFound->m_numIndicesReserved += uiNumIndices;
-            pFound->AddRef();
-            return pFound;
+            it->m_numIndicesReserved += uiNumIndices;
+            it->AddRef();
+            return it;
         }
     }
 
@@ -129,7 +126,7 @@ void pcRedIndexBuffer::Cleanup()
         PblList<pcRedIndexBuffer>::Node* pNode = s_dynamicIndexBufferList.GetFirst();
         pcRedIndexBuffer* pBuffer = pNode->_pObject;
         s_dynamicIndexBufferList.Remove(pNode);
-        while (pBuffer->Release())
+        while (pBuffer->Release() > 0)
         {
         }
     }
@@ -139,7 +136,7 @@ void pcRedIndexBuffer::Cleanup()
         PblList<pcRedIndexBuffer>::Node* pNode = s_staticIndexBufferList.GetFirst();
         pcRedIndexBuffer* pBuffer = pNode->_pObject;
         s_staticIndexBufferList.Remove(pNode);
-        while (pBuffer->Release())
+        while (pBuffer->Release() > 0)
         {
         }
     }
@@ -196,34 +193,32 @@ unsigned short* pcRedIndexBuffer::Lock(unsigned int uiNumIndices, unsigned int& 
 {
     void* pData = 0;
 
-    if (!m_buffer)
+    if (m_buffer)
     {
-        return 0;
-    }
+        DWORD dwFlags;
+        if (!m_static)
+        {
+            dwFlags = D3DLOCK_NOOVERWRITE;
+            if (m_flush || m_appendPos + uiNumIndices > m_maxIndices)
+            {
+                m_flush = false;
+                dwFlags = D3DLOCK_DISCARD;
+                m_appendPos = 0;
+            }
+        }
+        else
+        {
+            dwFlags = D3DLOCK_NOSYSLOCK;
+        }
 
-    DWORD dwFlags;
-    if (m_static)
-    {
-        dwFlags = D3DLOCK_NOSYSLOCK;
+        if (m_buffer->Lock(m_appendPos * sizeof(unsigned short),
+                           uiNumIndices * sizeof(unsigned short), &pData, dwFlags) == D3D_OK)
+        {
+            ++m_locked;
+            ruiStartIndex = m_appendPos;
+            m_appendPos += uiNumIndices;
+        }
+        return (unsigned short*)pData;
     }
-    else if (!m_flush && m_appendPos + uiNumIndices <= m_maxIndices)
-    {
-        dwFlags = D3DLOCK_NOOVERWRITE;
-    }
-    else
-    {
-        m_flush = false;
-        dwFlags = D3DLOCK_DISCARD;
-        m_appendPos = 0;
-    }
-
-    if (m_buffer->Lock(m_appendPos * sizeof(unsigned short),
-                       uiNumIndices * sizeof(unsigned short), &pData, dwFlags) == D3D_OK)
-    {
-        ++m_locked;
-        ruiStartIndex = m_appendPos;
-        m_appendPos += uiNumIndices;
-    }
-
-    return (unsigned short*)pData;
+    return 0;
 }
