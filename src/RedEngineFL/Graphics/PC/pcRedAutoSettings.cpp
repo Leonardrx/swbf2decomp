@@ -328,7 +328,7 @@ void DoAutoDetection()
 
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,
                         "Hardware\\Description\\System\\CentralProcessor\\0",
-                        0, 0, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, 0, &hKey, 0)
+                        0, 0, REG_OPTION_VOLATILE, KEY_ALL_ACCESS, 0, &hKey, 0)
         == ERROR_SUCCESS)
     {
         DWORD dwType;
@@ -347,7 +347,7 @@ void DoAutoDetection()
 
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,
                         "Hardware\\Description\\System\\CentralProcessor\\0",
-                        0, 0, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, 0, &hKey, 0)
+                        0, 0, REG_OPTION_VOLATILE, KEY_ALL_ACCESS, 0, &hKey, 0)
         == ERROR_SUCCESS)
     {
         char acProcessorName[256];
