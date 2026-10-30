@@ -50,7 +50,12 @@ public:
     VisibilityT ClassifyPoints(const PblVector3* pPoints, int iNumPoints) const;
 
     VisibilityT ClassifyPlane(const PblVector3& vNormal, float fDist) const;
-    VisibilityT ClassifyBox(const PblMatrix& rMatrix, const PblVector3& vExtents) const;
+    // FUNCTION: SWBF2 0x00692c70
+    VisibilityT ClassifyBox(const PblMatrix& rMatrix, const PblVector3& vExtents) const
+    {
+        PblMatrix m = rMatrix * _MatrixInverse;
+        return ClassifyBoxInternal(m, m.GetTranslation(), vExtents);
+    }
     VisibilityT ClassifyAABox(const PblVector3& vCenter, const PblVector3& vExtents) const;
 
     VisibilityT ClassifyXZBox(const PblVector3& vCenter, const PblVector3& vExtents) const;

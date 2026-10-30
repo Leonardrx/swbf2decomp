@@ -110,13 +110,13 @@ int __stdcall RedWarning::DlgProc(HWND__* hDlg, unsigned int uiMessage, unsigned
         return 1;
 
     case WM_COMMAND:
-        if (LOWORD(uiWParam) == IDOK)
+        switch (LOWORD(uiWParam))
         {
-
+        case IDOK:
             EndDialog(hDlg, uiWParam);
             return 1;
         }
-        break;
+        return 0;
     }
 
     return 0;
@@ -126,20 +126,20 @@ int __stdcall RedWarning::DlgProc(HWND__* hDlg, unsigned int uiMessage, unsigned
 unsigned int RedWarning::Format(char* pcBuffer, unsigned int uiSize, char* pcMessage,
                                 unsigned int uiFormat, char cSeparator)
 {
-    char* pcAt = pcBuffer;
+    char* pcStart = pcBuffer;
     char* pcEnd = pcBuffer + uiSize;
 
     if (uiFormat & 0x00010000)
     {
-        pcAt += _snprintf(pcAt, pcEnd - pcAt, "\n");
+        pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "\n");
 
         if (uiFormat & 0x02)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "Message Severity: %d\n", g_eSeverity);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "Message Severity: %d\n", g_eSeverity);
         }
         else if (uiFormat & 0x01)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "Message Severity: %s\n",
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "Message Severity: %s\n",
                               kapcSEVERITYLONG[g_eSeverity]);
         }
 
@@ -147,96 +147,96 @@ unsigned int RedWarning::Format(char* pcBuffer, unsigned int uiSize, char* pcMes
         {
             if (uiFormat & 0x04)
             {
-                pcAt += _snprintf(pcAt, pcEnd - pcAt, "%s", g_pcFileName);
+                pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "%s", g_pcFileName);
             }
             if (uiFormat & 0x08)
             {
-                pcAt += _snprintf(pcAt, pcEnd - pcAt, "(%d)", g_iLineNumber);
+                pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "(%d)", g_iLineNumber);
             }
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "\n");
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "\n");
         }
 
         if (uiFormat & 0x30)
         {
             if (uiFormat & 0x10)
             {
-                pcAt += _snprintf(pcAt, pcEnd - pcAt, g_pcCompileTime);
+                pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, g_pcCompileTime);
             }
             if (uiFormat & 0x20)
             {
-                pcAt += _snprintf(pcAt, pcEnd - pcAt, g_pcCompileDate);
+                pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, g_pcCompileDate);
             }
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "\n");
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "\n");
         }
 
         if (uiFormat & 0x40)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "%s\n", pcMessage);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "%s\n", pcMessage);
         }
 
-        if (pcAt < pcEnd)
+        if (pcBuffer >= pcEnd)
         {
-            return (unsigned int)(pcAt - pcBuffer);
+            pcBuffer = pcEnd - 2;
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "\n");
         }
-
-        pcAt = pcEnd - 2;
     }
     else
     {
 
         if (uiFormat & 0x04)
         {
-            unsigned int uiLength = (unsigned int)_snprintf(pcAt, pcEnd - pcAt, "%s", g_pcFileName);
-            while (uiLength < 16 && pcAt + 1 + uiLength < pcEnd)
+            unsigned int uiLength = (unsigned int)_snprintf(pcBuffer, pcEnd - pcBuffer, "%s", g_pcFileName);
+            while (uiLength < 16 && pcBuffer + 1 + uiLength < pcEnd)
             {
-                pcAt[uiLength++] = ' ';
+                pcBuffer[uiLength++] = ' ';
             }
-            pcAt += uiLength;
-            *pcAt = '\0';
+            pcBuffer += uiLength;
+            *pcBuffer = '\0';
         }
 
         if (uiFormat & 0x08)
         {
             unsigned int uiLength =
-                (unsigned int)_snprintf(pcAt, pcEnd - pcAt, "(%d) :", g_iLineNumber);
-            while (uiLength < 9 && pcAt + 1 + uiLength < pcEnd)
+                (unsigned int)_snprintf(pcBuffer, pcEnd - pcBuffer, "(%d) :", g_iLineNumber);
+            while (uiLength < 9 && pcBuffer + 1 + uiLength < pcEnd)
             {
-                pcAt[uiLength++] = ' ';
+                pcBuffer[uiLength++] = ' ';
             }
-            pcAt += uiLength;
-            *pcAt = '\0';
+            pcBuffer += uiLength;
+            *pcBuffer = '\0';
         }
 
         if (uiFormat & 0x02)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "[%s]", kapcSEVERITYLONG[g_eSeverity]);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "[%s]", kapcSEVERITYLONG[g_eSeverity]);
         }
         else if (uiFormat & 0x01)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "[%s]", kapcSEVERITYSHORT[g_eSeverity]);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "[%s]", kapcSEVERITYSHORT[g_eSeverity]);
         }
 
         if (uiFormat & 0x10)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "%c%s", cSeparator, g_pcCompileTime);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "%c%s", cSeparator, g_pcCompileTime);
         }
         if (uiFormat & 0x20)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "%c%s", cSeparator, g_pcCompileDate);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "%c%s", cSeparator, g_pcCompileDate);
         }
         if (uiFormat & 0x40)
         {
-            pcAt += _snprintf(pcAt, pcEnd - pcAt, "%c%s", cSeparator, pcMessage);
+            pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "%c%s", cSeparator, pcMessage);
         }
 
-        if (pcAt > pcEnd - 2)
+        if (pcBuffer > pcEnd - 2)
         {
-            pcAt = pcEnd - 2;
+            pcBuffer = pcEnd - 2;
         }
+
+        pcBuffer += _snprintf(pcBuffer, pcEnd - pcBuffer, "\n");
     }
 
-    pcAt += _snprintf(pcAt, pcEnd - pcAt, "\n");
-    return (unsigned int)(pcAt - pcBuffer);
+    return (unsigned int)(pcBuffer - pcStart);
 }
 
 // FUNCTION: SWBF2 0x006f6e90
@@ -248,19 +248,19 @@ RedWarning::RED_ERROR_SEVERITY RedWarning::GetSeverityToDestination(RED_LOG_DEST
 // FUNCTION: SWBF2 0x006f6ea0
 void RedWarning::Init(void)
 {
-    g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_CONSOLE] = RED_SEVERITY_INFORM;
-    g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_TRACE] = RED_SEVERITY_VERBOSE;
     g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_FILE] = RED_SEVERITY_NONE;
     g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_CALLBACK] = RED_SEVERITY_NONE;
+    g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_CONSOLE] = RED_SEVERITY_INFORM;
+    g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_TRACE] = RED_SEVERITY_VERBOSE;
     g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_BREAK] = RED_SEVERITY_ERROR;
     g_aeSeverityToDestination[RED_LOG_DESTINATION_INDEX_OPEN_CONSOLE] = RED_SEVERITY_WARNING;
     g_eSeverityMin = RED_SEVERITY_VERBOSE;
 
     g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_CONSOLE] = 0x0000004e;
     g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_TRACE] = 0x0000004e;
-    g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_FILE] = 0x0001004e;
     g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_CALLBACK] = 0x0000004e;
     g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_BREAK] = 0x0000004e;
+    g_auiFormatToDestination[RED_LOG_DESTINATION_INDEX_FILE] = 0x0001004e;
 
     g_fnLogCallback = 0;
     g_eSeverity = RED_SEVERITY_BUG;
@@ -270,13 +270,8 @@ void RedWarning::Init(void)
     g_iLineNumber = 0;
     g_bFormatted = true;
 
-    if (g_bOverwriteLogFile)
+    if (!g_bOverwriteLogFile)
     {
-        _snprintf(g_pcLogFileName, sizeof(g_pcLogFileName), "%s.%s", "BFront2", "log");
-    }
-    else
-    {
-
         int i = 0;
         do
         {
@@ -292,6 +287,10 @@ void RedWarning::Init(void)
         {
             memset(g_pcLogFileName, 0, sizeof(g_pcLogFileName));
         }
+    }
+    else
+    {
+        _snprintf(g_pcLogFileName, sizeof(g_pcLogFileName), "%s.%s", "BFront2", "log");
     }
 
     g_bInitialized = true;
@@ -310,10 +309,10 @@ void RedWarning::LogMessage(char const* pcFormat, ...)
     va_list args;
 
     va_start(args, pcFormat);
+    char* pcText = acFormatted;
     vsnprintf(acMessage, sizeof(acMessage), pcFormat, args);
     va_end(args);
 
-    char* pcText = acFormatted;
     bool bBreak = false;
 
     for (int i = 0; i < RED_LOG_NUM_WRITE_DESTINATIONS; ++i)
@@ -332,7 +331,11 @@ void RedWarning::LogMessage(char const* pcFormat, ...)
             pcText = acMessage;
         }
 
-        RED_ERROR_SEVERITY eBreakAt = GetBreakOnWarning() ? RED_SEVERITY_WARNING : RED_SEVERITY_ERROR;
+        RED_ERROR_SEVERITY eBreakAt = RED_SEVERITY_ERROR;
+        if (GetBreakOnWarning())
+        {
+            eBreakAt = RED_SEVERITY_WARNING;
+        }
         if (g_bFormatted && !bBreak && g_eSeverity >= eBreakAt)
         {
             bBreak = true;
@@ -414,20 +417,18 @@ void RedWarning::SetSeverityToDestination(unsigned int uiDestinationMask, RED_ER
 {
     g_eSeverityMin = RED_SEVERITY_NONE;
 
-    unsigned int uiBit = 1;
     for (int i = 0; i < RED_LOG_NUM_DESTINATIONS; ++i)
     {
-        if (uiDestinationMask & uiBit)
+        if (uiDestinationMask & (1u << i))
         {
             SetSeverityToDestination((RED_LOG_DESTINATION_INDEX)i, eSeverity);
         }
 
-        if (g_aeSeverityToDestination[i] < g_eSeverityMin)
+        RED_ERROR_SEVERITY eDestination = g_aeSeverityToDestination[i];
+        if (g_eSeverityMin > eDestination)
         {
-            g_eSeverityMin = g_aeSeverityToDestination[i];
+            g_eSeverityMin = eDestination;
         }
-
-        uiBit <<= 1;
     }
 }
 
@@ -449,7 +450,7 @@ void RedWarning::SetSeverityToDestination(RED_LOG_DESTINATION_INDEX eIndex,
             {
                 continue;
             }
-            if (g_aeSeverityToDestination[i] < g_eSeverityMin)
+            if (g_eSeverityMin > g_aeSeverityToDestination[i])
             {
                 g_eSeverityMin = g_aeSeverityToDestination[i];
             }

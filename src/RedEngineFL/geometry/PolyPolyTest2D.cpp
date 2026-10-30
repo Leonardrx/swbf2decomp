@@ -80,3 +80,14 @@ void __cdecl geo::Transform::Op(const geo::BasePoly3D& rIn, geo::BasePoly2D& rOu
         rOut.points_[i] = vProj;
     }
 }
+
+// FUNCTION: SWBF2 0x00725190
+void geo::PolyPoly2D::UnitTest()
+{
+}
+
+// FUNCTION: SWBF2 0x007251a0
+void geo::UnitTest()
+{
+    PolyPoly2D::UnitTest();
+}

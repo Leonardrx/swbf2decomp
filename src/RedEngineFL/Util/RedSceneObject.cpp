@@ -16,10 +16,12 @@ public:
 // FUNCTION: SWBF2 0x006e1eb0
 RedNoLodData::RedNoLodData()
 {
+    _LodClass = -1;
+    _LodBitmask = 0;
     _LodCost[0] = -1;
     _LodCost[1] = -1;
     _LodCost[2] = -1;
-    _LodClass = -1;
+    mLowRezFlags = 0;
 }
 
 // SYNTHETIC: SWBF2 0x00408980
@@ -47,7 +49,11 @@ bool BoxClipsNearPlane(const RedCamera* pCamera, const PblVector3& vCenter,
                         + fabsf(mView.m[1][2]) * vExtents.y
                         + fabsf(mView.m[2][2]) * vExtents.z;
 
-    return pCamera->GetNearPlane() + vViewCenter.z > -fRadius;
+    if (pCamera->GetNearPlane() + vViewCenter.z > -fRadius)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006e1ee0
@@ -55,15 +61,12 @@ RedSceneObject::RedSceneObject(const RedLodData* pLodData)
     : mNextSceneObject(0)
     , mPrevSceneObject(0)
     , mSceneAABox(0)
+    , _Sphere(0.0f, 0.0f, 0.0f, -1.0f)
     , _pLodData(const_cast<RedLodData*>(pLodData))
     , _uiRenderFlags(0)
     , _bActive(false)
     , _fPriorityMod(1.0f)
 {
-    _Sphere.x = 0.0f;
-    _Sphere.y = 0.0f;
-    _Sphere.z = 0.0f;
-    _Sphere.w = -1.0f;
     _iFrameNum[0] = (int)0xFAFAFAFA;
 }
 

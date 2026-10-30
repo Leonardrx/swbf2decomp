@@ -17,7 +17,7 @@ const TYPE& Max_(const TYPE& a, const TYPE& b)
 template <class TYPE>
 const TYPE& Min_(const TYPE& a, const TYPE& b)
 {
-    return b >= a ? a : b;
+    return a <= b ? a : b;
 }
 
 class Int_

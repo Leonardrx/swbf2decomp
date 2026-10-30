@@ -22,7 +22,8 @@ public:
     virtual void Allocate(Buffer& rBuf) = 0;
     virtual void Deallocate(Buffer& rBuf) = 0;
     virtual void SetMaxMem(int iMax) = 0;
-    virtual ~ListAllocator();
+    // FUNCTION: SWBF2 0x006e9310
+    virtual ~ListAllocator() {}
     virtual void UnitTest_() = 0;
 
     static ListAllocator* Create(unsigned int uBaseMem, unsigned int uMaxMem);

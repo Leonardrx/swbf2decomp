@@ -29,25 +29,12 @@ float GetNearSceneFadeEnd();
 // GLOBAL: SWBF2 0x009a08a8
 RedSceneManager* RedSceneManager::sInstance;
 
-void j_nullsub_177();
-
 // FUNCTION: SWBF2 0x006e4410
 void RedSceneManager::_Init()
 {
-    j_nullsub_177();
+    geo::UnitTest();
     util::Globals::GetInstance();
     pvs::IManager::GetInstance();
-}
-
-// FUNCTION: SWBF2 0x00725190
-void sub_725190()
-{
-}
-
-// FUNCTION: SWBF2 0x007251a0
-void j_nullsub_177()
-{
-    sub_725190();
 }
 
 // TEMPLATE: SWBF2 0x006aee30
@@ -112,7 +99,7 @@ int gCullingCount;
 // GLOBAL: SWBF2 0x009a0884
 int gObjCullingCount;
 // GLOBAL: SWBF2 0x009a0888
-static PblHeap<RedSceneObject*, float>* sFarSceneObjects;
+PblHeap<RedSceneObject*, float>* sFarSceneObjects;
 
 // FUNCTION: SWBF2 0x006e43b0
 void RedSceneManager::_Cleanup()
@@ -121,7 +108,7 @@ void RedSceneManager::_Cleanup()
     mScene.Cleanup();
     mDoScene = true;
     pvs::IManager::ClearInstance();
-    util::HashMultiAllocator::ClearDefault();
+    util::ResetMemory_();
 }
 
 // GLOBAL: SWBF2 0x009a088c
@@ -235,10 +222,7 @@ void RedSceneAABox::AddSibling(RedSceneAABox* pBox)
 void RedSceneManager::AddTransparentObject(RedSceneObject* pObject)
 {
     const PblMatrix& m = RedRenderer::GetCamera()->GetMatrix();
-    float fDist = m.m[2][1] * (m.m[3][1] - pObject->_Sphere.y)
-                + m.m[2][0] * (m.m[3][0] - pObject->_Sphere.x)
-                + m.m[2][2] * (m.m[3][2] - pObject->_Sphere.z)
-                - pObject->_Sphere.w;
+    float fDist = DotProduct(m.GetZAxis(), m.GetTranslation() - pObject->GetRenderPos()) - pObject->_Sphere.w;
     sInstance->_AddTransparentObject(pObject, fDist);
 }
 
@@ -252,39 +236,37 @@ int RedSceneCamera::ClassifyAABB(unsigned int uiFlags, const PblVector3& vPos,
     float dx = vPos.x - mPosition.x;
     float dy = vPos.y - mPosition.y;
     float dz = vPos.z - mPosition.z;
+    const PblVector3 vDelta(dx, dy, dz);
     float fNear, fFar, fWidth, fHeight;
     RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
 
     if (!(iMask & 1) || !(iMask & 2))
     {
-        PblVector3 c = GetCornerFromIndex(vSize, mFrontMaxIndex);
-        float fMax = mFront.y * (c.y + dy) + mFront.x * (c.x + dx) + mFront.z * (c.z + dz);
+        PblVector3 c = GetCornerFromIndex(vSize, mFrontMaxIndex) + vDelta;
+        float fMax = mFront.y * c.y + mFront.x * c.x + mFront.z * c.z;
         if (mNearPlane > fMax)
         {
             return -1;
         }
-        c = GetCornerFromIndex(vSize, mFrontMinIndex);
-        float fMin = mFront.y * (c.y + dy) + (c.x + dx) * mFront.x + mFront.z * (c.z + dz);
+        c = GetCornerFromIndex(vSize, mFrontMinIndex) + vDelta;
+        float fMin = mFront.y * c.y + c.x * mFront.x + mFront.z * c.z;
         if (fMin > mFarPlane)
         {
             return -1;
         }
         if (fMin > mNearPlane)
         {
-            if (uiFlags & 0x40000)
+            if (!(uiFlags & 0x40000))
             {
-                if (fNear > fMin)
-                {
-                    iMask |= 1;
-                }
-                else
-                {
-                    fFar = 0;
-                }
+                iMask |= 1;
+            }
+            else if (fNear > fMin)
+            {
+                iMask |= 1;
             }
             else
             {
-                iMask |= 1;
+                fFar = 0;
             }
         }
         if (mFarPlane > fMax)
@@ -297,8 +279,9 @@ int RedSceneCamera::ClassifyAABB(unsigned int uiFlags, const PblVector3& vPos,
     {
         if (!(iMask & sPlaneBit[i]))
         {
-            PblVector3 c = GetCornerFromIndex(vSize, mMaxIndex[i]);
-            if (mPlane[i].y * (c.y + dy) + mPlane[i].x * (c.x + dx) + mPlane[i].z * (c.z + dz) < 0.0f)
+            const PblVector3& plane = mPlane[i];
+            PblVector3 c = GetCornerFromIndex(vSize, mMaxIndex[i]) + vDelta;
+            if (plane.y * c.y + plane.x * c.x + plane.z * c.z < 0.0f)
             {
                 return -1;
             }
@@ -308,8 +291,9 @@ int RedSceneCamera::ClassifyAABB(unsigned int uiFlags, const PblVector3& vPos,
     {
         if (!(iMask & sPlaneBit[i]))
         {
-            PblVector3 c = GetCornerFromIndex(vSize, mMinIndex[i]);
-            if (mPlane[i].y * (c.y + dy) + mPlane[i].x * (c.x + dx) + mPlane[i].z * (c.z + dz) > 0.0f)
+            const PblVector3& plane = mPlane[i];
+            PblVector3 c = GetCornerFromIndex(vSize, mMinIndex[i]) + vDelta;
+            if (plane.y * c.y + plane.x * c.x + plane.z * c.z > 0.0f)
             {
                 iMask |= sPlaneBit[i];
             }
@@ -353,7 +337,8 @@ int RedSceneCamera::ClassifySphere(const PblVector3& vPos, float fRadius, int iM
     {
         if (!(iMask & sPlaneBit[i]))
         {
-            float fDist = mPlane[i].x * dx + mPlane[i].y * dy + dz * mPlane[i].z;
+            const PblVector3& plane = mPlane[i];
+            float fDist = plane.x * dx + plane.y * dy + plane.z * dz;
             if (-fRadius > fDist)
             {
                 return -1;
@@ -370,21 +355,9 @@ int RedSceneCamera::ClassifySphere(const PblVector3& vPos, float fRadius, int iM
 // FUNCTION: SWBF2 0x006e2900
 PblVector3 GetCornerFromIndex(const PblVector3& v, int i)
 {
-    float z = v.z;
-    if (i & 2)
-    {
-        z = -z;
-    }
-    float y = v.y;
-    if (i >= 4)
-    {
-        y = -y;
-    }
-    float x = v.x;
-    if (!(i & 1))
-    {
-        x = -x;
-    }
+    float z = (i & 2) ? -v.z : v.z;
+    float y = (i >= 4) ? -v.y : v.y;
+    float x = (i & 1) ? v.x : -v.x;
     return PblVector3(x, y, z);
 }
 
@@ -392,20 +365,25 @@ PblVector3 GetCornerFromIndex(const PblVector3& v, int i)
 bool RedSceneAABox::IsInside(RedSceneObject* pObject)
 {
     float fRadius = pObject->_Sphere.w;
-    return mSize.x > fabsf(pObject->_Sphere.x - mMidPos.x) + fRadius
-        && mSize.y > fabsf(pObject->_Sphere.y - mMidPos.y) + fRadius
-        && mSize.z > fabsf(pObject->_Sphere.z - mMidPos.z) + fRadius;
+    float dx = pObject->_Sphere.x - mMidPos.x;
+    float dy = pObject->_Sphere.y - mMidPos.y;
+    float dz = pObject->_Sphere.z - mMidPos.z;
+    return mSize.x > (dx < 0.0f ? -dx : dx) + fRadius
+        && mSize.y > (dy < 0.0f ? -dy : dy) + fRadius
+        && mSize.z > (dz < 0.0f ? -dz : dz) + fRadius;
 }
 
 // FUNCTION: SWBF2 0x006e29c0
 void RedSceneAABox::Move(RedSceneObject* pObject)
 {
-    RedSceneAABox* pBox = this;
-    while (pBox->mParent && !pBox->IsInside(pObject))
+    if (mParent && !IsInside(pObject))
     {
-        pBox = pBox->mParent;
+        mParent->Move(pObject);
     }
-    pBox->Add(pObject);
+    else
+    {
+        Add(pObject);
+    }
 }
 
 // TEMPLATE: SWBF2 0x006e2a00
@@ -504,19 +482,8 @@ void RedSceneAABox::RenderBox(int iDepth, bool bSiblings)
         mSibling->RenderBox(iDepth, true);
     }
 
-    PblBox box;
-    box._vMin.x = mMidPos.x - mSize.x;
-    box._vMin.y = mMidPos.y - mSize.y;
-    box._vMin.z = mMidPos.z - mSize.z;
-    box._vMax.x = mMidPos.x + mSize.x;
-    box._vMax.y = mMidPos.y + mSize.y;
-    box._vMax.z = mMidPos.z + mSize.z;
-    RedColor color;
-    color.b = RedColor::WHITE.b;
-    color.g = RedColor::WHITE.g;
-    color.r = RedColor::WHITE.r;
-    color.a = 0x80;
-    RedDebug::DrawAABB(box, color);
+    PblBox box(mMidPos - mSize, mMidPos + mSize);
+    RedDebug::DrawAABB(box, RedColor(RedColor::WHITE, 0x80));
 
     if (iDepth > 0 && mChild)
     {
@@ -671,11 +638,11 @@ bool RenderObject(RedSceneObject* pObject, unsigned int uiFlags, int iClip)
             fZoom = RedRenderer::GetCamera()->GetZoom();
         }
         float fFadeStart = FLRenderer::GetNearSceneFadeStart() * fZoom;
-        float fRadius = pObject->_Sphere.w;
         float fDist = (pObject->_Sphere.y - sRedSceneCamera.mPosition.y) * sRedSceneCamera.mFront.y
                     + (pObject->_Sphere.x - sRedSceneCamera.mPosition.x) * sRedSceneCamera.mFront.x
                     + (pObject->_Sphere.z - sRedSceneCamera.mPosition.z) * sRedSceneCamera.mFront.z
-                    + fRadius - fFadeStart;
+                    + pObject->_Sphere.w - fFadeStart;
+        float fRadius = pObject->_Sphere.w;
         if (0.0f > fDist)
         {
             return false;
@@ -725,11 +692,7 @@ bool RenderObject(RedSceneObject* pObject, unsigned int uiFlags, int iClip)
 
     float fRadius = pObject->_Sphere.w * fZoom;
     float fLength2 = vView.y * vView.y + vView.x * vView.x + vView.z * vView.z;
-    float fPriority = fRadius * fRadius;
-    if (fLength2 > 1.0f)
-    {
-        fPriority /= fLength2;
-    }
+    float fPriority = fLength2 > 1.0f ? fRadius * fRadius / fLength2 : fRadius * fRadius;
 
     if (pObject->IsClipped())
     {
@@ -743,8 +706,9 @@ bool RenderObject(RedSceneObject* pObject, unsigned int uiFlags, int iClip)
         }
         if (fDepth > 0.0f)
         {
-            float fOutX = fabsf(vView.x) - g_fCameraTanHalfFOVX * fDepth;
-            float fAbsY = fabsf(vView.y);
+            float fAbsX = vView.x < 0.0f ? -vView.x : vView.x;
+            float fAbsY = vView.y < 0.0f ? -vView.y : vView.y;
+            float fOutX = fAbsX - g_fCameraTanHalfFOVX * fDepth;
             if (fOutX > 0.0f)
             {
                 float f = 1.0f - g_fCameraCosHalfFOVX * fOutX * fInvRadius;
@@ -770,11 +734,11 @@ void RedSceneCamera::Setup(const RedCamera* pCamera, float fNear, float fFar)
     const PblMatrix& m = pCamera->GetMatrix();
     mNearPlane = fNear;
     mFarPlane = fFar;
-    mPosition = PblVector3(m.m[3][0], m.m[3][1], m.m[3][2]);
+    mPosition = m.GetTranslation();
     mFront = PblVector3(-m.m[2][0], -m.m[2][1], -m.m[2][2]);
     SetupMinMaxIndex(mFront, mFrontMinIndex, mFrontMaxIndex);
 
-    float fCamNear, fCamFar, fWidth, fHeight;
+    float fWidth, fHeight, fCamNear, fCamFar;
     pCamera->GetFrustum(fCamNear, fCamFar, fWidth, fHeight);
     SetupPlanes(m, fCamNear, fWidth, fHeight, mPlane, mMinIndex, mMaxIndex);
 }
@@ -968,7 +932,7 @@ void SetupPlanes(const PblMatrix& m, float fNear, float fWidth, float fHeight,
                    (x[0] * z[2] - x[2] * z[0]) * fHalfH,
                    (x[1] * z[0] - x[0] * z[1]) * fHalfH);
 
-    PblVector3 v, n0, n1, n2, n3;
+    PblVector3 v, n0, n1, n2, n3, vPlane;
     v = PblVector3(vFront.x - vRight.x + vUp.x, vFront.y - vRight.y + vUp.y, vFront.z - vRight.z + vUp.z);
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&n0), reinterpret_cast<const D3DXVECTOR3*>(&v));
     v = PblVector3(vRight.x + vFront.x + vUp.x, vRight.y + vFront.y + vUp.y, vRight.z + vFront.z + vUp.z);
@@ -979,13 +943,17 @@ void SetupPlanes(const PblMatrix& m, float fNear, float fWidth, float fHeight,
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&n3), reinterpret_cast<const D3DXVECTOR3*>(&v));
 
     v = PblVector3(n0.z * n2.y - n0.y * n2.z, n2.z * n0.x - n0.z * n2.x, n0.y * n2.x - n2.y * n0.x);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&pPlanes[0]), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPlane), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    pPlanes[0] = vPlane;
     v = PblVector3(n3.z * n1.y - n3.y * n1.z, n1.z * n3.x - n3.z * n1.x, n3.y * n1.x - n1.y * n3.x);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&pPlanes[1]), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPlane), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    pPlanes[1] = vPlane;
     v = PblVector3(n1.z * n0.y - n1.y * n0.z, n0.z * n1.x - n1.z * n0.x, n1.y * n0.x - n0.y * n1.x);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&pPlanes[2]), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPlane), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    pPlanes[2] = vPlane;
     v = PblVector3(n3.y * n2.z - n3.z * n2.y, n3.z * n2.x - n2.z * n3.x, n2.y * n3.x - n3.y * n2.x);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&pPlanes[3]), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPlane), reinterpret_cast<const D3DXVECTOR3*>(&v));
+    pPlanes[3] = vPlane;
 
     for (int i = 0; i < 4; ++i)
     {
@@ -1000,9 +968,7 @@ float RedSceneAABox::SetupRenderOrder(PblHeap<RedSceneAABox*, float>& heap)
     {
         heap.Push(mSibling, mSibling->SetupRenderOrder(heap));
     }
-    return -(sRedSceneCamera.mFront.x * (mMidPos.x - sRedSceneCamera.mPosition.x)
-           + sRedSceneCamera.mFront.y * (mMidPos.y - sRedSceneCamera.mPosition.y)
-           + sRedSceneCamera.mFront.z * (mMidPos.z - sRedSceneCamera.mPosition.z));
+    return -0.0f - DotProduct(sRedSceneCamera.mFront, mMidPos - sRedSceneCamera.mPosition);
 }
 
 // FUNCTION: SWBF2 0x006e4240
@@ -1062,41 +1028,45 @@ void RedSceneManager::_Remove(RedSceneObject* pObject)
 void RedSceneManager::_Render(unsigned int uiFlags, const RedCamera* pCamera)
 {
     BeginSceneRender();
+    float fNear, fFar;
     if (pCamera)
     {
-        float fNear, fFar, fWidth, fHeight;
+        float fWidth, fHeight;
         pCamera->GetFrustum(fNear, fFar, fWidth, fHeight);
         sRedSceneCamera.Setup(pCamera, fNear, fFar);
     }
-    else if (uiFlags & 0x40000)
-    {
-        if (!sFarSceneObjects)
-        {
-            return;
-        }
-        float fZoom = 1.0f;
-        if (FLRenderer::GetFadeAdjustWithZoom())
-        {
-            fZoom = RedRenderer::GetCamera()->GetZoom();
-        }
-        float fFadeStart = FLRenderer::GetNearSceneFadeStart() * fZoom;
-        float fFarRange = FLRenderer::GetFarSceneRange();
-        if (fFadeStart > fFarRange)
-        {
-            return;
-        }
-        sRedSceneCamera.Setup(RedRenderer::GetCamera(), fFadeStart, fFarRange);
-    }
     else
     {
-        float fNear, fFar, fWidth, fHeight;
-        RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
-        float fZoom = RedRenderer::GetCamera()->GetZoom();
-        float fFadeEnd = FLRenderer::GetNearSceneFadeEnd() * fZoom;
-        sRedSceneCamera.Setup(RedRenderer::GetCamera(), fNear, fFadeEnd);
+        if (uiFlags & 0x40000)
+        {
+            if (!sFarSceneObjects)
+            {
+                return;
+            }
+            float fZoom = 1.0f;
+            if (FLRenderer::GetFadeAdjustWithZoom())
+            {
+                fZoom = RedRenderer::GetCamera()->GetZoom();
+            }
+            fNear = FLRenderer::GetNearSceneFadeStart() * fZoom;
+            fFar = FLRenderer::GetFarSceneRange();
+            if (fNear > fFar)
+            {
+                return;
+            }
+        }
+        else
+        {
+            float fWidth, fHeight;
+            RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
+            float fZoom = RedRenderer::GetCamera()->GetZoom();
+            fFar = FLRenderer::GetNearSceneFadeEnd() * fZoom;
+        }
+        sRedSceneCamera.Setup(RedRenderer::GetCamera(), fNear, fFar);
     }
 
-    mState = (uiFlags & 0x40000) ? 2 : 1;
+    const unsigned int uiFarFlag = uiFlags & 0x40000;
+    mState = uiFarFlag ? 2 : 1;
     gRenderCount = 0;
     gClippedCount = 0;
     gCullingCount = 0;
@@ -1110,13 +1080,13 @@ void RedSceneManager::_Render(unsigned int uiFlags, const RedCamera* pCamera)
     g_fCameraCosHalfFOVY = 1.0f / sqrtf(g_fCameraTanHalfFOVY * g_fCameraTanHalfFOVY + 1.0f);
 
     mScene.Render(uiFlags);
-    if (uiFlags & 0x40000)
+    if (!uiFarFlag)
     {
-        RenderFarObjects();
+        RedLodManager::Render(uiFlags);
     }
     else
     {
-        RedLodManager::Render(uiFlags);
+        RenderFarObjects();
     }
     _RenderTransparentObjects(uiFlags);
     EndSceneRender();
@@ -1126,13 +1096,13 @@ void RedSceneManager::_Render(unsigned int uiFlags, const RedCamera* pCamera)
 // FUNCTION: SWBF2 0x006e46a0
 void RedSceneManager::_RenderTransparentObjects(unsigned int uiFlags)
 {
+    typedef PblHeap<RedSceneObject*, float> TransparentHeap;
+
     mTransparentPhase = true;
-    PblHeap<RedSceneObject*, float>* pHeap =
-        static_cast<PblHeap<RedSceneObject*, float>*>(mTransparentObjects);
-    while (!pHeap->IsEmpty())
+    while (!static_cast<TransparentHeap*>(mTransparentObjects)->IsEmpty())
     {
-        RedSceneObject* pObject = pHeap->Get(0);
-        pHeap->Pop();
+        RedSceneObject* pObject = static_cast<TransparentHeap*>(mTransparentObjects)->Get(0);
+        static_cast<TransparentHeap*>(mTransparentObjects)->Pop();
         pObject->Render(0, 1.0f, pObject->_uiRenderFlags | uiFlags);
     }
     mTransparentPhase = false;

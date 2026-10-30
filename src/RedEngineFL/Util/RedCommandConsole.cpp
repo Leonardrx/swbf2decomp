@@ -54,10 +54,10 @@ RedCommandConsole::Group* RedCommandConsole::Group::List::Find(char const* pcNam
 
 // FUNCTION: SWBF2 0x006ec8f0
 RedCommandConsole::Group::Group()
+    : mID(0),
+      mParent(0)
 {
-    mID = 0;
     mName[0] = 0;
-    mParent = 0;
 }
 
 // FUNCTION: SWBF2 0x006ec840
@@ -90,7 +90,7 @@ RedCommandConsole::Group* RedCommandConsole::_AddGroup(char const* pcPath, bool 
 
     if (!*pcPath || isspace(*pcPath))
     {
-        return bLeafIsCommand ? 0 : sRootNode;
+        return !bLeafIsCommand ? sRootNode : 0;
     }
 
     Group* pGroup = sRootNode;
@@ -118,10 +118,10 @@ RedCommandConsole::Group* RedCommandConsole::_AddGroup(char const* pcPath, bool 
 
             pcOut = acName;
             acName[0] = 0;
-            while (*pcPath == '.')
+            do
             {
                 ++pcPath;
-            }
+            } while (*pcPath == '.');
         }
         else
         {
@@ -138,11 +138,7 @@ RedCommandConsole::Group* RedCommandConsole::_AddGroup(char const* pcPath, bool 
     if (!bLeafIsCommand && acName[0])
     {
         Group* pChild = pGroup ? pGroup->mChildList.Find(acName) : 0;
-        if (pChild)
-        {
-            return pChild;
-        }
-        pGroup = new Group(acName, pGroup);
+        pGroup = pChild ? pChild : new Group(acName, pGroup);
     }
     return pGroup;
 }
@@ -245,6 +241,9 @@ void MultiVar::Set(char const* pcValue)
 {
     switch (m_uiVarType)
     {
+    case VAR_TYPE_STRING:
+        strlcpy(m_pVar_STRING, pcValue, m_uiVarLength);
+        break;
     case VAR_TYPE_BOOL:
         *m_pVar_BOOL = atoi(pcValue) != 0;
         break;
@@ -265,9 +264,6 @@ void MultiVar::Set(char const* pcValue)
         break;
     case VAR_TYPE_FLOAT64:
         *m_pVar_FLOAT64 = atof(pcValue);
-        break;
-    case VAR_TYPE_STRING:
-        strlcpy(m_pVar_STRING, pcValue, m_uiVarLength);
         break;
     }
 }
@@ -294,42 +290,44 @@ void MultiVar::Run(RedConsole* pConsole, char const* pcName, unsigned int uiID, 
     {
         ++pcArgs;
     }
-    if (*pcArgs)
+
+    if (!*pcArgs)
+    {
+        switch (m_uiVarType)
+        {
+        case VAR_TYPE_STRING:
+            pConsole->PrintfMsg("%s = %s\n", pcName, m_pVar_STRING);
+            break;
+        case VAR_TYPE_BOOL:
+            *m_pVar_BOOL = !*m_pVar_BOOL;
+            pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_BOOL);
+            break;
+        case VAR_TYPE_CHAR:
+            pConsole->PrintfMsg("%s = %c\n", pcName, *m_pVar_CHAR);
+            break;
+        case VAR_TYPE_INT16:
+            pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT16);
+            break;
+        case VAR_TYPE_INT32:
+            pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT32);
+            break;
+        case VAR_TYPE_INT64:
+            pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT64);
+            break;
+        case VAR_TYPE_FLOAT32:
+            pConsole->PrintfMsg("%s = %f\n", pcName, *m_pVar_FLOAT32);
+            break;
+        case VAR_TYPE_FLOAT64:
+            pConsole->PrintfMsg("%s = %f\n", pcName, *m_pVar_FLOAT64);
+            break;
+        default:
+            pConsole->PrintfMsg("Unknown VarType: %d\n", m_uiVarType);
+            break;
+        }
+    }
+    else
     {
         Set(pcArgs);
-        return;
-    }
-
-    switch (m_uiVarType)
-    {
-    case VAR_TYPE_BOOL:
-        *m_pVar_BOOL = !*m_pVar_BOOL;
-        pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_BOOL);
-        break;
-    case VAR_TYPE_CHAR:
-        pConsole->PrintfMsg("%s = %c\n", pcName, *m_pVar_CHAR);
-        break;
-    case VAR_TYPE_INT16:
-        pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT16);
-        break;
-    case VAR_TYPE_INT32:
-        pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT32);
-        break;
-    case VAR_TYPE_INT64:
-        pConsole->PrintfMsg("%s = %i\n", pcName, *m_pVar_INT64);
-        break;
-    case VAR_TYPE_FLOAT32:
-        pConsole->PrintfMsg("%s = %f\n", pcName, *m_pVar_FLOAT32);
-        break;
-    case VAR_TYPE_FLOAT64:
-        pConsole->PrintfMsg("%s = %f\n", pcName, *m_pVar_FLOAT64);
-        break;
-    case VAR_TYPE_STRING:
-        pConsole->PrintfMsg("%s = %s\n", pcName, m_pVar_STRING);
-        break;
-    default:
-        pConsole->PrintfMsg("Unknown VarType: %d\n", m_uiVarType);
-        break;
     }
 }
 
@@ -393,17 +391,24 @@ RedCommandConsole::Command* RedCommandConsole::_FindCommand(char const* pcPath)
         return 0;
     }
 
-    const char* pcLastDot = 0;
+    const char* pcName = 0;
     const char* pcEnd = pcPath;
     while (*pcEnd && !isspace(*pcEnd))
     {
         if (*pcEnd == '.')
         {
-            pcLastDot = pcEnd;
+            pcName = pcEnd;
         }
         ++pcEnd;
     }
-    const char* pcName = pcLastDot ? pcLastDot + 1 : pcPath;
+    if (pcName)
+    {
+        ++pcName;
+    }
+    else
+    {
+        pcName = pcPath;
+    }
     if (!*pcName || isspace(*pcName))
     {
         return 0;
@@ -432,7 +437,7 @@ RedCommandConsole::Group* RedCommandConsole::_FindGroup(char const* pcPath, bool
     }
     if (!*pcPath || isspace(*pcPath))
     {
-        return bLeafIsCommand ? 0 : sRootNode;
+        return !bLeafIsCommand ? sRootNode : 0;
     }
 
     Group* pGroup = sRootNode;
@@ -455,8 +460,9 @@ RedCommandConsole::Group* RedCommandConsole::_FindGroup(char const* pcPath, bool
             pcOut = acName;
             acName[0] = 0;
             do
+            {
                 ++pcPath;
-            while (*pcPath == '.');
+            } while (*pcPath == '.');
             continue;
         }
         if (pcOut == &acName[31])

@@ -115,21 +115,23 @@ void PickLanguage()
 // FUNCTION: SWBF2 0x006c5b30
 const unsigned short* Find(unsigned int uiHash, bool bNullIfMissing)
 {
-    if (uiHash == 0xb0a4d342)
+    switch (uiHash)
     {
+    case 0xb0a4d342: /* "ifs.mp.joinerrors.doesnotexist" */
+        // STRING: SWBF2 0x00772c08
         return (const unsigned short*)L"Cannot join: does not exist";
-    }
-    if (uiHash == 0xe6407c4d)
-    {
+    case 0xe6407c4d: /* "ifs.mp.joinerrors.cantconnect" */
+        // STRING: SWBF2 0x00772c40
         return (const unsigned short*)L"Cannot join: unable to connect";
     }
 
     FLLocalizeEntry* pEntry = sMasterLocalizeHash.Find(uiHash);
-    if (pEntry)
+    if (!pEntry)
     {
-        return pEntry->mData;
+        // STRING: SWBF2 0x00772c80
+        return bNullIfMissing ? 0 : (const unsigned short*)L"[NULL]";
     }
-    return bNullIfMissing ? 0 : (const unsigned short*)L"[NULL]";
+    return pEntry->mData;
 }
 
 // FUNCTION: SWBF2 0x006c5bf0
@@ -177,14 +179,16 @@ bool Read(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x454D414Eu)
+        switch (child._iId)
+        {
+        case 0x454D414Eu:
         {
             char acName[256];
             child.ReadString(acName, 256);
             bLanguage = _stricmp(acName, gLanguageStr) == 0;
+            break;
         }
-        else if (child._iId == 0x59444F42u)
-        {
+        case 0x59444F42u:
             if (bLanguage)
             {
                 if (mSkipCount)
@@ -196,10 +200,10 @@ bool Read(PblFileChunk& chunk)
                     ReadMasterLocalizeFile(child);
                 }
             }
-        }
-        else
-        {
+            break;
+        default:
             PblTraceP("Uhoh? Unknown chunk %08X\n", child._iId);
+            break;
         }
     }
 

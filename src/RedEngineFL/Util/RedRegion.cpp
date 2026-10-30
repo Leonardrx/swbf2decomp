@@ -110,19 +110,18 @@ const RedRegionFactory* RedRegionFactory::Find(const char* pcName)
 // FUNCTION: SWBF2 0x006dca00
 float RedRegion::GetIntersectionFactor(const PblVector3& vCenter, float fRadius) const
 {
-    const PblVector3& vSize = *(const PblVector3*)&mSize;
-    const PblVector3& vPos = mMatrix.GetTranslation();
     PblVector3 vLocal;
 
     switch (mType)
     {
     case type_sphere:
     {
+        float fOuter = mSize.w + fRadius;
+        const PblVector3& vPos = mMatrix.GetTranslation();
         float fDX = vCenter.x - vPos.x;
         float fDY = vCenter.y - vPos.y;
         float fDZ = vCenter.z - vPos.z;
         float fDist2 = fDX * fDX + fDY * fDY + fDZ * fDZ;
-        float fOuter = mSize.w + fRadius;
         if (fDist2 >= fOuter * fOuter)
         {
             return 0.0f;
@@ -136,16 +135,16 @@ float RedRegion::GetIntersectionFactor(const PblVector3& vCenter, float fRadius)
     }
     case type_box:
     {
-        PblMatrix mInverse = mMatrix.GetInverseFast();
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
         D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vCenter,
-                               (const D3DXMATRIX*)&mInverse);
+                               (const D3DXMATRIX*)&mMatrix.GetInverseFast());
         return _GetAABoxSphereIntersectionFactor(vSize, vLocal, fRadius);
     }
     case type_cylinder:
     {
-        PblMatrix mInverse = mMatrix.GetInverseFast();
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
         D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vCenter,
-                               (const D3DXMATRIX*)&mInverse);
+                               (const D3DXMATRIX*)&mMatrix.GetInverseFast());
         return _GetYCylinderSphereIntersectionFactor(vSize, vLocal, fRadius);
     }
     case type_plane:
@@ -163,26 +162,41 @@ float RedRegion::GetIntersectionFactor(const PblVector3& vCenter, float fRadius)
         return (fRadius - fDist) * 0.5f / fRadius;
     }
     case type_box_aligned:
+    {
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
+        const PblVector3& vPos = mMatrix.GetTranslation();
         vLocal.x = vCenter.x - vPos.x;
         vLocal.y = vCenter.y - vPos.y;
         vLocal.z = vCenter.z - vPos.z;
         return _GetAABoxSphereIntersectionFactor(vSize, vLocal, fRadius);
-
+    }
     case type_cylinder_xaligned:
+    {
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
+        const PblVector3& vPos = mMatrix.GetTranslation();
         vLocal.x = vCenter.z - vPos.z;
         vLocal.y = vCenter.x - vPos.x;
         vLocal.z = vCenter.y - vPos.y;
         return _GetYCylinderSphereIntersectionFactor(vSize, vLocal, fRadius);
+    }
     case type_cylinder_yaligned:
+    {
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
+        const PblVector3& vPos = mMatrix.GetTranslation();
         vLocal.x = vCenter.x - vPos.x;
         vLocal.y = vCenter.y - vPos.y;
         vLocal.z = vCenter.z - vPos.z;
         return _GetYCylinderSphereIntersectionFactor(vSize, vLocal, fRadius);
+    }
     case type_cylinder_zaligned:
+    {
+        const PblVector3& vSize = *(const PblVector3*)&mSize;
+        const PblVector3& vPos = mMatrix.GetTranslation();
         vLocal.x = vCenter.y - vPos.y;
         vLocal.y = vCenter.z - vPos.z;
         vLocal.z = vCenter.x - vPos.x;
         return _GetYCylinderSphereIntersectionFactor(vSize, vLocal, fRadius);
+    }
     }
     return 0.0f;
 }
@@ -428,7 +442,5 @@ float RedRegion::_GetYCylinderSphereIntersectionFactor(const PblVector3& vSize,
         return (fOuterR - fDist) * 0.5f / fRadius;
     }
 
-    float fDY = fAbsY - vSize.y;
-    float fDR = fDist - vSize.x;
-    return (fRadius - sqrtf(fDY * fDY + fDR * fDR)) * 0.5f / fRadius;
+    return (fRadius - sqrtf((fAbsY - vSize.y) * (fAbsY - vSize.y) + (fDist - vSize.x) * (fDist - vSize.x))) * 0.5f / fRadius;
 }

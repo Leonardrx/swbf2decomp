@@ -154,13 +154,16 @@ public:
         if (pPrev)
         {
             pPrev->next_ = pNext;
-            if (!pNext)
+            if (pNext)
+            {
+                if (pNode == last_)
+                {
+                    last_ = pNext;
+                }
+            }
+            else
             {
                 last_ = pPrev;
-            }
-            else if (pNode == last_)
-            {
-                last_ = pNext;
             }
         }
         else

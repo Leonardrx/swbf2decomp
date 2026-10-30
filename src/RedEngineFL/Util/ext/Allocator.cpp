@@ -41,8 +41,9 @@ void SetLastError(char* pError)
 // FUNCTION: SWBF2 0x006e9030
 void StackAllocator::Allocate(Buffer& rBuf)
 {
+    unsigned int uSize = rBuf.size_;
     char* pPos = pos_;
-    if (rBuf.size_ > (unsigned int)(pool_.data_ + pool_.size_ - pPos))
+    if (uSize > (unsigned int)(pool_.data_ + pool_.size_ - pPos))
     {
         if (alloc_)
         {
@@ -52,7 +53,7 @@ void StackAllocator::Allocate(Buffer& rBuf)
     }
 
     rBuf.data_ = pPos;
-    pos_ += rBuf.size_;
+    pos_ += uSize;
     sizes_[bpos_] = rBuf.size_;
     bpos_ = (bpos_ + 1) % 8;
 }
@@ -138,6 +139,12 @@ IAllocator& DefaultStaticAllocator::GetInstance()
         first_ = false;
     }
     return gStaticAllocator_;
+}
+
+// FUNCTION: SWBF2 0x006e91f0
+void ResetMemory_()
+{
+    HashMultiAllocator::ClearDefault();
 }
 
 }

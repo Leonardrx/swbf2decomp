@@ -54,6 +54,7 @@ public:
 class RedSceneCamera
 {
 public:
+    // FUNCTION: SWBF2 0x006e2320
     RedSceneCamera() {}
 
     int ClassifyAABB(unsigned int uiFlags, const PblVector3& vPos,

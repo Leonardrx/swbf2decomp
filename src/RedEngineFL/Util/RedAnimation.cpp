@@ -19,12 +19,12 @@ void RedAnimation::ClearAll()
 
 // FUNCTION: SWBF2 0x006dd620
 RedAnimation::RedAnimation()
+    : _uiNameHash(0)
+    , _pSkeleton(0)
+    , _pSkeletonShared(0)
+    , _pZephyrAnimBank(0)
+    , _pEventBank(0)
 {
-    _uiNameHash = 0;
-    _pSkeleton = 0;
-    _pSkeletonShared = 0;
-    _pZephyrAnimBank = 0;
-    _pEventBank = 0;
 }
 
 // FUNCTION: SWBF2 0x006dd6a0
@@ -35,11 +35,11 @@ RedAnimation::~RedAnimation()
 // FUNCTION: SWBF2 0x00443990
 const ZephyrAnim* RedAnimation::FindAnimation(const char* pszName) const
 {
-    if (!_pZephyrAnimBank)
+    if (_pZephyrAnimBank)
     {
-        return 0;
+        return _pZephyrAnimBank->Find(PblTEMPHash(pszName));
     }
-    return _pZephyrAnimBank->Find(PblTEMPHash(pszName));
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x006dd660
@@ -64,27 +64,23 @@ void RedAnimation::_ReadEvents(PblMemChunk& chunk)
     }
 
     _pEventBank = new ZephyrEventBank;
-    if (!_pEventBank)
-    {
-        return;
-    }
     _pEventBank->Init(static_cast<short>(iNumAnims));
     char name[100];
-    while (iNumAnims-- > 0)
+    for (int i = 0; i < iNumAnims; ++i)
     {
         chunk.ReadString(name, sizeof(name));
         unsigned int uiAnimHash = PblHash(name);
         short iNumEvents = static_cast<short>(chunk.Read32());
         const ZephyrAnim* pAnim = _pZephyrAnimBank->Find(uiAnimHash);
-        unsigned int uiNumFrames = pAnim->GetNumFrames();
+        int iNumFrames = pAnim->GetNumFrames();
         ZephyrEventList* pEvents = _pEventBank->New(uiAnimHash);
         pEvents->Init(iNumEvents);
-        while (iNumEvents-- > 0)
+        for (int j = 0; j < iNumEvents; ++j)
         {
             int iFrame = chunk.Read32();
             chunk.ReadString(name, sizeof(name));
             pEvents->AddEvent(static_cast<float>(iFrame) /
-                                  static_cast<float>(uiNumFrames), PblHash(name));
+                                  static_cast<float>(iNumFrames), PblHash(name));
         }
     }
 }

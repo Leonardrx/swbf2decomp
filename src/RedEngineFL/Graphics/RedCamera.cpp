@@ -240,12 +240,7 @@ RedCamera::VisibilityT RedCamera::ClassifyBoxInternal(const PblMatrix& rMatrix, 
     return eResult;
 }
 
-// FUNCTION: SWBF2 0x00692c70
-RedCamera::VisibilityT RedCamera::ClassifyBox(const PblMatrix& rMatrix, const PblVector3& vExtents) const
-{
-    PblMatrix m = rMatrix * _MatrixInverse;
-    return ClassifyBoxInternal(m, m.GetTranslation(), vExtents);
-}
+
 
 
 

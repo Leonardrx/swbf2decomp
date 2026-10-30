@@ -36,7 +36,11 @@ public:
     static bool PointInPolyCN(const Vector2<float>& rPoint, const BasePoly2D& rPoly);
 
     static int LineSegPolyC(const Vector2<float>& rA0, const Vector2<float>& rA1, const BasePoly2D& rPoly);
+
+    static void UnitTest();
 };
+
+void UnitTest();
 
 class Overlap3D
 {

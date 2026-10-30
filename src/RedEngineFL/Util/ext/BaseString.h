@@ -55,8 +55,8 @@ public:
 
     // FUNCTION: SWBF2 0x006224f0
     BaseString(BaseString const& rOther)
-        : ContString_<char, Vector<char, BaseArray<char, TNewArrayAlloc<char> > > >(rOther)
     {
+        *this = rOther;
     }
 
     operator char*() { return this->_elements; }

@@ -148,13 +148,16 @@ void Render(unsigned int uiFlags)
                 int iLod;
                 for (iLod = 0; iLod < 4; iLod++)
                 {
+                    int iMaxCost = mClass[iClass].mData[iLod].mMaxCost;
+                    int iLodCost = pLodData->GetCost(iLod);
+                    float fDensity = iLodCost * fInvSize;
+
                     if (!pLodData->HasLod(iLod))
                     {
                         continue;
                     }
 
                     int iNextLod = GetNextAvailableLod(pLodData, iLod);
-                    float fDensity = pLodData->GetCost(iLod) * fInvSize;
                     float fNextDensity = fDensity;
                     if (iNextLod < 4)
                     {
@@ -189,7 +192,7 @@ void Render(unsigned int uiFlags)
                         continue;
                     }
 
-                    if (iCost[iLod] + pLodData->GetCost(iLod) <= mClass[iClass].mData[iLod].mMaxCost)
+                    if (iCost[iLod] + iLodCost <= iMaxCost)
                     {
                         break;
                     }
@@ -208,10 +211,9 @@ void Render(unsigned int uiFlags)
                 if (uiFlags & 0x20000000)
                 {
                     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
-                    const PblVector4& vSphere = pObject->_Sphere;
-                    float fFront = vSphere.w - ((vSphere.x - mCamera.m[3][0]) * mCamera.m[2][0] +
-                                                (vSphere.y - mCamera.m[3][1]) * mCamera.m[2][1] +
-                                                (vSphere.z - mCamera.m[3][2]) * mCamera.m[2][2]);
+                    float fFront = -DotProduct(mCamera.GetZAxis(),
+                                               pObject->GetRenderPos() - mCamera.GetTranslation())
+                                   + pObject->_Sphere.w;
                     if (RedRenderer::pcGetNearSceneStart() > fFront)
                     {
                         uiObjectFlags &= ~0x20000000;
