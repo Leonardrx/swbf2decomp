@@ -452,7 +452,7 @@ bool pcRefractionShader::IsTransparent() const
 void pcRefractionShader::RenderZPrepass(const RenderItem* pItem) const
 {
     const RedMaterial* pMaterial = pItem->pRootShader->m_material;
-    RedRenderer::pcSetCullMode((pMaterial->materialFlags & 0x8000) ? PCREDCULL_NONE : PCREDCULL_BACK);
+    RedRenderer::pcSetCullMode((pMaterial->materialFlags & 0x10000) ? PCREDCULL_NONE : PCREDCULL_BACK);
 
     if (pMaterial->materialFlags & 2)
     {
@@ -466,7 +466,7 @@ void pcRefractionShader::RenderZPrepass(const RenderItem* pItem) const
         color.b = (unsigned char)(int)(color.b * (pItem->tweakColor.b * (1.0f / 255.0f)) + 0.5f);
         color.a = (unsigned char)(int)(color.a * (pItem->tweakColor.a * (1.0f / 255.0f)) + 0.5f);
 
-        RedRenderer::pcSetCullMode((pMaterial->materialFlags & 0x8000) ? PCREDCULL_NONE : PCREDCULL_BACK);
+        RedRenderer::pcSetCullMode((pMaterial->materialFlags & 0x10000) ? PCREDCULL_NONE : PCREDCULL_BACK);
 
         unsigned int uiDiffuseMap;
         const RedTextureTransform* pTransform = 0;
@@ -572,7 +572,7 @@ void pcRefractionShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPa
         RedRenderer::pcSetRenderState(D3DRS_COLORVERTEX, FALSE);
     }
 
-    RedRenderer::pcSetCullMode((m_material.materialFlags & 0x8000) ? PCREDCULL_NONE : PCREDCULL_BACK);
+    RedRenderer::pcSetCullMode((m_material.materialFlags & 0x10000) ? PCREDCULL_NONE : PCREDCULL_BACK);
 
     switch (pItem->uiShaderState)
     {
