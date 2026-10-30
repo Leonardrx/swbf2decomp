@@ -5283,7 +5283,7 @@ inline bool LightFlag0_(const RedLight* pLight) { return (pLight->m_uiFlags & 1)
 inline float LightFlag1_(const RedLight* pLight) { return (float)(int)((pLight->m_uiFlags >> 1) & 1); }
 }
 
-static unsigned int ToD3DColor_(const RedColorValue& c)
+static inline unsigned int ToD3DColor_(const RedColorValue& c)
 {
     return ((unsigned int)(unsigned char)(int)(c.a * 255.0f) << 24) |
            ((unsigned int)(unsigned char)(int)(c.r * 255.0f) << 16) |

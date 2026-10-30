@@ -178,13 +178,55 @@ D3DDeviceCombo::D3DDeviceCombo()
 // FUNCTION: SWBF2 0x00716090
 D3DDeviceCombo::~D3DDeviceCombo()
 {
-    DepthStencilFormatList.Clear();
-    TextureFormatList.Clear();
-    MultiSampleTypeList.Clear();
-    MultiSampleQualityList.Clear();
-    DSMSConflictList.Clear();
-    VertexProcessingTypeList.Clear();
-    PresentIntervalList.Clear();
+    while (DepthStencilFormatList.GetCount() > 0)
+    {
+        PblList<D3DFormat>::Node* pNode = DepthStencilFormatList.GetFirst();
+        D3DFormat* pFormat = pNode->_pObject;
+        DepthStencilFormatList.Remove(pNode);
+        delete pFormat;
+    }
+    while (TextureFormatList.GetCount() > 0)
+    {
+        PblList<D3DFormat>::Node* pNode = TextureFormatList.GetFirst();
+        D3DFormat* pFormat = pNode->_pObject;
+        TextureFormatList.Remove(pNode);
+        delete pFormat;
+    }
+    while (MultiSampleTypeList.GetCount() > 0)
+    {
+        PblList<D3DMultisampleType>::Node* pNode = MultiSampleTypeList.GetFirst();
+        D3DMultisampleType* pType = pNode->_pObject;
+        MultiSampleTypeList.Remove(pNode);
+        delete pType;
+    }
+    while (MultiSampleQualityList.GetCount() > 0)
+    {
+        PblList<D3DMultisampleQuality>::Node* pNode = MultiSampleQualityList.GetFirst();
+        D3DMultisampleQuality* pQuality = pNode->_pObject;
+        MultiSampleQualityList.Remove(pNode);
+        delete pQuality;
+    }
+    while (DSMSConflictList.GetCount() > 0)
+    {
+        PblList<D3DDSMSConflict>::Node* pNode = DSMSConflictList.GetFirst();
+        D3DDSMSConflict* pConflict = pNode->_pObject;
+        DSMSConflictList.Remove(pNode);
+        delete pConflict;
+    }
+    while (VertexProcessingTypeList.GetCount() > 0)
+    {
+        PblList<D3DVertexProcessingType>::Node* pNode = VertexProcessingTypeList.GetFirst();
+        D3DVertexProcessingType* pType = pNode->_pObject;
+        VertexProcessingTypeList.Remove(pNode);
+        delete pType;
+    }
+    while (PresentIntervalList.GetCount() > 0)
+    {
+        PblList<D3DPresentInterval>::Node* pNode = PresentIntervalList.GetFirst();
+        D3DPresentInterval* pInterval = pNode->_pObject;
+        PresentIntervalList.Remove(pNode);
+        delete pInterval;
+    }
 }
 
 // FUNCTION: SWBF2 0x00716290

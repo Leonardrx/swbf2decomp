@@ -349,7 +349,7 @@ void pcStencilShadowShader::RenderVolume(const RenderItem* pItem, unsigned int) 
     }
 }
 
-static unsigned long ColorValueToARGB(const RedColorValue& c)
+static inline unsigned long ColorValueToARGB(const RedColorValue& c)
 {
     return D3DCOLOR_ARGB((int)(c.a * 255.0f), (int)(c.r * 255.0f), (int)(c.g * 255.0f),
                          (int)(c.b * 255.0f));
