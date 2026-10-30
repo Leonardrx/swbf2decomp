@@ -70,9 +70,7 @@ void RedShadowProxy::BuildData(const RedModel* pModel, const PblMatrix* pMatrix,
                                 (i & 1) ? box._vMax.z : box._vMin.z);
             PblVector3 vStart;
             D3DXVec3TransformCoord((D3DXVECTOR3*)&vStart, &vCorner, pMat);
-            PblVector3 vEnd(vStart.x + pLight->m_vDirection.x * 500.0f,
-                            vStart.y + pLight->m_vDirection.y * 500.0f,
-                            vStart.z + pLight->m_vDirection.z * 500.0f);
+            PblVector3 vEnd = vStart + pLight->m_vDirection * 500.0f;
             float fHit = RedTerrain::RayHit(vStart, vEnd, 0.05f, 5.0f);
             if (fHit <= 1.0f && fHit > fMaxHit)
             {
@@ -102,26 +100,19 @@ void RedShadowProxy::BuildData(const RedModel* pModel, const PblMatrix* pMatrix,
     }
     else
     {
-        float dx = box._vMin.x - box._vMax.x;
-        float dy = box._vMin.y - box._vMax.y;
-        float dz = box._vMin.z - box._vMax.z;
-        m_fShadowLength = (float)sqrt(dx * dx + dy * dy + dz * dz) * 2.0f;
+        m_fShadowLength = (float)sqrt(SquaredLength(box._vMin - box._vMax)) * 2.0f;
     }
 
     float fShadowLength = m_fShadowLength;
-    float dx = box._vMin.x - box._vMax.x;
-    float dy = box._vMin.y - box._vMax.y;
-    float dz = box._vMin.z - box._vMax.z;
-    float fMaxLength = (float)sqrt(dx * dx + dy * dy + dz * dz) * 3.0f;
+    float fMaxLength = (float)sqrt(SquaredLength(box._vMin - box._vMax)) * 3.0f;
     if (fMaxLength > fShadowLength)
     {
         fMaxLength = fShadowLength;
     }
     m_fShadowLength = fMaxLength;
 
-    D3DXVECTOR3 vCenter((box._vMax.x + box._vMin.x) * 0.5f, (box._vMax.y + box._vMin.y) * 0.5f,
-                        (box._vMax.z + box._vMin.z) * 0.5f);
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&m_vCasterCenter, &vCenter, pMat);
+    PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&m_vCasterCenter, (const D3DXVECTOR3*)&vCenter, pMat);
 
     float hx = (box._vMax.x - box._vMin.x) * 0.5f;
     float hy = (box._vMax.y - box._vMin.y) * 0.5f;
@@ -131,9 +122,7 @@ void RedShadowProxy::BuildData(const RedModel* pModel, const PblMatrix* pMatrix,
     if (pLight)
     {
         float fHalf = m_fShadowLength * 0.5f;
-        PblVector3 vRenderPos(m_vCasterCenter.x + fHalf * pLight->m_vDirection.x,
-                              m_vCasterCenter.y + pLight->m_vDirection.y * fHalf,
-                              m_vCasterCenter.z + pLight->m_vDirection.z * fHalf);
+        PblVector3 vRenderPos = m_vCasterCenter + pLight->m_vDirection * fHalf;
         SetRenderPos(vRenderPos);
     }
     else
@@ -178,7 +167,14 @@ void RedShadowProxy::Render(unsigned char ucViewport, float fDist, unsigned int 
             m_vCasterCenter, m_fCasterRadius, m_fShadowLength);
         if (test != RedStencilShadow::TEST_NOT_VISIBLE)
         {
-            RedRenderer::SetStencilShadowZFail(test == RedStencilShadow::TEST_CONTAINS_CAMERA);
+            if (test == RedStencilShadow::TEST_CONTAINS_CAMERA)
+            {
+                RedRenderer::SetStencilShadowZFail(true);
+            }
+            else
+            {
+                RedRenderer::SetStencilShadowZFail(false);
+            }
             RedRenderer::SetStencilShadowLength(m_fShadowLength);
             mModel->_pStencilShadow->Render(mMatrix, NULL, NULL, true);
             RedRenderer::SetStencilShadowZFail(true);

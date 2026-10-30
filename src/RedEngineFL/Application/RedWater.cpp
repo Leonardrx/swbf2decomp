@@ -20,21 +20,19 @@
 // FUNCTION: SWBF2 0x006d0ac0
 void RedWater::UpdateEventCache()
 {
-    int count = m_numWaterEvents;
     int i = 0;
-    while (i < count)
+    while (i < m_numWaterEvents)
     {
         WaterEvent& event = m_eventCache[i];
-        if (event.in_range && m_waterTimeStamp.GetElapsed() <= event.expireTime)
+        if (!event.in_range || m_waterTimeStamp.GetElapsed() > event.expireTime)
         {
-            event.in_range = false;
-            ++i;
+            event = m_eventCache[m_numWaterEvents - 1];
+            --m_numWaterEvents;
         }
         else
         {
-            --count;
-            m_numWaterEvents = count;
-            event = m_eventCache[count];
+            event.in_range = false;
+            ++i;
         }
     }
 }
@@ -231,8 +229,8 @@ void RedWater::AddWaterRing(const PblVector3& vPos, float fLifetime, float fRadi
         return;
     }
 
-    float fMax = (float)(m_waterMapSize - 1);
     float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
+    float fMax = (float)(m_waterMapSize - 1);
     if (fX < 0.0f)
     {
         fX = 0.0f;
@@ -241,16 +239,9 @@ void RedWater::AddWaterRing(const PblVector3& vPos, float fLifetime, float fRadi
     {
         fX = fMax;
     }
-    float fZ = (m_worldCenterZ + vPos.z) * m_patchesPerMeter;
-    if (fZ < 0.0f)
-    {
-        fZ = 0.0f;
-    }
-    else if (fZ > fMax)
-    {
-        fZ = fMax;
-    }
-    if (!WaterExists((int)fX, (int)fZ))
+    int iX = (int)fX;
+    float fZ = Clamp((m_worldCenterZ + vPos.z) * m_patchesPerMeter, 0.0f, fMax);
+    if (!WaterExists(iX, (int)fZ))
     {
         return;
     }
@@ -279,8 +270,8 @@ void RedWater::AddWaterWake(const PblVector3& vPos, const PblVector3& vVelocity,
         return;
     }
 
-    float fMax = (float)(m_waterMapSize - 1);
     float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
+    float fMax = (float)(m_waterMapSize - 1);
     if (fX < 0.0f)
     {
         fX = 0.0f;
@@ -289,20 +280,13 @@ void RedWater::AddWaterWake(const PblVector3& vPos, const PblVector3& vVelocity,
     {
         fX = fMax;
     }
-    float fZ = (m_worldCenterZ + vPos.z) * m_patchesPerMeter;
-    if (fZ < 0.0f)
-    {
-        fZ = 0.0f;
-    }
-    else if (fZ > fMax)
-    {
-        fZ = fMax;
-    }
-    if (!WaterExists((int)fX, (int)fZ))
+    int iX = (int)fX;
+    float fZ = Clamp((m_worldCenterZ + vPos.z) * m_patchesPerMeter, 0.0f, fMax);
+    if (!WaterExists(iX, (int)fZ))
     {
         return;
     }
-    if (!(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z > 0.0f))
+    if (0.0f >= vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z)
     {
         return;
     }
@@ -344,7 +328,7 @@ void RedWater::BuildPatchCache(const RedCamera* pCamera, bool bFarScene, VISIBIL
             }
 
             PblVector3 vMin((float)x * m_metersPerPatch - m_worldCenterX,
-                            m_fWaterHeightOffset + m_waterHeight + m_minPatchHeight,
+                            m_waterHeight + m_fWaterHeightOffset + m_minPatchHeight,
                             (float)z * m_metersPerPatch - m_worldCenterZ);
             PblVector3 vCenter(m_metersPerPatch * 0.5f + vMin.x,
                                (m_maxPatchHeight - m_minPatchHeight) * 0.5f + vMin.y,
@@ -394,27 +378,29 @@ void RedWater::BuildPatchCache(const RedCamera* pCamera, bool bFarScene, VISIBIL
             {
                 for (; uiNear < m_uiVisibilityCacheSize; ++uiNear)
                 {
-                    int iEntryKey = pCache[uiNear].x + pCache[uiNear].z * m_waterMapSize;
+                    const VisibilityCacheEntryT& entry = pCache[uiNear];
+                    int iEntryKey = entry.x + entry.z * m_waterMapSize;
                     if (iEntryKey > iKey)
                     {
                         break;
                     }
                     if (iEntryKey == iKey)
                     {
-                        uiVisibilityID = pCache[uiNear].uiVisibilityID;
+                        uiVisibilityID = entry.uiVisibilityID;
                         break;
                     }
                 }
                 for (; uiFar < m_uiVisibilityCacheSize_FarScene; ++uiFar)
                 {
-                    int iEntryKey = pCache[uiFar].x + pCache[uiFar].z * m_waterMapSize;
+                    const VisibilityCacheEntryT& entry = pCache[uiFar];
+                    int iEntryKey = entry.x + entry.z * m_waterMapSize;
                     if (iEntryKey > iKey)
                     {
                         break;
                     }
                     if (iEntryKey == iKey)
                     {
-                        uiVisibilityFarID = pCache[uiFar].uiVisibilityID;
+                        uiVisibilityFarID = entry.uiVisibilityID;
                         break;
                     }
                 }
@@ -465,125 +451,73 @@ void RedWater::GetVisibleExtents(const RedCamera* pCamera, int& iMinX, int& iMin
 {
     PblBox box = pCamera->GetCameraBox();
 
-    float f = (m_worldCenterX + box._vMin.x) * m_patchesPerMeter;
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > (float)m_waterMapSize)
-    {
-        f = (float)m_waterMapSize;
-    }
+    float f = Clamp((m_worldCenterX + box._vMin.x) * m_patchesPerMeter, 0.0f, (float)m_waterMapSize);
     iMinX = (int)floorf(f);
 
-    f = (m_worldCenterZ + box._vMin.z) * m_patchesPerMeter;
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > (float)m_waterMapSize)
-    {
-        f = (float)m_waterMapSize;
-    }
+    f = Clamp((m_worldCenterZ + box._vMin.z) * m_patchesPerMeter, 0.0f, (float)m_waterMapSize);
     iMinZ = (int)floorf(f);
 
-    f = (m_worldCenterX + box._vMax.x) * m_patchesPerMeter;
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > (float)m_waterMapSize)
-    {
-        f = (float)m_waterMapSize;
-    }
+    f = Clamp((m_worldCenterX + box._vMax.x) * m_patchesPerMeter, 0.0f, (float)m_waterMapSize);
     iMaxX = (int)ceilf(f);
 
-    f = (m_worldCenterZ + box._vMax.z) * m_patchesPerMeter;
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > (float)m_waterMapSize)
-    {
-        f = (float)m_waterMapSize;
-    }
+    f = Clamp((m_worldCenterZ + box._vMax.z) * m_patchesPerMeter, 0.0f, (float)m_waterMapSize);
     iMaxZ = (int)ceilf(f);
 }
 
 // FUNCTION: SWBF2 0x006cea90
 bool RedWater::GetWaterHeight(const PblVector3& vPos, float& fHeight)
 {
-    if (!m_waterMap)
+    if (m_waterMap)
     {
-        return false;
+        float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
+        float fMax = (float)m_waterMapSize - 1.0f;
+        if (fX < 0.0f)
+        {
+            fX = 0.0f;
+        }
+        else if (fX > fMax)
+        {
+            fX = fMax;
+        }
+        int iX = (int)fX;
+        float fZ = Clamp((vPos.z + m_worldCenterZ) * m_patchesPerMeter, 0.0f, fMax);
+        if (WaterExists(iX, (int)fZ))
+        {
+            fHeight = m_waterHeight + m_fWaterHeightOffset;
+            return true;
+        }
     }
-
-    float fMax = (float)m_waterMapSize - 1.0f;
-    float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
-    if (fX < 0.0f)
-    {
-        fX = 0.0f;
-    }
-    else if (fX > fMax)
-    {
-        fX = fMax;
-    }
-    float fZ = (vPos.z + m_worldCenterZ) * m_patchesPerMeter;
-    if (fZ < 0.0f)
-    {
-        fZ = 0.0f;
-    }
-    else if (fZ > fMax)
-    {
-        fZ = fMax;
-    }
-    if (!WaterExists((int)fX, (int)fZ))
-    {
-        return false;
-    }
-
-    fHeight = m_fWaterHeightOffset + m_waterHeight;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006ceb50
 bool RedWater::GetWaterHeightAndVelocity(const PblVector3& vPos, float& fHeight, PblVector3& vVelocity)
 {
-    if (!m_waterMap)
+    if (m_waterMap)
     {
-        return false;
+        float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
+        float fMax = (float)m_waterMapSize - 1.0f;
+        if (fX < 0.0f)
+        {
+            fX = 0.0f;
+        }
+        else if (fX > fMax)
+        {
+            fX = fMax;
+        }
+        int iX = (int)fX;
+        float fZ = Clamp((vPos.z + m_worldCenterZ) * m_patchesPerMeter, 0.0f, fMax);
+        if (WaterExists(iX, (int)fZ))
+        {
+            fHeight = m_waterHeight + m_fWaterHeightOffset;
+            D3DXVECTOR3 vFlow(m_velocityU, 0.0f, m_velocityV);
+            D3DXVECTOR3 vDir;
+            D3DXVec3Normalize(&vDir, &vFlow);
+            vVelocity = *(PblVector3*)&vDir;
+            return true;
+        }
     }
-
-    float fMax = (float)m_waterMapSize - 1.0f;
-    float fX = (vPos.x + m_worldCenterX) * m_patchesPerMeter;
-    if (fX < 0.0f)
-    {
-        fX = 0.0f;
-    }
-    else if (fX > fMax)
-    {
-        fX = fMax;
-    }
-    float fZ = (vPos.z + m_worldCenterZ) * m_patchesPerMeter;
-    if (fZ < 0.0f)
-    {
-        fZ = 0.0f;
-    }
-    else if (fZ > fMax)
-    {
-        fZ = fMax;
-    }
-    if (!WaterExists((int)fX, (int)fZ))
-    {
-        return false;
-    }
-
-    fHeight = m_fWaterHeightOffset + m_waterHeight;
-    D3DXVECTOR3 vFlow(m_velocityU, 0.0f, m_velocityV);
-    D3DXVECTOR3 vDir;
-    D3DXVec3Normalize(&vDir, &vFlow);
-    vVelocity = *(PblVector3*)&vDir;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006cec80
@@ -796,10 +730,11 @@ void RedWater::OceanInit()
                                    m_divisionsPerPatchZ / 2) *
                            PblMath::fTwoPi / m_metersPerPatch;
                 float fAmplitude = (float)sqrt(OceanPhillipsSpectrum(kx, kz)) * INV_SQRT_2;
-                int i = x * m_divisionsPerPatchZ + z;
-                m_initialOceanPatchFreq[i].real = rng.GetNormal(0.0f, 1.0f) * fAmplitude;
-                m_initialOceanPatchFreq[i].imag = rng.GetNormal(0.0f, 1.0f) * fAmplitude;
-                m_oceanDispersion[i] = OceanDispersion(kx, kz);
+                m_initialOceanPatchFreq[x * m_divisionsPerPatchZ + z].real =
+                    rng.GetNormal(0.0f, 1.0f) * fAmplitude;
+                m_initialOceanPatchFreq[x * m_divisionsPerPatchZ + z].imag =
+                    rng.GetNormal(0.0f, 1.0f) * fAmplitude;
+                m_oceanDispersion[x * m_divisionsPerPatchZ + z] = OceanDispersion(kx, kz);
             }
         }
     }
@@ -815,7 +750,7 @@ float RedWater::OceanPhillipsSpectrum(float kx, float kz)
         return 0.0f;
     }
     float fK = sqrtf(fK2);
-    float fKDotW = fabsf(kz / fK * m_windDirectionZ + kx / fK * m_windDirectionX);
+    float fKDotW = fabsf(kx / fK * m_windDirectionX + kz / fK * m_windDirectionZ);
     float fl = fL / 75.0f;
     float fP = (float)exp(-1.0f / (fL * fL * fK2)) * m_phillipsConstant * fKDotW * fKDotW / (fK2 * fK2);
     return fP * expf(-(fl * fK2 * fl));
@@ -841,13 +776,13 @@ void RedWater::OceanUpdate(float fTime)
             int i = x * m_divisionsPerPatchZ + z;
             int j = mx * m_divisionsPerPatchZ + mz;
 
-            float fConjReal = m_initialOceanPatchFreq[j].real;
-            float fConjImag = -m_initialOceanPatchFreq[j].imag;
+            const PblComplex* pInitial = m_initialOceanPatchFreq;
+            float fConjReal = pInitial[j].real;
+            float fConjImag = -pInitial[j].imag;
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, m_oceanDispersion[i] * fTime);
-            const PblComplex& h0 = m_initialOceanPatchFreq[i];
-            m_oceanPatchFreq[i].real = fCos * h0.real - h0.imag * fSin;
-            m_oceanPatchFreq[i].imag = h0.imag * fCos + fSin * h0.real;
+            m_oceanPatchFreq[i].real = fCos * pInitial[i].real - pInitial[i].imag * fSin;
+            m_oceanPatchFreq[i].imag = pInitial[i].imag * fCos + fSin * pInitial[i].real;
             m_oceanPatchFreq[i].real += fSin * fConjImag + fCos * fConjReal;
             m_oceanPatchFreq[i].imag += fCos * fConjImag - fSin * fConjReal;
         }
@@ -859,66 +794,67 @@ void RedWater::OceanUpdate(float fTime)
 float RedWater::RayHit(const PblVector3& vStart, const PblVector3& vDir, float fLength,
                        PblVector3* pNormal)
 {
-    if (!m_waterMap)
+    if (m_waterMap)
     {
-        return 2.0f;
-    }
+        float fHit = fLength + 100.0f;
+        float fDY = m_fWaterHeightOffset + m_waterHeight - vStart.y;
+        if (fDY > 0.0f)
+        {
+            return 2.0f;
+        }
+        float t = fDY / vDir.y;
+        if (t < 0.0f)
+        {
+            return 2.0f;
+        }
 
-    float fHit = fLength + 100.0f;
-    float fDY = m_fWaterHeightOffset + m_waterHeight - vStart.y;
-    if (fDY > 0.0f)
-    {
-        return 2.0f;
-    }
-    float t = fDY / vDir.y;
-    if (t < 0.0f)
-    {
-        return 2.0f;
-    }
+        float fX = vDir.x * t + vStart.x;
+        float fZ = vDir.z * t + vStart.z;
+        float fMax = (float)m_waterMapSize - 1.0f;
+        float fPatchX = (fX + m_worldCenterX) * m_patchesPerMeter;
+        if (fPatchX < 0.0f)
+        {
+            fPatchX = 0.0f;
+        }
+        else if (fPatchX > fMax)
+        {
+            fPatchX = fMax;
+        }
+        float fPatchZ = (m_worldCenterZ + fZ) * m_patchesPerMeter;
+        if (fPatchZ < 0.0f)
+        {
+            fPatchZ = 0.0f;
+        }
+        else if (fPatchZ > fMax)
+        {
+            fPatchZ = fMax;
+        }
+        if (!WaterExists((int)fPatchX, (int)fPatchZ))
+        {
+            return 2.0f;
+        }
 
-    float fX = vDir.x * t + vStart.x;
-    float fZ = vDir.z * t + vStart.z;
-    float fMax = (float)m_waterMapSize - 1.0f;
-    float fPatchX = (fX + m_worldCenterX) * m_patchesPerMeter;
-    if (fPatchX < 0.0f)
-    {
-        fPatchX = 0.0f;
+        if (t > fLength)
+        {
+            return 2.0f;
+        }
+        if (t < fHit)
+        {
+            fHit = t;
+        }
+        if (fLength < fHit)
+        {
+            return 2.0f;
+        }
+        if (pNormal)
+        {
+            pNormal->x = 0.0f;
+            pNormal->y = 1.0f;
+            pNormal->z = 0.0f;
+        }
+        return fHit / fLength;
     }
-    else if (fPatchX > fMax)
-    {
-        fPatchX = fMax;
-    }
-    float fPatchZ = (m_worldCenterZ + fZ) * m_patchesPerMeter;
-    if (fPatchZ < 0.0f)
-    {
-        fPatchZ = 0.0f;
-    }
-    else if (fPatchZ > fMax)
-    {
-        fPatchZ = fMax;
-    }
-    if (!WaterExists((int)fPatchX, (int)fPatchZ))
-    {
-        return 2.0f;
-    }
-
-    if (t > fLength)
-    {
-        return 2.0f;
-    }
-    if (t < fHit)
-    {
-        fHit = t;
-    }
-    if (fLength < fHit)
-    {
-        return 2.0f;
-    }
-    if (pNormal)
-    {
-        *pNormal = PblVector3(0.0f, 1.0f, 0.0f);
-    }
-    return fHit / fLength;
+    return 2.0f;
 }
 
 // FUNCTION: SWBF2 0x006cfbd0
@@ -928,23 +864,22 @@ void RedWater::Read(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        PblFile* pFile = child._pFile;
         switch (child._iId)
         {
         case 0x4F464E49:
-            m_waterMapSize = pFile->Read32();
-            m_patchesPerCell = pFile->Read32();
-            m_metersPerPatch = pFile->ReadFloat();
-            m_worldCenterX = pFile->ReadFloat();
-            m_worldCenterZ = pFile->ReadFloat();
-            m_reductionFactor = pFile->Read32();
+            m_waterMapSize = child._pFile->Read32();
+            m_patchesPerCell = child._pFile->Read32();
+            m_metersPerPatch = child._pFile->ReadFloat();
+            m_worldCenterX = child._pFile->ReadFloat();
+            m_worldCenterZ = child._pFile->ReadFloat();
+            m_reductionFactor = child._pFile->Read32();
             m_patchesPerMeter = 1.0f / m_metersPerPatch;
             m_cellsPerPatch = 1.0f / (float)m_patchesPerCell;
             break;
 
         case 0x50414D57:
             m_waterMap = new unsigned char[m_waterMapSize * m_waterMapSize / m_patchesPerCell];
-            pFile->ReadData(m_waterMap, m_waterMapSize * m_waterMapSize / m_patchesPerCell);
+            child._pFile->ReadData(m_waterMap, m_waterMapSize * m_waterMapSize / m_patchesPerCell);
             break;
 
         case 0x5259414C:
@@ -952,16 +887,16 @@ void RedWater::Read(PblFileChunk& chunk)
             {
                 char acName[256];
                 child.ReadString(acName, sizeof(acName));
-                pFile->Read32();
-                m_waterHeight = pFile->ReadFloat();
-                pFile->ReadFloat();
-                pFile->ReadFloat();
-                pFile->ReadFloat();
-                pFile->ReadFloat();
-                pFile->Read8();
-                pFile->Read8();
-                pFile->Read8();
-                pFile->Read8();
+                child._pFile->Read32();
+                m_waterHeight = child._pFile->ReadFloat();
+                child._pFile->ReadFloat();
+                child._pFile->ReadFloat();
+                child._pFile->ReadFloat();
+                child._pFile->ReadFloat();
+                child._pFile->Read8();
+                child._pFile->Read8();
+                child._pFile->Read8();
+                child._pFile->Read8();
                 bReadLayer = true;
             }
             break;
@@ -1002,19 +937,19 @@ void RedWater::Read(PblFileChunk& chunk)
             _WaterRenderable.Activate(100001);
             _UnderWaterRenderable.Activate(0);
         }
+        int iReduction = m_reductionFactor;
         if (RedWater::m_highResLowResRatio > m_divisionsPerPatchX)
         {
             RedWater::m_highResLowResRatio = m_divisionsPerPatchX;
         }
-        float fReduction = (float)m_reductionFactor;
-        m_divisionsPerPatchX *= m_reductionFactor;
-        m_tilesU = fReduction * m_tilesU;
-        m_divisionsPerPatchZ *= m_reductionFactor;
+        m_divisionsPerPatchX *= iReduction;
+        m_tilesU *= iReduction;
+        m_divisionsPerPatchZ *= iReduction;
         m_pointsPerPatchX = m_divisionsPerPatchX + 1;
         m_pointsPerPatchZ = m_divisionsPerPatchZ + 1;
-        m_tilesV = fReduction * m_tilesV;
-        m_velocityU = m_velocityU / fReduction;
-        m_velocityV = m_velocityV / fReduction;
+        m_tilesV *= iReduction;
+        m_velocityU /= iReduction;
+        m_velocityV /= iReduction;
         OceanInit();
         PlatformPostReadInit();
         Update(0.0f);
@@ -1097,19 +1032,19 @@ void RedWater::ReadConfig(PblConfig& config)
             _WaterRenderable.Activate(100001);
             _UnderWaterRenderable.Activate(0);
         }
+        int iReduction = m_reductionFactor;
         if (RedWater::m_highResLowResRatio > m_divisionsPerPatchX)
         {
             RedWater::m_highResLowResRatio = m_divisionsPerPatchX;
         }
-        float fReduction = (float)m_reductionFactor;
-        m_divisionsPerPatchZ *= m_reductionFactor;
-        m_tilesU = fReduction * m_tilesU;
-        m_divisionsPerPatchX *= m_reductionFactor;
+        m_divisionsPerPatchZ *= iReduction;
+        m_tilesU *= iReduction;
+        m_divisionsPerPatchX *= iReduction;
         m_pointsPerPatchX = m_divisionsPerPatchX + 1;
         m_pointsPerPatchZ = m_divisionsPerPatchZ + 1;
-        m_tilesV = fReduction * m_tilesV;
-        m_velocityU = m_velocityU / fReduction;
-        m_velocityV = m_velocityV / fReduction;
+        m_tilesV *= iReduction;
+        m_velocityU /= iReduction;
+        m_velocityV /= iReduction;
         OceanInit();
         PlatformPostReadInit();
         Update(0.0f);
@@ -1150,7 +1085,7 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
     float fNear, fFar, fWidth, fHeight;
     pCamera->GetFrustum(fNear, fFar, fWidth, fHeight);
 
-    float fWaterHeight = m_fWaterHeightOffset + m_waterHeight;
+    float fWaterHeight = m_waterHeight + m_fWaterHeightOffset;
     float fAbove = pCamera->GetMatrix().m[3][1] - fWaterHeight;
     if (fAbove > 0.0f &&
         fAbove * fAbove > (fWidth * fWidth + fHeight * fHeight) * 0.25f + fNear * fNear)
@@ -1160,20 +1095,18 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
 
     float fHalfWidth = fWidth * 0.5f;
     float fHalfHeight = fHeight * 0.5f;
+    float fUnzoomedNear = fNear;
     PblMatrix mCamera = pCamera->GetMatrix();
     float fZoom = pCamera->GetZoom();
     if (fZoom != 1.0f)
     {
-        float fUnzoomedNear = fNear;
         fNear *= fZoom;
         fFar *= fZoom;
         fHalfWidth *= fZoom;
         fHalfHeight *= fZoom;
         mCamera = pCamera->GetMatrix();
         float fPush = fNear - fUnzoomedNear;
-        mCamera.m[3][0] += mCamera.m[2][0] * fPush;
-        mCamera.m[3][1] += mCamera.m[2][1] * fPush;
-        mCamera.m[3][2] += mCamera.m[2][2] * fPush;
+        mCamera[3] = mCamera[3] + mCamera[2] * fPush;
         mCamera.m[3][3] = 1.0f;
     }
 
@@ -1184,16 +1117,24 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
 
     PblVector3 vWorldCorners[4];
     PblVector3 vLocal;
-    vLocal = PblVector3(-fHalfWidth, -fHalfHeight, -fNear);
+    vLocal.x = -fHalfWidth;
+    vLocal.y = -fHalfHeight;
+    vLocal.z = -fNear;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[0], (const D3DXVECTOR3*)&vLocal,
                            (const D3DXMATRIX*)&mCamera);
-    vLocal = PblVector3(-fHalfWidth, fHalfHeight, -fNear);
+    vLocal.x = -fHalfWidth;
+    vLocal.y = fHalfHeight;
+    vLocal.z = -fNear;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[1], (const D3DXVECTOR3*)&vLocal,
                            (const D3DXMATRIX*)&mCamera);
-    vLocal = PblVector3(fHalfWidth, fHalfHeight, -fNear);
+    vLocal.x = fHalfWidth;
+    vLocal.y = fHalfHeight;
+    vLocal.z = -fNear;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[2], (const D3DXVECTOR3*)&vLocal,
                            (const D3DXMATRIX*)&mCamera);
-    vLocal = PblVector3(fHalfWidth, -fHalfHeight, -fNear);
+    vLocal.x = fHalfWidth;
+    vLocal.y = -fHalfHeight;
+    vLocal.z = -fNear;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[3], (const D3DXVECTOR3*)&vLocal,
                            (const D3DXMATRIX*)&mCamera);
 
@@ -1210,10 +1151,9 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
             float fInv = 1.0f / (fCur - fPrev);
             float fA = fInv * fCur;
             float fB = fInv * fPrev;
-            vVerts[iNumVerts].x = s_screenCorners[iPrev].x * fA - s_screenCorners[i].x * fB;
-            vVerts[iNumVerts].y = s_screenCorners[iPrev].y * fA - s_screenCorners[i].y * fB;
-            vVerts[iNumVerts].z = s_screenCorners[iPrev].z * fA - s_screenCorners[i].z * fB;
-            ++iNumVerts;
+            vVerts[iNumVerts++] = PblVector3(s_screenCorners[iPrev].x * fA - s_screenCorners[i].x * fB,
+                                             s_screenCorners[iPrev].y * fA - s_screenCorners[i].y * fB,
+                                             s_screenCorners[iPrev].z * fA - s_screenCorners[i].z * fB);
         }
         if (fCur <= 0.0f)
         {
@@ -1247,9 +1187,8 @@ bool RedWater::Update(float fElapsed)
 
     if (m_waterMode != WATER_MODE_ICE && RedWater::m_oscillationEnable)
     {
-        m_fWaterHeightOffset =
-            PblMath::Sin(PblMath::fTwoPi * m_waterTimeStamp.GetElapsed() * WATER_HEIGHT_FREQUENCY) *
-            WATER_HEIGHT_AMPLITUDE;
+        float fTime = m_waterTimeStamp.GetElapsed();
+        m_fWaterHeightOffset = PblMath::Sin(PblMath::fTwoPi * fTime * WATER_HEIGHT_FREQUENCY) * WATER_HEIGHT_AMPLITUDE;
     }
     else
     {
@@ -1265,10 +1204,10 @@ bool RedWater::Update(float fElapsed)
 bool RedWater::WaterExists(int x, int z)
 {
     unsigned char* pRow = m_waterMap + z * (m_waterMapSize / m_patchesPerCell);
-    unsigned char uiCell = pRow[x / m_patchesPerCell];
+    unsigned char* pCell = pRow + x / m_patchesPerCell;
     if (x & 1)
     {
-        return (uiCell & 0x0f) != 0;
+        return (*pCell & 0x0f) != 0;
     }
-    return (uiCell & 0xf0) != 0;
+    return (*pCell & 0xf0) != 0;
 }

@@ -47,8 +47,8 @@ bool RedWater::pcDeviceSupportsVisibilityTesting()
 // FUNCTION: SWBF2 0x00720c00
 unsigned int __cdecl RedWater::pcGetVisibilityTestResult(unsigned int uiID)
 {
-    IDirect3DQuery9* query = RedWater::m_aVisibilityCache[uiID - 1].pVisibilityQuery;
     unsigned int visible = 0;
+    IDirect3DQuery9* query = RedWater::m_aVisibilityCache[uiID - 1].pVisibilityQuery;
     if (!query || query->GetData(&visible, sizeof(visible), 0) != D3D_OK)
     {
         return 100;
@@ -331,7 +331,9 @@ pcRedPrimitive* RedWater::pcCreateDynamicPatchPrimitive(
     }
 
     PblBox box;
-    box._vMin = PblVector3(0.0f, m_fWaterHeightOffset + m_waterHeight + m_minPatchHeight, 0.0f);
+    box._vMin.x = 0.0f;
+    box._vMin.y = m_fWaterHeightOffset + m_waterHeight + m_minPatchHeight;
+    box._vMin.z = 0.0f;
     PblVector3 vSize(m_metersPerPatch + 0.001f, m_maxPatchHeight - m_minPatchHeight,
                      m_metersPerPatch + 0.001f);
     box._vMax = PblVector3(box._vMin.x + vSize.x, box._vMin.y + vSize.y,
@@ -347,12 +349,11 @@ pcRedPrimitive* RedWater::pcCreateDynamicPatchPrimitive(
             unsigned int i = z + x * m_pointsPerPatchZ;
             const PblVector3& pos = pPositions[i];
             const PblVector3& normal = pNormals[i];
-            pVert->pos.SetPos(pos.x * m_metersPerPatch, pos.y * fHeightScale + fHeightBase,
+            pVert->pos.SetPos(pos.x * m_metersPerPatch, fHeightScale * pos.y + fHeightBase,
                               pos.z * m_metersPerPatch);
             pVert->normal.SetNormal(normal.x, normal.y, normal.z);
             pVert->uv.SetUV(pos.x, pos.z);
-            pVert->color = RedColor::WHITE;
-            pVert->color.a = m_foamIntensity[i];
+            pVert->color = RedColor(RedColor::WHITE, m_foamIntensity[i]);
             ++pVert;
         }
     }
@@ -488,7 +489,7 @@ static void pcSetRingBoundingBox(pcRedPrimitive* pPrim, const PblVector3& vWorld
     CompressedPos::s_vScaleInv = vScaleInv;
 }
 
-static void pcSetPos(CompressedPos& out, const PblVector3& v)
+static inline void pcSetPos(CompressedPos& out, const PblVector3& v)
 {
     out.x = (short)((v.x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x
                     - 32767.5f);
@@ -498,7 +499,7 @@ static void pcSetPos(CompressedPos& out, const PblVector3& v)
                     - 32767.5f);
 }
 template <class T>
-static void pcSetDistortionRingVertex(T& vert, const PblVector3& vPos, float fSin, float fCos,
+static inline void pcSetDistortionRingVertex(T& vert, const PblVector3& vPos, float fSin, float fCos,
                                       float fDist, RedColor color, float u, float v)
 {
     vert.pos.SetPos(vPos.x + fCos * fDist, vPos.y + WATERRING_HEIGHT_BIAS,
@@ -566,21 +567,22 @@ void RedWater::pcRenderDistortionRing(pcRedShader* pShader, const PblVector3& vW
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 40.0f);
-        pVert[0].pos.SetPos(vPos.x + fCos * fInner, vPos.y + WATERRING_HEIGHT_BIAS,
-                           vPos.z + fSin * fInner);
-        pVert[0].normal.SetNormal(0.0f, 1.0f, 0.0f);
-        pVert[0].binormal_s.SetNormal(-fSin, 0.0f, fCos);
-        pVert[0].binormal_t.SetNormal(-fCos, 0.0f, -fSin);
-        pVert[0].uv.SetUV(fU, 1.0f - fInnerV);
-        pVert[0].color = color;
-        pVert[1].pos.SetPos(vPos.x + fCos * fOuter, vPos.y + WATERRING_HEIGHT_BIAS,
-                           vPos.z + fSin * fOuter);
-        pVert[1].normal.SetNormal(0.0f, 1.0f, 0.0f);
-        pVert[1].binormal_s.SetNormal(-fSin, 0.0f, fCos);
-        pVert[1].binormal_t.SetNormal(-fCos, 0.0f, -fSin);
-        pVert[1].uv.SetUV(fU, 0.0f);
-        pVert[1].color = color;
-        pVert += 2;
+        pVert->pos.SetPos(vPos.x + fCos * fInner, vPos.y + WATERRING_HEIGHT_BIAS,
+                          vPos.z + fSin * fInner);
+        pVert->normal.SetNormal(0.0f, 1.0f, 0.0f);
+        pVert->binormal_s.SetNormal(-fSin, 0.0f, fCos);
+        pVert->binormal_t.SetNormal(-fCos, 0.0f, -fSin);
+        pVert->uv.SetUV(fU, 1.0f - fInnerV);
+        pVert->color = color;
+        ++pVert;
+        pVert->pos.SetPos(vPos.x + fCos * fOuter, vPos.y + WATERRING_HEIGHT_BIAS,
+                          vPos.z + fSin * fOuter);
+        pVert->normal.SetNormal(0.0f, 1.0f, 0.0f);
+        pVert->binormal_s.SetNormal(-fSin, 0.0f, fCos);
+        pVert->binormal_t.SetNormal(-fCos, 0.0f, -fSin);
+        pVert->uv.SetUV(fU, 0.0f);
+        pVert->color = color;
+        ++pVert;
         fU += WATERRING_TEX_STEP;
     }
     pPrim->EndVertexData();
@@ -804,7 +806,7 @@ void RedWater::pcRenderDistortionWakeRing(pcRedShader* pShader, const PblVector3
 }
 
 template <class T>
-static void pcSetWakeRingVertex(T& vert, const PblVector3& vPos, float fSin, float fCos,
+static inline void pcSetWakeRingVertex(T& vert, const PblVector3& vPos, float fSin, float fCos,
                                 float fDist, RedColor color, float u, float v)
 {
     vert.pos.SetPos(vPos.x + fCos * fDist, vPos.y + WATERRING_HEIGHT_BIAS,
@@ -1303,27 +1305,26 @@ void RedWater::pcRegisterReflection()
 
         for (int i = 0; i < m_patchCacheSize; ++i)
         {
-            WaterPatch& rPatch = m_patchCache[i];
             if (m_bEnableVisibilityTest)
             {
-
-                bool bVisible = rPatch.uiVisibilityFarID && RedWater::pcGetVisibilityTestResult(rPatch.uiVisibilityFarID) != 0;
-                if (!bVisible && rPatch.uiVisibilityID)
+                bool bVisible = m_patchCache[i].uiVisibilityFarID &&
+                                RedWater::pcGetVisibilityTestResult(m_patchCache[i].uiVisibilityFarID) != 0;
+                if (!bVisible && m_patchCache[i].uiVisibilityID)
                 {
-                    RedWater::pcGetVisibilityTestResult(rPatch.uiVisibilityID);
+                    RedWater::pcGetVisibilityTestResult(m_patchCache[i].uiVisibilityID);
                 }
             }
-            FLRenderer::AddReflectionObject(m_reflectionID, rPatch.bbox, true);
-            if (rPatch.pCustomMesh)
+            FLRenderer::AddReflectionObject(m_reflectionID, m_patchCache[i].bbox, true);
+            if (m_patchCache[i].pCustomMesh)
             {
-                RedRenderer::pcRenderPrimitive((pcRedPrimitive*)rPatch.pCustomMesh,
+                RedRenderer::pcRenderPrimitive((pcRedPrimitive*)m_patchCache[i].pCustomMesh,
                                                s_pPreReflectionShader,
                                                mMesh,
                                                RedColor::WHITE, 0, 0, 0, 0);
             }
             else
             {
-                mPatch.SetTranslation(rPatch.bbox._vMin);
+                mPatch.SetTranslation(m_patchCache[i].bbox._vMin);
                 RedRenderer::pcRenderPrimitive(m_pLowResPrim,
                                                s_pPreReflectionShader,
                                                mPatch,
@@ -1403,7 +1404,7 @@ void RedWater::PlatformCleanup()
     }
 }
 
-void pcWaterShader::SetReflectionColor(RedColor color)
+inline void pcWaterShader::SetReflectionColor(RedColor color)
 {
     s_reflectionColor.r = color.r * kInv255;
     s_reflectionColor.g = color.g * kInv255;
@@ -1411,7 +1412,7 @@ void pcWaterShader::SetReflectionColor(RedColor color)
     s_reflectionColor.a = color.a * kInv255;
 }
 
-void pcWaterShader::SetRefractionColor(RedColor color)
+inline void pcWaterShader::SetRefractionColor(RedColor color)
 {
     s_refractionColor.r = color.r * kInv255;
     s_refractionColor.g = color.g * kInv255;
@@ -1419,7 +1420,7 @@ void pcWaterShader::SetRefractionColor(RedColor color)
     s_refractionColor.a = color.a * kInv255;
 }
 
-void pcWaterShader::SetSpecularEnable(bool bEnable)
+inline void pcWaterShader::SetSpecularEnable(bool bEnable)
 {
     s_specularEnable = bEnable;
 }
@@ -1435,17 +1436,10 @@ void pcWaterShader::SetFresnelMinMax(float fMin, float fMax)
     {
         fMax = 1.0f;
     }
-    if (fMin < 0.0f)
-    {
-        fMin = 0.0f;
-    }
-    else if (fMin > 1.0f)
-    {
-        fMin = 1.0f;
-    }
+    float fClampedMin = fMin < 0.0f ? 0.0f : (fMin > 1.0f ? 1.0f : fMin);
     s_fresnelMinMax.r = 0.0f;
     s_fresnelMinMax.g = 0.0f;
-    s_fresnelMinMax.b = fMin;
+    s_fresnelMinMax.b = fClampedMin;
     s_fresnelMinMax.a = fMax;
 }
 
@@ -1544,14 +1538,12 @@ void RedWater::PlatformPostReadInit()
 // FUNCTION: SWBF2 0x0071f9b0
 void RedWater::PlatformPreReadInit()
 {
-    m_reflectionColor.b = 255;
-    m_reflectionColor.g = 255;
-    m_reflectionColor.r = 255;
-    m_reflectionColor.a = 255;
-    m_refractionColor = m_reflectionColor;
+    m_reflectionColor = RedColor(255, 255, 255, 255);
+    m_refractionColor = RedColor(255, 255, 255, 255);
+    RedColor white = RedColor(255, 255, 255, 255);
     m_pHighResPrim = 0;
     m_pLowResPrim = 0;
-    m_underwaterColor = m_reflectionColor;
+    m_underwaterColor = white;
     m_fresnelMin = 0.2f;
     m_fresnelMax = 0.9f;
     m_uiNumBumpMapTextures = 0;
@@ -1600,16 +1592,21 @@ static RedColor ReadColor(PblConfig::Data& data)
     color.b = (unsigned char)(int)f;
     if (data.GetNumArgs() > 3)
     {
-        f = data.GetFloatArg(3);
-        if (f < 0.0f)
+        float fAlpha = data.GetFloatArg(3);
+        float fClamped;
+        if (fAlpha < 0.0f)
         {
-            f = 0.0f;
+            fClamped = 0.0f;
         }
-        else if (f > 255.0f)
+        else if (fAlpha > 255.0f)
         {
-            f = 255.0f;
+            fClamped = 255.0f;
         }
-        color.a = (unsigned char)(int)f;
+        else
+        {
+            fClamped = fAlpha;
+        }
+        color.a = (unsigned char)(int)fClamped;
     }
     else
     {
@@ -1743,14 +1740,14 @@ void* RedWater::PlatformReadCustomPatch(PblFileChunk* pChunk)
             float fMaxX = child._pFile->ReadFloat();
             float fMinY = child._pFile->ReadFloat();
             float fMaxY = child._pFile->ReadFloat();
-            float fMinZ = child._pFile->ReadFloat();
-            float fMaxZ = child._pFile->ReadFloat();
-            bbox._vMin.x = fMinX;
-            bbox._vMin.y = fMinY;
-            bbox._vMin.z = fMinZ;
-            bbox._vMax.x = fMaxX;
-            bbox._vMax.y = fMaxY;
-            bbox._vMax.z = fMaxZ;
+            PblBox info;
+            info._vMin.x = fMinX;
+            info._vMin.y = fMinY;
+            info._vMin.z = child._pFile->ReadFloat();
+            info._vMax.x = fMaxX;
+            info._vMax.y = fMaxY;
+            info._vMax.z = child._pFile->ReadFloat();
+            bbox = info;
             break;
         }
         }
@@ -1777,7 +1774,63 @@ void RedWater::PlatformRender(unsigned int uiFlags)
         return;
     }
 
-    if (m_waterMode != WATER_MODE_NORMAL)
+    if (m_waterMode == WATER_MODE_NORMAL)
+    {
+        if (RedRenderer::pcGetRenderOptions().waterQuality == QUALITY_HIGH &&
+            RedRenderer::GetCamera()->_Matrix.m[3][1] -
+                    (m_waterHeight + m_fWaterHeightOffset) <= 0.0f)
+        {
+            pcWaterShader::SetFresnelMinMax(1.0f, 1.0f);
+        }
+        else
+        {
+            pcWaterShader::SetFresnelMinMax(m_fresnelMin, m_fresnelMax);
+        }
+        pcWaterShader::SetSpecularEnable(RedWater::m_specularEnable);
+
+        if (uiFlags & 0x20000)
+        {
+            if (!(uiFlags & 0x100000))
+            {
+                pcRenderFarWaterPatches();
+            }
+            return;
+        }
+        if (uiFlags & 0x100000)
+        {
+            pcRegisterReflection();
+            return;
+        }
+
+        const RedCamera* pCamera = RedRenderer::GetCamera();
+        BuildPatchCache(pCamera, false,
+                        m_bEnableVisibilityTest ? VISIBILITYTEST_ASSIGNID : VISIBILITYTEST_NONE);
+        if (m_patchCacheSize <= 0)
+        {
+            return;
+        }
+        UpdateEventCache();
+        if (RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED)
+        {
+            pcRenderWaterPatches();
+            if (RedRenderer::pcGetRenderOptions().waterQuality != QUALITY_LOW)
+            {
+                pcRenderWaterRings();
+                pcRenderWaterSplashes();
+            }
+        }
+        else
+        {
+            if (RedRenderer::pcGetRenderOptions().waterQuality != QUALITY_LOW)
+            {
+                pcAccumulateNormalMap();
+            }
+            pcRenderWaterPatches();
+            pcRenderWaterRings();
+            pcRenderWaterSplashes();
+        }
+    }
+    else
     {
         if (uiFlags & 0x20000)
         {
@@ -1787,61 +1840,7 @@ void RedWater::PlatformRender(unsigned int uiFlags)
         {
             pcRenderOceanWaterPatches();
         }
-        return;
     }
-
-    if (RedRenderer::pcGetRenderOptions().waterQuality == QUALITY_HIGH &&
-        RedRenderer::GetCamera()->_Matrix.m[3][1] -
-                (m_fWaterHeightOffset + m_waterHeight) <= 0.0f)
-    {
-        pcWaterShader::SetFresnelMinMax(1.0f, 1.0f);
-    }
-    else
-    {
-        pcWaterShader::SetFresnelMinMax(m_fresnelMin, m_fresnelMax);
-    }
-    pcWaterShader::SetSpecularEnable(RedWater::m_specularEnable);
-
-    if (uiFlags & 0x20000)
-    {
-        if (!(uiFlags & 0x100000))
-        {
-            pcRenderFarWaterPatches();
-        }
-        return;
-    }
-    if (uiFlags & 0x100000)
-    {
-        pcRegisterReflection();
-        return;
-    }
-
-    BuildPatchCache(RedRenderer::GetCamera(), false,
-                    m_bEnableVisibilityTest ? VISIBILITYTEST_ASSIGNID : VISIBILITYTEST_NONE);
-    if (m_patchCacheSize <= 0)
-    {
-        return;
-    }
-    UpdateEventCache();
-    if (RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED)
-    {
-        pcRenderWaterPatches();
-        if (RedRenderer::pcGetRenderOptions().waterQuality == QUALITY_LOW)
-        {
-            return;
-        }
-        pcRenderWaterRings();
-    }
-    else
-    {
-        if (RedRenderer::pcGetRenderOptions().waterQuality != QUALITY_LOW)
-        {
-            pcAccumulateNormalMap();
-        }
-        pcRenderWaterPatches();
-        pcRenderWaterRings();
-    }
-    pcRenderWaterSplashes();
 }
 
 // FUNCTION: SWBF2 0x00720170
@@ -1864,8 +1863,10 @@ void RedWater::PlatformRenderUnderWaterView(PblVector3* pVerts, int iNumVerts)
     RedRenderer::pcGetViewportExtents(fMinX, fMinY, fMaxX, fMaxY);
     for (int i = 0; i < iNumVerts; ++i)
     {
-        pOut[0] = (pVerts[i].x * 0.5f + 0.5f) * (fMaxX - fMinX);
-        pOut[1] = (0.5f - pVerts[i].y * 0.5f) * (fMaxY - fMinY);
+        float fX = pVerts[i].x;
+        float fY = pVerts[i].y;
+        pOut[1] = (0.5f - fY * 0.5f) * (fMaxY - fMinY);
+        pOut[0] = (fX * 0.5f + 0.5f) * (fMaxX - fMinX);
         pOut[2] = 0.0f;
         pOut[3] = 1.0f;
         pOut += 4;
@@ -1926,29 +1927,29 @@ namespace FLRenderer
 RedTexture* pcGetReflectionTexture(char id);
 }
 
-void pcWaterShader::SetSpecularDirection(const PblVector3& vDirection)
+inline void pcWaterShader::SetSpecularDirection(const PblVector3& vDirection)
 {
     s_vSpecularDirection = vDirection;
 }
 
-void pcWaterShader::SetReflectionMap(RedTexture* pTexture)
+inline void pcWaterShader::SetReflectionMap(RedTexture* pTexture)
 {
     m_reflectionMap = pTexture;
 }
 
-void pcWaterShader::SetProjectedNormalMap(RedTexture* pTexture)
+inline void pcWaterShader::SetProjectedNormalMap(RedTexture* pTexture)
 {
     m_projectedNormalMap = pTexture;
 }
 
-void pcNormalMapAdderShader::SetNormalMap(RedTexture* pTex1, RedTexture* pTex2, float fBlend)
+inline void pcNormalMapAdderShader::SetNormalMap(RedTexture* pTex1, RedTexture* pTex2, float fBlend)
 {
     m_normalMap1 = pTex1;
     m_normalMap2 = pTex2;
     m_blend = fBlend;
 }
 
-void pcNormalMapAdderShader::SetTextureTransform(RedTextureTransform* pTransform1,
+inline void pcNormalMapAdderShader::SetTextureTransform(RedTextureTransform* pTransform1,
                                                  RedTextureTransform* pTransform2)
 {
     if (pTransform1)
@@ -1982,8 +1983,8 @@ void pcNormalMapAdderShader::SetTextureTransform(RedTextureTransform* pTransform
 // FUNCTION: SWBF2 0x00720570
 void RedWater::pcAccumulateNormalMap()
 {
-    PblMatrix mCustomPatch = gMatrixIdentity;
-    PblMatrix mPatch = mCustomPatch;
+    PblMatrix mPatch = gMatrixIdentity;
+    PblMatrix mCustomPatch = mPatch;
     mCustomPatch.m[3][1] = m_fWaterHeightOffset;
     float fTime = m_waterTimeStamp.GetElapsed();
 
@@ -2005,9 +2006,11 @@ void RedWater::pcAccumulateNormalMap()
     transform.m_Transform[2][1] = m_tilesV * 0.0f;
     float fFrame = m_fNormalMapTexturesFrameRate * fTime;
     int iFrame = (int)fFrame;
+    unsigned int uiCurrent = iFrame % m_uiNumNormalMapTextures;
+    unsigned int uiNext = (iFrame + 1) % m_uiNumNormalMapTextures;
     s_pNormalMapAdderShader->SetNormalMap(
-        RedTexture::Find(m_uiNormalMapTextures[iFrame % m_uiNumNormalMapTextures]),
-        RedTexture::Find(m_uiNormalMapTextures[(iFrame + 1) % m_uiNumNormalMapTextures]),
+        RedTexture::Find(m_uiNormalMapTextures[uiCurrent]),
+        RedTexture::Find(m_uiNormalMapTextures[uiNext]),
         fFrame - (float)iFrame);
     s_pNormalMapAdderShader->SetTextureTransform(&transform, &transform);
 
@@ -2053,36 +2056,37 @@ void RedWater::pcAccumulateNormalMap()
             continue;
         }
 
-        PblVector3 vPos(event.worldPos.x, m_waterHeight + m_fWaterHeightOffset, event.worldPos.z);
+        PblVector3 vPos = event.worldPos;
+        vPos.y = m_waterHeight + m_fWaterHeightOffset;
         float fLifetime = event.expireTime - event.startTime;
         if (geometry == GEOMETRYMODE_COMPRESSED)
         {
-            if (event.type != WATEREVENT_RING)
-            {
-                pcRenderDistortionWakeRing<CompressedWaterDistortionRingVertex, 53986>(
-                    s_pWaterDistortionRingShader, m_worldMin, m_worldMax, vPos, fRadius,
-                    event.worldVelocity, fLifetime, fAge);
-            }
-            else
+            if (event.type == WATEREVENT_RING)
             {
                 pcRenderDistortionRing<CompressedWaterDistortionRingVertex, 53986>(
                     s_pWaterDistortionRingShader, m_worldMin, m_worldMax, vPos, fRadius,
                     fLifetime, fAge);
             }
-        }
-        else
-        {
-            if (event.type != WATEREVENT_RING)
+            else
             {
-                pcRenderDistortionWakeRing<WaterDistortionRingVertex, 738>(
+                pcRenderDistortionWakeRing<CompressedWaterDistortionRingVertex, 53986>(
                     s_pWaterDistortionRingShader, m_worldMin, m_worldMax, vPos, fRadius,
                     event.worldVelocity, fLifetime, fAge);
             }
-            else
+        }
+        else
+        {
+            if (event.type == WATEREVENT_RING)
             {
                 pcRenderDistortionRing<WaterDistortionRingVertex, 738>(
                     s_pWaterDistortionRingShader, m_worldMin, m_worldMax, vPos, fRadius,
                     fLifetime, fAge);
+            }
+            else
+            {
+                pcRenderDistortionWakeRing<WaterDistortionRingVertex, 738>(
+                    s_pWaterDistortionRingShader, m_worldMin, m_worldMax, vPos, fRadius,
+                    event.worldVelocity, fLifetime, fAge);
             }
         }
     }
@@ -2091,7 +2095,7 @@ void RedWater::pcAccumulateNormalMap()
     RedRenderer::pcSetViewport(viewport);
 }
 
-void pcOceanShader::SetBaseMap(RedTexture* pTexture, RedTextureTransform* pTransform)
+inline void pcOceanShader::SetBaseMap(RedTexture* pTexture, RedTextureTransform* pTransform)
 {
     m_baseMap = pTexture;
     if (pTransform)
@@ -2109,7 +2113,7 @@ void pcOceanShader::SetBaseMap(RedTexture* pTexture, RedTextureTransform* pTrans
     }
 }
 
-void pcOceanShader::SetFoamMap(RedTexture* pTexture, RedTextureTransform* pTransform)
+inline void pcOceanShader::SetFoamMap(RedTexture* pTexture, RedTextureTransform* pTransform)
 {
     m_foamMap = pTexture;
     if (pTransform)
@@ -2146,8 +2150,8 @@ void RedWater::pcRenderFarOceanWaterPatches()
     RedTextureTransform baseTransform;
     baseTransform.m_bTransform = 1;
     baseTransform.m_Transform[0][0] = m_tilesU;
-    baseTransform.m_Transform[0][1] = 0.0f;
     baseTransform.m_Transform[1][0] = 0.0f;
+    baseTransform.m_Transform[0][1] = 0.0f;
     baseTransform.m_Transform[1][1] = m_tilesV;
     baseTransform.m_Transform[2][0] = m_tilesU * fScrollU;
     baseTransform.m_Transform[2][1] = m_tilesV * fScrollV;
@@ -2180,9 +2184,11 @@ void RedWater::pcRenderFarOceanWaterPatches()
         float fHeight = m_minPatchHeight + (m_maxPatchHeight - m_minPatchHeight) * 0.5f;
         for (int i = 0; i < m_patchCacheSize; ++i)
         {
-            mPatch.m[3][0] = m_patchCache[i].bbox._vMin.x;
+            float fZ = m_patchCache[i].bbox._vMin.z;
+            float fX = m_patchCache[i].bbox._vMin.x;
+            mPatch.m[3][0] = fX;
             mPatch.m[3][1] = fHeight;
-            mPatch.m[3][2] = m_patchCache[i].bbox._vMin.z;
+            mPatch.m[3][2] = fZ;
             mPatch.m[3][3] = 1.0f;
             RedRenderer::pcRenderPrimitive(m_pLowResPrim,
                                            s_pOceanWaterShader,
@@ -2226,7 +2232,8 @@ void RedWater::pcRenderWaterSplashes()
         }
 
         unsigned int uiSeed = (unsigned int)(event.startTime * 4096.0f);
-        PblVector3 vPos(event.worldPos.x, m_fWaterHeightOffset + m_waterHeight, event.worldPos.z);
+        PblVector3 vPos = event.worldPos;
+        vPos.y = m_waterHeight + m_fWaterHeightOffset;
         if (geometry == GEOMETRYMODE_COMPRESSED)
         {
             pcRenderSplash<CompressedWaterSplashVertex, 37506>(
@@ -2326,10 +2333,12 @@ void RedWater::pcSetupShaders()
     {
         float fFrame = m_fSpecularMaskTexturesFrameRate * fTime;
         int iFrame = (int)fFrame;
+        unsigned int uiCurrent = iFrame % m_uiNumSpecularMaskTextures;
+        unsigned int uiNext = (iFrame + 1) % m_uiNumSpecularMaskTextures;
         s_pNormalWaterShader->SetSpecularMask(
-            RedTexture::Find(m_uiSpecularMaskTextures[iFrame % m_uiNumSpecularMaskTextures]),
+            RedTexture::Find(m_uiSpecularMaskTextures[uiCurrent]),
             &transform1,
-            RedTexture::Find(m_uiSpecularMaskTextures[(iFrame + 1) % m_uiNumSpecularMaskTextures]),
+            RedTexture::Find(m_uiSpecularMaskTextures[uiNext]),
             &transform1, fFrame - (float)iFrame);
     }
 
@@ -2344,19 +2353,23 @@ void RedWater::pcSetupShaders()
     {
         float fFrame = m_fBumpMapTexturesFrameRate * fTime;
         int iFrame = (int)fFrame;
+        unsigned int uiCurrent = iFrame % m_uiNumBumpMapTextures;
+        unsigned int uiNext = (iFrame + 1) % m_uiNumBumpMapTextures;
         s_pNormalWaterShader->SetBumpMap(
-            RedTexture::Find(m_uiBumpMapTextures[iFrame % m_uiNumBumpMapTextures]), &transform1,
-            RedTexture::Find(m_uiBumpMapTextures[(iFrame + 1) % m_uiNumBumpMapTextures]),
+            RedTexture::Find(m_uiBumpMapTextures[uiCurrent]), &transform1,
+            RedTexture::Find(m_uiBumpMapTextures[uiNext]),
             &transform1, fFrame - (float)iFrame);
     }
     if (m_uiNumNormalMapTextures)
     {
         float fFrame = m_fNormalMapTexturesFrameRate * fTime;
         int iFrame = (int)fFrame;
+        unsigned int uiCurrent = iFrame % m_uiNumNormalMapTextures;
+        unsigned int uiNext = (iFrame + 1) % m_uiNumNormalMapTextures;
         s_pNormalWaterShader->SetNormalMap(
-            RedTexture::Find(m_uiNormalMapTextures[iFrame % m_uiNumNormalMapTextures]),
+            RedTexture::Find(m_uiNormalMapTextures[uiCurrent]),
             &transform1,
-            RedTexture::Find(m_uiNormalMapTextures[(iFrame + 1) % m_uiNumNormalMapTextures]),
+            RedTexture::Find(m_uiNormalMapTextures[uiNext]),
             &transform1, fFrame - (float)iFrame);
     }
 
@@ -2371,28 +2384,28 @@ void RedWater::pcRenderWaterPatches()
     {
         return;
     }
+    PblMatrix mPatch = gMatrixIdentity;
     PblMatrix mWorld = gMatrixIdentity;
     mWorld.m[3][1] = m_fWaterHeightOffset;
     pcSetupShaders();
     unsigned short uiLastVisibilityID = 0;
     for (int i = 0; i < m_patchCacheSize; ++i)
     {
-        WaterPatch& patch = m_patchCache[i];
-        if (m_bEnableVisibilityTest && uiLastVisibilityID != patch.uiVisibilityID)
+        if (m_bEnableVisibilityTest && uiLastVisibilityID != m_patchCache[i].uiVisibilityID)
         {
             if (uiLastVisibilityID)
             {
                 RedWater::pcEndVisibilityTest(uiLastVisibilityID);
             }
-            uiLastVisibilityID = patch.uiVisibilityID;
+            uiLastVisibilityID = m_patchCache[i].uiVisibilityID;
             if (uiLastVisibilityID)
             {
                 RedWater::pcBeginVisibilityTest(uiLastVisibilityID);
             }
         }
-        if (patch.pCustomMesh)
+        if (m_patchCache[i].pCustomMesh)
         {
-            RedRenderer::pcRenderPrimitive((pcRedPrimitive*)patch.pCustomMesh,
+            RedRenderer::pcRenderPrimitive((pcRedPrimitive*)m_patchCache[i].pCustomMesh,
                                            s_pNormalWaterShader,
                                            mWorld,
                                            RedColor::WHITE,
@@ -2400,8 +2413,7 @@ void RedWater::pcRenderWaterPatches()
         }
         else
         {
-            PblMatrix mPatch = mWorld;
-            mPatch.SetTranslation(patch.bbox._vMin);
+            mPatch.SetTranslation(m_patchCache[i].bbox._vMin);
             RedRenderer::pcRenderPrimitive(m_pHighResPrim,
                                            s_pNormalWaterShader,
                                            mPatch,
@@ -2430,8 +2442,8 @@ void RedWater::pcRenderWaterRings()
         float fAge = m_waterTimeStamp.GetElapsed() - event.startTime;
         float fRadius = fAge * 1.5f + event.radius;
         float fDX = pCamera->_Matrix.m[3][0] - event.worldPos.x;
-        float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
         float fDZ = pCamera->_Matrix.m[3][2] - event.worldPos.z;
+        float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
         if (fDX * fDX + fDY * fDY + fDZ * fDZ < WATEREVENT_MAX_VISIBLE_DISTANCESQR)
         {
             ++event.in_range;
@@ -2440,35 +2452,35 @@ void RedWater::pcRenderWaterRings()
         {
             continue;
         }
-        PblVector3 vPos(event.worldPos.x, m_waterHeight + m_fWaterHeightOffset,
-                        event.worldPos.z);
+        PblVector3 vPos = event.worldPos;
+        vPos.y = m_waterHeight + m_fWaterHeightOffset;
         float fLifetime = event.expireTime - event.startTime;
         if (geometry == GEOMETRYMODE_COMPRESSED)
         {
-            if (event.type != WATEREVENT_RING)
+            if (event.type == WATEREVENT_RING)
+            {
+                pcRenderRing<CompressedWaterRingVertex, 37506>(s_pWaterRingShader, m_worldMin, m_worldMax, vPos,
+                            fRadius, fLifetime, fAge);
+            }
+            else
             {
                 pcRenderWakeRing<CompressedWaterRingVertex, 37506>(
                     s_pWaterRingShader, m_worldMin, m_worldMax, vPos, fRadius,
                     event.worldVelocity, fLifetime, fAge);
             }
-            else
-            {
-                pcRenderRing<CompressedWaterRingVertex, 37506>(s_pWaterRingShader, m_worldMin, m_worldMax, vPos,
-                            fRadius, fLifetime, fAge);
-            }
         }
         else
         {
-            if (event.type != WATEREVENT_RING)
+            if (event.type == WATEREVENT_RING)
+            {
+                pcRenderRing<WaterRingVertex, 642>(s_pWaterRingShader, m_worldMin, m_worldMax, vPos,
+                            fRadius, fLifetime, fAge);
+            }
+            else
             {
                 pcRenderWakeRing<WaterRingVertex, 642>(
                     s_pWaterRingShader, m_worldMin, m_worldMax, vPos, fRadius,
                     event.worldVelocity, fLifetime, fAge);
-            }
-            else
-            {
-                pcRenderRing<WaterRingVertex, 642>(s_pWaterRingShader, m_worldMin, m_worldMax, vPos,
-                            fRadius, fLifetime, fAge);
             }
         }
     }
@@ -2483,14 +2495,15 @@ void RedWater::pcRenderRing(pcRedShader* pShader, const PblVector3& vWorldMin,
                             const PblVector3& vWorldMax, const PblVector3& vPos,
                             float fRadius, float fLifetime, float fAge)
 {
-    float fFade = fAge / fLifetime;
-    if (fFade < WATERRING_MAX_ALPHA_AT_TIME)
+    float fProgress = fAge / fLifetime;
+    float fFade;
+    if (fProgress < WATERRING_MAX_ALPHA_AT_TIME)
     {
-        fFade = WATERRING_MAX_ALPHASCALE_BEFORE_TIME * fFade;
+        fFade = WATERRING_MAX_ALPHASCALE_BEFORE_TIME * fProgress;
     }
     else
     {
-        fFade = (1.0f - fFade) * WATERRING_MAX_ALPHASCALE_AFTER_TIME;
+        fFade = (1.0f - fProgress) * WATERRING_MAX_ALPHASCALE_AFTER_TIME;
     }
     float fU = 0.0f;
     if (fFade < 0.0f)
@@ -2528,15 +2541,16 @@ void RedWater::pcRenderRing(pcRedShader* pShader, const PblVector3& vWorldMin,
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 40.0f);
-        pVert[0].pos.SetPos(vPos.x + fCos * fInner, vPos.y + WATERRING_HEIGHT_BIAS,
-                           vPos.z + fSin * fInner);
-        pVert[0].uv.SetUV(fU, 1.0f - fInnerV);
-        pVert[0].color = color;
-        pVert[1].pos.SetPos(vPos.x + fCos * fOuter, vPos.y + WATERRING_HEIGHT_BIAS,
-                           vPos.z + fSin * fOuter);
-        pVert[1].uv.SetUV(fU, 0.0f);
-        pVert[1].color = color;
-        pVert += 2;
+        pVert->pos.SetPos(vPos.x + fCos * fInner, vPos.y + WATERRING_HEIGHT_BIAS,
+                          vPos.z + fSin * fInner);
+        pVert->uv.SetUV(fU, 1.0f - fInnerV);
+        pVert->color = color;
+        ++pVert;
+        pVert->pos.SetPos(vPos.x + fCos * fOuter, vPos.y + WATERRING_HEIGHT_BIAS,
+                          vPos.z + fSin * fOuter);
+        pVert->uv.SetUV(fU, 0.0f);
+        pVert->color = color;
+        ++pVert;
         fU += WATERRING_TEX_STEP;
     }
     pPrim->EndVertexData();
@@ -2553,8 +2567,8 @@ void RedWater::pcRenderFarWaterPatches()
         return;
     }
 
+    PblMatrix mPatch = gMatrixIdentity;
     PblMatrix mWorld = gMatrixIdentity;
-    PblMatrix mPatch = mWorld;
     mWorld.m[3][1] = m_fWaterHeightOffset;
     const RedCamera* pCamera = RedRenderer::GetCamera();
     float fNear = FLRenderer::GetNearSceneFadeStart();
@@ -2565,8 +2579,8 @@ void RedWater::pcRenderFarWaterPatches()
     }
     RedCamera camera(*pCamera);
     camera.SetNearFarPlane(fNear, fFar);
-    m_uiVisibilityCacheSize = 0;
     m_uiVisibilityCacheSize_FarScene = 0;
+    m_uiVisibilityCacheSize = 0;
     BuildPatchCache(&camera, false,
                     m_bEnableVisibilityTest ? VISIBILITYTEST_ASSIGNID : VISIBILITYTEST_NONE);
     m_uiVisibilityCacheSize_FarScene = m_uiVisibilityCacheSize;
@@ -2577,22 +2591,21 @@ void RedWater::pcRenderFarWaterPatches()
         unsigned short uiLastVisibilityID = 0;
         for (int i = 0; i < m_patchCacheSize; ++i)
         {
-            WaterPatch& patch = m_patchCache[i];
-            if (m_bEnableVisibilityTest && uiLastVisibilityID != patch.uiVisibilityID)
+            if (m_bEnableVisibilityTest && uiLastVisibilityID != m_patchCache[i].uiVisibilityID)
             {
                 if (uiLastVisibilityID)
                 {
                     RedWater::pcEndVisibilityTest(uiLastVisibilityID);
                 }
-                uiLastVisibilityID = patch.uiVisibilityID;
+                uiLastVisibilityID = m_patchCache[i].uiVisibilityID;
                 if (uiLastVisibilityID)
                 {
                     RedWater::pcBeginVisibilityTest(uiLastVisibilityID);
                 }
             }
-            if (patch.pCustomMesh)
+            if (m_patchCache[i].pCustomMesh)
             {
-                RedRenderer::pcRenderPrimitive((pcRedPrimitive*)patch.pCustomMesh,
+                RedRenderer::pcRenderPrimitive((pcRedPrimitive*)m_patchCache[i].pCustomMesh,
                                                s_pNormalWaterShader,
                                                mWorld,
                                                RedColor::WHITE,
@@ -2600,7 +2613,7 @@ void RedWater::pcRenderFarWaterPatches()
             }
             else
             {
-                mPatch.SetTranslation(patch.bbox._vMin);
+                mPatch.SetTranslation(m_patchCache[i].bbox._vMin);
                 RedRenderer::pcRenderPrimitive(m_pLowResPrim,
                                                s_pNormalWaterShader,
                                                mPatch,
@@ -2634,8 +2647,8 @@ void RedWater::pcRenderOceanWaterPatches()
     RedTextureTransform baseTransform;
     baseTransform.m_bTransform = 1;
     baseTransform.m_Transform[0][0] = m_tilesU;
-    baseTransform.m_Transform[0][1] = 0.0f;
     baseTransform.m_Transform[1][0] = 0.0f;
+    baseTransform.m_Transform[0][1] = 0.0f;
     baseTransform.m_Transform[1][1] = m_tilesV;
     baseTransform.m_Transform[2][0] = m_tilesU * fScrollU;
     baseTransform.m_Transform[2][1] = m_tilesV * fScrollV;
@@ -2656,9 +2669,11 @@ void RedWater::pcRenderOceanWaterPatches()
         float fHeight = m_minPatchHeight + (m_maxPatchHeight - m_minPatchHeight) * 0.5f;
         for (int i = 0; i < m_patchCacheSize; ++i)
         {
-            mPatch.m[3][0] = m_patchCache[i].bbox._vMin.x;
+            float fZ = m_patchCache[i].bbox._vMin.z;
+            float fX = m_patchCache[i].bbox._vMin.x;
+            mPatch.m[3][0] = fX;
             mPatch.m[3][1] = fHeight;
-            mPatch.m[3][2] = m_patchCache[i].bbox._vMin.z;
+            mPatch.m[3][2] = fZ;
             mPatch.m[3][3] = 1.0f;
             RedRenderer::pcRenderPrimitive(m_pHighResPrim,
                                            s_pOceanWaterShader,

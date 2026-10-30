@@ -64,6 +64,9 @@ static float s_DebugNearWireColor[4] = { 1.0f, 0.0f, 1.0f, 0.3f };
 
 static float s_DebugFarWireColor[4] = { 0.8f, 0.2f, 0.8f, 0.1f };
 
+// GLOBAL: SWBF2 0x00784cb8
+const unsigned int pcStencilShadowShader::s_stencilRef = 0;
+
 // GLOBAL: SWBF2 0x00784cbc
 static const D3DVERTEXELEMENT9 s_softskinned_facenormal_ShadowFormat[7] =
 {

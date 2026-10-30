@@ -42,40 +42,49 @@ void TerrainRenderable::_RenderLowRes(unsigned int uiFlags) const
 
     const RedCamera* pCurrent = RedRenderer::GetCamera();
     RedCamera camera(*pCurrent);
+    float fZoom = pCurrent->GetZoom();
     float fNear, fFar, fWidth, fHeight;
     pCurrent->GetFrustum(fNear, fFar, fWidth, fHeight);
-    float fZoom = pCurrent->GetZoom();
     camera.SetZoom(fZoom);
-    float fClipNear = uiFlags & 0x200000 ? FLRenderer::GetNearPlane()
-                                       : FLRenderer::GetNearSceneFadeStart();
-    camera.SetNearFarPlane(fClipNear * fZoom, m_fFarTerrainMaxDistance);
+    camera.SetNearFarPlane((uiFlags & 0x200000 ? FLRenderer::GetNearPlane()
+                                               : FLRenderer::GetNearSceneFadeStart()) * fZoom,
+                           m_fFarTerrainMaxDistance);
 
-    int dimension = m_iLowResPatchesPerDimension;
-    bool reverseX = -pCurrent->GetMatrix().m[2][0] < 0.0f;
-    bool reverseZ = -pCurrent->GetMatrix().m[2][2] < 0.0f;
-    int xStart = reverseX ? dimension - 1 : 0;
-    int xEnd = reverseX ? -1 : dimension;
-    int xStep = reverseX ? -1 : 1;
-    int zStart = reverseZ ? dimension - 1 : 0;
-    int zEnd = reverseZ ? -1 : dimension;
-    int zStep = reverseZ ? -1 : 1;
+    int xStart = 0;
+    int xEnd = m_iLowResPatchesPerDimension;
+    int xStep = 1;
+    if (-pCurrent->GetMatrix().m[2][0] < 0.0f)
+    {
+        xStart = m_iLowResPatchesPerDimension - 1;
+        xEnd = -1;
+        xStep = -1;
+    }
+    int zStart = 0;
+    int zEnd = m_iLowResPatchesPerDimension;
+    int zStep = 1;
+    if (-pCurrent->GetMatrix().m[2][2] < 0.0f)
+    {
+        zStart = m_iLowResPatchesPerDimension - 1;
+        zEnd = -1;
+        zStep = -1;
+    }
     for (int z = zStart; z != zEnd; z += zStep)
     {
         for (int x = xStart; x != xEnd; x += xStep)
         {
-            const LowResPatch& patch = m_aLowResPatches[x + z * dimension];
+            const LowResPatch& patch = m_aLowResPatches[x + z * m_iLowResPatchesPerDimension];
             if (!patch.pPrim)
             {
                 continue;
             }
             const PblVector3& vMin = patch.bbox._vMin;
             const PblVector3& vMax = patch.bbox._vMax;
-            PblVector3 vCenter((vMax.x + vMin.x) * 0.5f,
-                               (vMax.y + vMin.y) * 0.5f,
-                               (vMax.z + vMin.z) * 0.5f);
             PblVector3 vExtent((vMax.x - vMin.x) * 0.5f,
                                (vMax.y - vMin.y) * 0.5f,
                                (vMax.z - vMin.z) * 0.5f);
+            PblVector3 vCenter((vMax.x + vMin.x) * 0.5f,
+                               (vMax.y + vMin.y) * 0.5f,
+                               (vMax.z + vMin.z) * 0.5f);
             if (camera.ClassifyAABox(vCenter, vExtent) == RedCamera::VISIBILITY_NONE)
             {
                 continue;
@@ -183,25 +192,24 @@ void TerrainRenderable::Deinit()
     {
         for (int i = 0; i < RedTerrain::_iNumPatches; ++i)
         {
-            Patch& patch = m_aPatches[i];
-            for (unsigned int j = 0; j < patch.uiNumPasses; ++j)
+            for (unsigned int j = 0; j < m_aPatches[i].uiNumPasses; ++j)
             {
-                if (patch.apPrim[j])
+                if (m_aPatches[i].apPrim[j])
                 {
-                    patch.apPrim[j]->Release();
+                    m_aPatches[i].apPrim[j]->Release();
                 }
-                if (patch.apShader[j])
+                if (m_aPatches[i].apShader[j])
                 {
-                    patch.apShader[j]->Release();
+                    m_aPatches[i].apShader[j]->Release();
                 }
-                if (patch.apShader2[j])
+                if (m_aPatches[i].apShader2[j])
                 {
-                    patch.apShader2[j]->Release();
+                    m_aPatches[i].apShader2[j]->Release();
                 }
             }
-            delete[] patch.apPrim;
-            delete[] patch.apShader;
-            delete[] patch.apShader2;
+            delete[] m_aPatches[i].apPrim;
+            delete[] m_aPatches[i].apShader;
+            delete[] m_aPatches[i].apShader2;
         }
         delete[] m_aPatches;
         m_aPatches = 0;
@@ -533,27 +541,32 @@ void TerrainRenderable::SetFarTerrainTexture(unsigned int uiHash, float fA, unsi
 {
     float fScale = fA / ((float)RedTerrain::_iPointsPerDimension * RedTerrain::_fMetersPerPoint);
     float fOffset = RedTerrain::_fMetersPerPoint * 0.5f * fScale;
+    float fMinX = fOffset - 0.5f;
+    float fMinY = -0.5f - fOffset;
     if (!pcTerrainShader2::IsEnabled())
     {
-        pcTerrainShader::_InitFarRendering(uiHash, fScale, fScale, fOffset - 0.5f, -0.5f - fOffset);
+        pcTerrainShader::_InitFarRendering(uiHash, fScale, fScale, fMinX, fMinY);
     }
     float fDetailScale = RedTerrain::_fPointsPerMeter * fC;
     if (!pcTerrainShader2::IsEnabled())
     {
         pcTerrainShader::_InitFarDetail(uiB, fDetailScale, fDetailScale, 0.0f, 0.0f);
     }
-    m_bEnableFarDetail = uiB != 0;
+    bool bEnableDetail = uiB != 0;
+    m_bEnableFarDetail = bEnableDetail;
     if (m_pFarShader)
     {
         m_pFarShader->m_uiOptions |= 8;
-        if (m_bEnableFarDetail)
+        unsigned char uiOptions = m_pFarShader->m_uiOptions;
+        if (bEnableDetail)
         {
-            m_pFarShader->m_uiOptions |= 1;
+            uiOptions |= 1;
         }
         else
         {
-            m_pFarShader->m_uiOptions &= ~1;
+            uiOptions &= ~1;
         }
+        m_pFarShader->m_uiOptions = uiOptions;
     }
 }
 
@@ -578,14 +591,14 @@ void TerrainRenderable::_InitPixelLighting(bool bEnable)
     if (m_bBumpTextureAvailable && m_bEnableBumpMapping)
     {
         float fScale = m_fBumpLuminosityScale * RedTerrain::_fPointsPerMeter;
-        PblVector4 vScale0 = { fScale, 0.0f, 0.0f, 0.0f };
         PblVector4 vScale1 = { 0.0f, 0.0f, fScale, 0.0f };
-        pcTerrainShader2::_InitBumpLuminosityPixelLighting(0x785887DA, m_uiBumpLuminosityTextureHash,
+        PblVector4 vScale0 = { fScale, 0.0f, 0.0f, 0.0f };
+        pcTerrainShader2::_InitBumpLuminosityPixelLighting(0x785887DA /* "attenuation_volume" */, m_uiBumpLuminosityTextureHash,
                                                            vScale0, vScale1, m_fStaticBumpFactor);
     }
     else
     {
-        pcTerrainShader2::_InitPixelLighting(0x785887DA, 0x63DD533C);
+        pcTerrainShader2::_InitPixelLighting(0x785887DA /* "attenuation_volume" */, 0x63DD533C /* "cube_normalizationmap" */);
     }
 
     if (!pcTerrainShader2::IsEnabled())
@@ -606,7 +619,7 @@ void TerrainRenderable::_InitPixelLighting(bool bEnable)
         m_pPrePixelLightingShader2 = (pcTerrainShader2*)pcRedShader::Create(
             PblHash("Terrain2"), uiFlags, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
         m_pPrePixelLightingShader = (pcTerrainShader*)pcRedShader::Create(
-            PblHash("Terrain"), uiFlags, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+            0x74DBC80E /* "Terrain" */, uiFlags, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
     }
     m_pPrePixelLightingShader->m_uiOptions |= 4;
     m_pPrePixelLightingShader->m_uiOptions |= 1;
@@ -635,7 +648,7 @@ void TerrainRenderable::_Reset()
 namespace
 {
 
-pcRedIndexBuffer* ReadIndexBuffer(PblFileChunk& chunk, unsigned int uiNumIndices, unsigned int& ruiStartIndex)
+inline pcRedIndexBuffer* ReadIndexBuffer(PblFileChunk& chunk, unsigned int uiNumIndices, unsigned int& ruiStartIndex)
 {
     pcRedIndexBuffer* pIB = pcRedIndexBuffer::Create(uiNumIndices, true, true);
     chunk._pFile->ReadData(pIB->Lock(uiNumIndices, ruiStartIndex), uiNumIndices * sizeof(unsigned short));

@@ -25,12 +25,6 @@ void RemoveInterfaceElement(RedScreenGroupElement* pElement);
 void __cdecl PblTraceP(const char* Format, ...);
 
 
-static const PblMatrix _IdentityMatrix(
-    PblVector4{ 1.0f, 0.0f, 0.0f, 0.0f },
-    PblVector4{ 0.0f, 1.0f, 0.0f, 0.0f },
-    PblVector4{ 0.0f, 0.0f, 1.0f, 0.0f },
-    PblVector4{ 0.0f, 0.0f, 0.0f, 1.0f });
-
 // SYNTHETIC: SWBF2 0x00408f10
 // `dynamic initializer for 'RedDebug::_PrintfColor''
 
@@ -216,7 +210,7 @@ void RedDebug::RedDebugRenderable::Cleanup()
     {
         RedTextElement& line = _aTextLines[i];
         line.SetFont("");
-        line.Cleanup();
+        line.RedTextElement::Cleanup();
         _ScreenGroup.RemoveElement(&line);
     }
 
@@ -224,7 +218,7 @@ void RedDebug::RedDebugRenderable::Cleanup()
     {
         RedTextElement& text = _aText3D[i].text;
         text.SetFont("");
-        text.Cleanup();
+        text.RedTextElement::Cleanup();
         _ScreenGroup.RemoveElement(&text);
     }
 
@@ -259,7 +253,7 @@ void RedDebug::DrawCone(const PblMatrix& matrix, float fHeight, float fRadius0, 
                         RedColor color)
 {
     const float fStep = PblMath::fTwoPi * 0.125f;
-    const PblVector3 vBase(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
+    const PblVector3 vBase = matrix.GetTranslation();
 
     PblVector3 aCircle[8];
     for (int i = 0; i < 8; i++)
@@ -407,7 +401,7 @@ void RedDebug::RedDebugRenderable::Init()
         RedTextElement& line = _aTextLines[i];
         line.SetFont("systemfont");
         line.SetIntercharacterSpacing(0);
-        line.Enable(false);
+        line.RedTextElement::Enable(false);
         line.BringToFront();
         _ScreenGroup.AddElement(&line);
     }
@@ -417,7 +411,7 @@ void RedDebug::RedDebugRenderable::Init()
         RedTextElement& text = _aText3D[i].text;
         text.SetFont("systemfont");
         text.SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER, RedTextElement::TEXT_VALIGN_CENTER);
-        text.Enable(false);
+        text.RedTextElement::Enable(false);
         text.SendToBack();
         _ScreenGroup.AddElement(&text);
     }
@@ -439,17 +433,16 @@ struct DebugVertex
 // FUNCTION: SWBF2 0x006f2dd0
 void RedDebug::_DrawRadius(const Radius& radius)
 {
-    const PblVector3& vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
-    PblMatrix mWorld = _IdentityMatrix;
-    mWorld.m[3][0] = vCamera.x;
-    mWorld.m[3][1] = vCamera.y;
-    mWorld.m[3][2] = vCamera.z;
+    const PblVector3 vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
+    PblMatrix mWorld;
+    mWorld.Reset();
+    mWorld.SetTranslation(vCamera);
 
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(
         D3DPT_TRIANGLESTRIP, 0x1082, 12, 66, 0, false);
-    pPrimitive->m_bbox._vMin = PblVector3(-512.0f, -512.0f, -512.0f);
-    pPrimitive->m_bbox._vMax = PblVector3(512.0f, 512.0f, 512.0f);
-    CompressedPos::s_vMin = PblVector3{ -512.0f, -512.0f, -512.0f };
+    const PblBox bounds(PblVector3(-512.0f, -512.0f, -512.0f), PblVector3(512.0f, 512.0f, 512.0f));
+    pPrimitive->m_bbox = bounds;
+    CompressedPos::s_vMin = bounds._vMin;
     CompressedPos::s_vScale = PblVector3{ 0.015625238f, 0.015625238f, 0.015625238f };
     CompressedPos::s_vScaleInv = PblVector3{ 63.999023f, 63.999023f, 63.999023f };
 
@@ -459,25 +452,23 @@ void RedDebug::_DrawRadius(const Radius& radius)
         return;
     }
     const float fX = radius._vPos.x - vCamera.x;
-    const float fZ = radius._vPos.z - vCamera.z;
     const float fY = radius._vPos.y - vCamera.y;
+    const float fZ = radius._vPos.z - vCamera.z;
     const float fHalfHeight = radius._fHeight * 0.5f;
+    const float fBottom = -fHalfHeight + fY;
+    const float fTop = fY + fHalfHeight;
     for (unsigned int i = 0; i <= 32; ++i)
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (float)i * 0.19634955f);
         const float x = fX + radius._fRadius * fSin;
         const float z = fZ + radius._fRadius * fCos;
-        for (int side = 0; side < 2; ++side)
-        {
-            const float y = side ? fY + fHalfHeight : fY - fHalfHeight;
-            short* p = (short*)&pVertex->position;
-            p[0] = (short)((x + 512.0f) * CompressedPos::s_vScaleInv.x - 32767.5f);
-            p[1] = (short)((y + 512.0f) * CompressedPos::s_vScaleInv.y - 32767.5f);
-            p[2] = (short)((z + 512.0f) * CompressedPos::s_vScaleInv.z - 32767.5f);
-            pVertex->color = radius._color;
-            ++pVertex;
-        }
+        pVertex->position.SetPos(x, fBottom, z);
+        pVertex->color = radius._color;
+        ++pVertex;
+        pVertex->position.SetPos(x, fTop, z);
+        pVertex->color = radius._color;
+        ++pVertex;
     }
     pPrimitive->EndVertexData();
     RedRenderer::pcRenderPrimitive(pPrimitive,
@@ -491,39 +482,40 @@ void RedDebug::_DrawRadius(const Radius& radius)
 // FUNCTION: SWBF2 0x006f3170
 void RedDebug::_DrawSolidOBB(const SolidOBB& obb)
 {
-    static const unsigned char order[10] = { 0, 2, 1, 3, 5, 7, 4, 6, 0, 2 };
+    const PblVector3 vMin(-512.0f, -512.0f, -512.0f);
+    const PblVector3 vMax(512.0f, 512.0f, 512.0f);
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(
         D3DPT_TRIANGLESTRIP, 0x1082, 12, 10, 0, false);
-    pPrimitive->m_bbox._vMin = PblVector3(-512.0f, -512.0f, -512.0f);
-    pPrimitive->m_bbox._vMax = PblVector3(512.0f, 512.0f, 512.0f);
-    CompressedPos::s_vMin = PblVector3{ -512.0f, -512.0f, -512.0f };
+    const PblBox bounds(vMin, vMax);
+    pPrimitive->m_bbox = bounds;
+    CompressedPos::s_vMin = vMin;
     CompressedPos::s_vScale = PblVector3{ 0.015625238f, 0.015625238f, 0.015625238f };
     CompressedPos::s_vScaleInv = PblVector3{ 63.999023f, 63.999023f, 63.999023f };
     DebugVertex* pVertex = (DebugVertex*)pPrimitive->BeginVertexData();
-    if (!pVertex)
+    if (pVertex)
     {
-        return;
+        const int order[10] = { 0, 2, 1, 3, 5, 7, 4, 6, 0, 2 };
+        for (int i = 0; i < 10; ++i)
+        {
+            const int corner = order[i];
+            const float z = (corner & 1) ? obb._vBox._vMax.z : obb._vBox._vMin.z;
+            const float y = (corner & 2) ? obb._vBox._vMax.y : obb._vBox._vMin.y;
+            const float x = (corner & 4) ? obb._vBox._vMax.x : obb._vBox._vMin.x;
+            short* p = (short*)&pVertex->position;
+            p[0] = (short)((x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+            p[1] = (short)((y - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+            p[2] = (short)((z - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+            pVertex->color = obb._color;
+            ++pVertex;
+        }
+        pPrimitive->EndVertexData();
+        RedRenderer::pcRenderPrimitive(pPrimitive,
+                                       s_debugShader,
+                                       obb._mBox,
+                                       RedColor::WHITE,
+                                       0, 0, 0, 0);
+        pPrimitive->Release();
     }
-    for (int i = 0; i < 10; ++i)
-    {
-        const unsigned char corner = order[i];
-        const float x = (corner & 4) ? obb._vBox._vMax.x : obb._vBox._vMin.x;
-        const float y = (corner & 2) ? obb._vBox._vMax.y : obb._vBox._vMin.y;
-        const float z = (corner & 1) ? obb._vBox._vMax.z : obb._vBox._vMin.z;
-        short* p = (short*)&pVertex->position;
-        p[0] = (short)((x + 512.0f) * CompressedPos::s_vScaleInv.x - 32767.5f);
-        p[1] = (short)((y + 512.0f) * CompressedPos::s_vScaleInv.y - 32767.5f);
-        p[2] = (short)((z + 512.0f) * CompressedPos::s_vScaleInv.z - 32767.5f);
-        pVertex->color = obb._color;
-        ++pVertex;
-    }
-    pPrimitive->EndVertexData();
-    RedRenderer::pcRenderPrimitive(pPrimitive,
-                                   s_debugShader,
-                                   obb._mBox,
-                                   RedColor::WHITE,
-                                   0, 0, 0, 0);
-    pPrimitive->Release();
 }
 
 // FUNCTION: SWBF2 0x006f2710
@@ -550,15 +542,7 @@ void RedDebug::RedDebugRenderable::Render(int)
         pcRedPrimitive* pPrimitive =
             pcRedPrimitive::Create(D3DPT_LINELIST, 0x1082, 12, uiNumLines * 2, 0, false);
         pPrimitive->m_bbox = box;
-
-        PblVector3 vMin = { box._vMin.x, box._vMin.y, box._vMin.z };
-        PblVector3 vExtent = { box._vMax.x - box._vMin.x, box._vMax.y - box._vMin.y,
-                                    box._vMax.z - box._vMin.z };
-        CompressedPos::s_vMin = vMin;
-        CompressedPos::s_vScale = vExtent * (1.0f / 65535.0f);
-        CompressedPos::s_vScaleInv.x = 1.0f / CompressedPos::s_vScale.x;
-        CompressedPos::s_vScaleInv.y = 1.0f / CompressedPos::s_vScale.y;
-        CompressedPos::s_vScaleInv.z = 1.0f / CompressedPos::s_vScale.z;
+        CompressedPos::SetBoundingBox(box);
 
         DebugVertex* pVertex = (DebugVertex*)pPrimitive->BeginVertexData();
         if (!pVertex)
@@ -568,20 +552,16 @@ void RedDebug::RedDebugRenderable::Render(int)
 
         for (unsigned int i = 0; i < uiNumLines; i++)
         {
-            for (int j = 0; j < 2; j++)
-            {
-                const PblVector3& v = _a3DLineVectors[i * 2 + j];
-                short* p = (short*)&pVertex->position;
-                p[0] = (short)((v.x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
-                p[1] = (short)((v.y - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
-                p[2] = (short)((v.z - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
-                pVertex->color = _aColor[i];
-                ++pVertex;
-            }
+            pVertex->position.SetPos(_a3DLineVectors[i * 2]);
+            pVertex->color = _aColor[i];
+            ++pVertex;
+            pVertex->position.SetPos(_a3DLineVectors[i * 2 + 1]);
+            pVertex->color = _aColor[i];
+            ++pVertex;
         }
 
         pPrimitive->EndVertexData();
-        RedRenderer::pcRenderPrimitive(pPrimitive, s_debugShader, _IdentityMatrix,
+        RedRenderer::pcRenderPrimitive(pPrimitive, s_debugShader, gMatrixIdentity,
                                        RedColor::WHITE, 0x200, 0, 0, 0);
         pPrimitive->Release();
     }
@@ -638,13 +618,12 @@ void RedDebug::Printf3D(const PblVector3& vPos, const char* pcFormat, ...)
         return;
     }
 
-    Text3D& text3D = _aText3D[_uiNumText3D];
-    text3D.text.SetColor(_PrintfColor);
-    text3D.text.m_eStyle = _ePrintfStyle;
+    _aText3D[_uiNumText3D].text.SetColor(_PrintfColor);
+    _aText3D[_uiNumText3D].text.m_eStyle = _ePrintfStyle;
 
     va_list args;
     va_start(args, pcFormat);
-    text3D.text.SetTextFormattedV(pcFormat, args);
+    _aText3D[_uiNumText3D].text.SetTextFormattedV(pcFormat, args);
     va_end(args);
 
     _aText3D[_uiNumText3D].pos = vPos;
@@ -695,9 +674,8 @@ void RedDebug::_DrawPrintf()
     unsigned int i;
     for (i = 0; i < _uiNumTextLines - uiFirst; i++)
     {
-        RedTextElement& line = _aTextLines[(i + uiFirst) % 30];
-        line.SetPosition(10.0f, (float)i * 15.0f + 10.0f);
-        line.Enable(true);
+        _aTextLines[(i + uiFirst) % 30].SetPosition(10.0f, (float)i * 15.0f + 10.0f);
+        _aTextLines[(i + uiFirst) % 30].Enable(true);
     }
     for (; i < 30; i++)
     {

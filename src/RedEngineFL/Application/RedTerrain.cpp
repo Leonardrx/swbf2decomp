@@ -21,16 +21,13 @@ bool PointInSphere(const PblVector3& vPoint, const PblVector3& vCenter, float fR
 // FUNCTION: SWBF2 0x006c21e0
 bool PointInSphere(const PblVector3& vPoint, const PblVector3& vCenter, float fRadius)
 {
-    const float fX = vPoint.x - vCenter.x;
-    const float fY = vPoint.y - vCenter.y;
-    const float fZ = vPoint.z - vCenter.z;
-    return fRadius * fRadius > fX * fX + fY * fY + fZ * fZ;
+    return SquaredLength(vPoint - vCenter) < fRadius * fRadius;
 }
 
 
 static const float EPSILON = 0.001f;
 
-static int Log2(int i)
+static inline int Log2(int i)
 {
     int iLog = -1;
     for (; i; i >>= 1)
@@ -193,24 +190,8 @@ float RedTerrain::GetHoleHeight(float fX, float fZ)
 float RedTerrain::GetInterpolatedHeight(float fX, float fZ)
 {
     const float fMax = (float)(_iPointsPerDimension - 1) * _fMetersPerPoint;
-    float fPosX = fX + _fTerrainCenterX;
-    if (fPosX < 0.0f)
-    {
-        fPosX = 0.0f;
-    }
-    else if (fPosX > fMax)
-    {
-        fPosX = fMax;
-    }
-    float fPosZ = fZ + _fTerrainCenterZ;
-    if (fPosZ < 0.0f)
-    {
-        fPosZ = 0.0f;
-    }
-    else if (fPosZ > fMax)
-    {
-        fPosZ = fMax;
-    }
+    const float fPosX = Clamp(fX + _fTerrainCenterX, 0.0f, fMax);
+    const float fPosZ = Clamp(fZ + _fTerrainCenterZ, 0.0f, fMax);
 
     const float fGridX = fPosX * _fPointsPerMeter;
     const float fGridZ = fPosZ * _fPointsPerMeter;
@@ -246,17 +227,16 @@ float RedTerrain::GetInterpolatedHeight(float fX, float fZ)
 float RedTerrain::GetInterpolatedLight(float fX, float fZ)
 {
     const float fHalf = _fMetersPerPoint * 0.5f;
-    const float fX0 = fX - fHalf;
-    const float fZ0 = fZ - fHalf;
-    const int iX = (int)((fX0 + _fTerrainCenterX) * _fPointsPerMeter + 0.5f);
-    const int iZ = (int)((fZ0 + _fTerrainCenterZ) * _fPointsPerMeter + 0.5f);
-    const float fFracX = (fX - ((float)iX * _fMetersPerPoint - _fTerrainCenterX)) * _fPointsPerMeter;
+    const int iZ = (int)((fZ - fHalf + _fTerrainCenterZ) * _fPointsPerMeter + 0.5f);
     const float fFracZ = (fZ - ((float)iZ * _fMetersPerPoint - _fTerrainCenterZ)) * _fPointsPerMeter;
 
-    const float fL00 = GetLight(fX0, fZ0);
-    const float fL10 = GetLight(fX + fHalf, fZ0);
-    const float fL01 = GetLight(fX0, fZ + fHalf);
+    const float fL00 = GetLight(fX - fHalf, fZ - fHalf);
+    const float fL10 = GetLight(fX + fHalf, fZ - fHalf);
+    const float fL01 = GetLight(fX - fHalf, fZ + fHalf);
     const float fL11 = GetLight(fX + fHalf, fZ + fHalf);
+
+    const int iX = (int)((fX - fHalf + _fTerrainCenterX) * _fPointsPerMeter + 0.5f);
+    const float fFracX = (fX - ((float)iX * _fMetersPerPoint - _fTerrainCenterX)) * _fPointsPerMeter;
     const float fA = (fL01 - fL00) * fFracZ + fL00;
     const float fB = (fL11 - fL10) * fFracZ + fL10;
     return (fB - fA) * fFracX + fA;
@@ -384,17 +364,18 @@ bool RedTerrain::PointInHole(const PblVector3& vPos)
         data.fRadius = 0.01f;
         data.pbInHole = &bLastInHole;
         CollisionManager::GetTreeGrid()->CallbackOnSphere(vPos, 0.01f, RedTerrain::PointInHoleCallback, &data);
-        return bLastInHole;
     }
-
-    for (PblList<Hole>::Itor it = _HoleList.Begin(); it; ++it)
+    else
     {
-        Hole* pHole = it;
-        if (PointInSphere(vPos, pHole->GetCollisionCenter(), pHole->GetCollisionRadius()) &&
-            PointInVolume(vPos, pHole->aPlanes, pHole->iNumPlanes))
+        for (PblList<Hole>::Itor it = _HoleList.Begin(); it; ++it)
         {
-            bLastInHole = true;
-            return true;
+            Hole* pHole = it;
+            if (PointInSphere(vPos, pHole->GetCollisionCenter(), pHole->GetCollisionRadius()) &&
+                PointInVolume(vPos, pHole->aPlanes, pHole->iNumPlanes))
+            {
+                bLastInHole = true;
+                return true;
+            }
         }
     }
     return bLastInHole;
@@ -421,7 +402,9 @@ float RedTerrain::RayHit(const PblVector3& vStart, const PblVector3& vEnd, float
         return 1.0f;
     }
 
-    if (fabsf(vStart.x - vEnd.x) < EPSILON && fabsf(vStart.z - vEnd.z) < EPSILON)
+    const float fDeltaX = vStart.x - vEnd.x;
+    const float fDeltaZ = vStart.z - vEnd.z;
+    if ((fDeltaX < 0.0f ? -fDeltaX : fDeltaX) < EPSILON && (fDeltaZ < 0.0f ? -fDeltaZ : fDeltaZ) < EPSILON)
     {
         if (vEnd.y >= vStart.y)
         {
@@ -778,15 +761,21 @@ float RedTerrain::_RayHit(const PblVector3& vStart, const PblVector3& vEnd, floa
 // FUNCTION: SWBF2 0x006c32f0
 float RedTerrain::_RayHit(const PblVector3& vStart, const PblVector3& vEnd, float fA, float fB, bool& bAbove)
 {
-    if ((vStart.x - vEnd.x) * (vStart.x - vEnd.x) + (vStart.z - vEnd.z) * (vStart.z - vEnd.z) > fB * fB)
+    const float fDeltaX = vStart.x - vEnd.x;
+    const float fDeltaZ = vStart.z - vEnd.z;
+    if (fDeltaX * fDeltaX + fDeltaZ * fDeltaZ > fB * fB)
     {
-        const PblVector3 vMid((vEnd.x + vStart.x) * 0.5f, (vStart.y + vEnd.y) * 0.5f, (vEnd.z + vStart.z) * 0.5f);
-        const float fFirst = _RayHit(vStart, vMid, fA, fB, bAbove);
+        const float fFirst = _RayHit(vStart,
+                                     PblVector3((vEnd.x + vStart.x) * 0.5f, (vStart.y + vEnd.y) * 0.5f,
+                                                (vEnd.z + vStart.z) * 0.5f),
+                                     fA, fB, bAbove);
         if (1.0f > fFirst)
         {
             return fFirst * 0.5f;
         }
-        return _RayHit(vMid, vEnd, fA, fB, bAbove) * 0.5f + 0.5f;
+        return _RayHit(PblVector3((vEnd.x + vStart.x) * 0.5f, (vStart.y + vEnd.y) * 0.5f,
+                                  (vEnd.z + vStart.z) * 0.5f),
+                       vEnd, fA, fB, bAbove) * 0.5f + 0.5f;
     }
 
     if (GetInterpolatedHeight(vEnd.x, vEnd.z) > vEnd.y)
@@ -800,9 +789,11 @@ float RedTerrain::_RayHit(const PblVector3& vStart, const PblVector3& vEnd, floa
             }
         }
         bAbove = false;
-        return 1.0f;
     }
-    bAbove = true;
+    else
+    {
+        bAbove = true;
+    }
     return 1.0f;
 }
 

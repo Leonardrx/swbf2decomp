@@ -47,6 +47,7 @@ static const unsigned int kuiClearShader = PblHash("Clear");
 
 // GLOBAL: SWBF2 0x009c8948
 // kuiFilterShader
+// STRING: SWBF2 0x00784420
 static const unsigned int kuiFilterShader = PblHash("FilterCopy");
 
 // FUNCTION: SWBF2 0x006fbdf0
@@ -135,24 +136,16 @@ void pcShadowQuadRenderable::Init()
         kuiClearShader, 3, 0, 0, 0x80000, RedColor::WHITE, RedColor::BLACK, 32.0f);
 
     m_pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 2, 0xc, 4, 0, true);
-    float* pVerts = (float*)m_pPrimitive->BeginVertexData();
+    PblVector3* pVerts = (PblVector3*)m_pPrimitive->BeginVertexData();
     if (!pVerts)
     {
         return;
     }
 
-    pVerts[0] = -1.0f;
-    pVerts[1] = -1.0f;
-    pVerts[2] = 1.0f;
-    pVerts[3] = 1.0f;
-    pVerts[4] = -1.0f;
-    pVerts[5] = 1.0f;
-    pVerts[6] = -1.0f;
-    pVerts[7] = 1.0f;
-    pVerts[8] = 1.0f;
-    pVerts[9] = 1.0f;
-    pVerts[10] = 1.0f;
-    pVerts[11] = 1.0f;
+    pVerts[0] = PblVector3(-1.0f, -1.0f, 1.0f);
+    pVerts[1] = PblVector3(1.0f, -1.0f, 1.0f);
+    pVerts[2] = PblVector3(-1.0f, 1.0f, 1.0f);
+    pVerts[3] = PblVector3(1.0f, 1.0f, 1.0f);
     m_pPrimitive->EndVertexData();
 
     IDirect3DSurface9* pBackBuffer;

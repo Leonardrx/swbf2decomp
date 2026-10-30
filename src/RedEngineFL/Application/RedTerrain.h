@@ -182,7 +182,7 @@ bool PointInVolume(const PblVector3& vPoint, const PblVector4* aPlanes, int iNum
 // FUNCTION: SWBF2 0x005b4260
 inline PblBox RedTerrain::GetBoundingBox()
 {
-    float fExtent = (float)_iPointsPerDimension * _fMetersPerPoint;
     return PblBox(-_fTerrainCenterX, _fHeightMin, -_fTerrainCenterZ,
-                  fExtent - _fTerrainCenterX, _fHeightMax, fExtent - _fTerrainCenterZ);
+                  (float)_iPointsPerDimension * _fMetersPerPoint - _fTerrainCenterX, _fHeightMax,
+                  (float)_iPointsPerDimension * _fMetersPerPoint - _fTerrainCenterZ);
 }

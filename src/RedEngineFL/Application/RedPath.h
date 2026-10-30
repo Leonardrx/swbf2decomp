@@ -44,10 +44,10 @@ public:
     public:
         Node()
         {
+            mRotation._fS = 1.0f;
             mRotation._fX = 0.0f;
             mRotation._fY = 0.0f;
             mRotation._fZ = 0.0f;
-            mRotation._fS = 1.0f;
         }
 
         static bool ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
@@ -66,7 +66,7 @@ public:
     public:
 
         NodeArray();
-        ~NodeArray() { FreeNodes(); }
+        ~NodeArray();
 
         bool AllocNodes(unsigned int uNumNodes);
         void FreeNodes();

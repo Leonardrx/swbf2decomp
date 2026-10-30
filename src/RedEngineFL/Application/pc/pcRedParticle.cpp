@@ -600,16 +600,19 @@ void RedParticleRenderer::Cleanup()
     currentCache = 0;
 }
 
+// angles here are in 512ths of a full turn
+static const float kRadiansPerAngleStep = 6.2831855f / 512.0f;
+
 // FUNCTION: SWBF2 0x006d3010
 static float GetCos(float fAngle)
 {
-    return PblMath::Cos(fAngle * (PblMath::fTwoPi / 512.0f));
+    return PblMath::Cos(fAngle * kRadiansPerAngleStep);
 }
 
 // FUNCTION: SWBF2 0x006d3030
 static float GetSin(float fAngle)
 {
-    return PblMath::Sin(fAngle * (PblMath::fTwoPi / 512.0f));
+    return PblMath::Sin(fAngle * kRadiansPerAngleStep);
 }
 
 // FUNCTION: SWBF2 0x006d3050
@@ -625,7 +628,12 @@ void RedParticleRenderer::Init()
 // FUNCTION: SWBF2 0x006d3090
 bool RedParticleRenderer::IsFull()
 {
-    return RedParticleRenderer::currentCache && RedParticleRenderer::currentCache->m_particleIndex >= 200;
+    RedParticleRenderer* pCache = RedParticleRenderer::currentCache;
+    if (pCache)
+    {
+        return pCache->m_particleIndex >= 200;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006d30b0
@@ -722,7 +730,7 @@ void RedParticleRenderer::SetCurrentCache(unsigned int uTexture, RedBlendMode eB
         currentCache = 0;
         return;
     }
-    if (!currentCache || currentCache->m_numVerts)
+    if (!currentCache || currentCache->m_numVerts > 0)
     {
         currentCache = &s_caches[s_cacheIndex++];
     }
@@ -795,15 +803,15 @@ static int numVertsAdded(ParticleInfoType eType)
 {
     switch (eType)
     {
+    case PIT_STREAK:
+        return 2;
+    case PIT_LASER_END:
+        return 9;
     case PIT_PARTICLE:
     case PIT_STREAK_TAIL:
     case PIT_FLAT:
     case PIT_ANIMATED:
         return 4;
-    case PIT_STREAK:
-        return 2;
-    case PIT_LASER_END:
-        return 9;
     default:
         return 0;
     }

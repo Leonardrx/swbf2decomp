@@ -250,10 +250,9 @@ void DropShadowRenderable::Render(int value)
         return;
     }
 
-    const PblBox& camBox = RedRenderer::GetCamera()->_box;
-    PblBox box;
-    box._vMax = PblVector3(camBox._vMax.x + 20.0f, camBox._vMax.y + 20.0f, camBox._vMax.z + 20.0f);
-    box._vMin = PblVector3(camBox._vMin.x - 20.0f, camBox._vMin.y - 20.0f, camBox._vMin.z - 20.0f);
+    PblBox box = RedRenderer::GetCamera()->_box;
+    box._vMax = PblVector3(box._vMax.x + 20.0f, box._vMax.y + 20.0f, box._vMax.z + 20.0f);
+    box._vMin = PblVector3(box._vMin.x - 20.0f, box._vMin.y - 20.0f, box._vMin.z - 20.0f);
 
     unsigned short usNumVertices = (unsigned short)(mShadowCount * 4);
     unsigned short usNumIndices = (unsigned short)(mShadowCount * 6 - 2);
@@ -278,11 +277,7 @@ void DropShadowRenderable::Render(int value)
     unsigned short* pIndices = pPrimitive->BeginIndexData();
 
     float fShade = 1.0f;
-    if (RedStencilShadow::GetShadowEnable())
-    {
-        ((pcParticleShader*)m_pShader)->SetShadowMode(true);
-    }
-    else
+    if (!RedStencilShadow::GetShadowEnable())
     {
         const RedColorValue& sun = ((RedLight*)RedLight::m_sGlobalDirectionals[0])->m_color;
         const RedColorValue& amb = ((RedLight*)RedLight::m_sGlobalAmbient)->m_color;
@@ -298,6 +293,10 @@ void DropShadowRenderable::Render(int value)
         float fAmb = (ambColor.r * 0.32f + ambColor.g * 0.43f + ambColor.b * 0.25f) / 255.0f;
         ((pcParticleShader*)m_pShader)->SetShadowMode(false);
         fShade = fSun / (fAmb + fSun);
+    }
+    else
+    {
+        ((pcParticleShader*)m_pShader)->SetShadowMode(true);
     }
 
     if (RedRenderer::pcGetGeometryMode())

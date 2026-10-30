@@ -17,6 +17,15 @@ RedPath::RedPath() : mName(0), mType(Bad)
 {
 }
 
+// FUNCTION: SWBF2 0x006dde70
+RedPath::NodeArray::~NodeArray()
+{
+    if (mNodes)
+    {
+        FreeNodes();
+    }
+}
+
 // FUNCTION: SWBF2 0x006dde80
 RedPath::~RedPath()
 {
@@ -236,7 +245,8 @@ bool RedPath::NodeArray::ReadScope(PblConfig& config, PblConfig::Data& data,
 
     AllocNodes(data.GetUint32Arg(0) + sAllocExtraPathNodes);
 
-    PblConfig scope(config.ReadNextScope(), true);
+    PblConfig scopeData = config.ReadNextScope();
+    PblConfig scope(scopeData, true);
     unsigned int i = 0;
     while (!scope.IsDone())
     {
@@ -247,7 +257,7 @@ bool RedPath::NodeArray::ReadScope(PblConfig& config, PblConfig::Data& data,
             while (!nodeScope.IsDone())
             {
                 PblConfig::Data prop = nodeScope.ReadNextData();
-                GetNode(i).ReadScope(nodeScope, prop, pPropFn, pUserData);
+                mNodes[i].ReadScope(nodeScope, prop, pPropFn, pUserData);
             }
             ++i;
         }
@@ -264,10 +274,10 @@ bool RedPath::ReadScope(PblConfig& config, PblConfig::Data& data,
 {
     switch (data.GetId())
     {
-    case 0x89348E46u:
+    case 0x89348E46u: /* "PathType" */
         mType = (Type)data.GetUint32Arg(0);
         return true;
-    case 0x11DE6CDCu:
+    case 0x11DE6CDCu: /* "Properties" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             while (!scope.IsDone())
@@ -282,27 +292,27 @@ bool RedPath::ReadScope(PblConfig& config, PblConfig::Data& data,
             }
         }
         return true;
-    case 0x8134A814u:
+    case 0x8134A814u: /* "SplineType" */
         {
             unsigned int uSpline = PblHash(data.GetStringArg(0));
-            if (uSpline == 0x002DBEBEu)
+            switch (uSpline)
             {
+            case 0x002DBEBEu: /* "Catmull-Rom" */
                 mSplineType = CatmullRom;
-            }
-            else if (uSpline == 0x9C265311u)
-            {
+                break;
+            case 0x9C265311u: /* "Hermite" */
                 mSplineType = Hermite;
-            }
-            else
-            {
-                mSplineType = uSpline == 0xD00594C0u ? Linear : None;
+                break;
+            default:
+                mSplineType = uSpline == 0xD00594C0u /* "linear" */ ? Linear : None;
+                break;
             }
         }
         break;
-    case 0x67F79061u:
-    case 0x9259CD79u:
-    case 0xD7BDF66Fu:
-    case 0xD872E2A5u:
+    case 0x67F79061u: /* "PathSpeedType" */
+    case 0x9259CD79u: /* "OffsetPath" */
+    case 0xD7BDF66Fu: /* "PathTime" */
+    case 0xD872E2A5u: /* "Data" */
         break;
     default:
         if (mNodeArray.ReadScope(config, data, pNodePropFn, pNodeUserData))
