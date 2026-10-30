@@ -58,21 +58,23 @@ namespace Snd
 bool SourceTransportControl::DeterminePlaySource(bool bArg) const
 {
     const float fTime = EngineBase::GetTimeElapsed();
-    if (fTime < mPlayIntervalNext)
+    if (fTime >= mPlayIntervalNext)
     {
-        return false;
-    }
+        if (mPlayInterval != 0.0f || mPlayIntervalDev != 0.0f)
+        {
+            const_cast<SourceTransportControl*>(this)->mPlayIntervalNext =
+                (sndRandom.GetFloat() - 0.5f) * mPlayIntervalDev * 2.0f + (fTime + mPlayInterval);
+        }
 
-    if (mPlayInterval != 0.0f || mPlayIntervalDev != 0.0f)
-    {
-        const_cast<SourceTransportControl*>(this)->mPlayIntervalNext =
-            (sndRandom.GetFloat() - 0.5f) * mPlayIntervalDev * 2.0f + (fTime + mPlayInterval);
+        if (bArg || 1.0f == mPlayProbability)
+        {
+            return true;
+        }
+        if (mPlayProbability >= sndRandom.GetFloat())
+        {
+            return true;
+        }
     }
-
-    if (bArg || mPlayProbability == 1.0f)
-    {
-        return true;
-    }
-    return mPlayProbability >= sndRandom.GetFloat();
+    return false;
 }
 }

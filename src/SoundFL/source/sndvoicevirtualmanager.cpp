@@ -36,10 +36,11 @@ void VoiceVirtualManager::InsertVoice(VoiceVirtual* pVoice)
 // FUNCTION: SWBF2 0x00748990
 void VoiceVirtualManager::RemoveVoice(VoiceVirtual* pVoice)
 {
-    if (pVoice->mVoice)
+    VoiceBase* pActive = pVoice->mVoice;
+    if (pActive)
     {
-        pVoice->mVoice->SourceTransport::Stop();
-        pVoice->mVoice->SetSample(0);
+        pActive->SourceTransport::Stop();
+        pActive->SetSample(0);
         pVoice->SetVoice(0);
     }
     pVoice->mNode.mNode.Remove();

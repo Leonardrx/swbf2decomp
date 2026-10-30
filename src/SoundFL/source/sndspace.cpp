@@ -81,11 +81,11 @@ bool Space::IsPointInside(const ::PblVector3& rPoint, float fRadius) const
 {
     if (mList.IsEmpty())
     {
-        if (this != &smDefaultSpace)
+        if (this == &smDefaultSpace)
         {
-            return false;
+            return GetSpace(rPoint) == &smDefaultSpace;
         }
-        return GetSpace(rPoint) == &smDefaultSpace;
+        return false;
     }
 
     const float fLength2EstAlpha = 0.94805944f;

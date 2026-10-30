@@ -60,7 +60,7 @@ void StreamSourceMemory::Update()
 
     bool bStop;
     const PlayState eCurrent = GetCurrentPlayState();
-    if (eCurrent == playState_playing || eCurrent == playState_pausing)
+    if (eCurrent >= playState_playing && eCurrent <= playState_pausing)
     {
         unsigned int uiPos = mPlaybackPosition * mAudioFrameSize;
         bStop = false;
@@ -163,10 +163,8 @@ void StreamSourceMemory::Setup(const StreamFormat& rFormat, void* const pData,
 
     if (mData)
     {
-        unsigned int uiFrameSize = SampleInfo::GetFrameSize(mFormat.GetFormat());
-        uiFrameSize *= mFormat.GetNumChannels();
+        mAudioFrameSize = SampleInfo::GetFrameSize(mFormat.GetFormat()) * mFormat.GetNumChannels();
         mSegment.mLength = mDataSize;
-        mAudioFrameSize = uiFrameSize;
     }
     else
     {

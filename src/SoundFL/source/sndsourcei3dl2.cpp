@@ -138,10 +138,7 @@ bool SourceI3DL2::Update(const ListenerBase* const pListener,
             vProbe.y = pPos->y + vDir.y * fRadius;
             vProbe.z = pPos->z + vDir.z * fRadius;
 
-            if (!pSpace->IsPointInside(vProbe, 0.0f))
-            {
-                pSpace = pListenerSpace;
-            }
+            pSpace = pSpace->IsPointInside(vProbe, 0.0f) ? pSpace : pListenerSpace;
         }
     }
     else if (pListenerSpace->IsPointInside(*pPos, fRadius))

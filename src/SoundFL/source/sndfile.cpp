@@ -49,42 +49,41 @@ PblListDoubleSorted File::smFileList(false);
 // FUNCTION: SWBF2 0x00730ae0
 bool File::SystemOpen(unsigned int uiPriority)
 {
-
-    if (smFileSystemOpen)
+    if (!smFileSystemOpen)
     {
-        return true;
+        smFileThread.Init(FileThread, uiPriority, 0x1000);
+        smExitFileThread = false;
+
+        if (!smQueuedCommands.Create(0, 0x7FFFFFFF))
+        {
+            return false;
+        }
+
+        if (!smQueuedFileOpListLock.Create(1, 1))
+        {
+            return false;
+        }
+
+        Semaphore startedSignal;
+        if (!startedSignal.Create(0, 1))
+        {
+            smQueuedFileOpListLock.Destroy();
+            return false;
+        }
+
+        if (smFileThread.Start(&startedSignal))
+        {
+            startedSignal.Wait();
+            startedSignal.Destroy();
+            smFileSystemOpen = true;
+        }
+        else
+        {
+            startedSignal.Destroy();
+            smQueuedFileOpListLock.Destroy();
+            return false;
+        }
     }
-
-    smFileThread.Init(FileThread, uiPriority, 0x1000);
-    smExitFileThread = false;
-
-    if (!smQueuedCommands.Create(0, 0x7FFFFFFF))
-    {
-        return false;
-    }
-
-    if (!smQueuedFileOpListLock.Create(1, 1))
-    {
-        return false;
-    }
-
-    Semaphore startedSignal;
-    if (!startedSignal.Create(0, 1))
-    {
-        smQueuedFileOpListLock.Destroy();
-        return false;
-    }
-
-    if (!smFileThread.Start(&startedSignal))
-    {
-        startedSignal.Destroy();
-        smQueuedFileOpListLock.Destroy();
-        return false;
-    }
-
-    startedSignal.Wait();
-    startedSignal.Destroy();
-    smFileSystemOpen = true;
     return true;
 }
 
@@ -99,16 +98,9 @@ void File::SystemClose()
 
 // FUNCTION: SWBF2 0x00730500
 File::File(void(__cdecl* pfnOpComplete)(File*, void*, bool), void* pCallbackData)
+    : mOpCompleteFunc(pfnOpComplete), mCallbackData(pCallbackData), mFileOp(fileOp_nothing), mHashID(0),
+      mAccessFlags(0), mBufferSize(0), mSectorSize(0), mAlignment(0)
 {
-
-    mOpCompleteFunc = pfnOpComplete;
-    mCallbackData = pCallbackData;
-    mFileOp = fileOp_nothing;
-    mHashID = 0;
-    mAccessFlags = 0;
-    mBufferSize = 0;
-    mSectorSize = 0;
-    mAlignment = 0;
     mLock.Create(1, 1);
 }
 

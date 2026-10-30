@@ -17,7 +17,8 @@ void HighLowPassFilter::Process16(const short* const pIn, unsigned int uiNumSamp
         for (unsigned int sample = channel; sample < uiNumSamples; sample += mNumChannels)
         {
             float input = (float)pIn[sample] / 32767.0f;
-            float output = state.mInDelay[0] * state.a2 + input * state.a1;
+            float output = state.mInDelay[0] * state.a2;
+            output += input * state.a1;
             output += state.a3 * state.mInDelay[1];
             output -= state.b1 * state.mOutDelay[0];
             output -= state.b2 * state.mOutDelay[1];

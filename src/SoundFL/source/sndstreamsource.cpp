@@ -55,7 +55,7 @@ void __cdecl StreamSource::FileOpComplete(File* pFile, void* pCallbackData,
         }
     }
 
-    pThis->mFlags &= (unsigned char)~flags_Reading;
+    pThis->mFlags &= ~flags_Reading;
 
     if (!bSuccess)
     {
@@ -114,20 +114,16 @@ void StreamSource::Flush()
 
     StartFlush();
 
-    for (;;)
+    StreamPacket* pPacket;
+    while ((pPacket = GetPacket(0)) != 0)
     {
-        StreamPacket* const pPacket = GetPacket(0);
-        if (pPacket == 0)
-        {
-            break;
-        }
         pPacket->Unlock();
     }
 
     if ((mFlags & flags_LastPacket) != 0
         && GetCurrentPlayState() != playState_stopped)
     {
-        mFlags &= (unsigned char)~flags_LastPacket;
+        mFlags &= ~flags_LastPacket;
         Stop();
         Update();
     }
@@ -284,7 +280,7 @@ void StreamSource::Update()
                 break;
 
             case playState_stopped:
-                mFlags &= (unsigned char)~flags_LastPacket;
+                mFlags &= ~flags_LastPacket;
                 SetStarved(false);
                 SetPlayState(playState_stopped);
                 if (!IsFlushing())
@@ -324,7 +320,7 @@ void StreamSource::Update()
             if ((mFlags & flags_SeekReady) != 0)
             {
                 mSegment = mSeekSegment;
-                mFlags &= (unsigned char)~flags_SeekReady;
+                mFlags &= ~flags_SeekReady;
                 mFile.Seek(mSegment.mOffset + mSeekPos);
                 mFlags |= (unsigned char)flags_SegmentSetup;
             }
@@ -337,7 +333,7 @@ void StreamSource::Update()
                 }
                 if ((mFlags & flags_SegmentQueued) != 0)
                 {
-                    mFlags &= (unsigned char)~flags_SegmentQueued;
+                    mFlags &= ~flags_SegmentQueued;
                     SetSegmentOffsetLength(mNextSegment.mOffset,
                                            mNextSegment.mLength,
                                            mNextSegment.mPadding);
@@ -346,7 +342,7 @@ void StreamSource::Update()
                     continue;
                 }
                 mFile.Seek(mSegment.mOffset);
-                mFlags &= (unsigned char)~flags_LastPacket;
+                mFlags &= ~flags_LastPacket;
             }
         }
 

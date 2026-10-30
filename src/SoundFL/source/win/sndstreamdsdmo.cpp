@@ -389,31 +389,19 @@ void StreamDSDMO::SetInputBuffer(void* pBuffer, unsigned int uiSize)
     mBuffer.Reset();
     StreamSourceProducer::Flush();
 
-    const unsigned int uiRequested = uiSize;
-
     mFlags = 0;
 
     if (pBuffer != 0 && uiSize != 0)
     {
-
-        unsigned int uiAlignment = mAlignment;
-        if (uiAlignment == 0)
-        {
-            uiAlignment = 1;
-        }
-        mAlignment = uiAlignment;
+        mAlignment = mAlignment ? mAlignment : 1;
     }
 
-    const unsigned int uiFrameSize = mInputFrameSize;
-    if (uiFrameSize != 0)
+    if (mInputFrameSize != 0)
     {
-
-        mBuffer.SetBuffer(pBuffer,
-                          (uiRequested / uiFrameSize) * uiFrameSize);
+        mBuffer.SetBuffer(pBuffer, (uiSize / mInputFrameSize) * mInputFrameSize);
     }
     else
     {
-
         mBuffer.SetBuffer(pBuffer, 0);
     }
 }

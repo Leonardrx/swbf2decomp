@@ -58,30 +58,29 @@ VoiceVirtual::VoiceVirtual(unsigned int uiCustomFlags,
 // FUNCTION: SWBF2 0x00737b20
 float VoiceVirtual::CalculatePriority(bool bForce)
 {
-    if (!(mFlags & flags_updatePriority)
-        && !GetPriorityChanged()
-        && !GetBiasChanged()
-        && !bForce)
+    if ((mFlags & flags_updatePriority) || GetPriorityChanged() || GetBiasChanged() || bForce)
     {
-        return mNode.mSortValue;
-    }
+        if (Get3DMode())
+        {
+            DetermineClosestListener();
+        }
 
-    if (Get3DMode())
-    {
-        DetermineClosestListener();
+        SourceI3DL2 sourceI3DL2;
+        const SourceI3DL2* pSourceI3DL2;
+        if (mClosestListener)
+        {
+            sourceI3DL2.Update(mClosestListener, mPos3D, Source3D::mProps->mSpaceDistance,
+                               true, 0);
+            pSourceI3DL2 = &sourceI3DL2;
+        }
+        else
+        {
+            pSourceI3DL2 = 0;
+        }
+        mNode.mSortValue = SourceVirtual::CalculatePriority(this, this, this, pSourceI3DL2,
+                                                            mSample, 1.0f, bForce);
+        mFlags &= ~(unsigned int)flags_updatePriority;
     }
-
-    SourceI3DL2 sourceI3DL2;
-    const SourceI3DL2* pSourceI3DL2 = 0;
-    if (mClosestListener)
-    {
-        sourceI3DL2.Update(mClosestListener, mPos3D, Source3D::mProps->mSpaceDistance,
-                           true, 0);
-        pSourceI3DL2 = &sourceI3DL2;
-    }
-    mNode.mSortValue = SourceVirtual::CalculatePriority(this, this, this, pSourceI3DL2,
-                                                        mSample, 1.0f, bForce);
-    mFlags &= ~(unsigned int)flags_updatePriority;
     return mNode.mSortValue;
 }
 
@@ -139,11 +138,12 @@ void VoiceVirtual::Stop()
 // FUNCTION: SWBF2 0x00737ff0
 void VoiceVirtual::Update3DMode()
 {
+    bool b3DMode = Get3DMode();
     VoiceVirtualManager* p2DManager = EngineBase::GetVoiceVirtualManager(false);
     VoiceVirtualManager* p3DManager = EngineBase::GetVoiceVirtualManager(true);
-    VoiceVirtualManager* pManager = Get3DMode() ? p3DManager : p2DManager;
+    VoiceVirtualManager* pManager = b3DMode ? p3DManager : p2DManager;
 
-    if ((mVoiceManager == p2DManager || mVoiceManager == p3DManager)
+    if ((p2DManager == mVoiceManager || p3DManager == mVoiceManager)
         && pManager != mVoiceManager)
     {
         Sample* pSample = mSample;

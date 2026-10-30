@@ -15,12 +15,11 @@ bool FreeList::AllocBlocks(unsigned int uiNumBlocks, Block** ppFirstBlock)
     {
         --uiNumBlocks;
 
-        const unsigned int uiBlockBytes = mEntriesPerBlock * mEntrySize;
         const unsigned int uiBitmapBytes = (mEntriesPerBlock + 7) / 8;
 
         void* const pAllocAddress =
             mAllocFunc(mAlignment + (sizeof(Block) - 1)
-                       + uiBlockBytes + uiBitmapBytes);
+                       + (mEntriesPerBlock * mEntrySize + uiBitmapBytes));
         if (!pAllocAddress)
         {
             return false;
@@ -29,7 +28,7 @@ bool FreeList::AllocBlocks(unsigned int uiNumBlocks, Block** ppFirstBlock)
         char* const pEntries =
             (char*)((((unsigned int)pAllocAddress + mAlignment - 1) / mAlignment)
                     * mAlignment);
-        Block* const pBlock = (Block*)(pEntries + uiBlockBytes);
+        Block* const pBlock = (Block*)(pEntries + mEntriesPerBlock * mEntrySize);
 
         Block* const pNew = new (pBlock, false) Block(pAllocAddress);
 

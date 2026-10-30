@@ -31,13 +31,13 @@ void StreamResampler::CompletePacket()
 {
     bool bLast = false;
     bool bDiscontinuity = false;
-    StreamPacket* const pInput = mInputPacket;
-    unsigned int uiInputSamples = pInput->mBufferUsed >> 1;
+    unsigned int uiInputSamples = mInputPacket->mBufferUsed >> 1;
 
     if (mOutputPacket.mBufferUsed != 0)
     {
         mOutputPacket.Lock();
     }
+    StreamPacket* const pInput = mInputPacket;
     mOutputPacket.mPos = pInput->mPos;
 
     if (mInputPacketReadPos >= uiInputSamples)

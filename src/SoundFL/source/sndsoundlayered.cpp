@@ -246,6 +246,10 @@ SoundLayered::SoundLayered()
 SoundLayered::~SoundLayered()
 {
     FreeLayers(SoundLayerDestroy);
+    if (mNode.IsAttached())
+    {
+        mNode.Remove();
+    }
 }
 
 // FUNCTION: SWBF2 0x00738e00
@@ -281,10 +285,11 @@ void SoundLayered::Update(float fDeltaTime)
         switch (eDesired)
         {
         case playState_playing:
+        {
+            PblListSingle::Itor itor(pProps->mLayerList);
             mTimeElapsed = 0.0f;
             mStopTime = 0.0f;
-            for (PblListSingle::Itor itor(pProps->mLayerList);
-                 itor.GetNode() != pProps->mLayerList.GetTerminator(); ++itor, ++soundItor)
+            for (; itor.GetNode() != pProps->mLayerList.GetTerminator(); ++itor, ++soundItor)
             {
                 const Properties::Layer* const pLayer = (const Properties::Layer*)itor.GetNode()->GetObjectA(
                     &pProps->mLayerList, offsetof(Properties::Layer, mNode));
@@ -301,6 +306,7 @@ void SoundLayered::Update(float fDeltaTime)
                 }
             }
             break;
+        }
 
         case playState_paused:
             for (; soundItor.GetNode() != mSoundList.GetTerminator(); ++soundItor)
@@ -319,8 +325,8 @@ void SoundLayered::Update(float fDeltaTime)
             }
             break;
         }
-        ePlayState = eDesired;
         SetPlayState(eDesired);
+        ePlayState = eDesired;
     }
 
     if (ePlayState == playState_playing && mProperties)
@@ -437,8 +443,8 @@ void __cdecl SoundLayered::Play(Source3D* pSource3D, const Properties* pProps)
         {
             float fPriority = 0.0f;
             FireForgetLayer* pFireForget = FireForgetLayer::GetFreeLayer();
-            pSource3D->mFlags |= Source3D::flags_updateListener;
             pSource3D->SetProperties(pLayer->mSoundProps);
+            pSource3D->mFlags |= Source3D::flags_updateListener;
             pSource3D->DetermineClosestListener();
             if (!pFireForget)
             {

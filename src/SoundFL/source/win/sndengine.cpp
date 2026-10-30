@@ -467,9 +467,12 @@ void Engine::SetBassManagement(bool bEnable)
             DSBufferRenderer& rRenderer = smSoftOutput->GetRenderer();
 
             const bool b3D = rRenderer.Get3DMode();
+            const unsigned int uiFrequency = rRenderer.mFrequency;
+            const unsigned int uiNumChannels = rRenderer.mNumChannels;
+            const SampleInfo::Format eFormat = rRenderer.mFormat;
 
-            rRenderer.SetFormat(rRenderer.mFormat, rRenderer.mNumChannels,
-                                rRenderer.mFrequency, b3D,
+            rRenderer.SetFormat(eFormat, uiNumChannels,
+                                uiFrequency, b3D,
                                 rRenderer.GetBufferSizeMs(), false, 0, 0x0C, true);
 
             sndEngineThreadUpdate.Resume();
@@ -491,7 +494,7 @@ void Engine::SetCentrePeakMode(bool bEnable)
         return;
     }
 
-    bool bWanted = false;
+    bool bWanted;
 
     if (bEnable && smMixConfig == mixConfig_DirectSoundHardware &&
         (EngineBase::smSpeakerConfig == EngineBase::speakerConfig_5point1 ||
@@ -499,17 +502,20 @@ void Engine::SetCentrePeakMode(bool bEnable)
     {
         bWanted = true;
     }
+    else
+    {
+        bWanted = false;
+    }
 
     if (smCentrePeakMode == bWanted)
     {
         return;
     }
 
-    for (unsigned int i = 0;
-         i < sizeof(EngineBase::smVoiceStorage) / sizeof(Voice); ++i)
+    for (unsigned int uiVoice = 0; uiVoice < sizeof(EngineBase::smVoiceStorage) / sizeof(Voice); uiVoice++)
     {
 
-        Voice& rVoice = EngineBase::smVoices[i];
+        Voice& rVoice = EngineBase::smVoices[uiVoice];
 
         if (bWanted)
         {
@@ -663,13 +669,15 @@ void Engine::SetSpeakerConfig(EngineBase::SpeakerConfig eConfig)
 
             if (SUCCEEDED(smDirectSound->SetSpeakerConfig(ulSpeakerConfig)))
             {
+                const MixConfig eMixConfig = smMixConfig;
+
                 EngineBase::smSpeakerConfig = eConfig;
                 smBassManagement = false;
 
                 SetCentrePeakMode(
                     (ulSpeakerConfig == DSSPEAKER_5POINT1 ||
                      ulSpeakerConfig == DSSPEAKER_7POINT1) &&
-                    smMixConfig == mixConfig_DirectSoundHardware);
+                    eMixConfig == mixConfig_DirectSoundHardware);
             }
         }
         else if (smMixConfig == mixConfig_Software)
@@ -679,9 +687,16 @@ void Engine::SetSpeakerConfig(EngineBase::SpeakerConfig eConfig)
                 eConfig = EngineBase::speakerConfig_AnalogSurround;
             }
 
-            smDirectSound->SetSpeakerConfig(eConfig == EngineBase::speakerConfig_Mono
-                                                ? DSSPEAKER_MONO
-                                                : DSSPEAKER_STEREO);
+            unsigned long ulSpeakerConfig;
+            if (eConfig == EngineBase::speakerConfig_Mono)
+            {
+                ulSpeakerConfig = DSSPEAKER_MONO;
+            }
+            else
+            {
+                ulSpeakerConfig = DSSPEAKER_STEREO;
+            }
+            smDirectSound->SetSpeakerConfig(ulSpeakerConfig);
             EngineBase::SetSpeakerConfig(eConfig);
         }
     }
@@ -1445,29 +1460,11 @@ void Engine::SetupEAXSource(void* const pA, void* const pB,
     plBuffer[3] = ConvertLinearToLog(pSource->mRoomHFGain);
     plBuffer[4] = ConvertLinearToLog(pSource->mObstructionHFGain);
 
-    float fRatio = pSource->mObstructionLFRatio;
-    if (0.0f > fRatio)
-    {
-        fRatio = 0.0f;
-    }
-    else if (fRatio > 1.0f)
-    {
-        fRatio = 1.0f;
-    }
-    pfBuffer[5] = fRatio;
+    pfBuffer[5] = Clamp(pSource->mObstructionLFRatio, 0.0f, 1.0f);
 
     plBuffer[6] = ConvertLinearToLog(pSource->mOcclusionHFGain);
 
-    float fOcclusion = pSource->mOcclusionLFRatio;
-    if (0.0f > fOcclusion)
-    {
-        fOcclusion = 0.0f;
-    }
-    else if (fOcclusion > 1.0f)
-    {
-        fOcclusion = 1.0f;
-    }
-    pfBuffer[7] = fOcclusion;
+    pfBuffer[7] = Clamp(pSource->mOcclusionLFRatio, 0.0f, 1.0f);
 
     pfBuffer[8] = 1.5f;
     pfBuffer[9] = 1.0f;
@@ -1477,16 +1474,7 @@ void Engine::SetupEAXSource(void* const pA, void* const pB,
     plBuffer[13] = 0;
     plBuffer[14] = 0;
 
-    float fRollOff = pSource->mRoomRollOffFactor;
-    if (0.0f > fRollOff)
-    {
-        fRollOff = 0.0f;
-    }
-    else if (fRollOff > 10.0f)
-    {
-        fRollOff = 10.0f;
-    }
-    pfBuffer[15] = fRollOff;
+    pfBuffer[15] = Clamp(pSource->mRoomRollOffFactor, 0.0f, 10.0f);
 
     plBuffer[16] = 0;
     plBuffer[17] = 0;

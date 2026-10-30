@@ -204,7 +204,8 @@ void StreamRenderer::Update()
             GainMatrix matrix;
             if (b3D)
             {
-                Source3D::CalculateGain(Source::mGain * CalculateGainEstimate(),
+                const float fGain = Source::mGain;
+                Source3D::CalculateGain(fGain * CalculateGainEstimate(),
                                         mReverbGain, matrix);
             }
             else

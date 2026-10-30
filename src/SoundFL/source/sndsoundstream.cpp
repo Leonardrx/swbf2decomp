@@ -316,8 +316,8 @@ bool SoundStream::Properties::SetupStream(Stream* pStream, unsigned int uiSegmen
 
     if (GetRandomPlayPosition())
     {
-        pStream->mPlaybackPosition =
-            (unsigned int)((float)pSegment->mLengthSamples * sndRandom.GetFloat());
+        const float fLength = (float)pSegment->mLengthSamples;
+        pStream->mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * fLength);
         pStream->SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
     }
     return true;
@@ -372,7 +372,7 @@ float SoundStream::Properties::CalculatePriority(const PblVector3* const pPos,
     transport.mFlags = SourceTransport::flags_stopped;
     transport.Play(true);
 
-    const Source3D* pSource3D = 0;
+    const Source3D* pSource3D;
     if (Get3DMode())
     {
         source3D.SetProperties(const_cast<Properties*>(this));
@@ -381,6 +381,10 @@ float SoundStream::Properties::CalculatePriority(const PblVector3* const pPos,
         source3D.mFlags |= Source3D::flags_updateListener;
         source3D.DetermineClosestListener();
         pSource3D = &source3D;
+    }
+    else
+    {
+        pSource3D = 0;
     }
     return SourceVirtual::CalculatePriority(&transport, this, pSource3D, 0, 0,
                                             mBus->mFinalGain, false);
@@ -528,7 +532,8 @@ void __cdecl SoundStream::Play(const Properties* pProps, bool bQueue)
 // FUNCTION: SWBF2 0x00737420
 void SoundStream::Properties::SetupSoundStream(SoundStream* pStream) const
 {
-    pStream->mInfo = StreamBase::Info::Find(mStreamID);
+    const unsigned int uiStreamID = mStreamID;
+    pStream->mInfo = StreamBase::Info::Find(uiStreamID);
     if (!pStream->mInfo)
     {
         return;

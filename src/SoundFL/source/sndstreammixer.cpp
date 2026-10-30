@@ -712,8 +712,8 @@ void StreamMixer::SetGain(unsigned int uiInput, unsigned int uiChannel,
 {
     const unsigned char ucOutputChannels = mOutputChannels;
     const unsigned int uiTarget =
-        StreamNodeSinkNInput::GetNumInputs() * ucOutputChannels
-        + uiInput * ucOutputChannels + uiChannel;
+        StreamNodeSinkNInput::GetNumInputs() * ucOutputChannels + uiChannel
+        + uiInput * mOutputChannels;
     int iGain;
     if (fGain > 0.0f)
     {

@@ -43,8 +43,9 @@ void Stream::Flush(bool bThreadPaused, bool bFlushRenderers)
     const Info* pInfo = mInfoList.IsEmpty()
         ? 0
         : (const Info*)ObjectList::Itor(&mInfoList).GetObjectA(&mInfoList);
+    const unsigned int uiNumSubstreams = pInfo->mNumSubstreams;
 
-    for (unsigned int i = 0; i < pInfo->mNumSubstreams; ++i)
+    for (unsigned int i = 0; i < uiNumSubstreams; ++i)
     {
         if (bFlushRenderers)
         {
@@ -56,13 +57,17 @@ void Stream::Flush(bool bThreadPaused, bool bFlushRenderers)
     mSplitter.Flush();
     mSource.Flush();
 
-    if (ePlayState == playState_playing)
+    switch (ePlayState)
     {
+    case playState_playing:
         mSource.Play(false);
-    }
-    else if (ePlayState == playState_pausing || ePlayState == playState_paused)
-    {
+        break;
+    case playState_pausing:
+    case playState_paused:
         mSource.Pause();
+        break;
+    default:
+        break;
     }
 
     if (!bThreadPaused)

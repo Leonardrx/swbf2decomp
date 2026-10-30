@@ -209,16 +209,17 @@ void Voice::Update()
     {
         if (bPositionChanged)
         {
+            const unsigned int uiPosition = mPlaybackPosition;
             switch (eMixConfig)
             {
             case Engine::mixConfig_DirectSoundHardware:
                 mSourceResamplerLFE.mSource.SourceTransport::mFlags |= flags_updatePlaybackPosition;
-                mSourceResamplerLFE.mSource.SourceTransport::mPlaybackPosition = mPlaybackPosition;
+                mSourceResamplerLFE.mSource.SourceTransport::mPlaybackPosition = uiPosition;
 
             case Engine::mixConfig_Software:
             case Engine::mixConfig_DirectSoundSoftware:
                 mSourceResampler.mSource.SourceTransport::mFlags |= flags_updatePlaybackPosition;
-                mSourceResampler.mSource.SourceTransport::mPlaybackPosition = mPlaybackPosition;
+                mSourceResampler.mSource.SourceTransport::mPlaybackPosition = uiPosition;
                 break;
             default:
                 break;
@@ -266,12 +267,15 @@ void Voice::Update()
     mStarting = QueryDesiredPlayState() == playState_playing;
 
     if (GetPlayState() == playState_playing && Get3DMode()
-        && GetPlayState() == playState_playing
-        && (Engine::GetMixConfig() == Engine::mixConfig_DirectSoundHardware
-            || Engine::GetMixConfig() == Engine::mixConfig_DirectSoundSoftware))
+        && GetPlayState() == playState_playing)
     {
-        mRenderer.Source3D::CopyParameters(*this);
-        mRenderer.SetDopplerMode(false);
+        const Engine::MixConfig eCurrentMix = Engine::GetMixConfig();
+        if (eCurrentMix == Engine::mixConfig_DirectSoundHardware
+            || eCurrentMix == Engine::mixConfig_DirectSoundSoftware)
+        {
+            mRenderer.Source3D::CopyParameters(*this);
+            mRenderer.SetDopplerMode(false);
+        }
     }
 
     VoiceHardware::Update(this);
@@ -582,16 +586,8 @@ void __cdecl Voice::UpdatePitch(Voice* pVoice, float fPitch)
             ? Engine::GetSoftOutput()->GetOutputFrequency()
             : Engine::GetOutputFrequency();
 
-        float fRatio = (float)pVoice->VoiceBase::mSample->mFrequency
-                     / (float)uiOutputFrequency * fPitch;
-        if (fRatio < 0.01f)
-        {
-            fRatio = 0.01f;
-        }
-        else if (fRatio > 4.0f)
-        {
-            fRatio = 4.0f;
-        }
+        const float fRatio = Clamp((float)pVoice->VoiceBase::mSample->mFrequency
+                                   / (float)uiOutputFrequency * fPitch, 0.01f, 4.0f);
 
         const unsigned int uiStepSize = (unsigned int)(fRatio * 65536.0f);
         pVoice->mSourceResampler.mResampler.mStepSize = uiStepSize;

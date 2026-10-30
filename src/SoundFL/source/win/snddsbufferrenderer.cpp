@@ -201,8 +201,8 @@ void DSBufferRenderer::ResetGain()
 // FUNCTION: SWBF2 0x0073e250
 void DSBufferRenderer::StopBuffer()
 {
-
-    if (DSBuffer::GetBuffer() == 0)
+    IDirectSoundBuffer8* pBuffer = DSBuffer::GetBuffer();
+    if (pBuffer == 0)
     {
         return;
     }
@@ -214,8 +214,8 @@ void DSBufferRenderer::StopBuffer()
 
     DSBuffer::Stop();
 
-    if (!Engine::Succeeded(DSBuffer::GetBuffer()->SetCurrentPosition(0),
-                           "source\\win\\snddsbufferrenderer.cpp", 578))
+    HRESULT hr = pBuffer->SetCurrentPosition(0);
+    if (!Engine::Succeeded(hr, "source\\win\\snddsbufferrenderer.cpp", 578))
     {
         PblTraceP("DSBufferRenderer : unable to reset buffer play cursor\n");
 
@@ -759,7 +759,8 @@ void DSBufferRenderer::UpdateObject()
 
     unsigned long ulPlayPos;
     unsigned long ulWritePos;
-    if (!Engine::Succeeded(pBuffer->GetCurrentPosition(&ulPlayPos, &ulWritePos),
+    const HRESULT hrPosition = pBuffer->GetCurrentPosition(&ulPlayPos, &ulWritePos);
+    if (!Engine::Succeeded(hrPosition,
                            "source\\win\\snddsbufferrenderer.cpp", 268))
     {
         return;
@@ -827,9 +828,10 @@ void DSBufferRenderer::UpdateObject()
         void* pAudio2;
         unsigned long ulBytes2;
         unsigned int uiWritten = 0;
-        if (!Engine::Succeeded(pBuffer->Lock(mNextLockPos, uiLockSize,
+        const HRESULT hrLock = pBuffer->Lock(mNextLockPos, uiLockSize,
                                              &pAudio1, &ulBytes1,
-                                             &pAudio2, &ulBytes2, 0),
+                                             &pAudio2, &ulBytes2, 0);
+        if (!Engine::Succeeded(hrLock,
                                "source\\win\\snddsbufferrenderer.cpp", 361))
         {
             return;
@@ -892,13 +894,13 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
                                  IDirectSound* pDirectSound,
                                  unsigned long ulFlags, bool bPrimary)
 {
-
+    const bool bHardwareEffects = Engine::smHardwareEffectsAvailable;
     const bool b3DMono = b3D && uiNumChannels == 1;
 
     float fMs = fBufferMs;
 
     if (Engine::GetDSCaps().dwMaxHwMixingAllBuffers == 0
-        && 500.0f > fBufferMs)
+        && 500.0f > fMs)
     {
         fMs = 500.0f;
     }
@@ -938,7 +940,7 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
                 ? DSBCAPS_LOCHARDWARE
                 : DSBCAPS_LOCSOFTWARE;
 
-        const bool bProperties = Engine::smHardwareEffectsAvailable && b3DMono;
+        const bool bProperties = bHardwareEffects && b3DMono;
 
         const unsigned int uiBufferFlags =
             (unsigned int)(b3DMono ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
@@ -958,7 +960,8 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
                 DSBCAPS caps;
                 caps.dwSize = sizeof(DSBCAPS);
 
-                if (Engine::Succeeded(DSBuffer::GetBuffer()->GetCaps(&caps),
+                const HRESULT hrCaps = DSBuffer::GetBuffer()->GetCaps(&caps);
+                if (Engine::Succeeded(hrCaps,
                                       "source\\win\\snddsbufferrenderer.cpp", 884))
                 {
                     mBufferSize = caps.dwBufferBytes;

@@ -257,11 +257,11 @@ void SoundParameterized::Properties::Read(PblFileChunk& chunk)
 
     if (mSoundLayeredProps)
     {
-        for (PblListSingle::Node* pNode = mLayerList.mHead.mNext; pNode != &mLayerList.mHead;
-             pNode = pNode->mNext)
+        for (PblListSingle::Itor itor(mLayerList);
+             itor.GetNode() != mLayerList.GetTerminator(); ++itor)
         {
-            Layer::Properties* pLayer =
-                (Layer::Properties*)((char*)pNode - offsetof(Layer::Properties, mNode));
+            const Layer::Properties* const pLayer =
+                (const Layer::Properties*)itor.GetNode()->GetObjectA(&mLayerList, offsetof(Layer::Properties, mNode));
             const_cast<SoundLayered::Properties*>(mSoundLayeredProps)->FindLayerByHashID(pLayer->mHashID);
         }
     }

@@ -64,13 +64,7 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
 
     GUID cGuidDevice;
 
-    if (uiIndex == 0xFEu)
-    {
-
-        mDevice = Engine::smDirectSound;
-        Engine::smDirectSound->AddRef();
-    }
-    else
+    if (uiIndex != 0xFEu)
     {
 
         switch (uiIndex)
@@ -116,6 +110,12 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
         }
 
         Engine::UpdateCooperativeLevel(*ppDS, true);
+    }
+    else
+    {
+
+        mDevice = Engine::smDirectSound;
+        Engine::smDirectSound->AddRef();
     }
 
     mIsOpen = SetFormat(cFormat.GetFormat(),

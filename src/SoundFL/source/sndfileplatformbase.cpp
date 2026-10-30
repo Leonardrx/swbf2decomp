@@ -61,7 +61,7 @@ unsigned int FilePlatformBase::BufferedReadWrite(void* pBuffer, unsigned int uiS
             pBuffer = (char*)pBuffer + uiDirect;
             if (uiDirect != uiSectors)
             {
-                return uiDone;
+                break;
             }
         }
         else if (bRead)
@@ -78,7 +78,7 @@ unsigned int FilePlatformBase::BufferedReadWrite(void* pBuffer, unsigned int uiS
                 mBuffer.UpdateWritePos(SeekRead(mBuffer.GetWritePos(), mBuffer.GetSize()));
                 if (mBuffer.GetUsed() < uiLeft && uiLeft < mBuffer.GetSize())
                 {
-                    return uiDone;
+                    break;
                 }
             }
 
@@ -170,13 +170,7 @@ void FilePlatformBase::Flush()
 // FUNCTION: SWBF2 0x00730360
 unsigned int FilePlatformBase::GetPos() const
 {
-    if (mFlags & 4)
-    {
-        const unsigned int uiUsed = mBuffer.GetUsed();
-        return mPos + uiUsed;
-    }
-    const unsigned int uiReadOffset = mBuffer.GetReadOffset();
-    return mPos + uiReadOffset;
+    return mPos + ((mFlags & 4) ? mBuffer.GetUsed() : mBuffer.GetReadOffset());
 }
 
 // FUNCTION: SWBF2 0x00730380

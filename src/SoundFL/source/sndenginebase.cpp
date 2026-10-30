@@ -177,9 +177,8 @@ bool EngineBase::Open()
 
     for (unsigned int uiOffset = 0; uiOffset < 0xA800; uiOffset += sizeof(Voice))
     {
-
-        Voice* const pVoice =
-            new ((unsigned char*)smVoices + uiOffset, false) Voice;
+        void* const pMemory = (unsigned char*)smVoices + uiOffset;
+        Voice* const pVoice = new (pMemory, false) Voice;
 
         smVoiceVirtualManager.mVoiceList.AddLast(&pVoice->mNode);
         pVoice->mManager = &smVoiceVirtualManager;
@@ -190,7 +189,8 @@ bool EngineBase::Open()
 
     for (unsigned int uiOffset = 0; uiOffset < 0x1446A68; uiOffset += sizeof(Stream))
     {
-        new ((unsigned char*)smStreams + uiOffset, false) Stream;
+        void* const pMemory = (unsigned char*)smStreams + uiOffset;
+        new (pMemory, false) Stream;
     }
 
     Sound::Open();

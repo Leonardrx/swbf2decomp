@@ -58,7 +58,7 @@ __declspec(noinline) void Bus::Update(float fDeltaTime, bool bForce)
     for (PblListSingle::Node* pNode = mSubBusList.mHead.mNext;
          pNode != &mSubBusList.mHead; pNode = pNode->mNext)
     {
-        Bus* const pSub = BusFromNode(pNode);
+        Bus* const pSub = (Bus*)pNode->GetObjectA(&mSubBusList, offsetof(Bus, mNode));
         pSub->Update(fDeltaTime, bForce);
     }
 }
@@ -82,7 +82,7 @@ void Bus::SetGain(float fGain, bool bStopFade)
     for (PblListSingle::Node* pNode = mSubBusList.mHead.mNext;
          pNode != &mSubBusList.mHead; pNode = pNode->mNext)
     {
-        Bus* const pSub = BusFromNode(pNode);
+        Bus* const pSub = (Bus*)pNode->GetObjectA(&mSubBusList, offsetof(Bus, mNode));
         pSub->Update(0.0f, true);
     }
 }
@@ -95,11 +95,10 @@ void __cdecl Bus::MuteAll(Bus* pBus)
         pBus = &smRootBus;
     }
 
-    PblListSingle* const pSubList = &pBus->mSubBusList;
-    for (PblListSingle::Node* pNode = pSubList->mHead.mNext;
-         pNode != &pSubList->mHead; pNode = pNode->mNext)
+    for (PblListSingle::Itor itor(&pBus->mSubBusList);
+         itor.GetNode() != pBus->mSubBusList.GetTerminator(); ++itor)
     {
-        Bus* const pSub = BusFromNode(pNode);
+        Bus* const pSub = BusFromNode(itor.GetNode());
         if (!(pSub->mFlags & flags_Solo))
         {
             pSub->SetGain(0.0f, true);

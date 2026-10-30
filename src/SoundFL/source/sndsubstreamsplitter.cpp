@@ -36,10 +36,14 @@ void SubstreamSplitter::Flush()
     for (unsigned int i = 0; i < mNumSubstreams; ++i)
     {
         StreamPacket* pPacket;
-        while ((pPacket = GetPacket(i)) != 0)
+        do
         {
-            pPacket->Unlock();
-        }
+            pPacket = GetPacket(i);
+            if (pPacket)
+            {
+                pPacket->Unlock();
+            }
+        } while (pPacket);
     }
 
     SetPlayState(ePlayState);
@@ -50,24 +54,21 @@ StreamPacket* SubstreamSplitter::GetPacket(unsigned int uiSubstream)
 {
     Update();
 
-    if (GetCurrentPlayState() != playState_playing || mPackets == 0 || mLockPos == 0)
+    if (GetCurrentPlayState() == playState_playing && mPackets != 0 && mLockPos != 0)
     {
-        return 0;
+        unsigned short& rPos = mLockPos[uiSubstream];
+        StreamPacket* pPacket = &mPackets[rPos + uiSubstream * mPacketsPerSubstream];
+        if (pPacket->mBufferUsed != 0 && pPacket->mRefCount <= 0)
+        {
+            if (++rPos == mPacketsPerSubstream)
+            {
+                rPos = 0;
+            }
+            ++pPacket->mRefCount;
+            return pPacket;
+        }
     }
-
-    unsigned short& rPos = mLockPos[uiSubstream];
-    StreamPacket* pPacket = &mPackets[rPos + uiSubstream * mPacketsPerSubstream];
-    if (pPacket->mBufferUsed == 0 || pPacket->mRefCount > 0)
-    {
-        return 0;
-    }
-
-    if (++rPos == mPacketsPerSubstream)
-    {
-        rPos = 0;
-    }
-    ++pPacket->mRefCount;
-    return pPacket;
+    return 0;
 }
 
 }
