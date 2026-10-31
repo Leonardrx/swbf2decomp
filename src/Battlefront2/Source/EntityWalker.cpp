@@ -3140,7 +3140,10 @@ void EntityWalker::NextState(int iInput)
 // FUNCTION: SWBF2 0x00503d30
 void EntityWalker::ResetRotation()
 {
-    mTurnOffset -= PblAngle(1.0f, mTurnOffset.mSin * 0.1f);
+    float fCos = mTurnOffset.mSin * 0.1f * mTurnOffset.mSin + mTurnOffset.mCos;
+    float fSin = mTurnOffset.mSin - mTurnOffset.mCos * 0.1f * mTurnOffset.mSin;
+    mTurnOffset.mCos = fCos;
+    mTurnOffset.mSin = fSin;
     mTurnOffset.Renormalize();
 }
 

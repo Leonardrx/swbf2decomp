@@ -3375,18 +3375,10 @@ int EnterVehicle(lua_State* L)
         return 0;
     }
     Character* pCharacter = Character::GetPtr((int)(float)luaL_checknumber(LuaHelper::mState, 1));
-    Controllable* pSoldier = 0;
     if (pCharacter && pCharacter->mClassPtr && pCharacter->mUnit &&
         pCharacter->mClassPtr->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass))
     {
-        Entity* pSoldierEntity = pCharacter->mUnit->GetEntity();
-        if (pSoldierEntity)
-        {
-            pSoldier = static_cast<EntitySoldier*>(pSoldierEntity);
-        }
-    }
-    if (pSoldier)
-    {
+        EntitySoldier* pSoldier = static_cast<EntitySoldier*>(pCharacter->mUnit->GetEntity());
         pSoldier->EnterVehicle(pEntity->GetGameObject());
     }
     return 0;
@@ -3418,20 +3410,11 @@ int ForceAIOutOfVehicles(lua_State* L)
     {
         for (int i = 0; i < pTeam->mMemberCount; ++i)
         {
-            Character* pCharacter = pTeam->mMemberArray[i];
-            Controllable* pSoldier = 0;
-            if (pCharacter && pCharacter->mClassPtr && pCharacter->mUnit &&
-                pCharacter->mClassPtr->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass))
+            Character* pCharacter = pTeam->GetMemberPtr(i);
+            if (pCharacter->mClassPtr->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass) &&
+                pCharacter->mUnit && pCharacter->mUnit->GetEntity())
             {
-                Entity* pSoldierEntity = pCharacter->mUnit->GetEntity();
-                if (pSoldierEntity)
-                {
-                    pSoldier = static_cast<EntitySoldier*>(pSoldierEntity);
-                }
-            }
-            if (pSoldier)
-            {
-                pSoldier->ExitVehicle(true, true);
+                static_cast<EntitySoldier*>(pCharacter->mUnit->GetEntity())->ExitVehicle(true, true);
             }
         }
     }

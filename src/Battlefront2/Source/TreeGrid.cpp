@@ -594,8 +594,8 @@ void TreeGrid::_CallbackOnRay(const PblVector3& rFrom, const PblVector3& rTo, in
     {
         fCellSize = mMaxSize / iGridSize;
         iStepX = 2 * (fEndX > fStartX) - 1;
-        float fDX = fEndX - fStartX;
         iStepZ = 2 * (fEndZ > fStartZ) - 1;
+        float fDX = fEndX - fStartX;
         float fDZ = fEndZ - fStartZ;
         float fLength = sqrtf(fDX * fDX + fDZ * fDZ);
         if (fDist > fCellSize * fLength)
@@ -663,7 +663,7 @@ void TreeGrid::_CallbackOnRay(const PblVector3& rFrom, const PblVector3& rTo, in
             }
             while (x != iEndX || z != iEndZ)
             {
-                if (fDist <= (fNextX - fDeltaX) * fCellSize && fDist <= (fNextZ - fDeltaZ) * fCellSize)
+                if (!(fDist > (fNextX - fDeltaX) * fCellSize || fDist > (fNextZ - fDeltaZ) * fCellSize))
                 {
                     break;
                 }

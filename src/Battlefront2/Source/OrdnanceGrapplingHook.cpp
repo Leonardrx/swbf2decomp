@@ -175,11 +175,8 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
     mDeltaTime = fDeltaTime;
     if (mCollBodyID >= 0 && mHitObject)
     {
-        PblMatrix world = mHitObject->GetCollisionObject()->mCollisionModel->GetWorldMatrix(
-            mCollBodyID, mHitObject->GetMatrix(), mHitObject->GetCollisionObject()->GetPose());
-        PblVector3 vNewPos;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vNewPos), reinterpret_cast<const D3DXVECTOR3*>(&mCollOffset), reinterpret_cast<const D3DXMATRIX*>(&world));
-        mPosition = vNewPos;
+        mPosition = mHitObject->GetCollisionObject()->mCollisionModel->GetWorldMatrix(
+            mCollBodyID, mHitObject->GetMatrix(), mHitObject->GetCollisionObject()->GetPose()).ApplyTransform(mCollOffset);
 
         float fSpeed = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                              mVelocity.z * mVelocity.z);
@@ -207,7 +204,8 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
             const PblVector3& vPos = GetPosition();
             float fDx = vCenter.x - vPos.x;
             float fDz = vCenter.z - vPos.z;
-            if (fRadius * 2.0f <= PblMath::Sqrt(fDz * fDz + fDx * fDx))
+            float fDist = PblMath::Sqrt(fDz * fDz + fDx * fDx);
+            if (!(fDist < fRadius * 2.0f))
             {
                 return true;
             }
