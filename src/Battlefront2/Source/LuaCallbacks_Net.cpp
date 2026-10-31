@@ -1547,8 +1547,8 @@ int Lua_Callbacks::GetSelectedFriendIdx()
     lua_gettable(LuaHelper::mState, LUA_GLOBALSINDEX);
     LuaHelper::TableReadVal("SelectedIdx", selected, false);
     lua_settop(LuaHelper::mState, -2);
-    const unsigned int count = gf::friends::friendCount();
-    return selected >= 1 && (unsigned int)selected <= count ? selected - 1 : 0xdddddddd;
+    const int count = gf::friends::friendCount();
+    return selected >= 1 && selected <= count ? selected - 1 : 0xdddddddd;
 }
 
 // FUNCTION: SWBF2 0x00595b70

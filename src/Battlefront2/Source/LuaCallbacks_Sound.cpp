@@ -1464,15 +1464,15 @@ int ScriptCB_SetLowReinforcementsVoiceOver(lua_State*)
     int iCount;
     if (nArgs == 5 && (int)luaL_checknumber(LuaHelper::mState, 5))
     {
-        iCount = (int)(Team::sTeams[iTeam]->mCurReinforcements *
-                       luaL_checknumber(LuaHelper::mState, 4));
+        float fFraction = (float)luaL_checknumber(LuaHelper::mState, 4);
+        iCount = (int)(Team::sTeams[iTeam]->mCurReinforcements * fFraction);
     }
     else
     {
         iCount = (int)luaL_checknumber(LuaHelper::mState, 4);
     }
-    VoiceOverManager::sInstance->SetLowReinforcementsVoiceOver(
-        iTeam - 1, iIndex - 1, luaL_checkstring(LuaHelper::mState, 3), iCount);
+    const char* pcName = luaL_checkstring(LuaHelper::mState, 3);
+    VoiceOverManager::sInstance->SetLowReinforcementsVoiceOver(iTeam - 1, iIndex - 1, pcName, iCount);
     return 0;
 }
 }

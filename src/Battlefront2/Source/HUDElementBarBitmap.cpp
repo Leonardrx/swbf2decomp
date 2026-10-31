@@ -270,20 +270,20 @@ void HUD::ElementBarBitmap::GetSize(float& rfWidth, float& rfHeight)
 // FUNCTION: SWBF2 0x0054b580
 void HUD::ElementBarBitmap::WriteData(HUD::File& file, unsigned int uTabs)
 {
-    float fU0, fV0, fU1, fV1;
-    RedBitmapElement::GetTexCoords(fU0, fV0, fU1, fV1);
-    RedBitmapElement::SetTexCoords(fU0, fV0, mBarU1, fV1, false);
+    RedBitmapElement* const pBitmap = (RedBitmapElement*)mElement;
+    float fX0, fY0, fX1, fY1;
+    pBitmap->GetTexCoords(fX0, fY0, fX1, fY1);
+    pBitmap->SetTexCoords(fX0, fY0, mBarU1, fY1, false);
     file.WriteProperty("ScaleSize", uTabs, (int)mScaleSize, 1);
     file.WriteProperty("ScaleTexture", uTabs, (int)mScaleTex, 1);
     file.WriteProperty("FlashyScale", uTabs, mFlashyScale, 0.2f);
     file.WriteProperty("FlashyIncFadeOutTime", uTabs, mFlashyIncFadeOutTime, 0.0f);
     file.WriteProperty("FlashyDecFadeOutTime", uTabs, mFlashyDecFadeOutTime, 0.0f);
     ElementBar::WriteData(file, uTabs);
-    float fLeft, fTop, fRight, fBottom;
-    RedBitmapElement::GetRect(fLeft, fTop, fRight, fBottom);
-    RedBitmapElement::SetRect(fLeft, fTop, fLeft + mBarWidth, fBottom);
+    pBitmap->GetRect(fX0, fY0, fX1, fY1);
+    pBitmap->SetRect(fX0, fY0, fX0 + mBarWidth, fY1);
     ElementBitmapBase::WriteData(file, uTabs);
-    RedBitmapElement::SetRect(fLeft, fTop, fRight, fBottom);
+    pBitmap->SetRect(fX0, fY0, fX1, fY1);
 }
 
 // FUNCTION: SWBF2 0x0054b070

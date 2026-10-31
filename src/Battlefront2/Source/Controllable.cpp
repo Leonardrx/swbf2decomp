@@ -252,10 +252,11 @@ void Controllable::Kill()
     NetGame::AddLateFence(mPlayerId);
     if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mPilot)
     {
+        Controllable* pPilot = mPilot;
         PilotType eType = mPilotType;
         if (eType == PILOT_VEHICLESELF)
         {
-            eType = (mPilot != this) ? PILOT_VEHICLE : PILOT_SELF;
+            eType = (pPilot != this) ? PILOT_VEHICLE : PILOT_SELF;
         }
         switch (eType)
         {
@@ -282,19 +283,20 @@ void Controllable::Kill()
             {
                 if (GetGameObject()->GetCollisionObject())
                 {
-                    bAttached = ((CollisionObject*)(mPilot->GetGameObject()->GetCollisionObject()))->GetCollisionType() == COLL_ATTACHED;
+                    bAttached = ((CollisionObject*)(pPilot->GetGameObject()->GetCollisionObject()))->GetCollisionType() == COLL_ATTACHED;
                 }
-                mPilot->GetGameObject()->InstantDeath(GetGameObject()->mDamageOwner, false);
+                GameObject* pObject = GetGameObject();
+                pPilot->GetGameObject()->InstantDeath(pObject->mDamageOwner, false);
             }
-            mPilot->Kill();
-            if (!bAttached && !(NetGame::IsEnabled() && NetGame::IsClient()))
+            pPilot->Kill();
+            if (!bAttached && !(NetGame::IsEnabled() && netEnabledNext && netClientActive))
             {
-                delete mPilot;
+                delete pPilot;
             }
             break;
         }
         case PILOT_REMOTE:
-            mPilot->ExitRemote();
+            pPilot->ExitRemote();
             break;
         }
         mPilot = 0;

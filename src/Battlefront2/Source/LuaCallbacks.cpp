@@ -144,11 +144,7 @@ int DrawParticleAt(lua_State*)
     const PblMatrix mWorld = *(const PblMatrix*)lua_touserdata(LuaHelper::mState, 1);
     const char* pcTexture = LuaHelper::GetString(2);
     const float fWidth = LuaHelper::GetFloat(3);
-    RedColor color;
-    color.r = (unsigned char)(int)LuaHelper::GetFloat(4);
-    color.g = (unsigned char)(int)LuaHelper::GetFloat(5);
-    color.b = (unsigned char)(int)LuaHelper::GetFloat(6);
-    color.a = (unsigned char)(int)LuaHelper::GetFloat(7);
+    RedColor color(LuaHelper::GetFloat(4), LuaHelper::GetFloat(5), LuaHelper::GetFloat(6), LuaHelper::GetFloat(7));
     const float fRotation = LuaHelper::GetFloat(8);
     sDrawAllParticleAt->Add(mWorld.GetTranslation(), pcTexture, fWidth, color, fRotation);
     return 0;

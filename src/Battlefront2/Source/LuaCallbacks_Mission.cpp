@@ -2844,15 +2844,11 @@ int RemoveEffect(lua_State* L)
 // FUNCTION: SWBF2 0x0058e830
 int GetEntityClassName(lua_State* L)
 {
-    EntityEx* pEntity = _GetEntity<EntityEx>(L, 1);
+    EntityEx* pEntity = _GetEntity<EntityEx>(LuaHelper::mState, 1);
     const char* pcName = 0;
     if (pEntity)
     {
-        EntityClass* pClass = pEntity->GetEntityClass();
-        if (pClass)
-        {
-            pcName = StringDB::Find(pClass->mId);
-        }
+        pcName = StringDB::Find(pEntity->GetEntityClass()->mId);
     }
     if (pcName)
     {
@@ -2908,13 +2904,17 @@ int SetMissionTimer(lua_State* L)
 // FUNCTION: SWBF2 0x0058e300
 int BroadcastVoiceOver(lua_State* L)
 {
-    unsigned int uVoiceHash = PblHash(LuaHelper::GetString(1));
-    unsigned int uTeamMask = ~0u;
-    if (!LuaHelper::IsNoneOrNil(2))
+    unsigned int uVoiceHash = PblHash(luaL_checklstring(LuaHelper::mState, 1, 0));
+    int iTeamMask;
+    if (lua_type(LuaHelper::mState, 2) <= LUA_TNIL)
     {
-        uTeamMask = 1u << LuaHelper::GetInt(2);
+        iTeamMask = -1;
     }
-    NetGame::CreateEvent_PlayVoiceOver(uVoiceHash, uTeamMask);
+    else
+    {
+        iTeamMask = 1 << (int)(float)luaL_checknumber(LuaHelper::mState, 2);
+    }
+    NetGame::CreateEvent_PlayVoiceOver(uVoiceHash, iTeamMask);
     return 0;
 }
 
@@ -3318,14 +3318,14 @@ int FillAsteroidRegion(lua_State* L)
     const char* pcRegion = luaL_checklstring(LuaHelper::mState, 1, 0);
     const char* pcClass = luaL_checklstring(LuaHelper::mState, 2, 0);
     int iCount = (int)(float)luaL_checknumber(LuaHelper::mState, 3);
-    PblVector3 vMin;
-    vMin.x = (float)luaL_checknumber(LuaHelper::mState, 4);
-    vMin.y = (float)luaL_checknumber(LuaHelper::mState, 5);
-    vMin.z = (float)luaL_checknumber(LuaHelper::mState, 6);
-    PblVector3 vMax;
-    vMax.x = (float)luaL_checknumber(LuaHelper::mState, 7);
-    vMax.y = (float)luaL_checknumber(LuaHelper::mState, 8);
-    vMax.z = (float)luaL_checknumber(LuaHelper::mState, 9);
+    float fMinZ = (float)luaL_checknumber(LuaHelper::mState, 6);
+    float fMinY = (float)luaL_checknumber(LuaHelper::mState, 5);
+    float fMinX = (float)luaL_checknumber(LuaHelper::mState, 4);
+    PblVector3 vMin(fMinX, fMinY, fMinZ);
+    float fMaxZ = (float)luaL_checknumber(LuaHelper::mState, 9);
+    float fMaxY = (float)luaL_checknumber(LuaHelper::mState, 8);
+    float fMaxX = (float)luaL_checknumber(LuaHelper::mState, 7);
+    PblVector3 vMax(fMaxX, fMaxY, fMaxZ);
     EntityClass* pClass = EntityClass::Find(PblHash(pcClass));
     if (pClass)
     {
@@ -3502,10 +3502,9 @@ int TogglePlanningGraphArcs(lua_State* L)
 // FUNCTION: SWBF2 0x00590c90
 int Print3D(lua_State* L)
 {
-    const PblMatrix* pMatrix = (const PblMatrix*)lua_touserdata(LuaHelper::mState, 1);
+    PblMatrix matrix = *(const PblMatrix*)lua_touserdata(LuaHelper::mState, 1);
     const char* pcText = luaL_checklstring(LuaHelper::mState, 2, 0);
-    const PblVector3& vPosition = (*pMatrix)[3];
-    RedDebug::Printf3D(vPosition, "%s", pcText);
+    RedDebug::Printf3D(matrix.GetTranslation(), "%s", pcText);
     return 0;
 }
 
@@ -3976,17 +3975,9 @@ int SetMissionEndMovie(lua_State* L)
 // FUNCTION: SWBF2 0x00590bb0
 int CanCharacterInteractWithFlag(lua_State* L)
 {
-    int iCharacter = LuaHelper::GetInt(1);
-    Character* pCharacter = Character::GetPtr(iCharacter);
-    bool bCanInteract = false;
-    if (pCharacter)
-    {
-        if (!pCharacter->mRemote && pCharacter->TimeSinceLastVehicleOrRemoteChange() > 0.3f)
-        {
-            bCanInteract = true;
-        }
-    }
-    LuaHelper::PushBool(bCanInteract);
+    Character* pCharacter = Character::GetPtr((int)(float)luaL_checknumber(LuaHelper::mState, 1));
+    bool bCanInteract = pCharacter && !pCharacter->mRemote && pCharacter->TimeSinceLastVehicleOrRemoteChange() > 0.3f;
+    lua_pushboolean(LuaHelper::mState, bCanInteract);
     return 1;
 }
 

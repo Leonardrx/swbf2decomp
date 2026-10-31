@@ -1783,11 +1783,11 @@ static int LoadLuaItems(lua_State* L, unsigned char* pBuffer, unsigned int iSize
     {
         return 0;
     }
-    unsigned char aSerialized[0x10004];
+    unsigned char aSerialized[0x10000];
     _zlibuncompress(aSerialized, 0x10000, pBuffer, iSize);
-    const unsigned int uCount = aSerialized[0];
+    const int uCount = aSerialized[0];
     unsigned int uRead = 1;
-    for (unsigned int i = 0; i < uCount; ++i)
+    for (int i = 1; i <= uCount; ++i)
     {
         uRead += Lua_Callbacks::ReadLuaItem(aSerialized + uRead, 0, false);
     }

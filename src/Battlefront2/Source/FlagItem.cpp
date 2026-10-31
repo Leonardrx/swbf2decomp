@@ -897,7 +897,7 @@ bool FlagItem::CollisionCallback(const CollisionResult* pResult, CollisionObject
                                  Restrictor* pRestrictor)
 {
     if (IsAlive() && !mOwner &&
-        (!mStationary || mClass->mLifeSpan - mLifeTimer > 0.5f))
+        (mStationary || mClass->mLifeSpan - mLifeTimer > 0.5f))
     {
         GameObject* pObject = pOther->GetGameObject();
         if (pObject && pObject->IsAlive() &&

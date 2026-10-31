@@ -966,7 +966,7 @@ void Node::RepeatLastPacket(unsigned char stream)
     {
         return;
     }
-    const unsigned short previous = receive.readIndex ? receive.readIndex - 1 : mMaxReceivePackets - 1;
+    const int previous = receive.readIndex ? receive.readIndex - 1 : mMaxReceivePackets - 1;
     AudioPacket& packet = receive.packet[previous];
     if (packet.mAppData)
     {
@@ -992,12 +992,15 @@ void Node::DecodeQueue(unsigned char stream, bool force)
     }
 
     AudioPacket* packet = &receive.packet[receive.readIndex];
-    const float timePerByte = mEncoderPacketSizeSec / (float)((VoiceChat::Encoder*)mEncoder)->GetMaxOutputPacketSizeBytes();
-    const bool connected = (VoiceChat::Node::sTransport)->GetReceivePossible(mNodeID, stream);
+    const float timePerByte = mEncoderPacketSizeSec / (float)(int)mEncoder->GetMaxOutputPacketSizeBytes();
+    const bool connected = ((Transport*)VoiceChat::Node::sTransport)->GetReceivePossible(mNodeID, stream);
     if (!connected && receive.activated)
     {
-        AudioPacket discontinuity = {};
+        AudioPacket discontinuity;
         discontinuity.mDiscontinuity = true;
+        discontinuity.mData = 0;
+        discontinuity.mSize = 0;
+        discontinuity.mAppData = 0;
         DecoderReceiveAudioPacket(stream, &discontinuity);
     }
     while (packet->mAppData)
@@ -1016,7 +1019,7 @@ void Node::DecodeQueue(unsigned char stream, bool force)
             receive.activated = !packet->mDiscontinuity;
             receive.starving = false;
             receive.lastPacketSize = packet->mSize;
-            receive.bufferedData += (float)packet->mSize * timePerByte;
+            receive.bufferedData += (float)(int)packet->mSize * timePerByte;
         }
         packet->mAppData = 0;
         packet->mSize = 0;

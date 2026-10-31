@@ -1394,7 +1394,9 @@ bool __cdecl CanPotentiallySee(Controllable* pMe, const GameObject* pObject, flo
 void AIUtil::DeployCargo(GameObject* pObject, const CommandPost*  )
 {
     const PblList<Controllable>& list = pObject->GetControllableList();
-    for (PblList<Controllable>::Itor it = list.Begin(); (Controllable*)it; ++it)
+    PblList<Controllable>::Itor it = list.Begin();
+    ++it;
+    for (; (Controllable*)it; ++it)
     {
         Controller* pCtrl = ((Controllable*)it)->mCtrl;
         if (pCtrl && !pCtrl->IsRtti(PlayerController::rttiHashPlayerController))

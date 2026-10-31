@@ -119,10 +119,9 @@ EntityBuildingAnimatedArmed::EntityBuildingAnimatedArmed(
     {
         if (pClass->mTurretClass[i])
         {
-            MountedTurret* pTurret = new MountedTurret(this, pClass->mTurretClass[i], &mPose);
-            mTurret[mNumTurrets++] = pTurret;
-            Controllable* pControllable = static_cast<Controllable*>(pTurret);
-            mControllableList.AddLast(&pControllable->mNode, pControllable);
+            mTurret[mNumTurrets] = new MountedTurret(this, pClass->mTurretClass[i], &mPose);
+            mControllableList.AddLast(&mTurret[mNumTurrets]->mNode, static_cast<Controllable*>(mTurret[mNumTurrets]));
+            ++mNumTurrets;
         }
     }
     NetGame::Created(this);
@@ -147,9 +146,9 @@ EntityBuildingAnimatedArmed::~EntityBuildingAnimatedArmed()
     NetGame::Destroyed(this);
     while (mNumTurrets)
     {
-        MountedTurret* pTurret = mTurret[--mNumTurrets];
-        mControllableList.Remove(&static_cast<Controllable*>(pTurret)->mNode);
-        delete pTurret;
+        --mNumTurrets;
+        mControllableList.Remove(&mTurret[mNumTurrets]->mNode);
+        delete mTurret[mNumTurrets];
     }
 }
 
