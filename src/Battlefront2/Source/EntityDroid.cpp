@@ -1005,7 +1005,7 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
         return bResult;
     }
 
-    if (mClass->mSetAltitude <= 0.0f && vSeparation.y > 0.5f)
+    if (mClass->mSetAltitude <= 0.0f && pResult->mSeparationNormal.y > 0.5f)
     {
         mGroundNormal = vSeparation;
         mGroundRatio = 1.0f;
@@ -1017,7 +1017,7 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
         if (mClass->mSetAltitude == 0.0f)
         {
             float fUp =
-                mMatrix.m[1][0] * vSeparation.x + mMatrix.m[1][1] * vSeparation.y + mMatrix.m[1][2] * vSeparation.z;
+                mMatrix.m[1][1] * vSeparation.y + mMatrix.m[1][0] * vSeparation.x + mMatrix.m[1][2] * vSeparation.z;
             if (fUp < 0.0f)
             {
                 fUp = 0.0f;
@@ -1026,11 +1026,11 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
         }
         mVelocity -= vSeparation * fApproach;
         float fSlow = fFriction * fApproach * -1.125f / PblMath::Sqrt(SquaredLength(mVelocity));
-        if (fSlow > 1.0f)
+        if (!(fSlow < 1.0f))
         {
             fSlow = 1.0f;
         }
-        mVelocity -= mVelocity * fSlow;
+        mVelocity -= fSlow * mVelocity;
         mVelocity -= vSeparation * (fApproach * 0.125f);
     }
 
@@ -1042,7 +1042,7 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
         Damageable::InstantDeath(owner, true);
     }
     PblVector3 vMove = pRestrictor->GetRestrictedMovement(vDir, fDist);
-    SetPosition(PblVector3(vMove.x + mMatrix.m[3][0], mMatrix.m[3][1] + vMove.y, mMatrix.m[3][2] + vMove.z));
+    SetPosition(PblVector3(mMatrix.m[3][0] + vMove.x, mMatrix.m[3][1] + vMove.y, mMatrix.m[3][2] + vMove.z));
     pRestrictor->AddRestriction(vSeparation);
     return true;
 }
