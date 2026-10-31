@@ -60,17 +60,19 @@ WeaponRemoteClass::~WeaponRemoteClass()
 // FUNCTION: SWBF2 0x00690460
 void WeaponRemoteClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xC43B77DD)
+    switch (uProperty)
     {
+    case 0xC43B77DD: /* "SwitchImmediately" */
         mSwitchImmediately = atoi(pszValue) != 0;
-    }
-    else if (uProperty == 0xED422F60)
-    {
+        break;
+
+    case 0xED422F60: /* "AllowDestruct" */
         mAllowDestruct = atoi(pszValue) != 0;
-    }
-    else
-    {
+        break;
+
+    default:
         WeaponDispenserClass::SetProperty(uProperty, pszValue);
+        break;
     }
 }
 
@@ -104,17 +106,19 @@ bool WeaponRemote::Update(float fDeltaTime)
 {
     if (mSelectedFlag && mItem && !(NetGame::IsEnabled() && NetGame::IsClient()))
     {
-        Controllable* pOwner = mOwner;
-        if (mTrigger->IsPressed() && pOwner->mPilot)
+        Controllable* pPilot;
+        if (mTrigger->IsPressed() && (pPilot = mOwner->mPilot) != 0)
         {
-            if (pOwner->mPlayerId >= 0)
+            if (mOwner->mPlayerId >= 0)
             {
-                pOwner->mPilot->EnterRemote(mItem);
+                pPilot->EnterRemote(mItem);
             }
         }
         else if (mReload && mReload->IsPressed() && ((const WeaponRemoteClass*)mClass)->mAllowDestruct)
         {
-            DamageOwner owner(pOwner->mCharacter, pOwner->GetGameObject(), mItem->GetTeam(),
+            Controllable* pOwner = mOwner;
+            Character* pCharacter = pOwner->mCharacter;
+            DamageOwner owner(pCharacter, pOwner->GetGameObject(), mItem->GetTeam(),
                               mItem->GetEntityClass(), mClass, 1.0f);
             mItem->InstantDeath(owner, false);
         }

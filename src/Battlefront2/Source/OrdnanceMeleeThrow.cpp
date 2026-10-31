@@ -57,16 +57,14 @@ bool OrdnanceMeleeThrow::Collide(CollisionObject* pObject, const PblVector3& vPo
         return false;
     }
 
+    int iReturn = -1;
     GameObject* pVictim = pObject->GetGameObject();
     if (m_pLight)
     {
-        PblVector3 vMid(vPos.x + vNormal.x * 0.5f,
-                        vPos.y + vNormal.y * 0.5f,
-                        vPos.z + vNormal.z * 0.5f);
+        PblVector3 vMid = vPos + vNormal * 0.5f;
         static_cast<FLEffectObject*>(m_pLight)->SetPosition(vMid);
     }
 
-    int iReturn = -1;
     if (pObject->GetCollisionType() == COLL_SHIELD)
     {
         if (pObject->mParent)
@@ -95,17 +93,17 @@ bool OrdnanceMeleeThrow::Collide(CollisionObject* pObject, const PblVector3& vPo
         }
     }
 
-    const CollisionObjectType eType = pObject->GetCollisionType();
-    if (eType == COLL_SOFT || eType == COLL_ATTACHED)
+    if (pObject->GetCollisionType() == COLL_SOFT || pObject->GetCollisionType() == COLL_ATTACHED)
     {
         if (iReturn == 1)
         {
             Return();
         }
     }
-    else if (eType == COLL_LEAFPATCH && mOffscreenTime < 0.5f)
+    else if (pObject->GetCollisionType() == COLL_LEAFPATCH && mOffscreenTime < 0.5f)
     {
-        PblVector3 vHorizontalNormal(vNormal.x, 0.0f, vNormal.z);
+        PblVector3 vHorizontalNormal = vNormal;
+        vHorizontalNormal.y = 0.0f;
         PblVector3 vUnit, vWind;
         D3DXVec3Normalize((D3DXVECTOR3*)&vUnit, (const D3DXVECTOR3*)&vHorizontalNormal);
         vWind = PblVector3(vUnit.x * 2.0f, vUnit.y * 2.0f, vUnit.z * 2.0f);
@@ -237,9 +235,9 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
       RedSceneObject(&((OrdnanceMeleeThrowClass*)mClass)->mLodData),
       m_pOwner(desc.mOwner),
       mOldPosition(desc.mPosition),
-      mVelocity(desc.mDirection * Interpolate(
-          ((const OrdnanceMeleeThrowClass*)mClass)->mVelocity,
-          ((const OrdnanceMeleeThrowClass*)mClass->mNextCharge)->mVelocity, mRatio))
+      mVelocity(Interpolate(((const OrdnanceMeleeThrowClass*)mClass)->mVelocity,
+                            ((const OrdnanceMeleeThrowClass*)mClass->mNextCharge)->mVelocity, mRatio) *
+                desc.mDirection)
 {
     m_pDamageData = 0;
     m_pLight = 0;
@@ -258,14 +256,10 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
     PblVector3 vEdgeDir = gVectorUnitZ;
     if (pWeaponClass->m_uiNumDamageEdges)
     {
-        D3DXVec3TransformNormal((D3DXVECTOR3*)&vEdgeDir, (const D3DXVECTOR3*)&pWeaponClass->m_aDamageEdge[0].vOffsetDir,
-                                (const D3DXMATRIX*)&m_mMatrix);
+        vEdgeDir = m_mMatrix.ApplyRotation(pWeaponClass->m_aDamageEdge[0].vOffsetDir);
     }
     const PblVector3& vDir = desc.mDirection;
-    PblVector3 vAxis(vEdgeDir.y * vDir.z - vEdgeDir.z * vDir.y, vEdgeDir.z * vDir.x - vEdgeDir.x * vDir.z,
-                     vEdgeDir.x * vDir.y - vEdgeDir.y * vDir.x);
-    D3DXVec3Normalize((D3DXVECTOR3*)&vEdgeDir, (const D3DXVECTOR3*)&vAxis);
-    m_vRotationAxis = vEdgeDir;
+    m_vRotationAxis = Normalize(CrossProduct(vEdgeDir, vDir));
 
     mCheckStaticCollision = true;
     mLifeTime = mClass->mLifeSpan;
@@ -283,24 +277,22 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
             pClass->m_bDamageLengthFromEdge ? edge.fLength * pClass->m_fDamageLength : pClass->m_fDamageLength;
         const float fWidth =
             pClass->m_bDamageWidthFromEdge ? edge.fWidth * pClass->m_fDamageWidth : pClass->m_fDamageWidth;
-        const PblVector3 vTip(edge.vOffsetPos.x + edge.vOffsetDir.x * fLength,
-                              edge.vOffsetPos.y + edge.vOffsetDir.y * fLength,
-                              edge.vOffsetPos.z + edge.vOffsetDir.z * fLength);
-        const float fTip2 = vTip.y * vTip.y + vTip.x * vTip.x + vTip.z * vTip.z + fWidth * fWidth;
+        const PblVector3 vTip = edge.vOffsetPos + edge.vOffsetDir * fLength;
+        const float fTip2 = SquaredLength(vTip) + fWidth * fWidth;
         if (fTip2 > fRadius2)
         {
             fRadius2 = fTip2;
         }
-        const float fBase2 = edge.vOffsetPos.x * edge.vOffsetPos.x + edge.vOffsetPos.y * edge.vOffsetPos.y +
-                             edge.vOffsetPos.z * edge.vOffsetPos.z;
+        const float fBase2 = SquaredLength(edge.vOffsetPos);
         if (fBase2 > fRadius2)
         {
             fRadius2 = fBase2;
         }
     }
 
+    const float fRadius = sqrtf(fRadius2);
     SetRenderPos(mPosition);
-    SetRenderRadius((float)sqrt((double)fRadius2));
+    SetRenderRadius(fRadius);
     AddToScene();
 
     if (mTrailEmitterObj)
@@ -328,20 +320,15 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
             {
                 matrix[1] = vDir;
                 matrix.m[1][3] = 0.0f;
-                PblVector3 vFront(vDir.x * vDir.y - gVectorUnitY.x, vDir.y * vDir.y - gVectorUnitY.y,
-                                  vDir.z * vDir.y - gVectorUnitY.z);
-                float fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
+                PblVector3 vFront = -gVectorUnitY + vDir * vDir.y;
+                float fLength2 = SquaredLength(vFront);
                 if (fLength2 <= 0.0001f)
                 {
-                    vFront = PblVector3(gVectorUnitZ.x - vDir.x * vDir.z, gVectorUnitZ.y - vDir.y * vDir.z,
-                                        gVectorUnitZ.z - vDir.z * vDir.z);
-                    fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
+                    vFront = gVectorUnitZ - vDir * vDir.z;
+                    fLength2 = SquaredLength(vFront);
                 }
-                const float fInv = 1.0f / (float)sqrt((double)fLength2);
-                vFront *= fInv;
-                matrix.m[0][0] = vDir.y * vFront.z - vDir.z * vFront.y;
-                matrix.m[0][1] = vDir.z * vFront.x - vDir.x * vFront.z;
-                matrix.m[0][2] = vDir.x * vFront.y - vDir.y * vFront.x;
+                vFront *= 1.0f / sqrtf(fLength2);
+                matrix[0] = CrossProduct(vDir, vFront);
                 matrix.m[0][3] = 0.0f;
                 matrix[2] = vFront;
                 matrix.m[2][3] = 0.0f;
@@ -373,101 +360,95 @@ bool OrdnanceMeleeThrow::Update(float fDeltaTime)
     }
 
     OrdnanceMeleeThrowClass* pClass = (OrdnanceMeleeThrowClass*)mClass;
-    if ((m_pOwner.mObject && m_pOwner.mObject->mHandleId != m_pOwner.mSavedHandleId) || m_bLastFrameIndicator)
+    if (m_pOwner.mObject && m_pOwner.mObject->mHandleId != m_pOwner.mSavedHandleId)
+    {
+        return false;
+    }
+    if (m_bLastFrameIndicator)
     {
         return false;
     }
 
-    if (mLifeTime > 0.0f)
+    if (mLifeTime <= 0.0f)
     {
-        if (mCheckStaticCollision)
-        {
-            const float fSpeed = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                       mVelocity.z * mVelocity.z);
-            const float fInvSpeed = 1.0f / fSpeed;
-            const PblVector3 vDir(mVelocity.x * fInvSpeed, mVelocity.y * fInvSpeed, mVelocity.z * fInvSpeed);
-            CollisionObject* pHit;
-            PblVector3 vNormal;
-            const float fHit =
-                CollisionManager::RayHit(mPosition, vDir, mLifeTime * fSpeed, pHit, &vNormal, 0, 0, 0x90, true);
-            if (fHit < 1.0f)
-            {
-                m_fReturnTime *= fHit;
-                mLifeTime *= fHit;
-            }
-            mCheckStaticCollision = false;
-        }
-
-        float fStep = fDeltaTime;
         mLifeTime -= fDeltaTime;
-        if (mLifeTime <= 0.0f)
+        const float fReturnDuration = m_fReturnTime / pClass->mLifeSpan * pClass->m_fReturnDuration;
+        if (-mLifeTime >= fReturnDuration)
         {
-            if (mLifeTime + fDeltaTime > 0.0f && m_pDamageData)
-            {
-                ((WeaponMelee::DamageData*)m_pDamageData)->iNumObjects = 0;
-            }
-            fStep = mLifeTime;
+            m_pWeapon->NotifyReturned();
+            m_pWeapon->m_pPrimaryWeapon->m_uiTrailOnMask = 0;
+            m_bLastFrameIndicator = true;
+            return true;
         }
-        mOffscreenTime += fStep;
-        ApplyDamage(fStep);
 
+        const float fPrev = (-mLifeTime - fDeltaTime) / fReturnDuration;
+        const float fT = (-(mLifeTime / fReturnDuration) - fPrev) / (1.0f - fPrev);
+        const PblVector3 vTarget = mOwner->GetMatrix().ApplyTransform(m_pWeapon->m_mThrow0Local.GetTranslation());
         mOldPosition = mPosition;
-        mPosition.x += mVelocity.x * fStep;
-        mPosition.y += mVelocity.y * fStep;
-        mPosition.z += mVelocity.z * fStep;
-        PblMatrix mRotate = gMatrixIdentity;
-        D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis, pClass->m_fOmega * fStep);
+        mPosition = Interpolate(mOldPosition, vTarget, fT);
+        PblMatrix mRotate(gMatrixIdentity);
+        D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis,
+                               pClass->m_fOmega * fDeltaTime * 0.5f);
         m_mMatrix = m_mMatrix * mRotate;
         m_mMatrix.SetTranslation(mPosition);
-
-        if (!Ordnance::Update(fStep) && mLifeTime > 0.0f)
-        {
-            Return();
-        }
-
-        m_pWeapon->m_pPrimaryWeapon->UpdateEffects(fStep, mPosition, mVelocity,
-                                                   pClass->m_OnSound.GetProperties() ? &pClass->m_OnSound : 0);
+        m_pWeapon->m_pPrimaryWeapon->UpdateEffects(fDeltaTime, mPosition, mVelocity, 0);
         SetRenderPos(mPosition);
-        if (m_pLight)
-        {
-            const PblVector3 vMid((mPosition.x + mOldPosition.x) * 0.5f, (mPosition.y + mOldPosition.y) * 0.5f,
-                                  (mPosition.z + mOldPosition.z) * 0.5f);
-            static_cast<FLEffectObject*>(m_pLight)->SetPosition(vMid);
-        }
-        if (mLifeTime <= 0.0f)
-        {
-            Return();
-        }
+        ApplyDamage(fDeltaTime);
         return true;
     }
 
-    mLifeTime -= fDeltaTime;
-    const float fReturnDuration = m_fReturnTime / pClass->mLifeSpan * pClass->m_fReturnDuration;
-    if (-mLifeTime >= fReturnDuration)
+    if (mCheckStaticCollision)
     {
-        m_pWeapon->NotifyReturned();
-        m_pWeapon->m_pPrimaryWeapon->m_uiTrailOnMask = 0;
-        m_bLastFrameIndicator = true;
-        return true;
+        const float fSpeed = Length(mVelocity);
+        const PblVector3 vDir = mVelocity / fSpeed;
+        CollisionObject* pHit;
+        PblVector3 vNormal;
+        const float fHit =
+            CollisionManager::RayHit(mPosition, vDir, mLifeTime * fSpeed, pHit, &vNormal, 0, 0, 0x90, true);
+        if (fHit < 1.0f)
+        {
+            mLifeTime *= fHit;
+            m_fReturnTime *= fHit;
+        }
+        mCheckStaticCollision = false;
     }
 
-    const float fPrev = (-mLifeTime - fDeltaTime) / fReturnDuration;
-    const float fT = (-(mLifeTime / fReturnDuration) - fPrev) / (1.0f - fPrev);
-    PblVector3 vTarget;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vTarget, (const D3DXVECTOR3*)&m_pWeapon->m_mThrow0Local.GetTranslation(),
-                           (const D3DXMATRIX*)&mOwner->GetMatrix());
+    float fStep = fDeltaTime;
+    mLifeTime -= fDeltaTime;
+    if (mLifeTime <= 0.0f)
+    {
+        if (mLifeTime + fDeltaTime > 0.0f && m_pDamageData)
+        {
+            ((WeaponMelee::DamageData*)m_pDamageData)->iNumObjects = 0;
+        }
+        fStep = mLifeTime;
+    }
+    mOffscreenTime += fStep;
+    ApplyDamage(fStep);
+
     mOldPosition = mPosition;
-    mPosition.x = (vTarget.x - mOldPosition.x) * fT + mOldPosition.x;
-    mPosition.y = (vTarget.y - mOldPosition.y) * fT + mOldPosition.y;
-    mPosition.z = (vTarget.z - mOldPosition.z) * fT + mOldPosition.z;
-    PblMatrix mRotate(gMatrixIdentity);
-    D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis,
-                           pClass->m_fOmega * fDeltaTime * 0.5f);
+    mPosition += mVelocity * fStep;
+    PblMatrix mRotate = gMatrixIdentity;
+    D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis, pClass->m_fOmega * fStep);
     m_mMatrix = m_mMatrix * mRotate;
     m_mMatrix.SetTranslation(mPosition);
-    m_pWeapon->m_pPrimaryWeapon->UpdateEffects(fDeltaTime, mPosition, mVelocity, 0);
+
+    if (!Ordnance::Update(fStep) && mLifeTime > 0.0f)
+    {
+        Return();
+    }
+
+    m_pWeapon->m_pPrimaryWeapon->UpdateEffects(fStep, mPosition, mVelocity,
+                                               pClass->m_OnSound.GetProperties() ? &pClass->m_OnSound : 0);
     SetRenderPos(mPosition);
-    ApplyDamage(fDeltaTime);
+    if (m_pLight)
+    {
+        static_cast<FLEffectObject*>(m_pLight)->SetPosition((mPosition + mOldPosition) * 0.5f);
+    }
+    if (mLifeTime <= 0.0f)
+    {
+        Return();
+    }
     return true;
 }
 
@@ -506,22 +487,15 @@ void OrdnanceMeleeThrow::ApplyDamage(float fDeltaTime)
 
     PblMatrix mRotate = gMatrixIdentity;
     D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis, fStep * pClass->m_fOmega);
-    PblMatrix mFirst;
-    mFirst = m_mMatrix * mRotate;
-    mFirst.m[3][0] = m_mMatrix.m[3][0] + mVelocity.x * fStep;
-    mFirst.m[3][1] = m_mMatrix.m[3][1] + mVelocity.y * fStep;
-    mFirst.m[3][2] = m_mMatrix.m[3][2] + mVelocity.z * fStep;
-    mFirst.m[3][3] = 1.0f;
+    PblMatrix mFirst = m_mMatrix * mRotate;
+    mFirst.SetTranslation(m_mMatrix.GetTranslation() + mVelocity * fStep);
     PblMatrix mLast;
     if (fDeltaTime > fStep)
     {
         D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis,
                                fDeltaTime * pClass->m_fOmega);
         mLast = m_mMatrix * mRotate;
-        mLast.m[3][0] = mVelocity.x * fDeltaTime + m_mMatrix.m[3][0];
-        mLast.m[3][1] = m_mMatrix.m[3][1] + mVelocity.y * fDeltaTime;
-        mLast.m[3][2] = m_mMatrix.m[3][2] + mVelocity.z * fDeltaTime;
-        mLast.m[3][3] = 1.0f;
+        mLast.SetTranslation(m_mMatrix.GetTranslation() + mVelocity * fDeltaTime);
     }
     else
     {
@@ -545,53 +519,48 @@ void OrdnanceMeleeThrow::ApplyDamage(float fDeltaTime)
         {
             fMaxWidth = edge.fWidth;
         }
-        PblVector3 vPos;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vPos, (const D3DXVECTOR3*)&edge.vOffsetPos, (const D3DXMATRIX*)&mFirst);
-        box.AddPoint(vPos);
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vPos, (const D3DXVECTOR3*)&edge.vOffsetPos, (const D3DXMATRIX*)&mLast);
-        box.AddPoint(vPos);
+        box.AddPoint(mFirst.ApplyTransform(edge.vOffsetPos));
+        box.AddPoint(mLast.ApplyTransform(edge.vOffsetPos));
     }
     const float fLength = pClass->m_bDamageLengthFromEdge ? fMaxLength * pClass->m_fDamageLength
                                                           : pClass->m_fDamageLength;
     const float fWidth = pClass->m_bDamageWidthFromEdge ? pClass->m_fDamageWidth * fMaxWidth
                                                         : pClass->m_fDamageWidth;
-    const PblVector3 vCenter((box._vMax.x + box._vMin.x) * 0.5f, (box._vMax.y + box._vMin.y) * 0.5f,
-                             (box._vMax.z + box._vMin.z) * 0.5f);
-    const float dx = box._vMax.x - box._vMin.x;
-    const float dy = box._vMax.y - box._vMin.y;
-    const float dz = box._vMax.z - box._vMin.z;
-    const float fRadius = sqrtf(dy * dy + dx * dx + dz * dz) * 0.5f + (fWidth + fLength) * 1.1f;
+    const PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
+    const float fRadius = Length(box._vMax - box._vMin) * 0.5f + (fWidth + fLength) * 1.1f;
 
     GameObject* apObjects[8];
     int iNumObjects =
         CollisionManager::GetObjectsInRange(vCenter, fRadius, apObjects, 8, mOwner->GetGameObject(), 0x3a);
+    GameObject* pFirstHit = 0;
+    FLEffectClass* pHitEffectClass = 0;
     for (int i = 0; i < iNumObjects;)
     {
         GameObject* pObject = apObjects[i];
-        if (pObject->GetCollisionObject())
+        if (!pObject->GetCollisionObject())
         {
-            const WeaponMelee::DamageData* pData = (const WeaponMelee::DamageData*)m_pDamageData;
-            int k;
-            for (k = 0; k < pData->iNumObjects; ++k)
+            apObjects[i] = apObjects[--iNumObjects];
+            continue;
+        }
+        const WeaponMelee::DamageData* pData = (const WeaponMelee::DamageData*)m_pDamageData;
+        int k;
+        for (k = 0; k < pData->iNumObjects; ++k)
+        {
+            if (pData->apObject[k] == pObject)
             {
-                if (pData->apObject[k] == pObject)
-                {
-                    break;
-                }
-            }
-            if (k >= pData->iNumObjects)
-            {
-                ++i;
-                continue;
+                break;
             }
         }
-        apObjects[i] = apObjects[--iNumObjects];
+        if (k < pData->iNumObjects)
+        {
+            apObjects[i] = apObjects[--iNumObjects];
+            continue;
+        }
+        ++i;
     }
 
     PblVector3 vDir;
     D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocity);
-    GameObject* pFirstHit = 0;
-    FLEffectClass* pHitEffectClass = 0;
     for (int iStep = 0; iStep < iNumSteps && iNumObjects; ++iStep)
     {
         const float fTime = (float)iStep * fStep;
@@ -605,10 +574,7 @@ void OrdnanceMeleeThrow::ApplyDamage(float fDeltaTime)
             D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotate, (const D3DXVECTOR3*)&m_vRotationAxis,
                                    fTime * pClass->m_fOmega);
             mStep = m_mMatrix * mRotate;
-            mStep.m[3][0] = mVelocity.x * fTime + m_mMatrix.m[3][0];
-            mStep.m[3][1] = m_mMatrix.m[3][1] + mVelocity.y * fTime;
-            mStep.m[3][2] = m_mMatrix.m[3][2] + mVelocity.z * fTime;
-            mStep.m[3][3] = 1.0f;
+            mStep.SetTranslation(m_mMatrix.GetTranslation() + mVelocity * fTime);
         }
         else
         {
@@ -629,13 +595,8 @@ void OrdnanceMeleeThrow::ApplyDamage(float fDeltaTime)
             PblVector3 vEdgeDir;
             D3DXVec3TransformNormal((D3DXVECTOR3*)&vEdgeDir, (const D3DXVECTOR3*)&edge.vOffsetDir,
                                     (const D3DXMATRIX*)&mStep);
-            const float fBackX = vEdgeDir.x * 0.2f;
-            const float fBackY = vEdgeDir.y * 0.2f;
-            const float fBackZ = vEdgeDir.z * 0.2f;
-            PblVector3 vEdgePos;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vEdgePos, (const D3DXVECTOR3*)&edge.vOffsetPos,
-                                   (const D3DXMATRIX*)&mStep);
-            const PblVector3 vStart(vEdgePos.x - fBackX, vEdgePos.y - fBackY, vEdgePos.z - fBackZ);
+            const PblVector3 vBack = vEdgeDir * 0.2f;
+            const PblVector3 vStart = mStep.ApplyTransform(edge.vOffsetPos) - vBack;
 
             for (int i = 0; i < iNumObjects;)
             {
@@ -645,42 +606,41 @@ void OrdnanceMeleeThrow::ApplyDamage(float fDeltaTime)
                 if (t >= 1.0f)
                 {
                     ++i;
-                    continue;
                 }
-                apObjects[i] = apObjects[--iNumObjects];
+                else
+                {
+                    apObjects[i] = apObjects[--iNumObjects];
 
-                WeaponMelee::DamageData* pData = (WeaponMelee::DamageData*)m_pDamageData;
-                if (pData->iNumObjects >= WeaponMelee::DamageData::MAX_OBJECTS_PER_ATTACK)
-                {
-                    continue;
-                }
-                pData->apObject[pData->iNumObjects] = pObject;
-                ++((WeaponMelee::DamageData*)m_pDamageData)->iNumObjects;
-                const float fAlong = t * fEdgeLength;
-                const PblVector3 vHit(vEdgeDir.x * fAlong + vStart.x, vEdgeDir.y * fAlong + vStart.y,
-                                      vEdgeDir.z * fAlong + vStart.z);
-
-                if (pObject->Deflect(0, vDir, vHit))
-                {
-                    continue;
-                }
-                static_cast<Damageable*>(pObject)->ApplyDamage(GetDamage(), vDir, vHit, -1, 0xffffffff);
-
-                if (pWeaponClass->m_uiNumHitEffects > 0 && pWeaponClass->m_uiHitEffects[0] && !pHitEffectClass)
-                {
-                    pHitEffectClass = FLEffect::s_EffectClasses.Find(pWeaponClass->m_uiHitEffects[0]);
-                }
-                if (pHitEffectClass)
-                {
-                    FLEffectObject* pEffect = pHitEffectClass->BuildEffect();
-                    if (pEffect)
+                    WeaponMelee::DamageData* pData = (WeaponMelee::DamageData*)m_pDamageData;
+                    if (pData->iNumObjects < WeaponMelee::DamageData::MAX_OBJECTS_PER_ATTACK)
                     {
-                        pEffect->AttachEffectToVector(&vHit, false);
+                        pData->apObject[pData->iNumObjects] = pObject;
+                        ++((WeaponMelee::DamageData*)m_pDamageData)->iNumObjects;
+                        const PblVector3 vHit = vEdgeDir * (t * fEdgeLength) + vStart;
+
+                        if (!pObject->Deflect(0, vDir, vHit))
+                        {
+                            static_cast<Damageable*>(pObject)->ApplyDamage(GetDamage(), vDir, vHit, -1, 0xffffffff);
+
+                            if (pWeaponClass->m_uiNumHitEffects > 0 && pWeaponClass->m_uiHitEffects[0] &&
+                                !pHitEffectClass)
+                            {
+                                pHitEffectClass = FLEffect::s_EffectClasses.Find(pWeaponClass->m_uiHitEffects[0]);
+                            }
+                            if (pHitEffectClass)
+                            {
+                                FLEffectObject* pEffect = pHitEffectClass->BuildEffect();
+                                if (pEffect)
+                                {
+                                    pEffect->AttachEffectToVector(&vHit, false);
+                                }
+                            }
+                            if (!pFirstHit)
+                            {
+                                pFirstHit = pObject;
+                            }
+                        }
                     }
-                }
-                if (!pFirstHit)
-                {
-                    pFirstHit = pObject;
                 }
             }
         }
@@ -701,15 +661,15 @@ OrdnanceMeleeThrowClass::OrdnanceMeleeThrowClass(unsigned int uHash)
     mLifeSpan = 3.0f;
 
     mLodData = OrdnanceLodData();
-    mVelocity = 20.0f;
-    m_fReturnDuration = 1.0f;
-    m_fOmega = 6.2831855f * 2.0f;
-    m_fDamageLength = 1.0f;
-    m_fDamageWidth = 1.0f;
     m_bDamageLengthFromEdge = 1;
     m_bDamageWidthFromEdge = 1;
+    m_colorLight = RedColor(0, 0, 0, 0);
+    mVelocity = 20.0f;
+    m_fReturnDuration = 1.0f;
+    m_fDamageLength = 1.0f;
+    m_fOmega = PblMath::fTwoPi * 2.0f;
+    m_fDamageWidth = 1.0f;
     m_uiLightOdfNameHash = 0;
-    m_colorLight = kColorZero;
     m_fRadiusLight = 0.0f;
 }
 
@@ -761,19 +721,17 @@ void OrdnanceMeleeThrowClass::SetProperty(unsigned int uProperty, const char* ps
             color.b = (unsigned char)(b * a / 255);
             color.g = (unsigned char)(g * a / 255);
             color.r = (unsigned char)(r * a / 255);
+            color.a = 255;
+            m_colorLight = color;
         }
         else if (iCount == 3)
         {
             color.b = (unsigned char)b;
             color.g = (unsigned char)g;
             color.r = (unsigned char)r;
+            color.a = 255;
+            m_colorLight = color;
         }
-        else
-        {
-            return;
-        }
-        color.a = 255;
-        m_colorLight = color;
             break;
     }
     case 0xDE71B19F:
@@ -800,7 +758,7 @@ void OrdnanceMeleeThrowClass::SetProperty(unsigned int uProperty, const char* ps
     {
         float fRate;
         sscanf(pszValue, "%f", &fRate);
-        m_fOmega = 6.2831855f * fRate;
+        m_fOmega = PblMath::fTwoPi * fRate;
             break;
     }
     case 0xE4B667AC:

@@ -77,14 +77,12 @@ WeaponDetonatorClass::WeaponDetonatorClass(WeaponDetonatorClass* pBase, unsigned
 // FUNCTION: SWBF2 0x00682b40
 void WeaponDetonatorClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x83CF5063)
-    {
-        mPlantedHash = PblHash(pszValue);
-    }
-    else
+    if (uProperty != 0x83CF5063 /* "PlantedHash" */)
     {
         WeaponDispenserClass::SetProperty(uProperty, pszValue);
+        return;
     }
+    mPlantedHash = PblHash(pszValue);
 }
 
 // FUNCTION: SWBF2 0x00682b80
@@ -131,8 +129,7 @@ void WeaponDetonator::NetAttachItem(Entity* pAttach)
 
     const float strength = (pClass->mMaxStrength - pClass->mMinStrength) *
                            pWeapon->mStrength + pClass->mMinStrength;
-    Trackable* pTrackable = pWeapon->mOwner;
-    GameObject* pOwnerObject = pTrackable->GetGameObject();
+    GameObject* pOwnerObject = pWeapon->mOwner->GetGameObject();
     const PblVector3& ownerPosition = pOwnerObject->GetPosition();
     const PblVector3& direction = pWeapon->mAimer->GetDirection();
     const float scale = pClass->mVelocity * strength;
@@ -251,10 +248,9 @@ bool WeaponDetonator::Update(float fDeltaTime)
         {
             for (int i = 0; i < pClass->mTrackItemCount[iIndex]; ++i)
             {
-                PblHandle<GameObject>& hItem = pClass->mTrackItemArray[iIndex][i];
-                if (hItem && hItem->IsAlive())
+                if (pClass->mTrackItemArray[iIndex][i] && pClass->mTrackItemArray[iIndex][i]->IsAlive())
                 {
-                    hItem->Kill();
+                    pClass->mTrackItemArray[iIndex][i]->Kill();
                 }
             }
             pClass->mTrackItemCount[iIndex] = 0;

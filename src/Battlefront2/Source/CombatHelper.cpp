@@ -217,9 +217,8 @@ void CombatHelper::EnterState()
         if (vDelta.x * vDelta.x + vDelta.z * vDelta.z < 100.0f)
         {
             const PblVector3 vDir = AIUtil::GetSafeNormalXZ(vDelta);
-            mTargetPos.x = vDir.x * 15.0f + mMe.m[3][0];
-            mTargetPos.y = mMe.m[3][1] + vDir.y * 15.0f;
-            mTargetPos.z = mMe.m[3][2] + vDir.z * 15.0f;
+            mTargetPos = PblVector3(vDir.x * 15.0f + mMe.m[3][0], mMe.m[3][1] + vDir.y * 15.0f,
+                                    mMe.m[3][2] + vDir.z * 15.0f);
         }
         GetLowLevel().SetHeading(mTargetPos, 0.0f);
         GetLowLevel().SetHeight(HEIGHT_STAND);
@@ -314,7 +313,7 @@ void CombatHelper::ExitState()
     Weapon* pWpn = GetMe()->GetCurWpn();
     if (pWpn && WeaponIsRtti(pWpn, WeaponMelee::rttiHashWeaponMelee))
     {
-        AI_ForceDeflectState(pWpn, false);
+        static_cast<WeaponMelee*>(pWpn)->m_bAI_Deflect = false;
     }
 
     switch (mCurState)
@@ -349,9 +348,7 @@ void CombatHelper::SetRandomHeading()
     const float fX = mLook.m[2][0] * 100.0f;
     const float fZ = mLook.m[2][2] * 100.0f;
     const PblMatrix& mMe = GetMe()->GetMatrix();
-    mTargetPos.x = mMe.m[3][0] + fX;
-    mTargetPos.y = mMe.m[3][1] + 0.01f;
-    mTargetPos.z = mMe.m[3][2] + fZ;
+    mTargetPos = PblVector3(mMe.m[3][0] + fX, mMe.m[3][1] + 0.01f, mMe.m[3][2] + fZ);
     GetLowLevel().SetHeading(mTargetPos, 0.0f);
     ++mLookCount;
 }
@@ -379,8 +376,17 @@ void CombatHelper::UpdateState(float dt)
                 mDeflectTimer = AIUtil::GetRandomFloat(1.5f, 4.0f) + GameLoop::GetMissionTime();
             }
         }
-        AI_ForceDeflectState(pWpn, mDeflect);
+        if (mDeflect)
+        {
+            static_cast<WeaponMelee*>(pWpn)->m_bAI_Deflect = true;
+        }
+        else
+        {
+            static_cast<WeaponMelee*>(pWpn)->m_bAI_Deflect = false;
+        }
     }
+
+    PblVector3 vTurnFacingDir, vTurnTargetDir, vLookFacingDir, vLookTargetDir;
 
     switch (mCurState)
     {
@@ -389,7 +395,12 @@ void CombatHelper::UpdateState(float dt)
         Controllable* pMe = GetMe();
         PblVector3 vToTarget(mTargetPos.x - pMe->mEyePoint.x, mTargetPos.y - pMe->mEyePoint.y,
                              mTargetPos.z - pMe->mEyePoint.z);
-        if (DotXZ(vToTarget, GetMe()->mEyeDir) > 0.939f)
+        PblVector3 vFacing = GetMe()->mEyeDir;
+        vToTarget.y = 0.0f;
+        vFacing.y = 0.0f;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vTurnFacingDir), reinterpret_cast<const D3DXVECTOR3*>(&vFacing));
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vTurnTargetDir), reinterpret_cast<const D3DXVECTOR3*>(&vToTarget));
+        if (vTurnFacingDir.x * vTurnTargetDir.x + vTurnFacingDir.y * vTurnTargetDir.y + vTurnFacingDir.z * vTurnTargetDir.z > 0.939f)
         {
             if (GetAttackHelper().HasTarget())
             {
@@ -422,7 +433,12 @@ void CombatHelper::UpdateState(float dt)
         Controllable* pMe = GetMe();
         PblVector3 vToTarget(mTargetPos.x - pMe->mEyePoint.x, mTargetPos.y - pMe->mEyePoint.y,
                              mTargetPos.z - pMe->mEyePoint.z);
-        if (DotXZ(vToTarget, GetMe()->mEyeDir) > 0.939f)
+        PblVector3 vFacing = GetMe()->mEyeDir;
+        vToTarget.y = 0.0f;
+        vFacing.y = 0.0f;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vLookFacingDir), reinterpret_cast<const D3DXVECTOR3*>(&vFacing));
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vLookTargetDir), reinterpret_cast<const D3DXVECTOR3*>(&vToTarget));
+        if (vLookFacingDir.x * vLookTargetDir.x + vLookFacingDir.y * vLookTargetDir.y + vLookFacingDir.z * vLookTargetDir.z > 0.939f)
         {
             if (!mWaiting)
             {
@@ -528,9 +544,9 @@ void CombatHelper::UpdateState(float dt)
 
         if (GetMe()->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
-            const Damageable* pDamageable = GetDamageable(GetMe()->GetGameObject());
-            if (!IsShielded(pDamageable) &&
-                GetCurShield(pDamageable) > GetMaxShield(pDamageable) * 0.5f)
+            const Damageable* pDamageable = static_cast<const Damageable*>(GetMe()->GetGameObject());
+            if (!pDamageable->mIsShielded &&
+                pDamageable->mCurShield > pDamageable->mMaxShield * 0.5f)
             {
                 GetLowLevel().SetNextWeapon(1);
                 GetLowLevel().SetFireRequest(true, false);
@@ -648,7 +664,11 @@ int CombatHelper::EventHandler(AI::EventInfo* pInfo)
         return mOwner->RunForVehicle(pInfo->mGameObject) ? AI::EVT_NotHandled : AI::EVT_Ignored;
 
     case AI::EVT_Grenade:
-        if (GetMe()->GetEntity()->IsRtti(MountedTurret::rttiHashMountedTurret) || mCurState == STATE_FleeEvent)
+        if (GetMe()->GetEntity()->IsRtti(MountedTurret::rttiHashMountedTurret))
+        {
+            return AI::EVT_Ignored;
+        }
+        if (mCurState == STATE_FleeEvent)
         {
             return AI::EVT_Ignored;
         }
@@ -667,9 +687,7 @@ int CombatHelper::EventHandler(AI::EventInfo* pInfo)
             pDamaged->mIsCriticalHit && mCurState != STATE_FleeEvent)
         {
             PblVector3 vFrom = GetMe()->GetMatrix().GetTranslation();
-            const PblMatrix& mMe = GetMe()->GetMatrix();
-            PblVector3 vTo(vFrom.x + mMe.m[2][0] * 10.0f, vFrom.y + mMe.m[2][1] * 10.0f,
-                           vFrom.z + mMe.m[2][2] * 10.0f);
+            const PblVector3 vTo = vFrom + GetMe()->GetMatrix()[2] * 10.0f;
             if (!PathFinder::TestTrivialStraightLineHit(vFrom, vTo, GetMe()->GetGameObject()))
             {
                 SetNextState(STATE_FleeEvent);
@@ -693,10 +711,19 @@ int CombatHelper::EventHandler(AI::EventInfo* pInfo)
         {
             return AI::EVT_Ignored;
         }
-        if (!CombatUtil::EngageInCombat(GetCtrl(), pInfo->mGameObject, false))
+        if (CombatUtil::EngageInCombat(GetCtrl(), pInfo->mGameObject, false))
+        {
+            SetNextState(STATE_Engage);
+            return AI::EVT_Handled;
+        }
+        return AI::EVT_Ignored;
+
+    case AI::EVT_EndInvisibility:
+        if (mCurState == STATE_Engage)
         {
             return AI::EVT_Ignored;
         }
+        GetCtrl()->ForceSetAttackHelperTarget(pInfo->mGameObject);
         SetNextState(STATE_Engage);
         return AI::EVT_Handled;
 
@@ -715,17 +742,8 @@ int CombatHelper::EventHandler(AI::EventInfo* pInfo)
         }
         GetCtrl()->mThreatManager.AddThreat(pInfo->mGameObject);
         mTargetHandle = pInfo->mGameObject;
-        mTargetPos = GetPosition(pInfo->mGameObject);
+        mTargetPos = pInfo->mGameObject->GetPosition();
         SetNextState(STATE_Investigate);
-        return AI::EVT_Handled;
-
-    case AI::EVT_EndInvisibility:
-        if (mCurState == STATE_Engage)
-        {
-            return AI::EVT_Ignored;
-        }
-        GetCtrl()->ForceSetAttackHelperTarget(pInfo->mGameObject);
-        SetNextState(STATE_Engage);
         return AI::EVT_Handled;
     }
     return AI::EVT_NotHandled;

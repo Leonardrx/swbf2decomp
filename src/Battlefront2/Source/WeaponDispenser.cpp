@@ -74,9 +74,7 @@ WeaponDispenserClass::WeaponDispenserClass(WeaponDispenserClass* pBase, unsigned
     mHideOnFire = pBase->mHideOnFire;
     mHideOnEmpty = pBase->mHideOnEmpty;
     mFirePointExtraOffset = pBase->mFirePointExtraOffset;
-    m_avFireOffset[0] = pBase->m_avFireOffset[0];
-    m_avFireOffset[1] = pBase->m_avFireOffset[1];
-    m_avFireOffset[2] = pBase->m_avFireOffset[2];
+    memcpy(m_avFireOffset, pBase->m_avFireOffset, sizeof(m_avFireOffset));
 }
 
 // SYNTHETIC: SWBF2 0x00684640
@@ -92,51 +90,49 @@ void WeaponDispenserClass::SetProperty(unsigned int uProperty, const char* pszVa
 {
     switch (uProperty)
     {
-    case 0x399BF05D:
-    case 0xF8899C5E:
+    case 0x399BF05D: /* "Ordnance" */
+    case 0xF8899C5E: /* "OrdnanceName" */
         mDispenseClass = EntityClass::Find(PblHash(pszValue));
         break;
-    case 0x32741C32:
+    case 0x32741C32: /* "Velocity" */
         sscanf(pszValue, "%f", &mVelocity);
         break;
-    case 0xD9356908:
+    case 0xD9356908: /* "ShotDelay" */
         sscanf(pszValue, "%f", &mShotDelay);
         if (mShotDelay < 0.01f)
         {
             mShotDelay = 0.01f;
         }
         break;
-    case 0xC8388D9D:
+    case 0xC8388D9D: /* "InitialSalvoDelay" */
         sscanf(pszValue, "%f", &mInitialSalvoDelay[0]);
         break;
-    case 0x36F0BFCD:
+    case 0x36F0BFCD: /* "InitialSalvoDelayProne" */
         sscanf(pszValue, "%f", &mInitialSalvoDelay[1]);
         break;
-    case 0x2819FFA0:
+    case 0x2819FFA0: /* "MaxPressedTime" */
         sscanf(pszValue, "%f", &mMaxPressedTime);
         break;
-    case 0x4D832102:
+    case 0x4D832102: /* "MinStrength" */
         sscanf(pszValue, "%f", &mMinStrength);
         break;
-    case 0x40BD9B1C:
+    case 0x40BD9B1C: /* "MaxStrength" */
         sscanf(pszValue, "%f", &mMaxStrength);
         break;
-    case 0x54C3C993:
+    case 0x54C3C993: /* "MaxItems" */
         sscanf(pszValue, "%d", &mMaxItems);
         break;
-    case 0x5578D44C:
+    case 0x5578D44C: /* "HideOnFire" */
         mHideOnFire = atoi(pszValue) != 0;
         break;
-    case 0xDD65D239:
+    case 0xDD65D239: /* "HideOnEmpty" */
         mHideOnEmpty = atoi(pszValue) != 0;
         break;
-    case 0x389C8E46:
+    case 0x389C8E46: /* "FirePointExtraOffset" */
     {
         float x, y, z;
         sscanf(pszValue, "%f %f %f", &x, &y, &z);
-        mFirePointExtraOffset.x = x;
-        mFirePointExtraOffset.y = y;
-        mFirePointExtraOffset.z = z;
+        mFirePointExtraOffset = PblVector3(x, y, z);
         break;
     }
     default:
@@ -245,12 +241,7 @@ WeaponDispenserClass::WeaponDispenserClass(unsigned int uHash)
     mFirePointExtraOffset.y = 0.0f;
     mFirePointExtraOffset.z = 0.0f;
 
-    for (int i = 0; i < 3; ++i)
-    {
-        m_avFireOffset[i].x = 0.0f;
-        m_avFireOffset[i].y = 0.0f;
-        m_avFireOffset[i].z = 0.0f;
-    }
+    memset(m_avFireOffset, 0, sizeof(m_avFireOffset));
 }
 
 // SYNTHETIC: SWBF2 0x00407140
@@ -300,8 +291,7 @@ bool WeaponDispenser::Update(float fDeltaTime)
             int iCount = 0;
             for (int i = 0; i < pClass->mTrackItemCount[iIndex]; ++i)
             {
-                PblHandle<GameObject>& hItem = pClass->mTrackItemArray[iIndex][i];
-                if (hItem && hItem->IsAlive())
+                if (pClass->mTrackItemArray[iIndex][i] && pClass->mTrackItemArray[iIndex][i]->IsAlive())
                 {
                     if (iCount != i)
                     {
@@ -329,11 +319,14 @@ bool WeaponDispenser::Update(float fDeltaTime)
 // FUNCTION: SWBF2 0x006838c0
 bool WeaponDispenser::IsBusy() const
 {
-    if (mState != FIRE && mState != FIRE2)
+    if (mState == FIRE || mState == FIRE2)
     {
-        return false;
+        if (!mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime)
+        {
+            return true;
+        }
     }
-    return !mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00683900
@@ -377,13 +370,13 @@ void WeaponDispenser::EnterFire()
 // FUNCTION: SWBF2 0x006839b0
 bool WeaponDispenser::UpdateFire(float fDeltaTime)
 {
-    if (mStateTimer < 0.0f)
+    if (mStateTimer >= 0.0f)
     {
-        mStateTimer = 0.0f;
+        mStateTimer += fDeltaTime;
     }
     else
     {
-        mStateTimer += fDeltaTime;
+        mStateTimer = 0.0f;
     }
 
     if (!mSelectedFlag)
@@ -397,7 +390,7 @@ bool WeaponDispenser::UpdateFire(float fDeltaTime)
         if (mStateTimer >= pClass->mInitialSalvoDelay[m_iSoldierState == 2])
         {
             if (m_pAmmoCounter->CanExpendRounds(pClass->mRoundsPerShot) &&
-                !(m_pEnergyBar->IsOverheating() && pClass->mHeatPerShot > 0.0f) && Fire())
+                (!m_pEnergyBar->IsOverheating() || pClass->mHeatPerShot <= 0.0f) && Fire())
             {
                 m_pAmmoCounter->ExpendRounds(mClass->mRoundsPerShot);
                 m_pEnergyBar->SpendEnergy(mClass->mHeatPerShot);
@@ -470,7 +463,11 @@ void WeaponDispenser::ExitEmpty()
 // FUNCTION: SWBF2 0x00683b80
 bool WeaponDispenser::CheckCharge() const
 {
-    if (!mTrigger || ((const WeaponDispenserClass*)mClass)->mMaxPressedTime <= 0.0f)
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (((const WeaponDispenserClass*)mClass)->mMaxPressedTime <= 0.0f)
     {
         return false;
     }
@@ -485,7 +482,15 @@ bool WeaponDispenser::CheckFire() const
         return false;
     }
     const WeaponDispenserClass* pClass = (const WeaponDispenserClass*)mClass;
-    if (!pClass->mDispenseClass || !mTrigger || reinterpret_cast<const Weapon*>(this)->CheckOverheat())
+    if (!pClass->mDispenseClass)
+    {
+        return false;
+    }
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (reinterpret_cast<const Weapon*>(this)->CheckOverheat())
     {
         return false;
     }
@@ -554,11 +559,13 @@ Entity* WeaponDispenser::Fire()
                 static_cast<EntitySoldier*>(mOwner->GetGameObject())->mClass->mSkeletonRootScale;
             if (fScale != 1.0f)
             {
-                vPos *= fScale;
+                vPos.x *= fScale;
+                vPos.y *= fScale;
+                vPos.z *= fScale;
             }
         }
         PblVector3 vWorld;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXMATRIX*>(&mOwner->GetMatrix()));
+        D3DXVec3TransformCoord(&vWorld, &vPos, reinterpret_cast<const D3DXMATRIX*>(&mOwner->GetMatrix()));
         vPos = vWorld;
     }
     else
@@ -566,23 +573,23 @@ Entity* WeaponDispenser::Fire()
         vPos = mAimer->mFirePos;
     }
 
-    PblVector3 vExtra;
-    D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vExtra), reinterpret_cast<const D3DXVECTOR3*>(&pClass->mFirePointExtraOffset), reinterpret_cast<const D3DXMATRIX*>(&mOwner->GetMatrix()));
-    vPos.x = vExtra.x + vPos.x;
-    vPos.y = vExtra.y + vPos.y;
-    vPos.z = vExtra.z + vPos.z;
+    {
+        PblVector3 vExtra;
+        D3DXVec3TransformNormal(&vExtra, &pClass->mFirePointExtraOffset, reinterpret_cast<const D3DXMATRIX*>(&mOwner->GetMatrix()));
+        vPos.x = vExtra.x + vPos.x;
+        vPos.y = vExtra.y + vPos.y;
+        vPos.z = vExtra.z + vPos.z;
+    }
 
     if (const GameObject* pMe = mOwner->GetGameObject())
     {
         PblVector3 vCenter = pMe->GetCollisionCenter();
         PblVector3 vEnd = vPos;
-        PblVector3 vDelta(vPos.x - vCenter.x, vPos.y - vCenter.y, vPos.z - vCenter.z);
+        PblVector3 vDelta = vPos - vCenter;
         PblVector3 vDir;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+        D3DXVec3Normalize(&vDir, &vDelta);
         const GameObject* pIgnore = pMe;
-        vEnd.x = vDir.x + vEnd.x;
-        vEnd.y = vDir.y + vEnd.y;
-        vEnd.z = vDir.z + vEnd.z;
+        vEnd += vDir;
         CollisionObject* pHit;
         PblVector3 vNormal;
         if (CollisionManager::RayHit(vCenter, vEnd, pHit, &vNormal, &pIgnore, 1, 0x98, false) < 1.0f)
@@ -606,15 +613,11 @@ Entity* WeaponDispenser::Fire()
         for (int i = 0; i < 600 * pClass->mMaxItems; ++i, ++pHandle)
         {
             GameObject* pItem = *pHandle;
-            if (pItem && pItem->IsAlive())
+            if (pItem && pItem->IsAlive() && (*pHandle)->GetAffiliationToMe(pMe) >= 0)
             {
-                pItem = *pHandle;
-                if (pItem->GetAffiliationToMe(pMe) >= 0)
+                if (!pOldest || (*pHandle)->GetCreatedTime() < pOldest->GetCreatedTime())
                 {
-                    if (!pOldest || pOldest->GetCreatedTime() > ((GameObject*)*pHandle)->GetCreatedTime())
-                    {
-                        pOldest = *pHandle;
-                    }
+                    pOldest = *pHandle;
                 }
             }
         }
@@ -640,10 +643,9 @@ Entity* WeaponDispenser::Fire()
 
     float fStrength = (pClass->mMaxStrength - pClass->mMinStrength) * mStrength + pClass->mMinStrength;
     float fVelocity = pClass->mVelocity;
-    const PblVector3& vOwnerVel = mOwner->GetGameObject()->GetVelocity();
-    float fSpeed = fVelocity * fStrength;
-    PblVector3 vVel(mAimer->mDirection.x * fSpeed + vOwnerVel.x, mAimer->mDirection.y * fSpeed + vOwnerVel.y,
-                    mAimer->mDirection.z * fSpeed + vOwnerVel.z);
+    GameObject* pThrower = mOwner->GetGameObject();
+    const PblVector3 vThrow = mAimer->mDirection * (fVelocity * fStrength);
+    PblVector3 vVel = pThrower->GetVelocity() + vThrow;
     pObject->SetVelocity(vVel);
 
     int iTeam = mOwner->mCharacter->mTeamNumber;
@@ -666,7 +668,7 @@ Entity* WeaponDispenser::Fire()
 
         Controllable* pControllable = pObject->GetControllable();
         if (pControllable &&
-            (pControllable->IsSelfPilotable()) &&
+            (pControllable->mPilotType == PILOT_SELF || pControllable->mPilotType == PILOT_VEHICLESELF) &&
             !pControllable->GetPilot())
         {
             Controller* pController = pControllable->mCtrl;

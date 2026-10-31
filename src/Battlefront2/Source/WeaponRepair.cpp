@@ -59,11 +59,8 @@ WeaponRepairClass::WeaponRepairClass(unsigned int uHash)
     mAITargetTypes = 0;
 
     mShotDelay = 0.125f;
-    for (int i = 0; i < 8; ++i)
-    {
-        mAddHealth[i] = 0.0f;
-        mAddAmmo[i] = 0.0f;
-    }
+    memset(mAddHealth, 0, sizeof(mAddHealth));
+    memset(mAddAmmo, 0, sizeof(mAddAmmo));
 }
 
 // FUNCTION: SWBF2 0x00691160
@@ -71,11 +68,8 @@ WeaponRepairClass::WeaponRepairClass(WeaponRepairClass* pBase, unsigned int uHas
     : WeaponClass(pBase, uHash)
 {
     mShotDelay = pBase->mShotDelay;
-    for (int i = 0; i < 8; ++i)
-    {
-        mAddHealth[i] = pBase->mAddHealth[i];
-        mAddAmmo[i] = pBase->mAddAmmo[i];
-    }
+    memcpy(mAddHealth, pBase->mAddHealth, sizeof(mAddHealth));
+    memcpy(mAddAmmo, pBase->mAddAmmo, sizeof(mAddAmmo));
 }
 
 // FUNCTION: SWBF2 0x006911d0
@@ -96,7 +90,6 @@ WeaponRepairClass::~WeaponRepairClass()
 void WeaponRepairClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
     float fValue;
-    int iMask;
 
     switch (uProperty)
     {
@@ -106,89 +99,143 @@ void WeaponRepairClass::SetProperty(unsigned int uProperty, const char* pszValue
     case 0xf51ad206:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[0] = fValue;
-        iMask = 1;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 1;
+            mAITargetTypes |= 1;
+        }
+        return;
     case 0x60d746d7:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[1] = fValue;
-        iMask = 2;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 2;
+            mAITargetTypes |= 2;
+        }
+        return;
     case 0x9622c73b:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[2] = fValue;
-        iMask = 4;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 4;
+            mAITargetTypes |= 4;
+        }
+        return;
     case 0xf33b41df:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[0] = fValue;
         mAddHealth[2] = fValue;
-        iMask = 5;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 5;
+            mAITargetTypes |= 5;
+        }
+        return;
     case 0x14e381c9:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[3] = fValue;
-        iMask = 8;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 8;
+            mAITargetTypes |= 8;
+        }
+        return;
     case 0xa6c59e9f:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[4] = fValue;
-        iMask = 0x10;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 0x10;
+            mAITargetTypes |= 0x10;
+        }
+        return;
     case 0x03ec6220:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[5] = fValue;
-        iMask = 0x20;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 0x20;
+            mAITargetTypes |= 0x20;
+        }
+        return;
     case 0x09cc7f53:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[6] = fValue;
-        iMask = 0x40;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 0x40;
+            mAITargetTypes |= 0x40;
+        }
+        return;
     case 0xf5ed2064:
         sscanf(pszValue, "%f", &fValue);
         mAddHealth[7] = fValue;
-        iMask = 0x80;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 0x80;
+            mAITargetTypes |= 0x80;
+        }
+        return;
     case 0x738f412e:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[0] = fValue;
-        iMask = 1;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 1;
+            mAITargetTypes |= 1;
+        }
+        return;
     case 0xbfe8e397:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[1] = fValue;
-        iMask = 2;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 2;
+            mAITargetTypes |= 2;
+        }
+        return;
     case 0x0fda4dbb:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[2] = fValue;
-        iMask = 4;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 4;
+            mAITargetTypes |= 4;
+        }
+        return;
     case 0xc3da529f:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[0] = fValue;
         mAddAmmo[2] = fValue;
-        iMask = 5;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 5;
+            mAITargetTypes |= 5;
+        }
+        return;
     case 0xe728d955:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[3] = fValue;
-        iMask = 8;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 8;
+            mAITargetTypes |= 8;
+        }
+        return;
     case 0xa25f865f:
         sscanf(pszValue, "%f", &fValue);
         mAddAmmo[4] = fValue;
-        iMask = 0x10;
-        break;
+        if (fValue != 0.0f)
+        {
+            mTargetTypes |= 0x10;
+            mAITargetTypes |= 0x10;
+        }
+        return;
     default:
         WeaponClass::SetProperty(uProperty, pszValue);
         return;
-    }
-
-    if (fValue != 0.0f)
-    {
-        mTargetTypes |= iMask;
-        mAITargetTypes |= iMask;
     }
 }
 
@@ -231,11 +278,14 @@ const char WeaponRepair::rttiNameWeaponRepair[] = "WeaponRepair";
 // FUNCTION: SWBF2 0x00690830
 bool WeaponRepair::IsBusy() const
 {
-    if (mState != FIRE && mState != FIRE2)
+    if (mState == FIRE || mState == FIRE2)
     {
-        return false;
+        if (!mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime)
+        {
+            return true;
+        }
     }
-    return !mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00690810
@@ -260,30 +310,26 @@ bool WeaponRepair::IsLocked() const
     if (!pTarget)
     {
         pTarget = mOwner->GetGameObject();
-        if (!pTarget)
-        {
-            return false;
-        }
     }
-
-    const WeaponRepairClass* pClass = static_cast<const WeaponRepairClass*>(mClass);
-    bool bHack = false;
-    float fHealth = pClass->mAddHealth[pTarget->mHealthType];
-    float fAmmo = pClass->mAddAmmo[pTarget->mHealthType];
-    if (pTarget->GetControllable())
+    if (pTarget)
     {
-        PilotType ePilot = pTarget->GetControllable()->mPilotType;
-        if ((ePilot == PILOT_VEHICLE || ePilot == PILOT_VEHICLESELF ||
-             pTarget->GetControllable()->IsRemoteVehicle()) &&
-            mOwner->GetGameObject() && mOwner->GetGameObject()->IsMyEnemy(pTarget))
+        float fHealth = static_cast<const WeaponRepairClass*>(mClass)->mAddHealth[pTarget->mHealthType];
+        float fAmmo = static_cast<const WeaponRepairClass*>(mClass)->mAddAmmo[pTarget->mHealthType];
+        int iPilotType;
+        int bHack = pTarget->GetControllable() &&
+                    ((iPilotType = pTarget->GetControllable()->mPilotType) == PILOT_VEHICLE ||
+                     iPilotType == PILOT_VEHICLESELF ||
+                     pTarget->GetControllable()->IsRemoteVehicle()) &&
+                    mOwner->GetGameObject() && mOwner->GetGameObject()->IsMyEnemy(pTarget);
+
+        int bAmmo = PowerupUtility::CheckAmmo(pTarget, fAmmo, false);
+        int bHealth = PowerupUtility::CheckHealth(pTarget, fHealth);
+        if (bHealth | bAmmo | bHack)
         {
-            bHack = true;
+            return true;
         }
     }
-
-    bool bAmmo = PowerupUtility::CheckAmmo(pTarget, fAmmo, false);
-    bool bHealth = PowerupUtility::CheckHealth(pTarget, fHealth);
-    return (bAmmo | bHack | bHealth) != 0;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00690870
@@ -360,7 +406,19 @@ void WeaponRepair::ExitFire()
 // FUNCTION: SWBF2 0x00690ab0
 bool WeaponRepair::CheckFire() const
 {
-    if (NetGame::IsPreGame() || !mTrigger || CheckOverheat() || !IsLocked())
+    if (NetGame::IsPreGame())
+    {
+        return false;
+    }
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (CheckOverheat())
+    {
+        return false;
+    }
+    if (!IsLocked())
     {
         return false;
     }
@@ -390,13 +448,12 @@ bool WeaponRepair::Fire(float fDeltaTime)
         return false;
     }
 
-    const WeaponRepairClass* pClass = static_cast<const WeaponRepairClass*>(mClass);
-    float fHealth = pClass->mAddHealth[pTarget->mHealthType] * fDeltaTime;
-    float fAmmo = pClass->mAddAmmo[pTarget->mHealthType] * fDeltaTime;
+    float fHealth = static_cast<const WeaponRepairClass*>(mClass)->mAddHealth[pTarget->mHealthType] * fDeltaTime;
+    float fAmmo = static_cast<const WeaponRepairClass*>(mClass)->mAddAmmo[pTarget->mHealthType] * fDeltaTime;
 
     DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
     owner.mCharacter = mOwner->mCharacter;
-    owner.mGameObject = mOwner->GetGameObject();
+    owner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
     owner.mTeam = mOwner->GetGameObject()->mTeam;
     owner.mClass = mOwner->GetGameObject()->GetEntityClass();
     owner.mWeapon = mClass;
@@ -412,7 +469,7 @@ bool WeaponRepair::Fire(float fDeltaTime)
         {
             int iSoldiers = 0;
             const PblList<Controllable>& list = pTarget->GetControllableList();
-            for (PblList<Controllable>::Itor it = list.Begin(); (Controllable*)it; ++it)
+            for (PblList<Controllable>::Itor it(list); (Controllable*)it; ++it)
             {
                 if (it->GetPilot() && it->GetPilot()->GetGameObject() &&
                     it->GetPilot()->GetGameObject()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
@@ -423,13 +480,14 @@ bool WeaponRepair::Fire(float fDeltaTime)
 
             if (iSoldiers && pTarget->GetGameObjectClass()->GetTimeRequiredToEject() > 0.0f)
             {
-                pTarget->SetEjectTimer(pClass->mShotDelay + pTarget->GetEjectTimer());
+                const float fEjectTimer = pTarget->GetEjectTimer();
+                pTarget->SetEjectTimer(static_cast<const WeaponRepairClass*>(mClass)->mShotDelay + fEjectTimer);
                 pTarget->ResetTimeSinceLastHack();
                 if (pTarget->GetEjectTimer() > pTarget->GetGameObjectClass()->GetTimeRequiredToEject())
                 {
                     EventManager::ObjectEvent::mHack.Trigger(*pTarget, owner);
 
-                    for (PblList<Controllable>::Itor it = list.Begin(); (Controllable*)it; ++it)
+                    for (PblList<Controllable>::Itor it(list); (Controllable*)it; ++it)
                     {
                         if (it->GetPilot() && it->GetPilot()->GetGameObject() &&
                             it->GetPilot()->GetGameObject()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
@@ -476,7 +534,7 @@ bool WeaponRepair::Fire(float fDeltaTime)
     }
 
     bool bHealth = PowerupUtility::ApplyHealth(pTarget, fHealth, &owner, false);
-    if (PowerupUtility::ApplyAmmo(pTarget, fAmmo, false) | bHealth)
+    if (bHealth | PowerupUtility::ApplyAmmo(pTarget, fAmmo, false))
     {
         if (!(NetGame::IsEnabled() && NetGame::IsClient()) && pTarget->mCurHealth == pTarget->mMaxHealth)
         {

@@ -38,7 +38,9 @@ OrdnanceGrapplingHook::OrdnanceGrapplingHook(OrdnanceGrapplingHookClass* pClass,
     {
         mFireWeapon = (WeaponGrapplingHook*)desc.mFireWeapon;
         PblMatrix inverse = mOwner->GetMatrix().GetInverseFast();
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&mWeaponOffset), reinterpret_cast<const D3DXVECTOR3*>(&mFireWeapon->mAimer->mFirePos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
+        PblVector3 vOffset;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&mFireWeapon->mAimer->mFirePos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
+        mWeaponOffset = vOffset;
     }
     else
     {
@@ -90,7 +92,7 @@ void OrdnanceGrapplingHook::HookFailure()
 
     mState = HOOK_ABORTING;
     CollisionManager::RemoveOrdnance(this);
-    mVelocity = PblVector3(-mVelocity.x, -mVelocity.y, -mVelocity.z);
+    mVelocity = -mVelocity;
     mFinalCollisionOnNextUpdate = false;
     mDecrementLifeTime = false;
     mLifeTime = 20.0f;
@@ -100,8 +102,7 @@ void OrdnanceGrapplingHook::HookFailure()
 bool OrdnanceGrapplingHook::Collide(CollisionObject* pObject, const PblVector3& vPos,
                                     const PblVector3& vNormal, int iBodyId)
 {
-    const PblVector3& vFirePos = mFireWeapon->mAimer->mFirePos;
-    PblVector3 vDelta(vPos.x - vFirePos.x, vPos.y - vFirePos.y, vPos.z - vFirePos.z);
+    PblVector3 vDelta = vPos - mFireWeapon->mAimer->mFirePos;
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
 
@@ -116,11 +117,13 @@ bool OrdnanceGrapplingHook::Collide(CollisionObject* pObject, const PblVector3& 
     mHitObject = pObject->GetGameObject();
     if (mHitObject)
     {
-        PblMatrix world = pObject->mCollisionModel->GetWorldMatrix(iBodyId, mHitObject->GetMatrix(),
-                                                                   pObject->GetPose());
+        CollisionModel* pModel = pObject->mCollisionModel;
+        PblMatrix world = pModel->GetWorldMatrix(iBodyId, mHitObject->GetMatrix(), pObject->GetPose());
         mCollBodyID = iBodyId;
         PblMatrix inverse = world.GetInverseFast();
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&mCollOffset), reinterpret_cast<const D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
+        PblVector3 vOffset;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
+        mCollOffset = vOffset;
     }
 
     CollisionManager::RemoveOrdnance(this);
@@ -151,10 +154,8 @@ void OrdnanceGrapplingHook::MoveSoldier(EntitySoldier* pSoldier, float fDeltaTim
     PblMatrix matrix = pSoldier->GetMatrix();
     if (mState == HOOK_LIFTING)
     {
-        matrix.m[3][0] += mVelocity.x * fDeltaTime;
-        matrix.m[3][1] += mVelocity.y * fDeltaTime;
-        matrix.m[3][2] += mVelocity.z * fDeltaTime;
         matrix.m[3][3] = 1.0f;
+        matrix.SetTranslation(matrix.GetTranslation() + mVelocity * fDeltaTime);
         pSoldier->SetPosition(matrix.GetTranslation());
         PblVector3 vOffset(0.0f, 0.0f, 0.0f);
         pSoldier->SetPilotInfo(matrix, vOffset,
@@ -303,13 +304,13 @@ OrdnanceGrapplingHookClass::OrdnanceGrapplingHookClass(OrdnanceGrapplingHookClas
 // FUNCTION: SWBF2 0x005fffe0
 void OrdnanceGrapplingHookClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x5F0CE10D)
+    if (uProperty != 0x5F0CE10D /* "SoldierAnimation" */)
     {
-        mAttachSoldierAnimation = SoldierAnimationBank::AddAnimation(pszValue);
+        OrdnanceBulletClass::SetProperty(uProperty, pszValue);
     }
     else
     {
-        OrdnanceBulletClass::SetProperty(uProperty, pszValue);
+        mAttachSoldierAnimation = SoldierAnimationBank::AddAnimation(pszValue);
     }
 }
 

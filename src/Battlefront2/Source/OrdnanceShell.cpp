@@ -73,14 +73,14 @@ Ordnance* OrdnanceShellClass::Build(const OrdnanceDesc& desc)
 // FUNCTION: SWBF2 0x00605df0
 void OrdnanceShellClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xD209FF45)
+    if (uProperty != 0xD209FF45 /* "Gravity" */)
     {
-        sscanf(pszValue, "%f", &mGravity);
-        mGravity *= -9.8f;
+        OrdnanceBulletClass::SetProperty(uProperty, pszValue);
     }
     else
     {
-        OrdnanceBulletClass::SetProperty(uProperty, pszValue);
+        sscanf(pszValue, "%f", &mGravity);
+        mGravity *= -9.8f;
     }
 }
 

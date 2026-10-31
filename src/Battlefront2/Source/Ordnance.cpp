@@ -116,8 +116,7 @@ const PblVector3& Ordnance::GetOldPosition() const
 // FUNCTION: SWBF2 0x005f7210
 const PblVector3& Ordnance::GetVelocity() const
 {
-    static PblVector3 vZero(0.0f, 0.0f, 0.0f);
-    return vZero;
+    return gMatrixIdentity.GetTranslation();
 }
 
 // FUNCTION: SWBF2 0x005f7220
@@ -191,32 +190,26 @@ Ordnance::Ordnance(OrdnanceClass* pClass, const OrdnanceDesc& desc)
     }
 
     const float fLow = mClass->mStrengthLimit;
-    const float fHigh = mClass->mNextCharge->mStrengthLimit;
-    if (fLow > desc.mStrength || fLow >= fHigh)
+    if (fLow > desc.mStrength || fLow >= mClass->mNextCharge->mStrengthLimit)
     {
         mRatio = 0.0f;
     }
     else
     {
-        mRatio = (desc.mStrength - fLow) / (fHigh - fLow);
+        mRatio = (desc.mStrength - fLow) / (mClass->mNextCharge->mStrengthLimit - fLow);
     }
 
     mPosition = desc.mPosition;
-    mOwner.mObject = desc.mOwner;
-    mOwner.mSavedHandleId = desc.mOwner ? GameObjectHandleId(desc.mOwner) : 0;
+    GameObject* pOwner = desc.mOwner;
+    mOwner.mObject = pOwner;
+    mOwner.mSavedHandleId = pOwner ? GameObjectHandleId(pOwner) : 0;
     mDamageOwner = desc.mDamageOwner;
     mLifeTime = (mClass->mNextCharge->mLifeSpan - mClass->mLifeSpan) * mRatio + mClass->mLifeSpan;
     mLifeElapsed = 0.0f;
 
-    if (pClass->mTrailEffect &&
-        (!NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost())))
-    {
-        mTrailEmitterObj = pClass->mTrailEffect->BuildEffect();
-    }
-    else
-    {
-        mTrailEmitterObj = 0;
-    }
+    const bool bBuildTrail =
+        !NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost());
+    mTrailEmitterObj = (pClass->mTrailEffect && bBuildTrail) ? pClass->mTrailEffect->BuildEffect() : 0;
 
     if (mTrailEmitterObj)
     {
@@ -235,7 +228,7 @@ Ordnance::Ordnance(OrdnanceClass* pClass, const OrdnanceDesc& desc)
     mSoundOrdnance.Play(&mClass->mSoundOrdnance, 0, 0, true);
     if (desc.mFireWeapon)
     {
-        SignalFire(desc.mFireWeapon);
+        desc.mFireWeapon->SignalFire();
     }
 
     mInterpIndex = -1;
@@ -286,10 +279,9 @@ bool Ordnance::Collide(CollisionObject* pObject, const PblVector3& vPos,
 
     if (mClass->mExplosionImpact)
     {
-        PblVector3 vExplosionPos(mPosition.x + vNormal.x * 0.2f,
-                                 mPosition.y + vNormal.y * 0.2f,
-                                 mPosition.z + vNormal.z * 0.2f);
-        mClass->mExplosionImpact->CreateExplosion(vExplosionPos, mDamageOwner, false, eType);
+        PblVector3 vExplosionPos = mPosition + vNormal * 0.2f;
+        mClass->mExplosionImpact->CreateExplosion(vExplosionPos, mDamageOwner, false,
+                                                  (CollisionObjectType)pObject->GetObjectData(0));
     }
 
     if (mClass->mImpactExplosionEffect)
@@ -297,9 +289,7 @@ bool Ordnance::Collide(CollisionObject* pObject, const PblVector3& vPos,
         FLEffectObject* pEffect = mClass->mImpactExplosionEffect->BuildEffect();
         if (pEffect)
         {
-            PblVector3 vEffectPos(mPosition.x + vNormal.x * 0.2f,
-                                  mPosition.y + vNormal.y * 0.2f,
-                                  mPosition.z + vNormal.z * 0.2f);
+            PblVector3 vEffectPos = mPosition + vNormal * 0.2f;
             pEffect->AttachEffectToVector(&vEffectPos, false);
         }
     }
@@ -379,7 +369,11 @@ bool Ordnance::Update(float fDeltaTime)
         }
     }
     mLifeElapsed += fDeltaTime;
-    return mPosition.y >= -2000.0f;
+    if (mPosition.y < -2000.0f)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x005f7c70
@@ -454,13 +448,12 @@ DamageDesc OrdnanceClass::GetDamage(const DamageOwner& owner, float fUnused, flo
 
     if (fRatio > 0.0f)
     {
-        const DamageDesc& next = mNextCharge->mDamage;
-        damage.mBaseValue = (next.mBaseValue - damage.mBaseValue) * fRatio + damage.mBaseValue;
+        damage.mBaseValue = (mNextCharge->mDamage.mBaseValue - damage.mBaseValue) * fRatio + damage.mBaseValue;
         for (int i = 0; i < 8; ++i)
         {
-            damage.mHealthScale[i] = (next.mHealthScale[i] - damage.mHealthScale[i]) * fRatio + damage.mHealthScale[i];
+            damage.mHealthScale[i] = (mNextCharge->mDamage.mHealthScale[i] - damage.mHealthScale[i]) * fRatio + damage.mHealthScale[i];
         }
-        damage.mShieldScale = (next.mShieldScale - damage.mShieldScale) * fRatio + damage.mShieldScale;
+        damage.mShieldScale = (mNextCharge->mDamage.mShieldScale - damage.mShieldScale) * fRatio + damage.mShieldScale;
     }
 
     const float fTime = fElapsed - mDamageTransitionDelay;
@@ -497,6 +490,7 @@ DamageDesc OrdnanceClass::GetDamage(const DamageOwner& owner, float fUnused, flo
 // FUNCTION: SWBF2 0x005f83c0
 void OrdnanceClass::Read(PblFileChunk& chunk)
 {
+    typedef Factory<Ordnance, OrdnanceClass, OrdnanceDesc> OrdnanceFactory;
     char acBuffer[128];
     OrdnanceClass* pClass = 0;
 
@@ -516,8 +510,20 @@ void OrdnanceClass::Read(PblFileChunk& chunk)
             break;
         }
         case 0x45534142:
-            pClass = Find(PblHash(child.ReadString(acBuffer, sizeof(acBuffer))));
+        {
+            const unsigned int uBase = PblHash(child.ReadString(acBuffer, sizeof(acBuffer)));
+            OrdnanceClass* pBase = 0;
+            for (PblList<OrdnanceFactory>::Itor it(OrdnanceFactory::sList.GetFirst()); it; ++it)
+            {
+                if (it->mId == uBase)
+                {
+                    pBase = static_cast<OrdnanceClass*>(&*it);
+                    break;
+                }
+            }
+            pClass = pBase;
             break;
+        }
         case 0x504F5250:
         {
             const unsigned int uProperty = child._pFile->Read32();
@@ -623,7 +629,7 @@ void OrdnanceClass::SetProperty(unsigned int uProperty, const char* pszValue)
     case 0xD4E84271:
         if (*pszValue)
         {
-            mImpactExplosionEffect = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
+            mImpactExplosionEffect = FLEffect::Get(PblHash(pszValue));
         }
         else
         {
@@ -655,7 +661,7 @@ void OrdnanceClass::SetProperty(unsigned int uProperty, const char* pszValue)
     case 0x7E71E2C6:
         if (*pszValue)
         {
-            mTrailEffect = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
+            mTrailEffect = FLEffect::Get(PblHash(pszValue));
         }
         else
         {

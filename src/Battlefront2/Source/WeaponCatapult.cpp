@@ -63,8 +63,9 @@ WeaponCatapult::WeaponCatapult(const WeaponCatapultClass* pClass, const WeaponDe
     : Weapon(pClass, desc)
 {
     mCatapultClass = const_cast<WeaponCatapultClass*>(pClass);
-    mLastArmAngle = pClass->mCockedAngle;
-    mNextArmAngle = pClass->mCockedAngle;
+    float fCockedAngle = pClass->mCockedAngle;
+    mLastArmAngle = fCockedAngle;
+    mNextArmAngle = fCockedAngle;
     mCatapultBuilding = 0;
     Entity* pEntity = mOwner->GetGameObject()->GetEntity();
     if (pEntity && pEntity->IsRtti(EntityBuildingArmed::rttiHashEntityBuildingArmed))
@@ -158,10 +159,7 @@ void WeaponCatapult::EnterFire()
     if (const PblMatrix* pArm = mCatapultBuilding->mPose.Find(mCatapultClass->mArmHash))
     {
         const PblVector3& vBase = mCatapultBuilding->GetPosition();
-        const float fX = pArm->m[3][0] + vBase.x - vFirePos.x;
-        const float fY = pArm->m[3][1] + vBase.y - vFirePos.y;
-        const float fZ = pArm->m[3][2] + vBase.z - vFirePos.z;
-        const float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+        const float fDist = Length(vBase + pArm->GetTranslation() - vFirePos);
         if (fDist > 0.0f)
         {
             const float fRate = mClass->mOrdnanceClass->GetVelocity() / fDist;
@@ -172,7 +170,7 @@ void WeaponCatapult::EnterFire()
                 {
                     mArmAccel = fRate / fSwing;
                     mArmSpeed = 0.0f;
-                    mStateLimit += (float)fabs(fSwing);
+                    mStateLimit += (float)fabs((double)fSwing);
                 }
             }
         }
@@ -207,14 +205,13 @@ void WeaponCatapult::EnterReload()
 {
     mLastArmAngle = mNextArmAngle;
     mNextArmAngle = mCatapultClass->mCockedAngle;
-    const float fSwing = mNextArmAngle - mLastArmAngle;
     if (mClass->mReloadTime > 0.0f)
     {
-        mArmSpeed = fSwing / mClass->mReloadTime;
+        mArmSpeed = (mNextArmAngle - mLastArmAngle) / mClass->mReloadTime;
     }
     else
     {
-        mArmSpeed = fSwing * 0.25f;
+        mArmSpeed = (mNextArmAngle - mLastArmAngle) * 0.25f;
     }
     mCurrArmAngle = mLastArmAngle;
     mArmAccel = 0.0f;
@@ -245,7 +242,11 @@ void WeaponCatapult::ExitReload()
 // FUNCTION: SWBF2 0x00681420
 bool WeaponCatapult::CheckFire() const
 {
-    return mTrigger && mTrigger->IsDown();
+    if (!mTrigger)
+    {
+        return false;
+    }
+    return mTrigger->m_bDown;
 }
 
 // FUNCTION: SWBF2 0x00681430
@@ -265,8 +266,12 @@ bool WeaponCatapult::Fire()
     desc.mPosition = mAimer->mFirePos;
     desc.mDirection = mAimer->mDirection;
     desc.mOwner = mOwner->GetGameObject();
-    desc.mDamageOwner = DamageOwner(mOwner->mCharacter, mOwner->GetGameObject(), mOwner->GetGameObject()->GetTeam(),
-                                    GetEntityClass(mOwner->GetGameObject()), mClass, mOwner->GetOffenseMultiplier());
+    desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+    desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+    desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+    desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+    desc.mDamageOwner.mClass = GetEntityClass(mOwner->GetGameObject());
+    desc.mDamageOwner.mWeapon = mClass;
     desc.mTarget = const_cast<GameObject*>(static_cast<const GameObject*>(mTarget));
     desc.mBodyID = mTargetBodyID;
 
@@ -298,14 +303,9 @@ void WeaponCatapult::Render(const PblMatrix& matrix, const RedPose* pPose, const
         {
             const PblVector3 vFirePos = mAimer->mFirePos;
             const PblVector3& vBase = mCatapultBuilding->GetPosition();
-            const float fX = pArm->m[3][0] + vBase.x - vFirePos.x;
-            const float fY = pArm->m[3][1] + vBase.y - vFirePos.y;
-            const float fZ = pArm->m[3][2] + vBase.z - vFirePos.z;
-            const float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+            const float fDist = Length(vBase + pArm->GetTranslation() - vFirePos);
             PblMatrix mOrdnance = *pArm * mCatapultBuilding->GetMatrix();
-            mOrdnance.m[3][0] += mOrdnance.m[1][0] * fDist;
-            mOrdnance.m[3][1] += mOrdnance.m[1][1] * fDist;
-            mOrdnance.m[3][2] += mOrdnance.m[1][2] * fDist;
+            mOrdnance.SetTranslation(mOrdnance.GetTranslation() + mOrdnance.GetYAxis() * fDist);
             mOrdnance.m[3][3] = 1.0f;
             mCatapultClass->mOrdnanceModel->Render(&mOrdnance, 0, color, uFlags, 0);
         }
@@ -387,6 +387,5 @@ WeaponClass* WeaponCatapultClass::Derive(unsigned int uHash)
 Weapon* WeaponCatapultClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::sMemoryPool.Allocate(0x170);
-    return pMemory ? reinterpret_cast<Weapon*>(::new (pMemory) WeaponCatapult(this, desc)) : 0;
+    return new WeaponCatapult(this, desc);
 }

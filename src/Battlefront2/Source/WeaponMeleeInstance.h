@@ -64,7 +64,7 @@ public:
         const Event& operator[](int iEvent) const { return m_aEventQueue[(m_uiStart + static_cast<unsigned char>(iEvent)) & INPUT_QUEUE_MASK]; }
         void Update(unsigned char uiButtons, float fTime);
         void Clear() { m_uiCount = 0; m_uiStart = 0; }
-        void ClearAll() { Clear(); m_uiButtonDown = 0; }
+        void ClearAll() { m_uiStart = 0; m_uiButtonDown = 0; m_uiCount = 0; }
         void Push(float fTime, unsigned char uiButton, unsigned char uiAction)
         {
             Event& event = m_aEventQueue[(m_uiStart + m_uiCount) & INPUT_QUEUE_MASK];

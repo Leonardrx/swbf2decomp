@@ -6,8 +6,7 @@
 Weapon* WeaponBinocularsClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::sMemoryPool.Allocate(0x110);
-    return pMemory ? reinterpret_cast<Weapon*>(::new (pMemory) WeaponBinoculars(this, desc)) : 0;
+    return new WeaponBinoculars(this, desc);
 }
 
 // SYNTHETIC: SWBF2 0x00407080

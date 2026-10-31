@@ -138,28 +138,27 @@ void WeaponAreaEffect::EnterFire()
         ++gDebugCount;
     }
     Weapon::EnterFire();
-    const WeaponAreaEffectClass* pClass = _GetClass();
-    if (pClass->m_eFireType == WeaponAreaEffectClass::FIRE_CHARGE && pClass->m_fChargeMaxTime > mStateTimer)
+    if (_GetClass()->m_eFireType == WeaponAreaEffectClass::FIRE_CHARGE && mStateTimer < _GetClass()->m_fChargeMaxTime)
     {
-        m_fStrength = (1.0f - pClass->m_fChargeMinStrength) * mStateTimer / pClass->m_fChargeMaxTime +
-                      pClass->m_fChargeMinStrength;
+        m_fStrength = (1.0f - _GetClass()->m_fChargeMinStrength) * mStateTimer / _GetClass()->m_fChargeMaxTime +
+                      _GetClass()->m_fChargeMinStrength;
     }
     else
     {
         m_fStrength = 1.0f;
     }
     mStateTimer = 0.0f;
-    const float fEnergyDrain = pClass->mEnergyDrain;
+    const float fEnergyDrain = _GetClass()->mEnergyDrain;
     if (EnergyBar* pEnergy = mOwner->GetEnergyBar())
     {
         pEnergy->SpendEnergy(fEnergyDrain);
     }
     m_bFired = false;
-    if (pClass->mInstantPlayFireAnim)
+    if (_GetClass()->mInstantPlayFireAnim)
     {
         mFiredFlag = 1;
     }
-    if (pClass->mTriggerSingle && pClass->m_eFireType != WeaponAreaEffectClass::FIRE_HOLD)
+    if (_GetClass()->mTriggerSingle && _GetClass()->m_eFireType != WeaponAreaEffectClass::FIRE_HOLD)
     {
         mTrigger->ClearUntilPressed();
     }
@@ -249,7 +248,15 @@ void WeaponAreaEffect::EnterEmpty()
 // FUNCTION: SWBF2 0x0067c7e0
 bool WeaponAreaEffect::CheckCharge() const
 {
-    if (!mTrigger || _GetClass()->m_eFireType != WeaponAreaEffectClass::FIRE_CHARGE || CheckOverheat())
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (_GetClass()->m_eFireType != WeaponAreaEffectClass::FIRE_CHARGE)
+    {
+        return false;
+    }
+    if (CheckOverheat())
     {
         return false;
     }
@@ -265,7 +272,7 @@ bool WeaponAreaEffect::CheckFire() const
     }
     const float fEnergyDrain = _GetClass()->mEnergyDrain;
     const EnergyBar* pEnergy = mOwner->GetEnergyBar();
-    if (pEnergy && pEnergy->IsOverheating() && fEnergyDrain > 0.0f)
+    if (pEnergy && pEnergy->IsOverheating() && !(fEnergyDrain <= 0.0f))
     {
         return false;
     }
@@ -308,7 +315,7 @@ bool WeaponAreaEffect::CheckEmpty() const
 {
     const float fEnergyDrain = _GetClass()->mEnergyDrain;
     const EnergyBar* pEnergy = mOwner->GetEnergyBar();
-    if (pEnergy && pEnergy->IsOverheating() && fEnergyDrain > 0.0f)
+    if (pEnergy && pEnergy->IsOverheating() && !(fEnergyDrain <= 0.0f))
     {
         return true;
     }
@@ -335,10 +342,7 @@ int WeaponAreaEffect::SetTargets()
     {
     case WeaponAreaEffectClass::AREA_CYLINDER:
     {
-        const float fRange = pClass->m_fAreaRange;
-        vCenter.x = mAimer->mDirection.x * fRange + mAimer->mFirePos.x;
-        vCenter.y = mAimer->mDirection.y * fRange + mAimer->mFirePos.y;
-        vCenter.z = mAimer->mDirection.z * fRange + mAimer->mFirePos.z;
+        vCenter = mAimer->mDirection * pClass->m_fAreaRange + mAimer->mFirePos;
         fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f +
                               pClass->m_fAreaRadius * pClass->m_fAreaRadius);
         break;
@@ -364,19 +368,14 @@ int WeaponAreaEffect::SetTargets()
             {
                 fDist = pClass->m_fAreaRange * 0.5f / fCos;
             }
-            vCenter.x = mAimer->mDirection.x * fDist + mAimer->mFirePos.x;
-            vCenter.y = mAimer->mDirection.y * fDist + mAimer->mFirePos.y;
-            vCenter.z = mAimer->mDirection.z * fDist + mAimer->mFirePos.z;
+            vCenter = mAimer->mDirection * fDist + mAimer->mFirePos;
         }
         fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f + fDist * fDist);
         break;
     }
     default:
     {
-        const float fRange = pClass->m_fAreaRange;
-        vCenter.x = mAimer->mDirection.x * fRange + mAimer->mFirePos.x;
-        vCenter.y = mAimer->mDirection.y * fRange + mAimer->mFirePos.y;
-        vCenter.z = mAimer->mDirection.z * fRange + mAimer->mFirePos.z;
+        vCenter = mAimer->mDirection * pClass->m_fAreaRange + mAimer->mFirePos;
         fRadius = pClass->m_fAreaRadius;
         break;
     }
@@ -405,7 +404,8 @@ int WeaponAreaEffect::UpdateTargets()
 // FUNCTION: SWBF2 0x0067cc30
 int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
 {
-    static const float fInner = 0.5625f;
+    static const float fInnerRadius = 0.75f;
+    static const float fInner = fInnerRadius * fInnerRadius;
     // GLOBAL: SWBF2 0x01fac388
     static const float fScale = 1.0f / (1.0f - fInner);
     // GLOBAL: SWBF2 0x01fac390
@@ -427,11 +427,7 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
     {
     case WeaponAreaEffectClass::AREA_SPHERE:
     {
-        const float fRange = pClass->m_fAreaRange;
-        PblVector3 vCenter;
-        vCenter.x = mAimer->mFirePos.x + fRange * mAimer->mDirection.x;
-        vCenter.y = mAimer->mFirePos.y + mAimer->mDirection.y * fRange;
-        vCenter.z = mAimer->mFirePos.z + mAimer->mDirection.z * fRange;
+        const PblVector3 vCenter = mAimer->mFirePos + mAimer->mDirection * pClass->m_fAreaRange;
         const float fInvRadiusSq = 1.0f / (pClass->m_fAreaRadius * pClass->m_fAreaRadius);
         for (int i = 0; i < iNumTargets; ++i)
         {
@@ -463,7 +459,8 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
             GameObject* pTarget = ppTargets[i];
             const PblVector3& vTarget = pTarget->GetCollisionCenter();
             const float fTargetRadius = pTarget->GetCollisionRadius();
-            const float fHeight = fabsf(vTarget.y - vCenter.y);
+            const float fOffsetY = vTarget.y - vCenter.y;
+            const float fHeight = fOffsetY < 0.0f ? -fOffsetY : fOffsetY;
             if (fHeight > _GetClass()->m_fAreaHeight * 0.5f + fTargetRadius)
             {
                 continue;
@@ -501,10 +498,7 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
         const Aimer* pAimer = mAimer;
         const PblMatrix& mOwnerMatrix = mOwner->GetMatrix();
         const PblVector3& vDir = pAimer->mDirection;
-        PblVector3 vNormal;
-        vNormal.x = vDir.y * mOwnerMatrix.m[0][2] - vDir.z * mOwnerMatrix.m[0][1];
-        vNormal.y = mOwnerMatrix.m[0][0] * vDir.z - vDir.x * mOwnerMatrix.m[0][2];
-        vNormal.z = vDir.x * mOwnerMatrix.m[0][1] - mOwnerMatrix.m[0][0] * vDir.y;
+        const PblVector3 vNormal = CrossProduct(vDir, mOwnerMatrix.GetXAxis());
         const float fInvRangeSq = 1.0f / (_GetClass()->m_fAreaRange * _GetClass()->m_fAreaRange);
         const float fInvHalfHeightSq = 4.0f / (_GetClass()->m_fAreaHeight * _GetClass()->m_fAreaHeight);
         for (int i = 0; i < iNumTargets; ++i)
@@ -515,13 +509,15 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
             const float dy = vTarget.y - pAimer->mFirePos.y;
             const float dz = vTarget.z - pAimer->mFirePos.z;
             const float fTargetRadius = pTarget->GetCollisionRadius();
-            const float fHeight = fabsf(dx * vNormal.x + vNormal.y * dy + vNormal.z * dz);
+            const float fPlaneDist = dx * vNormal.x + vNormal.y * dy + vNormal.z * dz;
+            const float fHeight = fPlaneDist < 0.0f ? -fPlaneDist : fPlaneDist;
             if (fHeight > _GetClass()->m_fAreaHeight * 0.5f + fTargetRadius)
             {
                 continue;
             }
             const float fForward = vDir.x * dx + vDir.y * dy + vDir.z * dz;
-            const float fSide = fabsf(mOwnerMatrix.m[0][1] * dy + mOwnerMatrix.m[0][0] * dx + mOwnerMatrix.m[0][2] * dz);
+            const float fSideDist = mOwnerMatrix.m[0][1] * dy + mOwnerMatrix.m[0][0] * dx + mOwnerMatrix.m[0][2] * dz;
+            const float fSide = fSideDist < 0.0f ? -fSideDist : fSideDist;
             if (fSide * fCos - fTargetRadius > fForward * fSin)
             {
                 continue;
@@ -533,7 +529,7 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
                 continue;
             }
             apIgnore[1] = pTarget;
-            if (CollisionManager::RayHit(pAimer->mFirePos, vTarget, pHit, 0, apIgnore, 2, 0x98, true) < 1.0f)
+            if (CollisionManager::RayHit(mAimer->mFirePos, vTarget, pHit, 0, apIgnore, 2, 0x98, true) < 1.0f)
             {
                 continue;
             }
@@ -565,10 +561,7 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
         const Aimer* pAimer = mAimer;
         const PblMatrix& mOwnerMatrix = mOwner->GetMatrix();
         const PblVector3& vDir = pAimer->mDirection;
-        PblVector3 vNormal;
-        vNormal.x = vDir.y * mOwnerMatrix.m[0][2] - vDir.z * mOwnerMatrix.m[0][1];
-        vNormal.y = mOwnerMatrix.m[0][0] * vDir.z - vDir.x * mOwnerMatrix.m[0][2];
-        vNormal.z = vDir.x * mOwnerMatrix.m[0][1] - mOwnerMatrix.m[0][0] * vDir.y;
+        const PblVector3 vNormal = CrossProduct(vDir, mOwnerMatrix.GetXAxis());
         const float fInvRangeSq = 1.0f / (_GetClass()->m_fAreaRange * _GetClass()->m_fAreaRange);
         const float fInvHalfHeightSq = 4.0f / (_GetClass()->m_fAreaHeight * _GetClass()->m_fAreaHeight);
         for (int i = 0; i < iNumTargets; ++i)
@@ -579,13 +572,15 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
             const float dy = vTarget.y - pAimer->mFirePos.y;
             const float dz = vTarget.z - pAimer->mFirePos.z;
             const float fTargetRadius = pTarget->GetCollisionRadius();
-            const float fHeight = fabsf(dx * vNormal.x + vNormal.y * dy + vNormal.z * dz);
+            const float fPlaneDist = dx * vNormal.x + vNormal.y * dy + vNormal.z * dz;
+            const float fHeight = fPlaneDist < 0.0f ? -fPlaneDist : fPlaneDist;
             if (fHeight > _GetClass()->m_fAreaHeight * 0.5f + fTargetRadius)
             {
                 continue;
             }
             const float fForward = vDir.x * dx + vDir.y * dy + vDir.z * dz;
-            const float fSide = fabsf(dx * mOwnerMatrix.m[0][0] + dy * mOwnerMatrix.m[0][1] + mOwnerMatrix.m[0][2] * dz);
+            const float fSideDist = dx * mOwnerMatrix.m[0][0] + dy * mOwnerMatrix.m[0][1] + mOwnerMatrix.m[0][2] * dz;
+            const float fSide = fSideDist < 0.0f ? -fSideDist : fSideDist;
             if (fSide * fCos - fTargetRadius > fForward * fSin)
             {
                 continue;
@@ -597,15 +592,19 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
                 continue;
             }
             apIgnore[1] = pTarget;
-            if (CollisionManager::RayHit(pAimer->mFirePos, vTarget, pHit, 0, apIgnore, 2, 0x98, true) < 1.0f)
+            if (CollisionManager::RayHit(mAimer->mFirePos, vTarget, pHit, 0, apIgnore, 2, 0x98, true) < 1.0f)
             {
                 continue;
             }
             float fTargetRange = fDistSq * fInvRangeSq * fScale + fOffset;
-            float fEdge = 0.0f;
+            float fEdge;
             if (fSide > 0.001f)
             {
                 fEdge = fSide / ((1.0f - fCos) * fSide + fForward * fSin);
+            }
+            else
+            {
+                fEdge = 0.0f;
             }
             fEdge *= fEdge;
             if (fEdge > fTargetRange)
@@ -646,11 +645,7 @@ bool WeaponAreaEffect::AddTarget(GameObject* pTarget, float fRange)
     {
         return false;
     }
-    int iLast = m_iNumTargets;
-    if (iLast >= iMax)
-    {
-        --iLast;
-    }
+    int iLast = m_iNumTargets - (m_iNumTargets >= iMax);
     for (int i = iLast; i > iSlot; --i)
     {
         m_apTarget[i] = m_apTarget[i - 1];
@@ -710,23 +705,22 @@ void WeaponAreaEffect::ApplyEffectsToTargets(float fDeltaTime)
 // FUNCTION: SWBF2 0x0067d930
 void WeaponAreaEffect::ApplyEffectsToTarget(GameObject* pTarget, const PblVector3& vDir, float fStrength)
 {
-    const WeaponAreaEffectClass* pClass = _GetClass();
-    if (pClass->m_fDamage > 0.0f)
+    if (_GetClass()->m_fDamage > 0.0f)
     {
-        const float fDamage = pClass->m_fDamage * fStrength;
+        const float fDamage = _GetClass()->m_fDamage * fStrength;
         GameObject* pOwnerObject = mOwner->GetGameObject();
         const int iTeam = mOwner->GetGameObject()->GetTeam();
-        DamageDesc damage(DamageOwner(mOwner->GetCharacter(), mOwner->GetGameObject(), iTeam,
-                                      GetEntityClass(pOwnerObject), mClass, 1.0f),
+        Character* pCharacter = mOwner->GetCharacter();
+        DamageDesc damage(DamageOwner(pCharacter, mOwner->GetGameObject(), iTeam,
+                                      pOwnerObject->GetEntityClass(), mClass, 1.0f),
                           fDamage);
         pTarget->ApplyDamage(damage, vDir, pTarget->GetCollisionCenter(), -1, (unsigned int)-1);
     }
 
-    pClass = _GetClass();
-    if (pClass->m_fEffectStrength > 0.0f)
+    if (_GetClass()->m_fEffectStrength > 0.0f)
     {
-        const float fEffect = pClass->m_fEffectStrength * fStrength;
-        switch (pClass->m_eEffectType)
+        const float fEffect = _GetClass()->m_fEffectStrength * fStrength;
+        switch (_GetClass()->m_eEffectType)
         {
         case WeaponAreaEffectClass::EFFECT_PUSH:
             pTarget->ApplyPush(vDir, fEffect, false);
@@ -744,7 +738,7 @@ void WeaponAreaEffect::ApplyEffectsToTarget(GameObject* pTarget, const PblVector
             if (pTarget->GetEntityType() == ENT_SOLDIER)
             {
                 static_cast<EntitySoldier*>(pTarget->GetEntity())
-                    ->ApplyChoke(vDir, fEffect, (SoldierAnimationBank::ANIMATION)pClass->m_eSoldierAnimation);
+                    ->ApplyChoke(vDir, fEffect, (SoldierAnimationBank::ANIMATION)_GetClass()->m_eSoldierAnimation);
             }
             break;
         }
@@ -866,6 +860,8 @@ void WeaponAreaEffectClass::SetProperty(unsigned int uProperty, const char* pszV
             m_eEffectType = EFFECT_STUN;
             break;
         case 0x876fffdd:
+            m_eEffectType = EFFECT_PUSH;
+            break;
         default:
             m_eEffectType = EFFECT_PUSH;
             break;
@@ -874,14 +870,17 @@ void WeaponAreaEffectClass::SetProperty(unsigned int uProperty, const char* pszV
     case 0xda78204c:
         switch (PblHash(pszValue))
         {
-        case 0xad1ebfef:
-            m_eAreaType = AREA_CYLINDER;
+        case 0x3dff097f:
+            m_eAreaType = AREA_RAY;
             break;
         case 0x3a6f2adb:
             m_eAreaType = AREA_ARC;
             break;
-        case 0x3dff097f:
-            m_eAreaType = AREA_RAY;
+        case 0xad1ebfef:
+            m_eAreaType = AREA_CYLINDER;
+            break;
+        case 0xafd98518:
+            m_eAreaType = AREA_SPHERE;
             break;
         default:
             m_eAreaType = AREA_SPHERE;
@@ -950,6 +949,5 @@ WeaponClass* WeaponAreaEffectClass::Derive(unsigned int uHash)
 Weapon* WeaponAreaEffectClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::sMemoryPool.Allocate(0x150);
-    return pMemory ? reinterpret_cast<Weapon*>(::new (pMemory) WeaponAreaEffect(this, desc)) : 0;
+    return new WeaponAreaEffect(this, desc);
 }

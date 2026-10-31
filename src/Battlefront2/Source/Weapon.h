@@ -216,6 +216,21 @@ public:
     float mBarrageDelay;
     char mName[20];
 };
+
+// FUNCTION: SWBF2 0x00677810
+inline bool WeaponClass::PostLoadInit()
+{
+    if (mPostLoadInit)
+    {
+        return false;
+    }
+    mPostLoadInit = true;
+    if (mNextCharge)
+    {
+        mNextCharge->PostLoadInit();
+    }
+    return true;
+}
  
  
  

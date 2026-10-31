@@ -201,26 +201,26 @@ OrdnanceGrenade::~OrdnanceGrenade()
 void OrdnanceGrenade::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
     OrdnanceGrenadeClass* pClass = (OrdnanceGrenadeClass*)mClass;
-    if (!pClass->mAlignVertical)
+    if (pClass->mAlignVertical)
     {
-        OrdnanceBullet::Render(ucViewport, fDist, uiFlags);
+        if (!pClass->mModel)
+        {
+            return;
+        }
+
+        PblVector3 vPos = mPosition;
+        if (!netFrameLock && NetGame::IsEnabled() &&
+            netInterpolator.GetIndex(mInterpIndex, 0, PblHandled::mHandleId))
+        {
+            netInterpolator.GetVec(mInterpIndex, vPos);
+        }
+
+        PblMatrix mat = _IdentityMatrix;
+        mat.SetTranslation(vPos);
+        ((OrdnanceGrenadeClass*)mClass)->mModel->Render(&mat, 0, RedColor::WHITE, uiFlags, 0);
         return;
     }
-    if (!pClass->mModel)
-    {
-        return;
-    }
-
-    PblVector3 vPos = mPosition;
-    if (!netFrameLock && NetGame::IsEnabled() &&
-        netInterpolator.GetIndex(mInterpIndex, 0, PblHandled::mHandleId))
-    {
-        netInterpolator.GetVec(mInterpIndex, vPos);
-    }
-
-    PblMatrix mat = _IdentityMatrix;
-    mat.SetTranslation(vPos);
-    ((OrdnanceGrenadeClass*)mClass)->mModel->Render(&mat, 0, RedColor::WHITE, uiFlags, 0);
+    OrdnanceBullet::Render(ucViewport, fDist, uiFlags);
 }
 
 // FUNCTION: SWBF2 0x006002c0

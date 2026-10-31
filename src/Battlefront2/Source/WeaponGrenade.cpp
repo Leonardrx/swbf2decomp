@@ -52,12 +52,7 @@ WeaponGrenadeClass::WeaponGrenadeClass(unsigned int uHash)
     mHideOnFire = true;
     mForcedFireAnim = -1;
 
-    for (int i = 0; i < 3; ++i)
-    {
-        m_avFireOffset[i].x = 0.0f;
-        m_avFireOffset[i].y = 0.0f;
-        m_avFireOffset[i].z = 0.0f;
-    }
+    memset(m_avFireOffset, 0, sizeof(m_avFireOffset));
 }
 
 
@@ -71,17 +66,12 @@ WeaponGrenadeClass::WeaponGrenadeClass(WeaponGrenadeClass* pBase, unsigned int u
     : WeaponClass(pBase, uHash)
 {
     mShotDelay = pBase->mShotDelay;
-    mInitialSalvoDelay[0] = pBase->mInitialSalvoDelay[0];
-    mInitialSalvoDelay[1] = pBase->mInitialSalvoDelay[1];
-    mInitialSalvoDelay[2] = pBase->mInitialSalvoDelay[2];
+    memcpy(mInitialSalvoDelay, pBase->mInitialSalvoDelay, sizeof(mInitialSalvoDelay));
     mShotElevate = pBase->mShotElevate;
     mMaxPressedTime = pBase->mMaxPressedTime;
     mHideOnFire = pBase->mHideOnFire;
     mForcedFireAnim = pBase->mForcedFireAnim;
-    for (int i = 0; i < 3; ++i)
-    {
-        m_avFireOffset[i] = pBase->m_avFireOffset[i];
-    }
+    memcpy(m_avFireOffset, pBase->m_avFireOffset, sizeof(m_avFireOffset));
 }
 
 // FUNCTION: SWBF2 0x006858f0
@@ -245,11 +235,14 @@ const char WeaponGrenade::rttiNameWeaponGrenade[] = "WeaponGrenade";
 // FUNCTION: SWBF2 0x00685060
 bool WeaponGrenade::IsBusy() const
 {
-    if (mState != FIRE && mState != FIRE2)
+    if (mState == FIRE || mState == FIRE2)
     {
-        return false;
+        if (!mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime)
+        {
+            return true;
+        }
     }
-    return !mFired || mStateLimit > mStateTimer + GameLoop::sClientDeltaTime;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006850d0
@@ -273,9 +266,14 @@ void WeaponGrenade::EnterFire()
     }
 
     char iFireAnim = pClass->mForcedFireAnim;
+    bool bStrongThrow = false;
     if (iFireAnim < 0)
     {
-        iFireAnim = mStrength > 0.4f;
+        if (mStrength > 0.4f)
+        {
+            bStrongThrow = true;
+        }
+        iFireAnim = bStrongThrow;
     }
     mState = (WeaponState)(FIRE + iFireAnim);
 
@@ -302,7 +300,11 @@ void WeaponGrenade::EnterFire()
 // FUNCTION: SWBF2 0x00685330
 bool WeaponGrenade::CheckCharge() const
 {
-    if (!mTrigger || ((const WeaponGrenadeClass*)mClass)->mMaxPressedTime <= 0.0f)
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (0.0f >= ((const WeaponGrenadeClass*)mClass)->mMaxPressedTime)
     {
         return false;
     }
@@ -312,7 +314,11 @@ bool WeaponGrenade::CheckCharge() const
 // FUNCTION: SWBF2 0x00685350
 bool WeaponGrenade::CheckFire() const
 {
-    if (!mTrigger || reinterpret_cast<const Weapon*>(this)->CheckOverheat())
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (reinterpret_cast<const Weapon*>(this)->CheckOverheat())
     {
         return false;
     }
@@ -334,7 +340,7 @@ WeaponGrenade::~WeaponGrenade()
 // FUNCTION: SWBF2 0x006850a0
 void WeaponGrenade::SignalFire()
 {
-    unsigned int bFiredFlag = mFiredFlag;
+    bool bFiredFlag = mFiredFlag != 0;
     Weapon::SignalFire();
     mFiredFlag = bFiredFlag;
 }
@@ -353,7 +359,7 @@ bool WeaponGrenade::UpdateFire(float fDeltaTime)
         if (mStateTimer >= pClass->mInitialSalvoDelay[m_iFirePos])
         {
             if (m_pAmmoCounter->CanExpendRounds(pClass->mRoundsPerShot) &&
-                (!m_pEnergyBar->m_bOverheat || !(pClass->mHeatPerShot > 0.0f)) && Fire())
+                (!m_pEnergyBar->m_bOverheat || pClass->mHeatPerShot <= 0.0f) && Fire())
             {
                 m_pAmmoCounter->ExpendRounds(mClass->mRoundsPerShot);
                 m_pEnergyBar->SpendEnergy(mClass->mHeatPerShot);
@@ -407,11 +413,8 @@ void WeaponGrenade::ExitReload()
 // FUNCTION: SWBF2 0x006853a0
 bool WeaponGrenade::FireDone() const
 {
-    if (!mFired || !(mStateTimer >= mStateLimit))
-    {
-        return false;
-    }
-    return mClass->mTriggerSingle || !CheckFire() || CheckReload() || CheckEmpty();
+    return mFired && mStateTimer >= mStateLimit
+           && (mClass->mTriggerSingle || !CheckFire() || CheckReload() || CheckEmpty());
 }
 
 // FUNCTION: SWBF2 0x00685400
@@ -453,19 +456,22 @@ bool WeaponGrenade::Fire()
     desc.mDirection = mAimer->mDirection;
     if (mOwner->mPlayerId >= 0)
     {
-        desc.mDirection.y += ((const WeaponGrenadeClass*)mClass)->mShotElevate;
+        desc.mDirection.y = desc.mDirection.y + ((const WeaponGrenadeClass*)mClass)->mShotElevate;
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&desc.mDirection));
         desc.mDirection = vDir;
     }
     desc.mStrength = mStrength;
     desc.mOwner = mOwner->GetGameObject();
-    desc.mDamageOwner = DamageOwner(mOwner->mCharacter, mOwner->GetGameObject(), mOwner->GetGameObject()->GetTeam(),
-                                    mOwner->GetGameObject()->GetEntityClass(), mClass,
-                                    mOwner->GetOffenseMultiplier());
+    desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+    desc.mDamageOwner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
+    desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+    desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+    desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetEntityClass();
+    desc.mDamageOwner.mWeapon = mClass;
+    desc.mFireWeapon = this;
     desc.mTarget = const_cast<GameObject*>(static_cast<const GameObject*>(mTarget));
     desc.mBodyID = mTargetBodyID;
-    desc.mFireWeapon = this;
 
     bool bFlash = true;
     if (NetGame::IsEnabled())

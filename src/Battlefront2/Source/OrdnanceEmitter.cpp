@@ -147,12 +147,12 @@ void OrdnanceEmitterClass::SetProperty(unsigned int uProperty, const char* pszVa
     {
     case 0x6E6E8D54:
     {
-        mFireEffect = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
+        mFireEffect = FLEffect::Get(PblHash(pszValue));
             break;
     }
     case 0x6DD5A894:
     {
-        mLightningEffectClass = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
+        mLightningEffectClass = FLEffect::Get(PblHash(pszValue));
             break;
     }
     case 0x38FFE98E:
@@ -343,16 +343,14 @@ void OrdnanceEmitterClass::SetProperty(unsigned int uProperty, const char* pszVa
         mAffectEnemies = atoi(pszValue) != 0;
             break;
     }
-    case 0x39B3648C:
-    {
-        mApplyOnOwnerIfOnOthers = atoi(pszValue) != 0;
-        OrdnanceClass::SetProperty(uProperty, pszValue);
-            break;
-    }
     case 0x02BB1FE0:
     {
         mExplosion = ExplosionClass::Find(PblHash(pszValue));
             break;
+    }
+    case 0x39B3648C:
+    {
+        mApplyOnOwnerIfOnOthers = atoi(pszValue) != 0;
     }
     default:
     {
@@ -417,8 +415,9 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
             FLEffectObject* pEffect = pEffectClass->BuildEffect();
             if (pEffect && desc.mOwner->GetControllable())
             {
-                PblMatrix mOffset = desc.mOwner->GetControllable()->GetCurAimer()->GetFireMatrix() *
-                                    desc.mOwner->GetMatrix().GetInverseFast();
+                const PblMatrix mFire = desc.mOwner->GetControllable()->GetCurAimer()->GetFireMatrix();
+                PblMatrix mOffset = desc.mOwner->GetMatrix().GetInverseFast();
+                mOffset = mFire * mOffset;
                 pEffect->AttachEffectToObject(desc.mOwner, mOffset, true);
             }
         }
@@ -442,43 +441,41 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
         }
 
         float fConeLengthSq = mConeLength * mConeLength;
-        float fNearConeWidth = 0.1f;
-        if (mConeWidth <= 0.1f)
-        {
-            fNearConeWidth = mConeWidth;
-        }
+        float fNearConeWidth = mConeWidth > 0.1f ? 0.1f : mConeWidth;
 
         PblHeap<GameObject*, float> heap(96, 1000000.0f, 0);
-        for (int i = iCount - 1; i >= 0; --i)
+        while (iCount > 0)
         {
-            CollisionObject* pCollision = objects[i]->GetCollisionObject();
+            --iCount;
+            CollisionObject* pCollision = objects[iCount]->GetCollisionObject();
             if (!pCollision || !pCollision->GetGameObject() || !pCollision->GetGameObject()->IsAlive())
             {
                 continue;
             }
-            if (desc.mOwner->GetAffiliationToMe(pCollision->GetGameObject()) < 0)
+            if (desc.mOwner->GetAffiliationToMe(pCollision->GetGameObject()) >= 0)
             {
-                if (!mAffectEnemies)
+                if (!mAffectFriends)
                 {
                     continue;
                 }
             }
-            else if (!mAffectFriends)
+            else if (!mAffectEnemies)
             {
                 continue;
             }
 
-            PblVector3 vTarget = objects[i]->GetCollisionCenter();
+            PblVector3 vTarget = objects[iCount]->GetCollisionCenter();
             PblVector3 vDelta(vTarget.x - vPos.x, vTarget.y - vPos.y, vTarget.z - vPos.z);
             float fDistSq = vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z;
             if (fConeLengthSq > fDistSq)
             {
                 PblVector3 vToTarget;
                 D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vToTarget), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-                float fWidth = fDistSq < 6.25f ? fNearConeWidth : mConeWidth;
-                if (vDir.x * vToTarget.x + vToTarget.y * vDir.y + vToTarget.z * vDir.z > fWidth)
+                const float fDot = vDir.x * vToTarget.x + vToTarget.y * vDir.y + vToTarget.z * vDir.z;
+                const float fWidth = fDistSq < 6.25f ? fNearConeWidth : mConeWidth;
+                if (fDot > fWidth)
                 {
-                    heap.Push(objects[i], -(float)sqrt((double)fDistSq));
+                    heap.Push(objects[iCount], -(float)sqrt((double)fDistSq));
                 }
             }
         }
@@ -496,36 +493,28 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
             }
         }
 
-        while (!heap.IsEmpty())
+        while (!heap.IsEmpty() && iTargets < mMaxTargets && fDamage >= mDamageThreshold)
         {
-            if (iTargets >= mMaxTargets || fDamage < mDamageThreshold)
-            {
-                break;
-            }
-
             float fTargetDist = -heap.Value(0);
             GameObject* pTarget = heap.Get(0);
             heap.Pop();
 
             if (!mNoChaining)
             {
-                float fMaxJump = iTargets ? mMaxJumpDistance : mConeLength;
+                float fMaxJump = iTargets == 0 ? mConeLength : mMaxJumpDistance;
                 if (fTargetDist - fChainDist > fMaxJump)
                 {
                     break;
                 }
             }
 
-            TreeGridObject* pTreeGrid = pTarget;
-            PblVector3 vTarget = pTreeGrid->GetCollisionCenter();
+            PblVector3 vTarget = pTarget->GetCollisionCenter();
             if (CollisionManager::RayTest(vSource, vTarget, 0, 0, kEmitterRayFilter))
             {
                 continue;
             }
 
-            PblVector3 vDelta(vTarget.x - vSource.x, vTarget.y - vSource.y, vTarget.z - vSource.z);
-            PblVector3 vJumpDir;
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vJumpDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+            const PblVector3 vJumpDir = Normalize(vTarget - vSource);
 
             if (pTarget->Deflect(0, vTarget, vJumpDir))
             {
@@ -539,9 +528,7 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
                         {
                             pBolt->AttachEffectToVector(&vSource, false);
                         }
-                        vTarget.x -= vJumpDir.x * 0.75f;
-                        vTarget.y -= vJumpDir.y * 0.75f;
-                        vTarget.z -= vJumpDir.z * 0.75f;
+                        vTarget -= vJumpDir * 0.75f;
                         pBolt->SetTargetPoint(vTarget);
                         pBolt->SetStrength(mLightningEffectScale * desc.mStrength);
                     }
@@ -553,12 +540,9 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
                 {
                     if (mFirstRadius > 0.0f && iTargets == 0)
                     {
-                        float fAlong = (vTarget.y - vPos.y) * vDir.y + (vTarget.x - vPos.x) * vDir.x +
-                                       (vTarget.z - vPos.z) * vDir.z;
-                        float fDx = fAlong * vDir.x + vPos.x - vTarget.x;
-                        float fDy = fAlong * vDir.y + vPos.y - vTarget.y;
-                        float fDz = fAlong * vDir.z + vPos.z - vTarget.z;
-                        if (fDx * fDx + fDy * fDy + fDz * fDz > mFirstRadius * mFirstRadius)
+                        const float fAlong = DotProduct(vTarget - vPos, vDir);
+                        const PblVector3 vOffset = vDir * fAlong + vPos - vTarget;
+                        if (SquaredLength(vOffset) > mFirstRadius * mFirstRadius)
                         {
                             continue;
                         }
@@ -594,7 +578,7 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
                     bExplode = false;
                     if (mExplosion)
                     {
-                        mExplosion->CreateExplosion(pTreeGrid->GetCollisionCenter(), desc.mDamageOwner, false,
+                        mExplosion->CreateExplosion(pTarget->GetCollisionCenter(), desc.mDamageOwner, false,
                                                     COLL_UNKNOWN);
                     }
                 }
@@ -607,21 +591,16 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
                 }
                 else if (fPush < 0.0f)
                 {
-                    float fDx = vTarget.x - vPos.x;
-                    float fDy = vTarget.y - vPos.y;
-                    float fDz = vTarget.z - vPos.z;
-                    float fLength = sqrtf(fDx * fDx + fDy * fDy + fDz * fDz);
+                    PblVector3 vAway = vTarget - vPos;
+                    const float fLength = Length(vAway);
                     if (fLength > 0.0f)
                     {
-                        float fInvLength = 1.0f / fLength;
-                        fDx *= fInvLength;
-                        fDy *= fInvLength;
-                        fDz *= fInvLength;
+                        vAway *= 1.0f / fLength;
                     }
                     float fRadius = mConeLength * 1.1f;
 
-                    PblVector3 vPushPos(fDx * fRadius + vPos.x + 0.0f, fDy * fRadius + vPos.y + 0.0f,
-                                        fDz * fRadius + vPos.z + 0.0f);
+                    PblVector3 vPushPos(vAway.x * fRadius + vPos.x + 0.0f, vAway.y * fRadius + vPos.y + 0.0f,
+                                        vAway.z * fRadius + vPos.z + 0.0f);
                     pTarget->ApplyRadiusPush(vPushPos, 0.0f, fRadius, -fPush, true);
                 }
 
@@ -654,7 +633,8 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
 
         if (mLightningEffectClass)
         {
-            for (int iBolts = mNoTargetLightningEffectCount - iTargets; iBolts > 0; --iBolts)
+            const int iBolts = mNoTargetLightningEffectCount - iTargets;
+            for (int i = 0; i < iBolts; ++i)
             {
                 LightningBoltEffectObject* pBolt =
                     static_cast<LightningBoltEffectObject*>(mLightningEffectClass->BuildEffect());
@@ -714,14 +694,14 @@ Ordnance* OrdnanceEmitterClass::Build(const OrdnanceDesc& desc)
             {
                 continue;
             }
-            if (desc.mOwner->GetAffiliationToMe(pTarget) < 0)
+            if (desc.mOwner->GetAffiliationToMe(pTarget) >= 0)
             {
-                if (!mAffectEnemies)
+                if (!mAffectFriends)
                 {
                     continue;
                 }
             }
-            else if (!mAffectFriends)
+            else if (!mAffectEnemies)
             {
                 continue;
             }
@@ -897,7 +877,7 @@ float OrdnanceEmitterClass::GetDamage(float fStrength) const
 DamageDesc OrdnanceEmitterClass::GetDamage(const DamageOwner& owner, float fStrength, float,
                                            float) const
 {
-    DamageDesc damage = OrdnanceClass::GetDamage();
+    DamageDesc damage = mDamage;
     damage.mDamageOwner = owner;
     damage.mBaseValue = GetDamage(fStrength);
     return damage;
@@ -907,11 +887,8 @@ DamageDesc OrdnanceEmitterClass::GetDamage(const DamageOwner& owner, float fStre
 PblMatrix Aimer::GetFireMatrix() const
 {
     PblVector3 vSide(mDirection.z, 0.0f, -mDirection.x);
-    PblVector3 vRight;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-    PblVector3 vUp(mDirection.y * vRight.z - mDirection.z * vRight.y,
-                   mDirection.z * vRight.x - mDirection.x * vRight.z,
-                   mDirection.x * vRight.y - mDirection.y * vRight.x);
+    PblVector3 vRight = Normalize(vSide);
+    PblVector3 vUp = CrossProduct(mDirection, vRight);
 
     return PblMatrix(vRight, vUp, mDirection, mFirePos);
 }

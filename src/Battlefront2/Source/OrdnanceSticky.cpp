@@ -231,9 +231,9 @@ OrdnanceSticky::OrdnanceSticky(OrdnanceStickyClass* pClass, const OrdnanceDesc& 
 {
     mStickInfo = 0;
     mNumBounces = 0;
+    mDecrementLifeTime = !pClass->mStartTimerOnContact;
     mLastEventTime = -1.0f;
     mBeginTime = FLT_MAX;
-    mDecrementLifeTime = !pClass->mStartTimerOnContact;
 }
 
 // FUNCTION: SWBF2 0x00606040
@@ -297,10 +297,11 @@ bool OrdnanceSticky::Update(float fDeltaTime)
     mOldPosition = mPosition;
     mPosition = mStickInfo->mLocalPosition;
     CollisionObject* pObject = mStickInfo->mCollObject;
-    if (pObject->mCollisionModel)
+    CollisionModel* pModel = pObject->mCollisionModel;
+    if (pModel)
     {
-        PblMatrix mBody = pObject->mCollisionModel->GetWorldMatrix(mStickInfo->mCollBodyID,
-                                                                   pObject->GetMatrix(), pObject->GetPose());
+        PblMatrix mBody = pModel->GetWorldMatrix(mStickInfo->mCollBodyID,
+                                                 pObject->GetMatrix(), pObject->GetPose());
         PblVector3 vWorld;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&mPosition), reinterpret_cast<const D3DXMATRIX*>(&mBody));
         mPosition = vWorld;
@@ -310,8 +311,8 @@ bool OrdnanceSticky::Update(float fDeltaTime)
     if (fDeltaTime != 0.0f)
     {
         const float fInv = 1.0f / fDeltaTime;
-        mVelocity = PblVector3((mPosition.x - mOldPosition.x) * fInv, fInv * (mPosition.y - mOldPosition.y),
-                               (mPosition.z - mOldPosition.z) * fInv);
+        const PblVector3 vDelta = mPosition - mOldPosition;
+        mVelocity = PblVector3(vDelta.x * fInv, fInv * vDelta.y, vDelta.z * fInv);
     }
     return Ordnance::Update(fDeltaTime);
 }
@@ -333,24 +334,21 @@ void OrdnanceSticky::Render(unsigned char ucViewport, float fDist, unsigned int 
             return;
         }
 
-        PblQuaternion qRot;
-        PblMatrix mRot;
-        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRot), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRot), reinterpret_cast<const D3DXQUATERNION*>(&mStickInfo->mLocalRotation)));
-        for (int i = 0; i < 3; ++i)
         {
-            for (int j = 0; j < 4; ++j)
-            {
-                mat.m[i][j] = mRot.m[i][j];
-            }
+            PblQuaternion qRot;
+            PblMatrix mRot;
+            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRot), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRot), reinterpret_cast<const D3DXQUATERNION*>(&mStickInfo->mLocalRotation)));
+            mat = mRot;
         }
         mat.SetTranslation(mStickInfo->mLocalPosition);
 
         CollisionObject* pObject = mStickInfo->mCollObject;
-        if (pObject->mCollisionModel)
+        CollisionModel* pModel = pObject->mCollisionModel;
+        if (pModel)
         {
-            PblMatrix mBody = pObject->mCollisionModel->GetWorldMatrix(mStickInfo->mCollBodyID,
-                                                                       pObject->GetMatrix(), pObject->GetPose());
-            mat *= mBody;
+            PblMatrix mBody = pModel->GetWorldMatrix(mStickInfo->mCollBodyID,
+                                                     pObject->GetMatrix(), pObject->GetPose());
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXMATRIX*>(&mBody));
         }
     }
     else if (pClass->mAlignVertical)
@@ -361,13 +359,7 @@ void OrdnanceSticky::Render(unsigned char ucViewport, float fDist, unsigned int 
         {
             netInterpolator.GetVec(mInterpIndex, vPos);
         }
-        for (int i = 0; i < 3; ++i)
-        {
-            for (int j = 0; j < 4; ++j)
-            {
-                mat.m[i][j] = i == j ? 1.0f : 0.0f;
-            }
-        }
+        mat = gMatrixIdentity;
         mat.SetTranslation(vPos);
     }
     else
@@ -417,35 +409,35 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
         mBeginTime = GameLoop::GetMissionTime();
     }
 
-    OrdnanceStickyClass* pClass = (OrdnanceStickyClass*)mClass;
     if (pObject->GetCollisionType() == COLL_WATER)
     {
         mVelocity = PblVector3(0.0f, -2.0f, 0.0f);
-        pClass->mSoundCollisionWater.Play(&vPos, 0, false, true);
+        ((OrdnanceStickyClass*)mClass)->mSoundCollisionWater.Play(&vPos, 0, false, true);
         mDecrementLifeTime = true;
         return false;
     }
     if (pObject->GetCollisionType() == COLL_LEAFPATCH)
     {
-        pClass->mSoundCollisionLeaf.Play(&vPos, 0, false, true);
+        ((OrdnanceStickyClass*)mClass)->mSoundCollisionLeaf.Play(&vPos, 0, false, true);
         return false;
     }
-    pClass->mSoundCollisionOther.Play(&vPos, 0, false, true);
+    ((OrdnanceStickyClass*)mClass)->mSoundCollisionOther.Play(&vPos, 0, false, true);
 
     bool bStick = false;
     if (pObject->GetCollisionType() == COLL_TERRAIN)
     {
-        bStick = (pClass->mStickTypes & 0x80000000) != 0;
+        bStick = (((OrdnanceStickyClass*)mClass)->mStickTypes & 0x80000000) != 0;
     }
     else
     {
         GameObject* pVictim = pObject->GetGameObject();
         if (pVictim)
         {
-            bStick = (pClass->mStickTypes & (1 << AsDamageable(pVictim)->mHealthType)) != 0;
+            bStick = (((OrdnanceStickyClass*)mClass)->mStickTypes &
+                      (1 << static_cast<Damageable*>(pVictim)->mHealthType)) != 0;
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mVelocity));
-            AsDamageable(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
+            static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
         }
     }
 
@@ -477,11 +469,10 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
         {
             mStickInfo->mCollBodyID = -1;
         }
-        mStickInfo->mLocalPosition = PblVector3(mStick.m[3][0], mStick.m[3][1], mStick.m[3][2]);
+        mStickInfo->mLocalPosition = mStick.GetTranslation();
         mStickInfo->mLocalRotation = PblQuaternion(mStick);
 
-        mPosition = PblVector3(vPos.x + vNormal.x * 0.01f, vPos.y + vNormal.y * 0.01f,
-                               vPos.z + vNormal.z * 0.01f);
+        mPosition = vPos + vNormal * 0.01f;
         mVelocity = gVectorZero;
         CollisionManager::RemoveOrdnance(this);
         mDecrementLifeTime = true;
@@ -495,13 +486,12 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
         {
             const float fRebound = 0.37f;
             const float fFriction = 1.15f;
-            mPosition = PblVector3(vPos.x + vNormal.x * 0.1f, vPos.y + vNormal.y * 0.1f,
-                                   vPos.z + vNormal.z * 0.1f);
+            mPosition = vPos + vNormal * 0.1f;
 
             mVelocity -= vNormal * fDot;
             float fSlow = -fFriction * fDot * (fRebound + 1.0f) /
-                          sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                mVelocity.z * mVelocity.z);
+                          PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                                        mVelocity.z * mVelocity.z);
             fSlow = fSlow < 1.0f ? fSlow : 1.0f;
             mVelocity.x -= fSlow * mVelocity.x;
             mVelocity.y -= mVelocity.y * fSlow;

@@ -42,7 +42,7 @@ const char OrdnanceMissile::rttiNameOrdnanceMissile[] = "OrdnanceMissile";
 
 
 
-void Controllable::SetEnemyLockedOnMeState(float fState, OrdnanceMissile* pMissile, float fDistance)
+inline void Controllable::SetEnemyLockedOnMeState(float fState, OrdnanceMissile* pMissile, float fDistance)
 {
     mEnemyLockedOnMeState = fState;
     mEnemyLockedOnMeTimestamp = GameLoop::GetMissionTime();
@@ -70,8 +70,8 @@ OrdnanceMissile::OrdnanceMissile(OrdnanceMissileClass* pClass, const OrdnanceDes
     : OrdnanceBullet(pClass, desc),
       mTarget(desc.mTarget),
       mBodyID(desc.mBodyID),
-      mWaverPitch(PblRandom::GetSim().GetFloat() * PblMath::fTwoPi),
-      mWaverYaw(PblRandom::GetSim().GetFloat() * PblMath::fTwoPi)
+      mWaverPitch(PblRandom::GetSim().GetFloat() * 6.2831855f),
+      mWaverYaw(PblRandom::GetSim().GetFloat() * 6.2831855f)
 {
     OrdnanceMissileClass* pMissileClass = (OrdnanceMissileClass*)mClass;
     mTargetDir = desc.mDirection;
@@ -84,9 +84,7 @@ OrdnanceMissile::OrdnanceMissile(OrdnanceMissileClass* pClass, const OrdnanceDes
     {
         mSpeed = pMissileClass->mMinSpeed;
     }
-    mVelocity.x = mVelocityDir.x * mSpeed;
-    mVelocity.y = mVelocityDir.y * mSpeed;
-    mVelocity.z = mVelocityDir.z * mSpeed;
+    mVelocity = mVelocityDir * mSpeed;
     mGoalSpeed = pMissileClass->mVelocity;
     mScale = 0.0f;
 
@@ -97,7 +95,7 @@ OrdnanceMissile::OrdnanceMissile(OrdnanceMissileClass* pClass, const OrdnanceDes
         {
             if (it->GetEnemyLockedOnMeState() < 2.0f || it->GetEnemyLockedOnMeState() > 0.2f)
             {
-                it->SetEnemyLockedOnMeState(2.0f, this, Distance(static_cast<const CollisionObject*>(mTarget)->GetCollisionCenter(), mPosition));
+                it->SetEnemyLockedOnMeState(2.0f, this, Distance(mTarget->GetCollisionCenter(), mPosition));
             }
         }
     }
@@ -114,11 +112,12 @@ OrdnanceMissile::~OrdnanceMissile()
     {
         for (PblList<Controllable>::Itor it(mTarget->GetControllableList()); it; ++it)
         {
-            if (it->mEnemyLockedOnMeState > 0.2f)
+            Controllable* pControllable = it;
+            if (pControllable->mEnemyLockedOnMeState > 0.2f)
             {
-                it->mEnemyLockedOnMeState = 0.0f;
-                it->mEnemyLockedOnMeTimestamp = GameLoop::GetMissionTime();
-                it->mEnemyLockedOnMeDistance = FLT_MAX;
+                pControllable->mEnemyLockedOnMeState = 0.0f;
+                pControllable->mEnemyLockedOnMeTimestamp = GameLoop::GetMissionTime();
+                pControllable->mEnemyLockedOnMeDistance = FLT_MAX;
             }
         }
     }
@@ -134,39 +133,31 @@ OrdnanceMissile::~OrdnanceMissile()
 // FUNCTION: SWBF2 0x00604ea0
 bool OrdnanceMissile::Update(float fDeltaTime)
 {
-    OrdnanceMissileClass* pClass = (OrdnanceMissileClass*)mClass;
-    OrdnanceMissileClass* pNext = (OrdnanceMissileClass*)pClass->mNextCharge;
+    const OrdnanceMissileClass* pClass = (OrdnanceMissileClass*)mClass;
 
     const float fScale = pClass->mScaleRate * fDeltaTime + mScale;
     mScale = fScale < 1.0f ? fScale : 1.0f;
 
+    const OrdnanceMissileClass* pNext = (OrdnanceMissileClass*)pClass->mNextCharge;
     const float fTurnRate = ((pNext->mTurnRate - pClass->mTurnRate) * mRatio + pClass->mTurnRate) * mScale;
     if (fTurnRate > 0.0f)
     {
         const GameObject* pTarget = mTarget;
         if (pTarget)
         {
-            const PblVector3 vMiss = pTarget->GetTargetPointMissVector();
-            const PblVector3 vPoint = pTarget->GetTargetPoint(mPosition, mVelocityDir, mBodyID);
-            PblVector3 vAim(vPoint.x + vMiss.x, vPoint.y + vMiss.y, vPoint.z + vMiss.z);
+            PblVector3 vAim = pTarget->GetTargetPoint(mPosition, mVelocityDir, mBodyID) +
+                              pTarget->GetTargetPointMissVector();
             if (mOwner)
             {
                 if (UnitControllerPtr(mOwner->GetControllable()) &&
                     !pTarget->IsRtti(EntityFlyer::rttiHashEntityFlyer))
                 {
-                    const WeaponClass* pWeaponClass = mOwner->GetControllable()->GetCurWpn()->mClass;
-                    const PblVector3 vBubble = AIUtil::CalculateBubbleOffset(
-                        mOwner->GetControllable(), vAim, pTarget, pWeaponClass);
-                    vAim.x += vBubble.x;
-                    vAim.y += vBubble.y;
-                    vAim.z += vBubble.z;
+                    vAim += AIUtil::CalculateBubbleOffset(mOwner->GetControllable(), vAim, pTarget,
+                                                          mOwner->GetControllable()->GetCurWpn()->mClass);
                 }
             }
 
-            PblVector3 vToAim(vAim.x - mPosition.x, vAim.y - mPosition.y, vAim.z - mPosition.z);
-            PblVector3 vTargetDir;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vTargetDir, (const D3DXVECTOR3*)&vToAim);
-            mTargetDir = vTargetDir;
+            mTargetDir = Normalize(vAim - mPosition);
 
             for (PblList<Controllable>::Itor it(mTarget->GetControllableList()); it; ++it)
             {
@@ -177,13 +168,11 @@ bool OrdnanceMissile::Update(float fDeltaTime)
             }
         }
 
-        PblVector3 vAxis(mVelocityDir.y * mTargetDir.z - mVelocityDir.z * mTargetDir.y,
-                         mVelocityDir.z * mTargetDir.x - mVelocityDir.x * mTargetDir.z,
-                         mVelocityDir.x * mTargetDir.y - mVelocityDir.y * mTargetDir.x);
+        PblVector3 vAxis = CrossProduct(mVelocityDir, mTargetDir);
         const float fLengthSq = vAxis.y * vAxis.y + vAxis.x * vAxis.x + vAxis.z * vAxis.z;
         if (fLengthSq > 1.0e-8f)
         {
-            const float fLength = (float)sqrt((double)fLengthSq);
+            const float fLength = sqrtf(fLengthSq);
             const float fInv = 1.0f / fLength;
             vAxis *= fInv;
             const float fMaxTurn = fTurnRate * fDeltaTime;
@@ -196,19 +185,25 @@ bool OrdnanceMissile::Update(float fDeltaTime)
         }
     }
 
-    const float fWaverTurn = ((pNext->mWaverTurn - pClass->mWaverTurn) * mRatio + pClass->mWaverTurn) * mScale;
+    const OrdnanceMissileClass* pWaverClass = (OrdnanceMissileClass*)mClass;
+    const OrdnanceMissileClass* pWaverNext = (OrdnanceMissileClass*)pWaverClass->mNextCharge;
+    const float fWaverTurn =
+        ((pWaverNext->mWaverTurn - pWaverClass->mWaverTurn) * mRatio + pWaverClass->mWaverTurn) * mScale;
     if (fWaverTurn > 0.0f)
     {
-        const PblMatrix mDir = DirectionMatrix(mVelocityDir, gVectorUnitY, gVectorZero);
-        const float fSinYaw = PblMath::Sin(mWaverYaw);
-        const PblVector3 vUp(mDir.m[1][0] * fSinYaw, mDir.m[1][1] * fSinYaw, mDir.m[1][2] * fSinYaw);
-        const float fSinPitch = PblMath::Sin(mWaverPitch);
-        PblVector3 vAxis(mDir.m[0][0] * fSinPitch + vUp.x, mDir.m[0][1] * fSinPitch + vUp.y,
-                         mDir.m[0][2] * fSinPitch + vUp.z);
+        PblVector3 vAxis;
+        {
+            const PblMatrix mDir = DirectionMatrix(mVelocityDir, gVectorUnitY, gVectorZero);
+            const float fSinYaw = PblMath::Sin(mWaverYaw);
+            const PblVector3 vUp(mDir.m[1][0] * fSinYaw, mDir.m[1][1] * fSinYaw, mDir.m[1][2] * fSinYaw);
+            const float fSinPitch = PblMath::Sin(mWaverPitch);
+            vAxis = PblVector3(mDir.m[0][0] * fSinPitch + vUp.x, mDir.m[0][1] * fSinPitch + vUp.y,
+                               mDir.m[0][2] * fSinPitch + vUp.z);
+        }
         const float fLengthSq = vAxis.y * vAxis.y + vAxis.x * vAxis.x + vAxis.z * vAxis.z;
         if (fLengthSq > 1.0e-8f)
         {
-            const float fLength = (float)sqrt((double)fLengthSq);
+            const float fLength = sqrtf(fLengthSq);
             const float fInv = 1.0f / fLength;
             vAxis *= fInv;
             D3DXMATRIX mRotation;
@@ -218,28 +213,26 @@ bool OrdnanceMissile::Update(float fDeltaTime)
             mVelocityDir = vDir;
         }
 
+        const OrdnanceMissileClass* pRateClass = (OrdnanceMissileClass*)mClass;
+        const OrdnanceMissileClass* pRateNext = (OrdnanceMissileClass*)pRateClass->mNextCharge;
         const float fWaverRate =
-            ((pNext->mWaverRate - pClass->mWaverRate) * mRatio + pClass->mWaverRate) * fDeltaTime * 2.0f;
+            ((pRateNext->mWaverRate - pRateClass->mWaverRate) * mRatio + pRateClass->mWaverRate) * fDeltaTime * 2.0f;
         mWaverPitch += PblRandom::GetSim().GetFloat() * fWaverRate;
         mWaverYaw += PblRandom::GetSim().GetFloat() * fWaverRate;
     }
 
-    mSpeed += pClass->mAcceleration * fDeltaTime;
+    mSpeed += ((OrdnanceMissileClass*)mClass)->mAcceleration * fDeltaTime;
     if (mSpeed > mGoalSpeed)
     {
         mSpeed = mGoalSpeed;
     }
 
-    PblVector3 vDir;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocityDir);
-    mVelocityDir = vDir;
-    mVelocity.x = mVelocityDir.x * mSpeed;
-    mVelocity.y = mVelocityDir.y * mSpeed;
-    mVelocity.z = mVelocityDir.z * mSpeed;
+    mVelocityDir = Normalize(mVelocityDir);
+    mVelocity = mVelocityDir * mSpeed;
 
     if (mLockedOnSoundCtrl.mFlags & GameSoundControllable::flags_playing)
     {
-        mLockedOnSoundCtrl.Update(&pClass->mLockedOnSound, &mPosition, &mVelocity);
+        mLockedOnSoundCtrl.Update(&((OrdnanceMissileClass*)mClass)->mLockedOnSound, &mPosition, &mVelocity);
     }
 
     if (mTrailEmitterObj)

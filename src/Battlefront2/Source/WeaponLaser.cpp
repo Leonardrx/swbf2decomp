@@ -69,12 +69,15 @@ WeaponLaser::~WeaponLaser()
 // FUNCTION: SWBF2 0x00686b20
 bool WeaponLaser::IsBusy() const
 {
-    if (mState != FIRE && mState != FIRE2)
+    if (mState == FIRE || mState == FIRE2)
     {
-        return false;
+        if (mSalvoTimer - GameLoop::sClientDeltaTime > 0.0f ||
+            mStateLimit > mStateTimer + GameLoop::sClientDeltaTime)
+        {
+            return true;
+        }
     }
-    return mSalvoTimer - GameLoop::sClientDeltaTime > 0.0f ||
-           mStateLimit > mStateTimer + GameLoop::sClientDeltaTime;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00686b70
@@ -102,7 +105,30 @@ bool WeaponLaser::UpdateFire(float fDeltaTime)
     while (fRemaining > 0.0f)
     {
         float fStep = mSalvoTimer;
-        if (fStep > 0.0f)
+        if (fStep <= 0.0f)
+        {
+            const float fLimit = mStateLimit;
+            float fWait = fLimit - mStateTimer;
+            if (fWait > fRemaining)
+            {
+                fWait = fRemaining;
+            }
+            fRemaining -= fWait;
+            mStateTimer += fWait;
+            if (!(mStateTimer >= fLimit) || mClass->mTriggerSingle || !CheckFire() || CheckReload() || CheckEmpty())
+            {
+                mSoundControl.Stop(true);
+                break;
+            }
+            mStateTimer -= mStateLimit;
+            if (static_cast<const WeaponLaserClass*>(mClass)->mShotDelay > 0.0f)
+            {
+                Weapon::ExitFire();
+                Weapon::EnterFire();
+            }
+            mSalvoTimer = static_cast<const WeaponLaserClass*>(mClass)->mSalvoTime;
+        }
+        else
         {
             if (fStep > fRemaining)
             {
@@ -122,29 +148,6 @@ bool WeaponLaser::UpdateFire(float fDeltaTime)
             fRemaining -= fStep;
             mSalvoTimer -= fStep;
         }
-        else
-        {
-            const float fLimit = mStateLimit;
-            float fWait = fLimit - mStateTimer;
-            if (fWait > fRemaining)
-            {
-                fWait = fRemaining;
-            }
-            fRemaining -= fWait;
-            mStateTimer += fWait;
-            if (mStateTimer < fLimit || mClass->mTriggerSingle || !CheckFire() || CheckReload() || CheckEmpty())
-            {
-                mSoundControl.Stop(true);
-                break;
-            }
-            mStateTimer -= mStateLimit;
-            if (static_cast<const WeaponLaserClass*>(mClass)->mShotDelay > 0.0f)
-            {
-                Weapon::ExitFire();
-                Weapon::EnterFire();
-            }
-            mSalvoTimer = static_cast<const WeaponLaserClass*>(mClass)->mSalvoTime;
-        }
     }
     return Weapon::UpdateFire(fDeltaTime);
 }
@@ -158,7 +161,11 @@ void WeaponLaser::ExitFire()
 // FUNCTION: SWBF2 0x00686df0
 bool WeaponLaser::CheckFire() const
 {
-    if (!mTrigger || CheckOverheat())
+    if (!mTrigger)
+    {
+        return false;
+    }
+    if (CheckOverheat())
     {
         return false;
     }
@@ -179,10 +186,13 @@ bool WeaponLaser::Fire(float fTime)
     desc.mPosition = mAimer->mFirePos;
     desc.mDirection = mAimer->mDirection;
     desc.mStrength = fTime / static_cast<const WeaponLaserClass*>(mClass)->mSalvoTime;
-    GameObject* pOwnerObject = mOwner->GetGameObject();
-    desc.mOwner = pOwnerObject;
-    desc.mDamageOwner = DamageOwner(mOwner->mCharacter, mOwner->GetGameObject(), mOwner->GetGameObject()->GetTeam(),
-                                    GetEntityClass(mOwner->GetGameObject()), mClass, mOwner->GetOffenseMultiplier());
+    desc.mOwner = mOwner->GetGameObject();
+    desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+    desc.mDamageOwner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
+    desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+    desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+    desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetEntityClass();
+    desc.mDamageOwner.mWeapon = mClass;
     desc.mTarget = const_cast<GameObject*>(static_cast<const GameObject*>(mTarget));
     desc.mBodyID = mTargetBodyID;
 
@@ -262,17 +272,19 @@ WeaponLaserClass::~WeaponLaserClass()
 // FUNCTION: SWBF2 0x00687170
 void WeaponLaserClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xD9356908)
+    switch (uProperty)
     {
-        sscanf(pszValue, "%f", &mShotDelay);
-    }
-    else if (uProperty == 0x4225631D)
-    {
+    case 0x4225631D: /* "SalvoTime" */
         sscanf(pszValue, "%f", &mSalvoTime);
-    }
-    else
-    {
+        break;
+
+    case 0xD9356908: /* "ShotDelay" */
+        sscanf(pszValue, "%f", &mShotDelay);
+        break;
+
+    default:
         WeaponClass::SetProperty(uProperty, pszValue);
+        break;
     }
 }
 
@@ -286,6 +298,5 @@ WeaponClass* WeaponLaserClass::Derive(unsigned int uHash)
 Weapon* WeaponLaserClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::sMemoryPool.Allocate(0x120);
-    return pMemory ? reinterpret_cast<Weapon*>(::new (pMemory) WeaponLaser(this, desc)) : 0;
+    return new WeaponLaser(this, desc);
 }

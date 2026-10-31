@@ -66,13 +66,13 @@ WeaponInvisibilityClass::WeaponInvisibilityClass(WeaponInvisibilityClass* pBase,
     : WeaponClass(pBase, uHash)
 {
     m_eInvisibilityTrigger = pBase->m_eInvisibilityTrigger;
+    m_fInvisibilityPersistTime = pBase->m_fInvisibilityPersistTime;
     m_fInvisibilityMin = pBase->m_fInvisibilityMin;
     m_fInvisibilityMax = pBase->m_fInvisibilityMax;
     m_fSpeedForInvisibilityMin = pBase->m_fSpeedForInvisibilityMin;
     m_fSpeedForInvisibilityMax = pBase->m_fSpeedForInvisibilityMax;
     m_fInvisibilityIncRate = pBase->m_fInvisibilityIncRate;
     m_fInvisibilityDecRate = pBase->m_fInvisibilityDecRate;
-    m_fInvisibilityPersistTime = pBase->m_fInvisibilityPersistTime;
     m_fFlickerAmplitude = pBase->m_fFlickerAmplitude;
     m_fFlickerTimeMin = pBase->m_fFlickerTimeMin;
     m_fFlickerTimeMax = pBase->m_fFlickerTimeMax;
@@ -356,7 +356,7 @@ bool WeaponInvisibility::CheckEmpty() const
     const WeaponInvisibilityClass* pClass = static_cast<const WeaponInvisibilityClass*>(mClass);
     float fDrain = pClass->mEnergyDrain;
     EnergyBar* pEnergyBar = mOwner->GetEnergyBar();
-    if (pEnergyBar && pEnergyBar->IsOverheating() && fDrain > 0.0f)
+    if (pEnergyBar && pEnergyBar->IsOverheating() && !(0.0f >= fDrain))
     {
         return true;
     }
@@ -386,12 +386,14 @@ bool WeaponInvisibility::FireDone() const
 // FUNCTION: SWBF2 0x00686200
 void WeaponInvisibility::Fire()
 {
-    InputInvisibilityOn();
-    if (static_cast<const WeaponInvisibilityClass*>(mClass)->m_eInvisibilityTrigger ==
+    if (static_cast<const WeaponInvisibilityClass*>(mClass)->m_eInvisibilityTrigger !=
         WeaponInvisibilityClass::TRIGGER_PRESS)
     {
-        InputInvisibilityOff();
+        InputInvisibilityOn();
+        return;
     }
+    InputInvisibilityOn();
+    InputInvisibilityOff();
 }
 
 // FUNCTION: SWBF2 0x00686220

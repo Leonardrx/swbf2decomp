@@ -135,13 +135,7 @@ bool WeaponLauncher::IsLocked() const
 // FUNCTION: SWBF2 0x00687300
 const GameObject* WeaponLauncher::GetLocked() const
 {
-    PblHandle<const GameObject>& h = const_cast<WeaponLauncher*>(this)->mCurTarget;
-    if (h.mObject && h.mObject->mHandleId != h.mSavedHandleId)
-    {
-        h.mObject = 0;
-        h.mSavedHandleId = 0;
-    }
-    return h.mObject;
+    return const_cast<WeaponLauncher*>(this)->mCurTarget;
 }
 
 // FUNCTION: SWBF2 0x00687330
@@ -167,11 +161,7 @@ void WeaponLauncher::SetupTarget(const GameObject** ppTarget, int* pBodyId) cons
                 }
                 else
                 {
-                    const PblVector3& vPos = pTarget->GetCollisionCenter();
-                    PblVector3 vDelta;
-                    vDelta.x = vPos.x - mOwner->mEyePoint.x;
-                    vDelta.y = vPos.y - mOwner->mEyePoint.y;
-                    vDelta.z = vPos.z - mOwner->mEyePoint.z;
+                    PblVector3 vDelta = pTarget->GetCollisionCenter() - mOwner->mEyePoint;
                     PblVector3 vDir;
                     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
                     float fDot = mOwner->mEyeDir.x * vDir.x + mOwner->mEyeDir.y * vDir.y +

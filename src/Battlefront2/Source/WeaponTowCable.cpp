@@ -76,17 +76,17 @@ WeaponTowCableClass::~WeaponTowCableClass()
 // FUNCTION: SWBF2 0x00692b40
 void WeaponTowCableClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x5EDE4703)
+    switch (uProperty)
     {
+    case 0x5EDE4703: /* "DetatchSound" */
         mDetatch.SetID(pszValue, false, false);
-    }
-    else if (uProperty == 0x96A1687E)
-    {
+        return;
+    case 0x96A1687E: /* "WindSound" */
         mWhir.SetID(pszValue, false, false);
-    }
-    else
-    {
+        return;
+    default:
         WeaponCannonClass::SetProperty(uProperty, pszValue);
+        return;
     }
 }
 
@@ -138,7 +138,14 @@ bool WeaponTowCable::CheckFire() const
 // FUNCTION: SWBF2 0x00692840
 void WeaponTowCable::SetOrdnance(Ordnance* pOrdnance)
 {
-    if (pOrdnance ? mCableOut : !mCableOut)
+    if (pOrdnance)
+    {
+        if (mCableOut)
+        {
+            return;
+        }
+    }
+    else if (!mCableOut)
     {
         return;
     }

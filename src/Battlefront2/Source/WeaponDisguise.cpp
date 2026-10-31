@@ -200,18 +200,18 @@ bool WeaponDisguise::FireDone() const
 // FUNCTION: SWBF2 0x00682ee0
 void WeaponDisguise::InputToggleDisguise()
 {
-    if (m_eState == STATE_OFF)
+    switch (m_eState)
     {
+    case STATE_OFF:
         StartRaisingDisguise();
         FinishRaisingDisguise();
-    }
-    else
-    {
-        if (m_eState == STATE_ON)
-        {
-            StartDroppingDisguise();
-        }
+        break;
+    case STATE_ON:
+        StartDroppingDisguise();
+        // fall through
+    default:
         FinishDroppingDisguise();
+        break;
     }
 }
 
@@ -245,7 +245,7 @@ void WeaponDisguise::FinishRaisingDisguise()
         WhoTwiggedMe();
     }
 
-    mOwner->GetGameObject()->SetPerceivedTeam(mOtherTeam->GetNumber());
+    mOwner->GetGameObject()->SetPerceivedTeam(mOtherTeam->mTeamNumber);
     m_eState = STATE_ON;
 }
 
@@ -348,6 +348,5 @@ void WeaponDisguise::WhoTwiggedMe()
 Weapon* WeaponDisguiseClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::sMemoryPool.Allocate(0x120);
-    return pMemory ? reinterpret_cast<Weapon*>(::new (pMemory) WeaponDisguise(this, desc)) : 0;
+    return new WeaponDisguise(this, desc);
 }

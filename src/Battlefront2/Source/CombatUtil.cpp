@@ -221,12 +221,12 @@ WeaponClass::Label CombatUtil::GetWeaponLabel(const Weapon* pWpn)
         {
             return WeaponClass::THROWN;
         }
-        if (WeaponIsMeleeThrow(pWpn))
+        if (pWpn->IsMeleeThrow())
         {
             return WeaponClass::MELEE;
         }
         switch (SoldierAnimationBank::GetWeaponRoot(
-            (SoldierAnimationBank::WEAPON)WeaponGetClass(pWpn)->mSoldierAnimationWeapon))
+            (SoldierAnimationBank::WEAPON)pWpn->GetSoldierAnimationWeapon()))
         {
         case SoldierAnimationBank::RIFLE:
             return WeaponClass::LASER;
@@ -311,7 +311,7 @@ void CombatUtil::sCalcExplosionDamage(const ExplosionClass* pExplosion, const Ga
 // FUNCTION: SWBF2 0x0046de90
 float CombatUtil::sGetMaxAmmo(const Weapon* pWpn, const WeaponClass* pClass)
 {
-    return (float)WeaponGetAmmoCounter(pWpn)->GetMaxNumRounds();
+    return (float)pWpn->m_pAmmoCounter->GetMaxNumRounds();
 }
 
 // FUNCTION: SWBF2 0x0046deb0
@@ -319,9 +319,11 @@ float CombatUtil::sCalcImpactTime_Missile(const DamageOwner& owner,
                                           const OrdnanceMissileClass* pClass,
                                           const GameObject* pTarget)
 {
-    const GameObject* pShooter = HandleObject(owner.mGameObject);
+    const GameObject* pShooter = owner.mGameObject;
     OrdnanceMissileClass* pMissile = const_cast<OrdnanceMissileClass*>(pClass);
-    float fDistance = Distance(GetPosition(pTarget), GetPosition(pShooter));
+    const PblVector3& vTarget = pTarget->GetPosition();
+    const PblVector3& vShooter = pShooter->GetPosition();
+    float fDistance = sqrtf(LengthSq(vShooter - vTarget));
     float fAccel = pClass->mAcceleration;
     float fStartSpeed;
     if (fAccel < 9000.0f)
@@ -337,14 +339,13 @@ float CombatUtil::sCalcImpactTime_Missile(const DamageOwner& owner,
     float fTime =
         ((float)sqrt((double)(fAccel * 2.0f * fDistance + fStartSpeed * fStartSpeed)) - fStartSpeed) /
         fAccel;
-    if (fTime * fAccel + fStartSpeed < fMaxSpeed)
+    if (!(fTime * fAccel + fStartSpeed < fMaxSpeed))
     {
-        return fTime;
+        float fAccelTime = (fMaxSpeed - fStartSpeed) / fAccel;
+        float fAccelDistance = fAccel * 0.5f * fAccelTime * fAccelTime + fAccelTime * fStartSpeed;
+        return (fDistance - fAccelDistance) / fMaxSpeed + fAccelTime;
     }
-
-    float fAccelTime = (fMaxSpeed - fStartSpeed) / fAccel;
-    float fAccelDistance = fAccel * 0.5f * fAccelTime * fAccelTime + fAccelTime * fStartSpeed;
-    return (fDistance - fAccelDistance) / fMaxSpeed + fAccelTime;
+    return fTime;
 }
 
 // FUNCTION: SWBF2 0x0046e030
@@ -364,8 +365,10 @@ float CombatUtil::sCalcImpactTime(const DamageOwner& owner, const OrdnanceClass*
     {
         return 0.0f;
     }
-    const GameObject* pShooter = HandleObject(owner.mGameObject);
-    float fDistance = Distance(GetPosition(pTarget), GetPosition(pShooter));
+    const GameObject* pShooter = owner.mGameObject;
+    const PblVector3& vTarget = pTarget->GetPosition();
+    const PblVector3& vShooter = pShooter->GetPosition();
+    float fDistance = sqrtf(LengthSq(vShooter - vTarget));
     return fDistance / pOrdnance->GetVelocity();
 }
 
@@ -376,7 +379,7 @@ void CombatUtil::sGetDamageValues(const DamageOwner& owner, const OrdnanceClass*
 {
     float fImpactTime = sCalcImpactTime(owner, pClass, pTarget);
     DamageDesc damage = pClass->GetDamage(owner, fStrength, 0.0f, fImpactTime);
-    fShieldDamage = damage.mShieldScale * damage.mBaseValue;
+    fShieldDamage = damage.mBaseValue * damage.mShieldScale;
     fHealthDamage = damage.mHealthScale[GetHealthType(pTarget)] * damage.mBaseValue;
 
     if (pClass->mExplosionImpact)
@@ -407,17 +410,22 @@ void CombatUtil::GetAverageDamageValues(const DamageOwner& owner, const Ordnance
         return;
     }
 
-    float fChargeBot = 0.15f;
-    float fChargeTop = 1.0f;
+    const UnitController* pCtrl = 0;
     if (HandleObject(owner.mGameObject))
     {
-        const UnitController* pCtrl =
-            UnitControllerPtr(GetControllable(const_cast<GameObject*>(HandleObject(owner.mGameObject))));
-        if (pCtrl)
-        {
-            fChargeBot = AIDifficulty::GetChargeWeaponBot(pCtrl);
-            fChargeTop = AIDifficulty::GetChargeWeaponTop(pCtrl);
-        }
+        pCtrl = UnitControllerPtr(GetControllable(const_cast<GameObject*>(HandleObject(owner.mGameObject))));
+    }
+    float fChargeBot;
+    float fChargeTop;
+    if (pCtrl)
+    {
+        fChargeBot = AIDifficulty::GetChargeWeaponBot(pCtrl);
+        fChargeTop = AIDifficulty::GetChargeWeaponTop(pCtrl);
+    }
+    else
+    {
+        fChargeBot = 0.15f;
+        fChargeTop = 1.0f;
     }
 
     const OrdnanceClass* pBot = pClass;
@@ -453,14 +461,15 @@ float CombatUtil::sCalcDamagePerSecond_Cannon(const DamageOwner& owner,
     GetAverageDamageValues(owner, pClass->mOrdnanceClass, pTarget, fHealthDamage, fShieldDamage);
 
     float fShotDelay = (pClass->mShotDelayMin + pClass->mShotDelayMax) * 0.5f;
+    int iShotsPerSalvo = pClass->mShotsPerSalvo;
     float fReloadTime = pClass->mReloadTime;
     int iRoundsPerClip = pClass->mAmmoCounterClass.mRoundsPerClip;
-    if (fReloadTime > 0.0f && (float)iRoundsPerClip < 1000000.0f)
+    if (fReloadTime <= 0.0f || (float)iRoundsPerClip >= 1000000.0f)
     {
-        return (float)iRoundsPerClip * fHealthDamage /
-               ((float)(iRoundsPerClip / pClass->mShotsPerSalvo) * fShotDelay + fReloadTime);
+        return (float)iShotsPerSalvo * fHealthDamage / fShotDelay;
     }
-    return (float)pClass->mShotsPerSalvo * fHealthDamage / fShotDelay;
+    return (float)iRoundsPerClip * fHealthDamage /
+           ((float)(iRoundsPerClip / iShotsPerSalvo) * fShotDelay + fReloadTime);
 }
 
 // FUNCTION: SWBF2 0x0046e440
@@ -485,10 +494,11 @@ float CombatUtil::sCalcDamagePerSecond_MeleeThrow(const DamageOwner& owner,
                                                   const WeaponMeleeThrowClass* pClass,
                                                   const GameObject* pTarget)
 {
+    const OrdnanceClass* pOrdnance = pClass->mOrdnanceClass;
     float fHealthDamage = 0.0f;
     float fShieldDamage = 0.0f;
-    GetAverageDamageValues(owner, pClass->mOrdnanceClass, pTarget, fHealthDamage, fShieldDamage);
-    return fHealthDamage / (sCalcImpactTime(owner, pClass->mOrdnanceClass, pTarget) * 2.0f);
+    GetAverageDamageValues(owner, pOrdnance, pTarget, fHealthDamage, fShieldDamage);
+    return fHealthDamage / (sCalcImpactTime(owner, pOrdnance, pTarget) * 2.0f);
 }
 
 // FUNCTION: SWBF2 0x0046e510
@@ -501,8 +511,10 @@ float CombatUtil::sCalcDamagePerSecond(Controllable* pMe, const WeaponClass* pCl
     }
 
     GameObject* pObj = pMe->GetGameObject();
-    DamageOwner owner(pMe->GetCharacter(), pMe->GetGameObject(), GetTeam(pMe->GetGameObject()),
-                      GetEntityClass(pObj), const_cast<WeaponClass*>(pClass),
+    int iTeam = GetTeam(pMe->GetGameObject());
+    Character* pCharacter = pMe->mCharacter;
+    DamageOwner owner(pCharacter, pMe->GetGameObject(), iTeam,
+                      pObj->GetEntityClass(), const_cast<WeaponClass*>(pClass),
                       pMe->GetOffenseMultiplier());
 
     WeaponClass* pWeapon = const_cast<WeaponClass*>(pClass);
@@ -539,22 +551,29 @@ float CombatUtil::CalcDamagePerSecond(Controllable* pMe, const WeaponClass* pCla
     }
 
     GameObject* pObj = pMe->GetGameObject();
-    DamageOwner owner(pMe->GetCharacter(), pMe->GetGameObject(), GetTeam(pMe->GetGameObject()),
-                      GetEntityClass(pObj), const_cast<WeaponClass*>(pClass),
+    int iTeam = GetTeam(pMe->GetGameObject());
+    Character* pCharacter = pMe->mCharacter;
+    DamageOwner owner(pCharacter, pMe->GetGameObject(), iTeam,
+                      pObj->GetEntityClass(), const_cast<WeaponClass*>(pClass),
                       pMe->GetOffenseMultiplier());
 
-    float fChargeBot = 0.15f;
-    float fChargeTop = 1.0f;
+    const UnitController* pCtrl = 0;
     const GameObject* pOwnerObj = HandleObject(owner.mGameObject);
     if (pOwnerObj)
     {
-        const UnitController* pCtrl =
-            UnitControllerPtr(GetControllable(const_cast<GameObject*>(pOwnerObj)));
-        if (pCtrl)
-        {
-            fChargeBot = AIDifficulty::GetChargeWeaponBot(pCtrl);
-            fChargeTop = AIDifficulty::GetChargeWeaponTop(pCtrl);
-        }
+        pCtrl = UnitControllerPtr(GetControllable(const_cast<GameObject*>(pOwnerObj)));
+    }
+    float fChargeBot;
+    float fChargeTop;
+    if (pCtrl)
+    {
+        fChargeBot = AIDifficulty::GetChargeWeaponBot(pCtrl);
+        fChargeTop = AIDifficulty::GetChargeWeaponTop(pCtrl);
+    }
+    else
+    {
+        fChargeBot = 0.15f;
+        fChargeTop = 1.0f;
     }
 
     const WeaponClass* pBot = pClass;
@@ -569,11 +588,12 @@ float CombatUtil::CalcDamagePerSecond(Controllable* pMe, const WeaponClass* pCla
     {
         pTop = pTop->mNextCharge;
     }
-    if (pTop == pBot)
+    float fResult = fDamagePerSecond;
+    if (pTop != pBot)
     {
-        return fDamagePerSecond;
+        fResult = (sCalcDamagePerSecond(pMe, pTop, pTarget) + fDamagePerSecond) * 0.5f;
     }
-    return (sCalcDamagePerSecond(pMe, pTop, pTarget) + fDamagePerSecond) * 0.5f;
+    return fResult;
 }
 
 // FUNCTION: SWBF2 0x0046e7c0
@@ -596,11 +616,11 @@ bool CombatUtil::sCauseDamage(Controllable* pMe, const Weapon* pWpn, const Weapo
             return true;
         }
         if (pWeaponClass->IsRtti(WeaponMeleeClass::rttiHashWeaponMeleeClass) &&
-            (EntityIsRtti(pTarget, EntitySoldier::rttiHashEntitySoldier) ||
-             EntityIsRtti(pTarget, EntityDroideka::rttiHashEntityDroideka) ||
-             EntityIsRtti(pTarget, EntityWalker::rttiHashEntityWalker) ||
-             EntityIsRtti(pTarget, EntityHover::rttiHashEntityHover) ||
-             EntityIsRtti(pTarget, EntityBuildingArmed::rttiHashEntityBuildingArmed)))
+            (pTarget->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) ||
+             pTarget->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka) ||
+             pTarget->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker) ||
+             pTarget->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover) ||
+             pTarget->GetEntity()->IsRtti(EntityBuildingArmed::rttiHashEntityBuildingArmed)))
         {
             *pDamagePerSecond = 1000.0f;
             return true;
@@ -611,23 +631,23 @@ bool CombatUtil::sCauseDamage(Controllable* pMe, const Weapon* pWpn, const Weapo
     {
         return false;
     }
-    if (EntityIsRtti(pTarget, EntityTrap::rttiHashEntityTrap))
+    if (pTarget->GetEntity()->IsRtti(EntityTrap::rttiHashEntityTrap))
     {
         return false;
     }
     if (!(pClass->mAITargetTypes & (1 << GetHealthType(pTarget))) &&
-        !(EntityIsRtti(pTarget, EntityDroideka::rttiHashEntityDroideka) && (pClass->mAITargetTypes & 8)))
+        !(pTarget->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka) && (pClass->mAITargetTypes & 8)))
     {
         if (!pMe->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
         {
             return false;
         }
-        if (!EntityIsRtti(pTarget, EntitySoldier::rttiHashEntitySoldier))
+        if (!pTarget->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
         {
             return false;
         }
-        const Controllable* pHim = GetControllable(pTarget);
-        if (!pHim || !pHim->mCtrl || !pHim->mCtrl->IsInCrowd())
+        if (!GetControllable(pTarget) || !GetControllable(pTarget)->mCtrl ||
+            !GetControllable(pTarget)->mCtrl->IsInCrowd())
         {
             return false;
         }
@@ -657,7 +677,7 @@ bool CombatUtil::sCauseDamage(Controllable* pMe, const Weapon* pWpn, const Weapo
     }
 
     bool bSlowFlyer = false;
-    if (EntityIsRtti(pTarget, EntityFlyer::rttiHashEntityFlyer))
+    if (pTarget->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
     {
         int iState = GetFlyerState(pTarget);
         if (iState == 0 || iState == 3 || iState == 1 || LengthSq(GetVelocity(pTarget)) < 256.0f)
@@ -665,9 +685,9 @@ bool CombatUtil::sCauseDamage(Controllable* pMe, const Weapon* pWpn, const Weapo
             bSlowFlyer = true;
         }
     }
-    if (!bSlowFlyer && !EntityIsRtti(pTarget, EntityHover::rttiHashEntityHover) &&
-        !EntityIsRtti(pTarget, EntityWalker::rttiHashEntityWalker) &&
-        !(IsTargetable(pTarget) && EntityIsRtti(pTarget, EntityBuilding::rttiHashEntityBuilding)))
+    if (!bSlowFlyer && !pTarget->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover) &&
+        !pTarget->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker) &&
+        !(pTarget->mIsTargetable && pTarget->GetEntity()->IsRtti(EntityBuilding::rttiHashEntityBuilding)))
     {
         return false;
     }
@@ -710,8 +730,9 @@ void CombatUtil::sUseGrenadeAgainstCrowds(const Controllable* pMe, bool bSoldier
     {
         *pbUse = false;
     }
-    const Controllable* pHim = GetControllable(pTarget);
-    if ((pHim && pHim->mCtrl && pHim->mCtrl->IsInCrowd()) || pEntity->IsRtti(EntityDroideka::rttiHashEntityDroideka))
+    if ((pTarget->GetControllable() && pTarget->GetControllable()->mCtrl &&
+         pTarget->GetControllable()->mCtrl->IsInCrowd()) ||
+        pEntity->IsRtti(EntityDroideka::rttiHashEntityDroideka))
     {
         Controller* pCtrl = pMe->mCtrl;
         int iRoll = (((UnitController*)pCtrl)->GetRandomSeed() -
@@ -733,7 +754,7 @@ bool CombatUtil::CanGetFireReservation(const WeaponClass* pClass, const GameObje
     {
         bool bGrenade = pOrdnance->IsRtti(OrdnanceGrenadeClass::rttiHashOrdnanceGrenadeClass);
         bool bMissile = pOrdnance->IsRtti(OrdnanceMissileClass::rttiHashOrdnanceMissileClass);
-        if (bGrenade || bMissile)
+        if (bGrenade | bMissile)
         {
             if (!ReserveManager::IsReservedBy(pTarget, pMe, RT_HeavyWeapons) &&
                 ReserveManager::GetOpenReservableSlots(pTarget, GetTeam(pMe), RT_HeavyWeapons) <= 0)
@@ -752,12 +773,11 @@ bool CombatUtil::sIsWeaponUnlocked(const Controllable* pMe, const WeaponClass* p
     if (pMe && pMe->GetCharacter())
     {
         MedalsMgr* pMedals = pMe->GetCharacter()->GetMedalsManager();
-        short level = pClass->mMedalsTypeToUnlock;
-        if (pMedals && level != -1)
+        if (pMedals && pClass->mMedalsTypeToUnlock != -1)
         {
-            bool bUnlocked = pMedals->IsAwardAvailable(level);
-            level = pClass->mMedalsTypeToLock;
-            if (bUnlocked && level != -1 && pMedals->IsAwardAvailable(level))
+            bool bUnlocked = pMedals->IsAwardAvailable(pClass->mMedalsTypeToUnlock) ? true : false;
+            if (bUnlocked && pClass->mMedalsTypeToLock != -1 &&
+                pMedals->IsAwardAvailable(pClass->mMedalsTypeToLock))
             {
                 bUnlocked = false;
             }
@@ -781,7 +801,7 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
     bool bBestInRange = false;
     int iBest = -1;
 
-    PblVector3 vPoint = GetTargetPoint(pTarget, pMe->mEyePoint, pMe->mEyeDir, -1);
+    PblVector3 vPoint = pTarget->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
     float fDistSq = (vPoint.y - pMe->mEyePoint.y) * (vPoint.y - pMe->mEyePoint.y) +
                     (vPoint.x - pMe->mEyePoint.x) * (vPoint.x - pMe->mEyePoint.x) +
                     (vPoint.z - pMe->mEyePoint.z) * (vPoint.z - pMe->mEyePoint.z);
@@ -790,7 +810,7 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
     for (int i = 0; i < pMe->GetWeaponCount(); ++i)
     {
         const Weapon* pWpn = pMe->GetWeaponPtr(i);
-        if (!pWpn || WeaponGetAmmoCounter(pWpn)->GetNumRounds() <= 0)
+        if (!pWpn || pWpn->m_pAmmoCounter->GetNumRounds() <= 0)
         {
             continue;
         }
@@ -803,7 +823,7 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
             {
                 continue;
             }
-            if (!WeaponIsMelee(pWpn) && (WeaponGetState(pWpn) == 4 || WeaponGetState(pWpn) == 5))
+            if (!pWpn->IsMelee() && (pWpn->mState == 4 || pWpn->mState == 5))
             {
                 continue;
             }
@@ -863,7 +883,7 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
         }
         else
         {
-            if (bBestInRange || WeaponIsMeleeThrow(pWpn))
+            if (bBestInRange || pWpn->IsMeleeThrow())
             {
                 continue;
             }
@@ -889,7 +909,8 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
     *pLabel = GetWeaponLabel(pMe->GetWeaponPtr(iBest));
     if ((!pMe->GetCurWpn() || pMe->GetWeaponIndex(pMe->GetWpnChannel()) != iBest) && bFire)
     {
-        UnitControllerPtr(pMe->mCtrl)->mLowLevel.SetNextWeapon(iBest);
+        UnitController* pUnit = UnitControllerPtr(pMe->mCtrl);
+        pUnit->mLowLevel.SetNextWeapon(iBest);
     }
     return true;
 }
@@ -1034,7 +1055,7 @@ void CombatUtil::sRegularInfantryAttackPattern(Controllable* pMe, const GameObje
     int iTotal = 0;
     if (fOpenRadius > -1.0f)
     {
-        iTotal = cPatternWeights[iDifficulty][0] + cPatternWeights[iDifficulty][1];
+        iTotal = cPatternWeights[iDifficulty][1] + cPatternWeights[iDifficulty][0];
     }
     if (fOpenRadius > 10.0f)
     {
@@ -1046,25 +1067,20 @@ void CombatUtil::sRegularInfantryAttackPattern(Controllable* pMe, const GameObje
     }
 
     int iRoll = ((UnitController*)pMe->mCtrl)->GetRandomSeed() % iTotal;
-    int i;
-    for (i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         iRoll -= cPatternWeights[iDifficulty][i];
         if (iRoll < 0)
         {
-            break;
+            *pDesc->mPattern = cPatterns[i];
+            if (!bInOptimalRange && *pDesc->mPattern == AttackPatterns::STATE_STATIONARY)
+            {
+                *pDesc->mPattern = AttackPatterns::STATE_SIMPLE;
+            }
+            return;
         }
     }
-    if (i == 4)
-    {
-        *pDesc->mPattern = AttackPatterns::STATE_SIMPLE;
-        return;
-    }
-    *pDesc->mPattern = cPatterns[i];
-    if (!bInOptimalRange && *pDesc->mPattern == AttackPatterns::STATE_STATIONARY)
-    {
-        *pDesc->mPattern = AttackPatterns::STATE_SIMPLE;
-    }
+    *pDesc->mPattern = AttackPatterns::STATE_SIMPLE;
 }
 
 // FUNCTION: SWBF2 0x0046f2b0
@@ -1076,20 +1092,7 @@ void CombatUtil::InfantryVsFoot(Controllable* pMe, GameObjectClass::SoldierType 
     bool bInOptimalRange;
     *pDesc->mSuitableWpn = sSelectBestWeaponType(pMe, pTarget, pDesc->mSwitchWpn, &eLabel, &bInRange,
                                                  &bInOptimalRange, pDesc->mIgnoreRanges);
-    if (eType == GameObjectClass::SOLDIER_SCOUT)
-    {
-        if (!*pDesc->mSuitableWpn)
-        {
-            *pDesc->mPattern = kNoPattern;
-            return;
-        }
-        if (eLabel == WeaponClass::LASER)
-        {
-            *pDesc->mPattern = bInRange ? AttackPatterns::STATE_STATIONARY : kNoPattern;
-            return;
-        }
-    }
-    else
+    if (eType != GameObjectClass::SOLDIER_SCOUT)
     {
         if (!*pDesc->mSuitableWpn)
         {
@@ -1103,6 +1106,26 @@ void CombatUtil::InfantryVsFoot(Controllable* pMe, GameObjectClass::SoldierType 
             return;
         }
     }
+    else
+    {
+        if (!*pDesc->mSuitableWpn)
+        {
+            *pDesc->mPattern = kNoPattern;
+            return;
+        }
+        if (eLabel == WeaponClass::LASER)
+        {
+            if (bInRange)
+            {
+                *pDesc->mPattern = AttackPatterns::STATE_STATIONARY;
+            }
+            else
+            {
+                *pDesc->mPattern = kNoPattern;
+            }
+            return;
+        }
+    }
     sRegularInfantryAttackPattern(pMe, pTarget, bInRange, bInOptimalRange, eLabel, pDesc);
 }
 
@@ -1110,21 +1133,24 @@ void CombatUtil::InfantryVsFoot(Controllable* pMe, GameObjectClass::SoldierType 
 void CombatUtil::SoldierVsSoldier(Controllable* pMe, const GameObject* pTarget, CombatDesc* pDesc)
 {
     EntitySoldier* pSoldier = (EntitySoldier*)pMe->GetEntity();
-    InfantryVsFoot(pMe, (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType(), pTarget, pDesc);
+    GameObjectClass::SoldierType eType = (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType();
+    InfantryVsFoot(pMe, eType, pTarget, pDesc);
 }
 
 // FUNCTION: SWBF2 0x0046f3a0
 void CombatUtil::SoldierVsDroideka(Controllable* pMe, const GameObject* pTarget, CombatDesc* pDesc)
 {
     EntitySoldier* pSoldier = (EntitySoldier*)pMe->GetEntity();
-    InfantryVsFoot(pMe, (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType(), pTarget, pDesc);
+    GameObjectClass::SoldierType eType = (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType();
+    InfantryVsFoot(pMe, eType, pTarget, pDesc);
 }
 
 // FUNCTION: SWBF2 0x0046f3d0
 void CombatUtil::SoldierVsDroid(Controllable* pMe, const GameObject* pTarget, CombatDesc* pDesc)
 {
     EntitySoldier* pSoldier = (EntitySoldier*)pMe->GetEntity();
-    InfantryVsFoot(pMe, (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType(), pTarget, pDesc);
+    GameObjectClass::SoldierType eType = (GameObjectClass::SoldierType)pSoldier->mClass->GetSoldierType();
+    InfantryVsFoot(pMe, eType, pTarget, pDesc);
 }
 
 // FUNCTION: SWBF2 0x0046f400
@@ -1182,9 +1208,9 @@ void CombatUtil::InfantryVsVehicle(Controllable* pMe, GameObjectClass::SoldierTy
         }
         break;
     case WeaponClass::MELEE:
-        if (EntityIsRtti(pTarget, EntityBuildingArmed::rttiHashEntityBuildingArmed) ||
-            EntityIsRtti(pTarget, EntityWalker::rttiHashEntityWalker) ||
-            EntityIsRtti(pTarget, EntityHover::rttiHashEntityHover))
+        if (pTarget->GetEntity()->IsRtti(EntityBuildingArmed::rttiHashEntityBuildingArmed) ||
+            pTarget->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker) ||
+            pTarget->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover))
         {
             *pDesc->mCoverPercent = 0.0f;
             *pDesc->mPattern = AttackPatterns::STATE_MELEE;
@@ -1388,7 +1414,14 @@ void CombatUtil::HoverVsVehicle(Controllable* pMe, const GameObject* pTarget, Co
         *pDesc->mPattern = AttackPatterns::STATE_GLANCE;
         return;
     }
-    *pDesc->mPattern = bInRange ? AttackPatterns::STATE_STATIONARY : AttackPatterns::STATE_SIMPLE;
+    if (bInRange)
+    {
+        *pDesc->mPattern = AttackPatterns::STATE_STATIONARY;
+    }
+    else
+    {
+        *pDesc->mPattern = AttackPatterns::STATE_SIMPLE;
+    }
 }
 
 // FUNCTION: SWBF2 0x0046fae0
@@ -1423,14 +1456,14 @@ bool CombatUtil::SelectCombatResponse(Controllable* pMe, const GameObject* pTarg
         switch (eHim)
         {
         case AIUtil::ENTITY_SOLDIER: SoldierVsSoldier(pMe, pTarget, &desc); break;
+        case AIUtil::ENTITY_DROIDEKA: SoldierVsDroideka(pMe, pTarget, &desc); break;
         case AIUtil::ENTITY_DROID: SoldierVsDroid(pMe, pTarget, &desc); break;
         case AIUtil::ENTITY_WALKER: SoldierVsWalker(pMe, pTarget, &desc); break;
-        case AIUtil::ENTITY_DROIDEKA: SoldierVsDroideka(pMe, pTarget, &desc); break;
         case AIUtil::ENTITY_TAUNTAUN: SoldierVsTauntaun(pMe, pTarget, &desc); break;
-        case AIUtil::ENTITY_FLYER: SoldierVsFlyer(pMe, pTarget, &desc); break;
         case AIUtil::ENTITY_HOVER: SoldierVsHover(pMe, pTarget, &desc); break;
         case AIUtil::ENTITY_BUILDING_ARMED:
         case AIUtil::ENTITY_BUILDING: SoldierVsBuildings(pMe, pTarget, &desc); break;
+        case AIUtil::ENTITY_FLYER: SoldierVsFlyer(pMe, pTarget, &desc); break;
         }
         break;
     case AIUtil::ENTITY_DROID:
@@ -1453,13 +1486,13 @@ bool CombatUtil::SelectCombatResponse(Controllable* pMe, const GameObject* pTarg
             break;
         }
         break;
-    case AIUtil::ENTITY_WALKER:
+    case AIUtil::ENTITY_DROIDEKA:
         switch (eHim)
         {
         case AIUtil::ENTITY_SOLDIER:
         case AIUtil::ENTITY_DROID:
         case AIUtil::ENTITY_DROIDEKA:
-            WalkerVsInfantry(pMe, pTarget, &desc);
+            DroidekaVsInfantry(pMe, pTarget, &desc);
             break;
         case AIUtil::ENTITY_WALKER:
         case AIUtil::ENTITY_TAUNTAUN:
@@ -1473,13 +1506,13 @@ bool CombatUtil::SelectCombatResponse(Controllable* pMe, const GameObject* pTarg
             break;
         }
         break;
-    case AIUtil::ENTITY_DROIDEKA:
+    case AIUtil::ENTITY_WALKER:
         switch (eHim)
         {
         case AIUtil::ENTITY_SOLDIER:
         case AIUtil::ENTITY_DROID:
         case AIUtil::ENTITY_DROIDEKA:
-            DroidekaVsInfantry(pMe, pTarget, &desc);
+            WalkerVsInfantry(pMe, pTarget, &desc);
             break;
         case AIUtil::ENTITY_WALKER:
         case AIUtil::ENTITY_TAUNTAUN:
@@ -1548,15 +1581,15 @@ bool CombatUtil::SelectCombatResponse(Controllable* pMe, const GameObject* pTarg
 bool CombatUtil::EngageInCombat(const UnitController* pCtrl, const GameObject* pTarget, bool bIgnoreRanges)
 {
     Controllable* pMe = pCtrl->mOwner;
-    if (!pMe->GetWeaponPtr(0))
+    if (pMe->GetWeaponPtr(0))
     {
-        return false;
+        AttackPatterns::State ePattern;
+        float fCoverPercent;
+        bool bSuitableWpn;
+        return SelectCombatResponse(pMe, pTarget, &ePattern, &fCoverPercent, &bSuitableWpn, false,
+                                    bIgnoreRanges);
     }
-    AttackPatterns::State ePattern;
-    float fCoverPercent;
-    bool bSuitableWpn;
-    return SelectCombatResponse(pMe, pTarget, &ePattern, &fCoverPercent, &bSuitableWpn, false,
-                                bIgnoreRanges);
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00470050
@@ -1647,8 +1680,8 @@ bool CombatUtil::sIsTargetLinedUpPos(const Controllable* pMe, const PblVector3& 
         return false;
     }
 
-    vDir = AIUtil::GetSafeNormal(pAimer->GetDirection());
-    if (!(pMe->mEyeDir.x * vDir.x + pMe->mEyeDir.y * vDir.y + pMe->mEyeDir.z * vDir.z > fCos) &&
+    PblVector3 vAimDir = AIUtil::GetSafeNormal(pAimer->GetDirection());
+    if (!(pMe->mEyeDir.x * vAimDir.x + pMe->mEyeDir.y * vAimDir.y + pMe->mEyeDir.z * vAimDir.z > fCos) &&
         !pWpn->IsRtti(WeaponMelee::rttiHashWeaponMelee) &&
         !pMe->GetGameObject()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
     {
@@ -1704,15 +1737,12 @@ namespace CombatUtil
 // FUNCTION: SWBF2 0x00470460
 bool TestWpnConstraintsPos(Controllable* pMe, const PblVector3& vAim, const PblVector3& vPos)
 {
-    if (!CombatUtil::sIsTargetLinedUpPos(pMe, vAim))
+    if (CombatUtil::sIsTargetLinedUpPos(pMe, vAim))
     {
-        return false;
+        float fRange = CombatUtil::GetWeaponMaxRange(pMe);
+        return fRange * fRange > LengthSq(vPos - pMe->mEyePoint);
     }
-    float fRange = CombatUtil::GetWeaponMaxRange(pMe);
-    float dx = vPos.x - pMe->mEyePoint.x;
-    float dy = vPos.y - pMe->mEyePoint.y;
-    float dz = vPos.z - pMe->mEyePoint.z;
-    return fRange * fRange > dx * dx + dy * dy + dz * dz;
+    return false;
 }
 }
 
@@ -1731,7 +1761,7 @@ bool CombatUtil::TestWpnConstraintsObj(Controllable* pMe, const GameObject* pTar
     }
     PblVector3 vLead;
     AIUtil::GetLeadPosition(0.0f, pMe, pTarget, &vLead);
-    PblVector3 vPoint = GetTargetPoint(pTarget, pMe->mEyePoint, pMe->mEyeDir, -1);
+    PblVector3 vPoint = pTarget->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
     return CombatUtil::TestWpnConstraintsPos(pMe, vLead, vPoint);
 }
 
@@ -1744,7 +1774,7 @@ bool CombatUtil::CanTurretFaceDisturbance(const Controllable* pMe, const Mounted
     vDelta.x = vPos.x - vTurret.x;
     vDelta.y = vPos.y - vTurret.y;
     vDelta.z = vPos.z - vTurret.z;
-    PblVector3 vLocal = AIUtil::UnrotateVector(static_cast<const CollisionObject&>(*pObj).GetMatrix(), vDelta);
+    PblVector3 vLocal = AIUtil::UnrotateVector(static_cast<const EntityGeometry&>(*pObj).GetMatrix(), vDelta);
     float fYaw = atan2f(vLocal.x, vLocal.z);
     if (fYaw >= pClass->mMinYaw && pClass->mMaxYaw >= fYaw)
     {
@@ -1819,10 +1849,11 @@ void SendDamageEvent(const Controllable* pOwner, const GameObject* pTarget, cons
         {
             pRider = pRider->mCharacter->GetControllable();
         }
-        if (pRider->mCtrl && pRider->mPlayerId < 0)
+        UnitController* pCtrl = static_cast<UnitController*>(pRider->mCtrl);
+        if (pCtrl && pRider->mPlayerId < 0)
         {
             AI::EventInfo_Damaged info(pOwner->mCharacter, true, pOwner->GetMatrix().GetTranslation(), 0.0f, false);
-            static_cast<UnitController*>(pRider->mCtrl)->SendEvent(&info);
+            pCtrl->SendEvent(&info);
         }
     }
 }

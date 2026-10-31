@@ -44,15 +44,13 @@ WeaponMeleeThrow::WeaponMeleeThrow(const WeaponMeleeThrowClass* pClass, const We
     m_bReturnedThisFrame = 0;
     m_pPrimaryWeapon = 0;
 
-    EntitySoldier* pSoldier = static_cast<EntitySoldier*>(mOwner->GetGameObject());
-    Controllable* pWeapons = static_cast<Controllable*>(pSoldier);
     int iMeleeIndex = pClass->m_iPrimaryWeaponIndex;
-    for (int i = 0; i < pWeapons->GetWeaponCount(); ++i)
+    EntitySoldier& soldier = *static_cast<EntitySoldier*>(mOwner->GetGameObject());
+    for (int i = 0; i < soldier.GetWeaponCount(); ++i)
     {
-        Weapon* pWeapon = pWeapons->GetWeaponPtr(i);
-        if (pWeapon && pWeapon->IsMelee())
+        if (soldier.GetWeaponPtr(i) && soldier.GetWeaponPtr(i)->IsMelee())
         {
-            m_pPrimaryWeapon = static_cast<WeaponMelee*>(pWeapons->GetWeaponPtr(i));
+            m_pPrimaryWeapon = static_cast<WeaponMelee*>(soldier.GetWeaponPtr(i));
             if (iMeleeIndex-- == 0)
             {
                 break;
@@ -66,7 +64,8 @@ WeaponMeleeThrow::WeaponMeleeThrow(const WeaponMeleeThrowClass* pClass, const We
     const unsigned char uiThrowAnim = static_cast<unsigned char>(pPrimaryClass->m_pCombo->m_uiThrowAnimIndex);
     SoldierAnimatorClass::sInstance->GetAnimationBoneMatrix(
         static_cast<SoldierAnimationBank::MAP>(m_pPrimaryWeapon->mSoldierAnimationMap),
-        uiThrowAnim, 0x2B960099, pClass->m_fInitialSalvoDelay, m_mThrow0Local);
+        uiThrowAnim, 0x2B960099 /* "hp_weapons" */,
+        static_cast<const WeaponMeleeThrowClass*>(mClass)->m_fInitialSalvoDelay, m_mThrow0Local);
 }
 
 
@@ -126,7 +125,11 @@ bool WeaponMeleeThrow::ReloadDone() const
 // FUNCTION: SWBF2 0x0068f9b0
 bool WeaponMeleeThrow::FireDone() const
 {
-    return m_bFired && !m_bThrow && Weapon::FireDone();
+    if (!m_bFired || m_bThrow)
+    {
+        return false;
+    }
+    return Weapon::FireDone() ? true : false;
 }
 
 // FUNCTION: SWBF2 0x0068f720
@@ -162,10 +165,11 @@ void WeaponMeleeThrow::EnterFire()
 {
     Weapon::EnterFire();
     mStateTimer = 0.0f;
+    float fEnergyDrain = mClass->mEnergyDrain;
     EnergyBar* pEnergy = mOwner->GetEnergyBar();
     if (pEnergy)
     {
-        pEnergy->SpendEnergy(mClass->mEnergyDrain);
+        pEnergy->SpendEnergy(fEnergyDrain);
     }
     m_bFired = 0;
     if (mClass->mInstantPlayFireAnim)
@@ -188,23 +192,29 @@ bool WeaponMeleeThrow::CheckFire() const
     {
         return false;
     }
+    const float fEnergyDrain = mClass->mEnergyDrain;
     EnergyBar* pEnergy = mOwner->GetEnergyBar();
-    if (pEnergy && pEnergy->IsOverheating() && mClass->mEnergyDrain > 0.0f)
+    if (pEnergy && pEnergy->IsOverheating() && !(fEnergyDrain <= 0.0f))
     {
         return false;
     }
-    return !Weapon::CheckOverheat() && mTrigger->IsPressed();
+    if (Weapon::CheckOverheat())
+    {
+        return false;
+    }
+    return mTrigger->IsPressed();
 }
 
 // FUNCTION: SWBF2 0x0068f9d0
 bool WeaponMeleeThrow::CheckEmpty() const
 {
+    const float fEnergyDrain = mClass->mEnergyDrain;
     EnergyBar* pEnergy = mOwner->GetEnergyBar();
-    if (pEnergy && pEnergy->IsOverheating() && mClass->mEnergyDrain > 0.0f)
+    if (!pEnergy || !pEnergy->IsOverheating() || fEnergyDrain <= 0.0f)
     {
-        return true;
+        return Weapon::CheckEmpty();
     }
-    return Weapon::CheckEmpty();
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0068f8a0
@@ -235,11 +245,13 @@ void WeaponMeleeThrow::Fire()
     desc.mPosition = mAimer->mFirePos;
     desc.mDirection = mAimer->mDirection;
     desc.mStrength = 1.0f;
-    GameObject* pOwnerObject = mOwner->GetGameObject();
-    desc.mOwner = pOwnerObject;
-    desc.mDamageOwner = DamageOwner(mOwner->mCharacter, pOwnerObject,
-        pOwnerObject ? pOwnerObject->GetTeam() : 0,
-        GetEntityClass(pOwnerObject), mClass, mOwner->GetOffenseMultiplier());
+    desc.mOwner = mOwner->GetGameObject();
+    desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+    desc.mDamageOwner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
+    desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+    desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+    desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetEntityClass();
+    desc.mDamageOwner.mWeapon = mClass;
     desc.mTarget = IsLocked() ? const_cast<GameObject*>(static_cast<const GameObject*>(mTarget)) : 0;
     desc.mBodyID = IsLocked() ? mTargetBodyID : -1;
     desc.mFireWeapon = this;
@@ -322,17 +334,17 @@ WeaponMeleeThrowClass::~WeaponMeleeThrowClass()
 // FUNCTION: SWBF2 0x0068fd80
 void WeaponMeleeThrowClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xC8388D9D)
+    switch (uProperty)
     {
+    case 0xC8388D9D: /* "InitialSalvoDelay" */
         sscanf(pszValue, "%f", &m_fInitialSalvoDelay);
-    }
-    else if (uProperty == 0xF83F717B)
-    {
+        break;
+    case 0xF83F717B: /* "PrimaryWeaponIndex" */
         m_iPrimaryWeaponIndex = atoi(pszValue);
-    }
-    else
-    {
+        break;
+    default:
         WeaponClass::SetProperty(uProperty, pszValue);
+        break;
     }
 }
 
@@ -346,6 +358,5 @@ WeaponClass* WeaponMeleeThrowClass::Derive(unsigned int uHash)
 Weapon* WeaponMeleeThrowClass::Build(const WeaponDesc& desc)
 {
     PostLoadInit();
-    void* pMemory = Weapon::operator new(sizeof(WeaponMeleeThrow));
-    return pMemory ? ::new (pMemory) WeaponMeleeThrow(this, desc) : 0;
+    return new WeaponMeleeThrow(this, desc);
 }

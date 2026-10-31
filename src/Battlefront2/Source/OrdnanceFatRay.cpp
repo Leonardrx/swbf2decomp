@@ -43,50 +43,37 @@ bool OrdnanceFatRay::CheckCollision()
     OrdnanceFatRayClass* pClass = (OrdnanceFatRayClass*)mClass;
     const PblVector3 vOld = GetOldPosition();
     const PblVector3 vCur = GetPosition();
-    const float fDx = vCur.x - vOld.x;
-    const float fDy = vCur.y - vOld.y;
-    const float fDz = vCur.z - vOld.z;
-    const float fLength = sqrtf(fDx * fDx + fDy * fDy + fDz * fDz);
+    const PblVector3 vDelta = vCur - vOld;
+    const float fLength = Length(vDelta);
     if (!(fLength > 0.0f))
     {
         return true;
     }
 
-    const float fInvLength = 1.0f / fLength;
-    PblVector3 vDir;
-    vDir.x = fDx * fInvLength;
-    vDir.y = fDy * fInvLength;
-    vDir.z = fDz * fInvLength;
-
+    const PblVector3 vDir = vDelta / fLength;
     const float fHalf = fLength * 0.5f;
-    PblVector3 vCenter;
-    vCenter.x = vDir.x * fHalf + vOld.x;
-    vCenter.y = vDir.y * fHalf + vOld.y;
-    vCenter.z = vDir.z * fHalf + vOld.z;
 
     GameObject* pObjects[32];
-    int iCount = CollisionManager::GetObjectsInRange(vCenter, pClass->mRayRadius + fHalf, pObjects, 32,
+    int iCount = CollisionManager::GetObjectsInRange(vDir * fHalf + vOld, pClass->mRayRadius + fHalf, pObjects, 32,
                                                      GetOwner(), 0x1022);
     while (iCount)
     {
         GameObject* pObject = pObjects[--iCount];
         const PblVector3 vTarget = pObject->GetTargetPoint(vOld, vDir, -1);
-        const float fAlong = (vTarget.x - vOld.x) * vDir.x + (vTarget.y - vOld.y) * vDir.y +
-                             (vTarget.z - vOld.z) * vDir.z;
+        const PblVector3 vFromOld = vTarget - vOld;
+        const PblVector3 vFromCur = vTarget - vCur;
+        const float fAlong = DotProduct(vFromOld, vDir);
         if (!(fAlong > 0.0f))
         {
             continue;
         }
-        if (!((vTarget.x - vCur.x) * vDir.x + (vTarget.y - vCur.y) * vDir.y + (vTarget.z - vCur.z) * vDir.z <
-              0.0f))
+        if (!(DotProduct(vFromCur, vDir) < 0.0f))
         {
             continue;
         }
 
-        const float fOffX = vTarget.x - (vDir.x * fAlong + vOld.x);
-        const float fOffY = vTarget.y - (vDir.y * fAlong + vOld.y);
-        const float fOffZ = vTarget.z - (vDir.z * fAlong + vOld.z);
-        const float fOffSq = fOffX * fOffX + fOffY * fOffY + fOffZ * fOffZ;
+        const PblVector3 vOffset = vTarget - (vDir * fAlong + vOld);
+        const float fOffSq = SquaredLength(vOffset);
         if (!(pClass->mRayRadius * pClass->mRayRadius > fOffSq))
         {
             continue;
@@ -114,11 +101,8 @@ bool OrdnanceFatRay::CheckCollision()
             const float fPush = mPush;
             const float fInvOff = 1.0f / fOff;
             const float fOutward = (1.0f - fScale) * 0.5f;
-            const float fAlongRay = 1.0f - fOutward;
-            PblVector3 vPush;
-            vPush.x = fOffX * fInvOff * (fPush * fOutward) + vDir.x * fAlongRay * fPush;
-            vPush.y = vDir.y * fAlongRay * fPush + fPush * fOutward * 0.0f;
-            vPush.z = fOffZ * fInvOff * (fPush * fOutward) + vDir.z * fAlongRay * fPush;
+            const PblVector3 vSide(vOffset.x * fInvOff, 0.0f, vOffset.z * fInvOff);
+            const PblVector3 vPush = vSide * (fPush * fOutward) + vDir * (1.0f - fOutward) * fPush;
             pObject->ApplyPush(vPush, 1.0f, false);
             const float fWorn = mPush - pClass->mPushDeduction;
             mPush = pClass->mMinPush > fWorn ? fWorn : pClass->mMinPush;

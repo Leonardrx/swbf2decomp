@@ -61,9 +61,6 @@ OrdnanceLaserClass::OrdnanceLaserClass(OrdnanceLaserClass* pBase, unsigned int u
 
 
 
-static const RedColor kRedBoltColor   = { 0xff, 0x0a, 0x0a, 0x64 };
-static const RedColor kGreenBoltColor = { 0x64, 0xff, 0x64, 0x50 };
-static const RedColor kBlueBoltColor  = { 0x0a, 0x0a, 0x7f, 0x64 };
 
 static inline float ClampLength(float f)
 {
@@ -106,37 +103,37 @@ void OrdnanceLaserClass::SetProperty(unsigned int uProperty, const char* pszValu
             mLaserWidth = 0.35f;
             mLaserLength = 12.0f;
             mTextureId = 0x5AE97AEA;
-            mGlowColor = kRedBoltColor;
+            mGlowColor = RedColor(0xff, 0x0a, 0x0a, 0x64);
             break;
         case 0x5BFD7D80:
             mLaserWidth = 0.1f;
             mLaserLength = 5.0f;
             mTextureId = 0x5AE97AEA;
-            mGlowColor = kRedBoltColor;
+            mGlowColor = RedColor(0xff, 0x0a, 0x0a, 0x64);
             break;
         case 0x09D3224C:
             mLaserWidth = 0.35f;
             mLaserLength = 12.0f;
             mTextureId = 0xD89A2A5A;
-            mGlowColor = kGreenBoltColor;
+            mGlowColor = RedColor(0x64, 0xff, 0x64, 0x50);
             break;
         case 0x8AB31EE0:
             mLaserWidth = 0.2f;
             mLaserLength = 10.0f;
             mTextureId = 0xD89A2A5A;
-            mGlowColor = kGreenBoltColor;
+            mGlowColor = RedColor(0x64, 0xff, 0x64, 0x50);
             break;
         case 0xD6578027:
             mLaserWidth = 0.35f;
             mLaserLength = 12.0f;
             mTextureId = 0xD89A2A5A;
-            mGlowColor = kBlueBoltColor;
+            mGlowColor = RedColor(0x0a, 0x0a, 0x7f, 0x64);
             break;
         case 0x4A4A69FF:
             mLaserWidth = 0.2f;
             mLaserLength = 10.0f;
             mTextureId = 0xD89A2A5A;
-            mGlowColor = kBlueBoltColor;
+            mGlowColor = RedColor(0x0a, 0x0a, 0x7f, 0x64);
             break;
         }
         mGlowLength = ClampLength(mLaserLength * 3.0f);
@@ -147,13 +144,13 @@ void OrdnanceLaserClass::SetProperty(unsigned int uProperty, const char* pszValu
         break;
     case 0x798DC484:
         sscanf(pszValue, "%f", &mFadeOutSpeed);
-        if (mFadeOutSpeed > 0.0f)
+        if (mFadeOutSpeed <= 0.0f)
         {
-            mFadeOutSpeed = 1.0f / mFadeOutSpeed;
+            mFadeOutSpeed = 0.0f;
         }
         else
         {
-            mFadeOutSpeed = 0.0f;
+            mFadeOutSpeed = 1.0f / mFadeOutSpeed;
         }
         break;
     case 0xB709B5E7:
@@ -188,21 +185,19 @@ OrdnanceClass* OrdnanceLaserClass::Derive(unsigned int uHash)
 // FUNCTION: SWBF2 0x006020b0
 Ordnance* OrdnanceLaserClass::Build(const OrdnanceDesc& desc)
 {
-    if (Ordnance::sMemoryPool.mUsed >= Ordnance::sMemoryPool.mCount)
+    if (Ordnance::sMemoryPool.mUsed < Ordnance::sMemoryPool.mCount)
     {
-        return 0;
+        Character* pCharacter = desc.mDamageOwner.mCharacter;
+        if ((pCharacter && pCharacter->mPlayerId >= 0) ||
+            Ordnance::sMemoryPool.mUsed + 20 <= Ordnance::sMemoryPool.mCount)
+        {
+            OrdnanceLaser* pLaser = new OrdnanceLaser(this, desc);
+            pLaser->ActivateThread(-40, PER_LOCAL_TURN);
+            pLaser->AddOrdnanceToCollisionManager();
+            return pLaser;
+        }
     }
-    Character* pCharacter = desc.mDamageOwner.mCharacter;
-    if ((!pCharacter || pCharacter->mPlayerId < 0) &&
-        Ordnance::sMemoryPool.mUsed + 20 > Ordnance::sMemoryPool.mCount)
-    {
-        return 0;
-    }
-
-    OrdnanceLaser* pLaser = new OrdnanceLaser(this, desc);
-    pLaser->ActivateThread(-40, PER_LOCAL_TURN);
-    pLaser->AddOrdnanceToCollisionManager();
-    return pLaser;
+    return 0;
 }
 
 // SYNTHETIC: SWBF2 0x00405b00
@@ -232,11 +227,14 @@ OrdnanceLaser::OrdnanceLaser(OrdnanceLaserClass* pClass, const OrdnanceDesc& des
 
     const OrdnanceLaserClass* pLaser = (const OrdnanceLaserClass*)mClass;
     const OrdnanceLaserClass* pNext = (const OrdnanceLaserClass*)pLaser->mNextCharge;
-    float fMax = ChargeLerp(pLaser->mLaserLength, pNext->mLaserLength, mRatio);
-    const float fGlow = ChargeLerp(pLaser->mGlowLength, pNext->mGlowLength, mRatio);
-    fMax = Max(fMax, fGlow);
-    const float fBlur = ChargeLerp(pLaser->mBlurLength, pNext->mBlurLength, mRatio);
-    fMax = Max(fMax, fBlur);
+    float fMax = pLaser->mLaserLength;
+    float fGlow = pLaser->mGlowLength;
+    float fBlur = pLaser->mBlurLength;
+    fMax = (pNext->mLaserLength - fMax) * mRatio + fMax;
+    fGlow = (pNext->mGlowLength - fGlow) * mRatio + fGlow;
+    fMax = fMax > fGlow ? fMax : fGlow;
+    fBlur = (pNext->mBlurLength - fBlur) * mRatio + fBlur;
+    fMax = fMax > fBlur ? fMax : fBlur;
     mMaxLength = fMax;
     SetRenderRadius(mMaxLength * 2.0f);
 }
@@ -263,15 +261,8 @@ OrdnanceLaser::~OrdnanceLaser()
 void OrdnanceLaser::KillOrdnance()
 {
     mDeadFlag = true;
-    const float dx = mPosition.x - mStartPos.x;
-    const float dy = mPosition.y - mStartPos.y;
-    const float dz = mPosition.z - mStartPos.z;
-    float fLength = sqrtf(dx * dx + dy * dy + dz * dz);
-    if (mMaxLength <= fLength)
-    {
-        fLength = mMaxLength;
-    }
-    mGrowLength = fLength;
+    float fLength = Length(mPosition - mStartPos);
+    mGrowLength = fLength < mMaxLength ? fLength : mMaxLength;
     CollisionManager::RemoveOrdnance(this);
 }
 
@@ -303,20 +294,13 @@ bool OrdnanceLaser::Update(float fDeltaTime)
     float fLength;
     if (mFinalCollisionOnNextUpdate)
     {
-        const float dx = mPosition.x - mStartPos.x;
-        const float dy = mPosition.y - mStartPos.y;
-        const float dz = mPosition.z - mStartPos.z;
-        fLength = sqrtf(dx * dx + dy * dy + dz * dz);
+        fLength = Length(mPosition - mStartPos);
     }
     else
     {
         fLength = pClass->mVelocity * fDeltaTime + mGrowLength;
     }
-    if (mMaxLength <= fLength)
-    {
-        fLength = mMaxLength;
-    }
-    mGrowLength = fLength;
+    mGrowLength = fLength < mMaxLength ? fLength : mMaxLength;
     return true;
 }
 
@@ -371,8 +355,9 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
     fGlowLength = Min(fGlowLength, mGrowLength);
 
     const float fRadius = (fWidth * 3.0f + mGrowLength) * 2.0f;
-    const PblVector3 vMax(mPosition.x + fRadius, mPosition.y + fRadius, mPosition.z + fRadius);
-    const PblVector3 vMin(mPosition.x - fRadius, mPosition.y - fRadius, mPosition.z - fRadius);
+    const PblVector3 vExtent(fRadius, fRadius, fRadius);
+    const PblVector3 vMax = mPosition + vExtent;
+    const PblVector3 vMin = mPosition - vExtent;
     RedParticleRenderer::SubmitBounds(vMin, vMax);
 
     RedParticleRenderer::TexCoords texCoords;
@@ -388,8 +373,7 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
         RedParticleRenderer::SubmitTexture(pClass->mTextureId, BLEND_NORMAL, 0);
         RedParticleRenderer::SubmitParticle(PIT_LASER_START, mPosition, laserColor, fWidth, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
-        const PblVector3 vTail(mPosition.x - vDir.x * fLaserLength, mPosition.y - vDir.y * fLaserLength,
-                               mPosition.z - vDir.z * fLaserLength);
+        const PblVector3 vTail = mPosition - vDir * fLaserLength;
         RedParticleRenderer::SubmitParticle(PIT_LASER_END, vTail, laserColor, fWidth * 0.5f, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
     }
@@ -402,8 +386,7 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
         fWidth *= 2.0f;
         RedParticleRenderer::SubmitParticle(PIT_LASER_START, mPosition, glowColor, fWidth, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
-        const PblVector3 vTail(mPosition.x - vDir.x * fGlowLength, mPosition.y - vDir.y * fGlowLength,
-                               mPosition.z - vDir.z * fGlowLength);
+        const PblVector3 vTail = mPosition - vDir * fGlowLength;
         RedParticleRenderer::SubmitParticle(PIT_LASER_END, vTail, glowColor, fWidth * 0.8f, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
     }

@@ -127,7 +127,8 @@ void OrdnanceTowCable::TowCableFailure()
     {
         mFireWeapon->SetOrdnance(NULL);
         mFireWeapon = NULL;
-        ((EntityFlyer*)mOwner->GetEntity())->SetTowCableWalker(NULL);
+        EntityFlyer* pFlyer = (EntityFlyer*)mOwner->GetEntity();
+        pFlyer->SetTowCableWalker(NULL);
     }
 
     PblVector3 vSlope(mLastOwnerFireDir.x * -15.0f, mLastOwnerFireDir.y * -15.0f,
@@ -172,38 +173,43 @@ bool OrdnanceTowCable::Collide(CollisionObject* pObject, const PblVector3& vPos,
     }
 
     CollisionModel* pModel = pObject->mCollisionModel;
-    CollisionObjectType eType = COLL_TOWCABLE;
-    if (pModel && pModel->GetCollisionMask(eType).IsSet(iBodyId))
+    if (pModel)
     {
-        Entity* pEntity = pObject->GetEntity();
-        if (pEntity && pEntity->IsRtti(EntityWalker::rttiHashEntityWalker))
+        CollisionObjectType eType = COLL_TOWCABLE;
+        CollisionMask mask = pModel->GetCollisionMask(eType);
+        if (mask.IsSet(iBodyId))
         {
-            mTowCable.mTowState = TOW_WRAP;
-            mHitWalker = pEntity->GetGameObject();
-            mTowCable.Clear();
-
-            CollisionObject* pWalkerCollision = mHitWalker->GetCollisionObject();
-            PblMatrix mBody = pModel->GetWorldMatrix(iBodyId, mHitWalker->GetMatrix(), pWalkerCollision->GetPose());
-            PblMatrix mInverse = mBody.GetInverseFast();
-            PblVector3 vLocal;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vPos, (const D3DXMATRIX*)&mInverse);
-            mTowCable.AddAttachPoint(iBodyId, vLocal, gVectorZero);
-            CollisionManager::RemoveOrdnance(this);
-
-            if (mOwner)
+            Entity* pEntity = pObject->GetEntity();
+            if (pEntity && pEntity->IsRtti(EntityWalker::rttiHashEntityWalker))
             {
-                ((EntityFlyer*)mOwner->GetEntity())->SetTowCableWalker(mHitWalker);
-            }
+                mTowCable.mTowState = TOW_WRAP;
+                mHitWalker = pEntity->GetGameObject();
+                mTowCable.Clear();
 
-            OrdnanceDesc desc;
-            if (NetGame::IsEnabled() && !NetGame::IsClient())
-            {
-                PblVector3 vDir;
-                D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocity);
-                NetGame::CreateEvent_ConnectTowCable(mOwner, mFireWeapon, vDir, vPos, iBodyId, mHitWalker,
-                                                     (unsigned __int64)-1);
+                CollisionObject* pWalkerCollision = mHitWalker->GetCollisionObject();
+                PblMatrix mBody = pModel->GetWorldMatrix(iBodyId, mHitWalker->GetMatrix(), pWalkerCollision->GetPose());
+                PblVector3 vLocal;
+                D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vPos,
+                                       (const D3DXMATRIX*)&mBody.GetInverseFast());
+                mTowCable.AddAttachPoint(iBodyId, vLocal, gVectorZero);
+                CollisionManager::RemoveOrdnance(this);
+
+                if (mOwner)
+                {
+                    EntityFlyer* pFlyer = (EntityFlyer*)mOwner->GetEntity();
+                    pFlyer->SetTowCableWalker(mHitWalker);
+                }
+
+                OrdnanceDesc desc;
+                if (NetGame::IsEnabled() && !NetGame::IsClient())
+                {
+                    PblVector3 vDir;
+                    D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocity);
+                    NetGame::CreateEvent_ConnectTowCable(mOwner, mFireWeapon, vDir, vPos, iBodyId, mHitWalker,
+                                                         (unsigned __int64)-1);
+                }
+                return false;
             }
-            return false;
         }
     }
 
@@ -224,9 +230,9 @@ void OrdnanceTowCable::Render(unsigned char ucViewport, float fDist, unsigned in
         {
             PblMatrix mOwnerMatrix = mOwner->GetMatrix();
             PblMatrix mSmoothed = mOwner->GetSmoothedMatrix();
-            PblMatrix mInverse = mOwnerMatrix.GetInverseFast();
             PblVector3 v;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&v, (const D3DXVECTOR3*)&vFirePos, (const D3DXMATRIX*)&mInverse);
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&v, (const D3DXVECTOR3*)&vFirePos,
+                                   (const D3DXMATRIX*)&mOwnerMatrix.GetInverseFast());
             vFirePos = v;
             D3DXVec3TransformCoord((D3DXVECTOR3*)&v, (const D3DXVECTOR3*)&vFirePos, (const D3DXMATRIX*)&mSmoothed);
             vFirePos = v;
@@ -249,24 +255,26 @@ void OrdnanceTowCable::Render(unsigned char ucViewport, float fDist, unsigned in
                 return;
             }
 
-            TowCableAttachPointData& point = mTowCable.mAttachPoints[i - 1];
             CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
             CollisionObject* pWalkerCollision = mHitWalker->GetCollisionObject();
-            PblMatrix mBody =
-                pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pWalkerCollision->GetPose());
+            TowCableAttachPointData& point = mTowCable.mAttachPoints[i - 1];
             D3DXVec3TransformCoord((D3DXVECTOR3*)&vEndPos, (const D3DXVECTOR3*)&point.mBodyOffset,
-                                   (const D3DXMATRIX*)&mBody);
+                                   (const D3DXMATRIX*)&pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(),
+                                                                              pWalkerCollision->GetPose()));
             pEndSlope = &point.mSlopeOut;
         }
         else
         {
-            vEndSlope = PblVector3(0.0f, 0.0f, 0.0f);
+            vEndSlope.x = 0.0f;
+            vEndSlope.y = 0.0f;
+            vEndSlope.z = 0.0f;
             pEndSlope = &vEndSlope;
         }
 
         PblVector3 vFireSlope(mLastOwnerFireDir.x * -15.0f, mLastOwnerFireDir.y * -15.0f,
                               mLastOwnerFireDir.z * -15.0f);
-        PblHermiteVector3 segment(vEndPos, vFirePos, *pEndSlope, vFireSlope, 1.0f);
+        PblHermiteVector3 segment;
+        segment.Set(vEndPos, vFirePos, *pEndSlope, vFireSlope, 1.0f);
         sRenderHermiteSegment(segment, ucViewport, fDist, uiFlags);
     }
 
@@ -396,16 +404,10 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
             CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
             const RedPose* pPose = mHitWalker->GetCollisionObject()->GetPose();
 
-            PblMatrix mBody = pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose);
-            PblVector3 vPos;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vPos, (const D3DXVECTOR3*)&point.mBodyOffset,
-                                   (const D3DXMATRIX*)&mBody);
-            mBody = pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose);
-            PblVector3 vNormal;
-            D3DXVec3TransformNormal((D3DXVECTOR3*)&vNormal, (const D3DXVECTOR3*)&point.mBodyOffset,
-                                    (const D3DXMATRIX*)&mBody);
-            PblVector3 vDir;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vNormal);
+            PblVector3 vPos =
+                pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose).ApplyTransform(point.mBodyOffset);
+            PblVector3 vDir = Normalize(
+                pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose).ApplyRotation(point.mBodyOffset));
 
             DamageDesc damage = GetDamage();
             damage.mBaseValue = mHitWalker->mMaxHealth;
@@ -450,10 +452,8 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
         TowCableAttachPointData& last = mTowCable.mAttachPoints[iNumPoints - 1];
         CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
         CollisionObject* pWalkerCollision = mHitWalker->GetCollisionObject();
-        PblMatrix mBody = pModel->GetWorldMatrix(last.mBodyID, mHitWalker->GetMatrix(), pWalkerCollision->GetPose());
-        PblVector3 vStart;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vStart, (const D3DXVECTOR3*)&last.mBodyOffset,
-                               (const D3DXMATRIX*)&mBody);
+        PblVector3 vStart = pModel->GetWorldMatrix(last.mBodyID, mHitWalker->GetMatrix(), pWalkerCollision->GetPose())
+                                .ApplyTransform(last.mBodyOffset);
         PblVector3 vFirePos = mLastOwnerFirePos;
         int iLastBodyId = last.mBodyID;
         int iPrevBodyId = -1;
@@ -481,55 +481,50 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
             float fY = vB.y - vA.y;
             float fZ = vB.z - vA.z;
             float fLength = sqrtf(fY * fY + fX * fX + fZ * fZ);
-            if (fLength <= 0.0f)
+            if (fLength > 0.0f)
             {
-                continue;
-            }
-
-            float fInvLength = 1.0f / fLength;
-            PblVector3 vDir(fX * fInvLength, fInvLength * fY, fInvLength * fZ);
-            PblVector3 vNormal;
-            int iBodyId;
-            float fHit = mHitWalker->GetCollisionObject()->RayHit(vA, vDir, fLength, &vNormal, &iBodyId, true, 0.0f);
-            if (fHit >= 1.0f)
-            {
-                continue;
-            }
-
-            CollisionObjectType eType = COLL_TOWCABLE;
-            CollisionMask mask = pModel->GetCollisionMask(eType);
-            if (!mask.IsSet(iBodyId))
-            {
-                TowCableFailure();
-                return true;
-            }
-            if (iBodyId == last.mBodyID)
-            {
-                continue;
-            }
-
-            int iValid = ((EntityWalker*)mHitWalker->GetEntity())
-                             ->IsTowCableCollisionValid(iBodyId, iLastBodyId, iPrevBodyId);
-            if (iValid > 0)
-            {
-                PblMatrix mHitBody =
-                    pModel->GetWorldMatrix(iBodyId, mHitWalker->GetMatrix(), mHitWalker->GetCollisionObject()->GetPose());
-                PblVector3 vHit(vDir.x * fHit + vA.x, vDir.y * fHit + vA.y, vDir.z * fHit + vA.z);
-                PblMatrix mInverse = mHitBody.GetInverseFast();
-                PblVector3 vLocal;
-                D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vHit,
-                                       (const D3DXMATRIX*)&mInverse);
-                PblVector3 vSlope = segment.getSlope(fHit * 0.1f + fT);
-                vSlope.x *= 0.5f;
-                vSlope.y *= 0.5f;
-                vSlope.z *= 0.5f;
-                mTowCable.AddAttachPoint(iBodyId, vLocal, vSlope);
-                return true;
-            }
-            if (iValid < 0)
-            {
-                TowCableFailure();
-                return true;
+                float fInvLength = 1.0f / fLength;
+                PblVector3 vDir(fX * fInvLength, fInvLength * fY, fInvLength * fZ);
+                PblVector3 vNormal;
+                int iBodyId;
+                float fHit =
+                    mHitWalker->GetCollisionObject()->RayHit(vA, vDir, fLength, &vNormal, &iBodyId, true, 0.0f);
+                if (fHit < 1.0f)
+                {
+                    CollisionObjectType eType = COLL_TOWCABLE;
+                    CollisionMask mask = pModel->GetCollisionMask(eType);
+                    if (!mask.IsSet(iBodyId))
+                    {
+                        TowCableFailure();
+                        return true;
+                    }
+                    if (iBodyId != last.mBodyID)
+                    {
+                        EntityWalker* pWalker = (EntityWalker*)mHitWalker->GetEntity();
+                        int iValid = pWalker->IsTowCableCollisionValid(iBodyId, iLastBodyId, iPrevBodyId);
+                        if (iValid > 0)
+                        {
+                            PblMatrix mHitBody = pModel->GetWorldMatrix(iBodyId, mHitWalker->GetMatrix(),
+                                                                        mHitWalker->GetCollisionObject()->GetPose());
+                            PblVector3 vHit(vDir.x * fHit + vA.x, vDir.y * fHit + vA.y, vDir.z * fHit + vA.z);
+                            PblMatrix mInverse = mHitBody.GetInverseFast();
+                            PblVector3 vLocal;
+                            D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vHit,
+                                                   (const D3DXMATRIX*)&mInverse);
+                            PblVector3 vSlope = segment.getSlope(fHit * 0.1f + fT);
+                            vSlope.x *= 0.5f;
+                            vSlope.y *= 0.5f;
+                            vSlope.z *= 0.5f;
+                            mTowCable.AddAttachPoint(iBodyId, vLocal, vSlope);
+                            return true;
+                        }
+                        if (iValid < 0)
+                        {
+                            TowCableFailure();
+                            return true;
+                        }
+                    }
+                }
             }
         }
         return true;
@@ -538,7 +533,8 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
     mTowCable.mTowState = TOW_DAMAGE;
     if (mOwner)
     {
-        ((EntityFlyer*)mOwner->GetEntity())->SetTowCableWalker(NULL);
+        EntityFlyer* pFlyer = (EntityFlyer*)mOwner->GetEntity();
+        pFlyer->SetTowCableWalker(NULL);
         if (mFireWeapon)
         {
             mFireWeapon->SetOrdnance(NULL);
@@ -565,9 +561,9 @@ void OrdnanceTowCable::ConvertPointsToWorldSpace()
         }
         if (point.mBodyID >= 0)
         {
+            point.mBodyID = -1;
             point.mBodyOffset = point.mWorldBodyOffset;
             point.mInitialBodyOffset = point.mWorldInitialBodyOffset;
-            point.mBodyID = -1;
         }
     }
 }
@@ -588,25 +584,26 @@ void OrdnanceTowCable::CalculateWorldSpacePoints()
             return;
         }
 
-        if (point.mBodyID < 0)
+        if (point.mBodyID >= 0)
+        {
+            CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
+            const RedPose* pPose = mHitWalker->GetCollisionObject()->GetPose();
+            PblVector3 vWorld;
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorld, (const D3DXVECTOR3*)&point.mBodyOffset,
+                                   (const D3DXMATRIX*)&pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(),
+                                                                              pPose));
+            PblVector3 vWorldInitial;
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldInitial, (const D3DXVECTOR3*)&point.mInitialBodyOffset,
+                                   (const D3DXMATRIX*)&pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(),
+                                                                              pPose));
+            point.mWorldBodyOffset = vWorld;
+            point.mWorldInitialBodyOffset = vWorldInitial;
+        }
+        else
         {
             point.mWorldBodyOffset = point.mBodyOffset;
             point.mWorldInitialBodyOffset = point.mInitialBodyOffset;
-            continue;
         }
-
-        CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
-        const RedPose* pPose = mHitWalker->GetCollisionObject()->GetPose();
-        PblMatrix mBody = pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose);
-        PblVector3 vWorld;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorld, (const D3DXVECTOR3*)&point.mBodyOffset,
-                               (const D3DXMATRIX*)&mBody);
-        mBody = pModel->GetWorldMatrix(point.mBodyID, mHitWalker->GetMatrix(), pPose);
-        PblVector3 vWorldInitial;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldInitial, (const D3DXVECTOR3*)&point.mInitialBodyOffset,
-                               (const D3DXMATRIX*)&mBody);
-        point.mWorldBodyOffset = vWorld;
-        point.mWorldInitialBodyOffset = vWorldInitial;
     }
 }
 
@@ -675,7 +672,7 @@ void OrdnanceTowCableClass::SetProperty(unsigned int uProperty, const char* pszV
 TowCableRenderObject::TowCableRenderObject()
 {
     mTowState = TOW_ATTACHING;
-    Clear();
+    memset(mAttachPoints, 0, sizeof(mAttachPoints));
 }
 
 // FUNCTION: SWBF2 0x00609340
@@ -733,49 +730,50 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
                 break;
             }
 
-            float fStep = fDeltaTime * 30.0f;
             PblVector3& vIn = point.mSlopeIn;
             float fLength = sqrtf(vIn.x * vIn.x + vIn.y * vIn.y + vIn.z * vIn.z);
-            if (fStep < fLength)
+            float fStep = fDeltaTime * 30.0f;
+            if (fLength <= fStep)
+            {
+                vIn = gVectorZero;
+            }
+            else
             {
                 vIn.x -= fStep * vIn.x * (1.0f / fLength);
                 vIn.y -= fStep * vIn.y * (1.0f / fLength);
                 vIn.z -= fStep * vIn.z * (1.0f / fLength);
             }
-            else
-            {
-                vIn = gVectorZero;
-            }
 
             PblVector3& vOut = mAttachPoints[i - 1].mSlopeOut;
             fLength = sqrtf(vOut.x * vOut.x + vOut.y * vOut.y + vOut.z * vOut.z);
-            if (fStep < fLength)
+            if (fLength <= fStep)
+            {
+                vOut = gVectorZero;
+            }
+            else
             {
                 vOut.x -= fStep * vOut.x * (1.0f / fLength);
                 vOut.y -= fStep * vOut.y * (1.0f / fLength);
                 vOut.z -= fStep * vOut.z * (1.0f / fLength);
             }
-            else
-            {
-                vOut = gVectorZero;
-            }
 
-            PblVector3 vTarget = ((EntityWalker*)pObject->GetEntity())->GetTowCableCollisionOffset(point.mBodyID);
+            EntityWalker* pWalker = (EntityWalker*)pObject->GetEntity();
+            PblVector3 vTarget = pWalker->GetTowCableCollisionOffset(point.mBodyID);
             vTarget.y = point.mBodyOffset.y;
             PblVector3 vDiff;
             vDiff.x = vTarget.x - point.mBodyOffset.x;
             vDiff.y = vTarget.y - point.mBodyOffset.y;
             vDiff.z = vTarget.z - point.mBodyOffset.z;
             fLength = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
-            if (fStep < fLength)
+            if (fLength <= fStep)
+            {
+                point.mBodyOffset = vTarget;
+            }
+            else
             {
                 point.mBodyOffset.x += vDiff.x * fStep * (1.0f / fLength);
                 point.mBodyOffset.y += vDiff.y * fStep * (1.0f / fLength);
                 point.mBodyOffset.z += vDiff.z * fStep * (1.0f / fLength);
-            }
-            else
-            {
-                point.mBodyOffset = vTarget;
             }
         }
     }
@@ -791,6 +789,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             point.mFallSpeed -= fDeltaTime * 9.8f;
+            fPrevFallSpeed = point.mFallSpeed;
             point.mInitialBodyOffset.y += point.mFallSpeed * fDeltaTime;
             if (point.mBodyOffset.y > point.mFinalHeight)
             {
@@ -806,9 +805,9 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             const PblVector3& vFinal = point.mFinalSlope;
-            float fLength = sqrtf(vFinal.x * vFinal.x + vFinal.y * vFinal.y + vFinal.z * vFinal.z);
+            float fLength = sqrtf(vFinal.y * vFinal.y + vFinal.x * vFinal.x + vFinal.z * vFinal.z);
             PblVector3& vIn = point.mSlopeIn;
-            if (sqrtf(vIn.x * vIn.x + vIn.y * vIn.y + vIn.z * vIn.z) + fDeltaTime > fLength)
+            if (sqrtf(vIn.y * vIn.y + vIn.x * vIn.x + vIn.z * vIn.z) + fDeltaTime > fLength)
             {
                 vIn = vFinal;
             }
@@ -820,15 +819,15 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             PblVector3& vOut = point.mSlopeOut;
-            fLength = sqrtf(vOut.x * vOut.x + vOut.y * vOut.y + vOut.z * vOut.z);
-            if (fLength + fDeltaTime > fLength)
+            fLength = sqrtf(vOut.y * vOut.y + vOut.x * vOut.x + vOut.z * vOut.z);
+            if (fDeltaTime + fLength > fLength)
             {
                 vOut = vFinal;
             }
             else
             {
-                vOut.x += fDeltaTime * vFinal.x * (1.0f / fLength);
-                vOut.y += fDeltaTime * vFinal.y * (1.0f / fLength);
+                vOut.x += vFinal.x * fDeltaTime * (1.0f / fLength);
+                vOut.y += vFinal.y * fDeltaTime * (1.0f / fLength);
                 vOut.z += fDeltaTime * vFinal.z * (1.0f / fLength);
             }
 
@@ -837,18 +836,16 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             vDiff.y = point.mInitialBodyOffset.y - point.mBodyOffset.y;
             vDiff.z = point.mInitialBodyOffset.z - point.mBodyOffset.z;
             fLength = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
-            if (fDeltaTime < fLength)
+            if (fLength <= fDeltaTime)
+            {
+                point.mBodyOffset = point.mInitialBodyOffset;
+            }
+            else
             {
                 point.mBodyOffset.x += vDiff.x * fDeltaTime * (1.0f / fLength);
                 point.mBodyOffset.y += vDiff.y * fDeltaTime * (1.0f / fLength);
                 point.mBodyOffset.z += vDiff.z * fDeltaTime * (1.0f / fLength);
             }
-            else
-            {
-                point.mBodyOffset = point.mInitialBodyOffset;
-            }
-
-            fPrevFallSpeed = point.mFallSpeed;
         }
     }
 }
@@ -858,6 +855,7 @@ void TowCableRenderObject::Render(GameObject* pObject, unsigned char ucViewport,
                                   unsigned int uiFlags)
 {
     PblVector3 vPrev;
+    int i = 1;
     if (mAttachPoints[0].mIsAttached)
     {
         if (mAttachPoints[0].mBodyID >= 0)
@@ -868,10 +866,12 @@ void TowCableRenderObject::Render(GameObject* pObject, unsigned char ucViewport,
             }
             CollisionObject* pCollision = pObject->GetCollisionObject();
             CollisionModel* pModel = pObject->GetCollisionObject()->mCollisionModel;
-            PblMatrix mBody = pModel->GetWorldMatrix(mAttachPoints[0].mBodyID, pObject->GetMatrix(),
-                                                     pCollision->GetPose());
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vPrev, (const D3DXVECTOR3*)&mAttachPoints[0].mBodyOffset,
-                                   (const D3DXMATRIX*)&mBody);
+            PblVector3 vWorld;
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorld, (const D3DXVECTOR3*)&mAttachPoints[0].mBodyOffset,
+                                   (const D3DXMATRIX*)&pModel->GetWorldMatrix(mAttachPoints[0].mBodyID,
+                                                                              pObject->GetMatrix(),
+                                                                              pCollision->GetPose()));
+            vPrev = vWorld;
         }
         else
         {
@@ -879,7 +879,7 @@ void TowCableRenderObject::Render(GameObject* pObject, unsigned char ucViewport,
         }
     }
 
-    for (int i = 1; i < 13; i++)
+    for (; i < 13; i++)
     {
         TowCableAttachPointData& point = mAttachPoints[i];
         if (!point.mIsAttached)
@@ -888,6 +888,7 @@ void TowCableRenderObject::Render(GameObject* pObject, unsigned char ucViewport,
         }
 
         PblVector3 vStart = vPrev;
+        PblVector3 vEnd;
         if (point.mBodyID >= 0)
         {
             if (!pObject)
@@ -896,14 +897,17 @@ void TowCableRenderObject::Render(GameObject* pObject, unsigned char ucViewport,
             }
             CollisionObject* pCollision = pObject->GetCollisionObject();
             CollisionModel* pModel = pObject->GetCollisionObject()->mCollisionModel;
-            PblMatrix mBody = pModel->GetWorldMatrix(point.mBodyID, pObject->GetMatrix(), pCollision->GetPose());
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vPrev, (const D3DXVECTOR3*)&point.mBodyOffset,
-                                   (const D3DXMATRIX*)&mBody);
+            PblVector3 vWorld;
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorld, (const D3DXVECTOR3*)&point.mBodyOffset,
+                                   (const D3DXMATRIX*)&pModel->GetWorldMatrix(point.mBodyID, pObject->GetMatrix(),
+                                                                              pCollision->GetPose()));
+            vEnd = vWorld;
         }
         else
         {
-            vPrev = point.mBodyOffset;
+            vEnd = point.mBodyOffset;
         }
+        vPrev = vEnd;
 
         PblHermiteVector3 segment(vStart, vPrev, mAttachPoints[i - 1].mSlopeOut, point.mSlopeIn, 1.0f);
         sRenderHermiteSegment(segment, ucViewport, fDist, uiFlags);

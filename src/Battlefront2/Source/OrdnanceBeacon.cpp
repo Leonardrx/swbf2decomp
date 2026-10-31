@@ -109,25 +109,25 @@ bool OrdnanceBeacon::Update(float fDeltaTime)
 {
     while (mSalvoCount > 0 && fDeltaTime > mLifeTime)
     {
-        OrdnanceBeaconClass* pClass = static_cast<OrdnanceBeaconClass*>(mClass);
-
         PblMatrix aim;
-        aim.SetRotateX(-pClass->mAimElevation);
-        aim.RotateY(pClass->mAimAzimuth);
+        aim.SetRotateX(-static_cast<OrdnanceBeaconClass*>(mClass)->mAimElevation);
+        aim.RotateY(static_cast<OrdnanceBeaconClass*>(mClass)->mAimAzimuth);
 
         OrdnanceDesc desc;
         desc.mPosition = mPosition;
-        const float fDist = pClass->mAimDistance;
+        const float fDist = static_cast<OrdnanceBeaconClass*>(mClass)->mAimDistance;
         desc.mPosition.x += aim.m[2][0] * fDist;
         desc.mPosition.y += aim.m[2][1] * fDist;
         desc.mPosition.z += aim.m[2][2] * fDist;
 
         PblRandom& rand = PblRandom::GetSim();
-        const float fRight = (rand.GetFloat() - rand.GetFloat()) * pClass->mScatterDistance;
+        const float fRight =
+            (rand.GetFloat() - rand.GetFloat()) * static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
         desc.mPosition.x += aim.m[0][0] * fRight;
         desc.mPosition.y += aim.m[0][1] * fRight;
         desc.mPosition.z += aim.m[0][2] * fRight;
-        const float fUp = (rand.GetFloat() - rand.GetFloat()) * pClass->mScatterDistance;
+        const float fUp =
+            (rand.GetFloat() - rand.GetFloat()) * static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
         desc.mPosition.x += aim.m[1][0] * fUp;
         desc.mPosition.y += aim.m[1][1] * fUp;
         desc.mPosition.z += aim.m[1][2] * fUp;
@@ -141,15 +141,15 @@ bool OrdnanceBeacon::Update(float fDeltaTime)
 
         if (NetGame::IsEnabled() && !NetGame::IsClient())
         {
-            NetGame::CreateEvent_CreateOrdnance(pClass->mOrdnanceClass, desc);
+            NetGame::CreateEvent_CreateOrdnance(static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass, desc);
         }
         if (!NetGame::IsEnabled() || !NetGame::IsClient() || netIsLocalTurn)
         {
-            pClass->mOrdnanceClass->Build(desc);
+            static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass->Build(desc);
         }
 
         --mSalvoCount;
-        mLifeTime += pClass->mSalvoDelay;
+        mLifeTime += static_cast<OrdnanceBeaconClass*>(mClass)->mSalvoDelay;
     }
     return OrdnanceSticky::Update(fDeltaTime);
 }
@@ -165,7 +165,7 @@ OrdnanceBeaconClass::OrdnanceBeaconClass(unsigned int uHash)
     : OrdnanceStickyClass(uHash)
 {
     mAimAzimuth = 0.0f;
-    mAimElevation = 1.5707964f;
+    mAimElevation = PblMath::fHalfPi;
     mAimDistance = 100.0f;
     mSalvoCount = 1;
     mSalvoDelay = 0.0f;

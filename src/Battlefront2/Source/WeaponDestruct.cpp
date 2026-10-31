@@ -82,21 +82,23 @@ WeaponDestructClass::~WeaponDestructClass()
 // FUNCTION: SWBF2 0x00682290
 void WeaponDestructClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x2819FFA0)
+    switch (uProperty)
     {
+    case 0x2819FFA0:
         sscanf(pszValue, "%f", &mMaxPressedTime);
-    }
-    else if (uProperty == 0x4C5AA5AA)
-    {
+        break;
+    case 0x4C5AA5AA:
         sscanf(pszValue, "%f", &mChargeSoundPitch);
-    }
-    else if (uProperty == 0xCA0C1378)
-    {
+        break;
+    case 0xCA0C1378:
         mExplosionClass = ExplosionClass::Find(PblHash(pszValue));
-    }
-    else if (!OrbitalStrikeClass::SetProperty(uProperty, pszValue))
-    {
-        WeaponClass::SetProperty(uProperty, pszValue);
+        break;
+    default:
+        if (!OrbitalStrikeClass::SetProperty(uProperty, pszValue))
+        {
+            WeaponClass::SetProperty(uProperty, pszValue);
+        }
+        break;
     }
 }
 
@@ -132,7 +134,11 @@ bool WeaponDestruct::CheckCharge() const
 {
     if (mState == IDLE)
     {
-        return mTrigger && mTrigger->IsPressed();
+        if (mTrigger && mTrigger->IsPressed())
+        {
+            return true;
+        }
+        return false;
     }
     return mStateLimit > mStateTimer;
 }
@@ -163,20 +169,18 @@ void WeaponDestruct::EnterCharge()
     mStateLimit = ((WeaponDestructClass*)mClass)->mMaxPressedTime;
     m_pAmmoCounter->ExpendRounds(mClass->mRoundsPerShot);
     m_pEnergyBar->SpendEnergy(mClass->mHeatPerShot);
-    GameObject* pObject = mOwner->GetGameObject();
-    if (pObject && pObject->mAddHealth < 0.0f)
+    if (mOwner->GetGameObject() && mOwner->GetGameObject()->mAddHealth < 0.0f)
     {
-        pObject->mAddHealth = 0.0f;
+        mOwner->GetGameObject()->mAddHealth = 0.0f;
     }
 }
 
 // FUNCTION: SWBF2 0x00681c00
 bool WeaponDestruct::UpdateCharge(float fDeltaTime)
 {
-    GameObject* pObject = mOwner->GetGameObject();
-    if (pObject->IsRtti(EntityDroid::rttiHashEntityDroid))
+    if (mOwner->GetGameObject()->IsRtti(EntityDroid::rttiHashEntityDroid))
     {
-        ((EntityDroid*)pObject)->FreezeMovement();
+        ((EntityDroid*)mOwner->GetGameObject())->FreezeMovement();
     }
     mStateTimer += fDeltaTime;
     return Weapon::UpdateCharge(fDeltaTime);
@@ -186,21 +190,18 @@ bool WeaponDestruct::UpdateCharge(float fDeltaTime)
 void WeaponDestruct::EnterFire()
 {
     Weapon::ExitCharge();
-    GameObject* pObject = mOwner->GetGameObject();
-    WeaponDestructClass* pClass = (WeaponDestructClass*)mClass;
-    const PblVector3& vPos = pObject->GetCollisionObject()->GetCollisionCenter();
 
     if (mClass->mOrdnanceClass)
     {
         OrdnanceDesc desc;
-        desc.mPosition = vPos;
-        desc.mOwner = pObject;
+        desc.mPosition = mOwner->GetGameObject()->GetCollisionObject()->GetCollisionCenter();
+        desc.mOwner = mOwner->GetGameObject();
         desc.mDamageOwner.mCharacter = mOwner->mCharacter;
-        desc.mDamageOwner.mGameObject = pObject;
-        desc.mDamageOwner.mTeam = pObject->GetTeam();
-        desc.mDamageOwner.mClass = pObject->GetEntityClass();
-        desc.mDamageOwner.mWeapon = mClass;
+        desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
         desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+        desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+        desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetEntityClass();
+        desc.mDamageOwner.mWeapon = mClass;
         desc.mTarget = IsLocked() ? (GameObject*)GetLocked() : 0;
         desc.mBodyID = IsLocked() ? GetLockedTargetBodyId() : -1;
         desc.mFireWeapon = this;
@@ -223,20 +224,23 @@ void WeaponDestruct::EnterFire()
         {
             if (bFlash)
             {
-                mClass->CreateMuzzleFlash(pObject->GetCollisionObject()->GetMatrix());
+                mClass->CreateMuzzleFlash(static_cast<CollisionObject&>(*mOwner->GetGameObject()).GetMatrix());
             }
             mClass->mOrdnanceClass->Build(desc);
         }
     }
 
-    if (pClass->mStrikeClass)
+    if (((WeaponDestructClass*)mClass)->mStrikeClass)
     {
-        OrbitalStrikeDesc desc;
-        desc.mPosition = vPos;
-        desc.mDamageOwner = DamageOwner(mOwner->mCharacter, pObject, pObject->GetTeam(),
-                                       pObject->GetEntityClass(), mClass,
-                                       mOwner->GetOffenseMultiplier());
-        mStrike = new OrbitalStrike(pClass, desc);
+        OrbitalStrikeDesc desc = { PblVector3(0.0f, 0.0f, 0.0f), DamageOwner(0, 0, 0, 0, 0, 1.0f) };
+        desc.mPosition = mOwner->GetGameObject()->GetCollisionObject()->GetCollisionCenter();
+        desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+        desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+        desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+        desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
+        desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetGameObjectClass();
+        desc.mDamageOwner.mWeapon = mClass;
+        mStrike = new OrbitalStrike((WeaponDestructClass*)mClass, desc);
     }
 }
 
@@ -244,22 +248,23 @@ void WeaponDestruct::EnterFire()
 void WeaponDestruct::ExitFire()
 {
     Weapon::ExitFire();
-    GameObject* pObject = mOwner->GetGameObject();
-    DamageOwner owner(mOwner->GetCharacter(), pObject, pObject->GetTeam(),
-                      pObject->GetEntityClass(), mClass, 1.0f);
-    WeaponDestructClass* pClass = (WeaponDestructClass*)mClass;
-    if (pClass->mExplosionClass)
+    DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
+    owner.mCharacter = mOwner->mCharacter;
+    owner.mGameObject = mOwner->GetGameObject();
+    owner.mTeam = mOwner->GetGameObject()->GetTeam();
+    owner.mClass = mOwner->GetGameObject()->GetEntityClass();
+    owner.mWeapon = mClass;
+    if (((WeaponDestructClass*)mClass)->mExplosionClass)
     {
-        CollisionObject* pCollision = pObject->GetCollisionObject();
-        pClass->mExplosionClass->CreateExplosion(
-            pCollision->GetCollisionCenter(), owner, false, COLL_UNKNOWN);
+        ((WeaponDestructClass*)mClass)->mExplosionClass->CreateExplosion(
+            mOwner->GetGameObject()->GetCollisionObject()->GetCollisionCenter(), owner, false, COLL_UNKNOWN);
     }
-    if (pObject->IsRtti(EntityDroid::rttiHashEntityDroid))
+    if (mOwner->GetGameObject()->IsRtti(EntityDroid::rttiHashEntityDroid))
     {
-        ((EntityDroid*)pObject)->KillDelay(1.0f);
+        ((EntityDroid*)mOwner->GetGameObject())->KillDelay(1.0f);
     }
     else
     {
-        pObject->InstantDeath(owner, false);
+        mOwner->GetGameObject()->InstantDeath(owner, false);
     }
 }
