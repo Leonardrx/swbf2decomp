@@ -52,7 +52,7 @@ OrdnanceGrapplingHook::OrdnanceGrapplingHook(OrdnanceGrapplingHookClass* pClass,
 
     mState = HOOK_ATTACHING;
     mMaxLifetime = -1.0f;
-    mWaitTime = 0.3f;
+    mWaitTime = 0.4f;
     mDeltaTime = 0.0f;
     mCollBodyID = -1;
     mCollOffset = gVectorZero;
