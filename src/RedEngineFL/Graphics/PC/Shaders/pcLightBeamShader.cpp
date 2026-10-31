@@ -316,7 +316,6 @@ void pcLightBeamShader::Begin_Fixed(unsigned int, unsigned int) const
     mTransform.m[1][1] = 0.0f;
     mTransform.m[1][2] = 0.0f;
     mTransform.m[1][3] = 0.0f;
-    mTransform.m[2][0] = fScale;
     mTransform.m[2][1] = 0.0f;
     mTransform.m[2][2] = 0.0f;
     mTransform.m[2][3] = 0.0f;
@@ -324,6 +323,7 @@ void pcLightBeamShader::Begin_Fixed(unsigned int, unsigned int) const
     mTransform.m[3][1] = 0.0f;
     mTransform.m[3][2] = 0.0f;
     mTransform.m[3][3] = 1.0f;
+    mTransform.m[2][0] = fScale;
     RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
     RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
     RedRenderer::pcFFSetTextureTransform(0, mTransform);

@@ -3248,18 +3248,22 @@ void RedRenderer::internalInitOcclusionQuery()
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
 
         const float fZero = 0.0f;
-        pVertex[0] = fCos * fZero;
+        const float fXZero = fCos * fZero;
+        const float fZZero = fSin * fZero;
+        pVertex[0] = fXZero;
         pVertex[1] = 0.0f;
-        pVertex[2] = fSin * fZero;
+        pVertex[2] = fZZero;
         pVertex[3] = fCos;
         pVertex[4] = 1.0f;
         pVertex[5] = fSin;
         pVertex += 6;
     }
 
-    pVertex[0] = fCos;
+    const float fX1 = fCos;
+    const float fZ1 = fSin;
+    pVertex[0] = fX1;
     pVertex[1] = 1.0f;
-    pVertex[2] = fSin;
+    pVertex[2] = fZ1;
     pVertex[3] = fCos;
     pVertex[4] = 1.0f;
     pVertex[5] = fSin;
@@ -3268,9 +3272,11 @@ void RedRenderer::internalInitOcclusionQuery()
     for (i = 0; i <= 6; i++)
     {
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
-        pVertex[0] = fCos;
+        const float fX2 = fCos;
+        const float fZ2 = fSin;
+        pVertex[0] = fX2;
         pVertex[1] = 1.0f;
-        pVertex[2] = fSin;
+        pVertex[2] = fZ2;
         pVertex[3] = 0.0f;
         pVertex[4] = 1.0f;
         pVertex[5] = 0.0f;
@@ -3297,9 +3303,11 @@ void RedRenderer::internalInitOcclusionQuery()
         pVertex += 6;
     }
 
-    pVertex[0] = fCos;
+    const float fX3 = fCos;
+    const float fZ3 = fSin;
+    pVertex[0] = fX3;
     pVertex[1] = -1.0f;
-    pVertex[2] = fSin;
+    pVertex[2] = fZ3;
     pVertex[3] = fCos;
     pVertex[4] = -1.0f;
     pVertex[5] = fSin;
@@ -3308,18 +3316,22 @@ void RedRenderer::internalInitOcclusionQuery()
     for (i = 0; i <= 6; i++)
     {
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
-        pVertex[0] = fCos;
+        const float fX4 = fCos;
+        const float fZ4 = fSin;
+        pVertex[0] = fX4;
         pVertex[1] = -1.0f;
-        pVertex[2] = fSin;
+        pVertex[2] = fZ4;
         pVertex[3] = fCos;
         pVertex[4] = 1.0f;
         pVertex[5] = fSin;
         pVertex += 6;
     }
 
-    pVertex[0] = fCos;
+    const float fX5 = fCos;
+    const float fZ5 = fSin;
+    pVertex[0] = fX5;
     pVertex[1] = 1.0f;
-    pVertex[2] = fSin;
+    pVertex[2] = fZ5;
     pVertex[3] = fCos;
     pVertex[4] = 1.0f;
     pVertex[5] = fSin;
@@ -3328,9 +3340,11 @@ void RedRenderer::internalInitOcclusionQuery()
     for (i = 0; i <= 6; i++)
     {
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
-        pVertex[0] = fCos;
+        const float fX6 = fCos;
+        const float fZ6 = fSin;
+        pVertex[0] = fX6;
         pVertex[1] = 1.0f;
-        pVertex[2] = fSin;
+        pVertex[2] = fZ6;
         pVertex[3] = 0.0f;
         pVertex[4] = 1.0f;
         pVertex[5] = 0.0f;
@@ -3359,14 +3373,18 @@ void RedRenderer::internalInitOcclusionQuery()
                             -((float)i * PblMath::fTwoPi * 0.125f));
 
             PblMath::SinCos(&fSinTheta, &fCosTheta, fTheta0);
-            pVertex[0] = fCos * fSinTheta;
+            const float fX0 = fCos * fSinTheta;
+            const float fZ0 = fSin * fSinTheta;
+            pVertex[0] = fX0;
             pVertex[1] = fCosTheta;
-            pVertex[2] = fSin * fSinTheta;
+            pVertex[2] = fZ0;
 
             PblMath::SinCos(&fSinTheta, &fCosTheta, fTheta1);
-            pVertex[3] = fCos * fSinTheta;
+            const float fX1 = fCos * fSinTheta;
+            const float fZ1 = fSin * fSinTheta;
+            pVertex[3] = fX1;
             pVertex[4] = fCosTheta;
-            pVertex[5] = fSin * fSinTheta;
+            pVertex[5] = fZ1;
             pVertex += 6;
 
             fSinTheta1 = fSinTheta;
@@ -3384,7 +3402,7 @@ void RedRenderer::internalInitOcclusionQuery()
 
     RedRenderer::m_occlusionQueryShapes[0]->EndVertexData();
 
-    const unsigned int auiCorners[20] = {
+    unsigned int auiCorners[20] = {
         0, 1, 2, 3,
         6, 7, 7, 3,
         5, 1, 4, 0,
@@ -3401,9 +3419,12 @@ void RedRenderer::internalInitOcclusionQuery()
     for (i = 0; i < 20; i++)
     {
         const unsigned int uiCorner = auiCorners[i];
-        pVertex[0] = (uiCorner & 4) ? 1.0f : -1.0f;
-        pVertex[1] = (uiCorner & 2) ? 1.0f : -1.0f;
-        pVertex[2] = (uiCorner & 1) ? 1.0f : -1.0f;
+        const float fZ = (uiCorner & 1) ? 1.0f : -1.0f;
+        const float fY = (uiCorner & 2) ? 1.0f : -1.0f;
+        const float fX = (uiCorner & 4) ? 1.0f : -1.0f;
+        pVertex[0] = fX;
+        pVertex[1] = fY;
+        pVertex[2] = fZ;
         pVertex += 3;
     }
 
@@ -3776,7 +3797,7 @@ void RedRenderer::pcSetViewport(const RedViewport& rViewport)
     pTarget->Release();
 
     float fWidth = (float)(double)desc.Width;
-    m_viewport.X = (unsigned int)(fWidth * rViewport.fOffsetX);
+    m_viewport.X = (unsigned int)(rViewport.fOffsetX * fWidth);
     float fHeight = (float)(double)desc.Height;
     m_viewport.Y = (unsigned int)(fHeight * rViewport.fOffsetY);
     m_viewport.Width = (unsigned int)(fWidth * rViewport.fWidth);
@@ -5362,7 +5383,7 @@ void __cdecl RedRenderer::internalRenderFixed(RenderItem* pItem, unsigned int ui
         }
 
         const unsigned int uiAmbient = bAmbient ? ToD3DColor_(pLS->ambientLight.m_color)
-                                                : *(const unsigned int*)&RedColor::BLACK;
+                                                : RedColor::BLACK.GetARGB();
         pcSetRenderState(D3DRS_AMBIENT, uiAmbient);
 
         if (bDirectional)
@@ -5410,7 +5431,7 @@ void __cdecl RedRenderer::internalRenderFixed(RenderItem* pItem, unsigned int ui
     }
     else
     {
-        pcSetRenderState(D3DRS_AMBIENT, *(const unsigned int*)&RedColor::WHITE);
+        pcSetRenderState(D3DRS_AMBIENT, RedColor::WHITE.GetARGB());
     }
 
     pcRedShader* pShader;
@@ -5450,7 +5471,7 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
     internalShaderBeginEnd(pItem, uiShaderID, uiPass);
 
     pcRedVertexShaderConstantRegister* pRegs;
-    if (pItem->pBoneMatrices && pItem->pBoneMatrices != RedRenderer::m_pmBoneMatricesPrev)
+    if (pItem->pBoneMatrices && RedRenderer::m_pmBoneMatricesPrev != pItem->pBoneMatrices)
     {
         RedRenderer::m_pmBoneMatricesPrev = pItem->pBoneMatrices;
         pRegs = m_VSConstants.GetRegisterArray(51, 3 * pItem->numBoneMatrices);
@@ -5463,7 +5484,7 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
 
     float fSpotW = 2.0f;
     float fSpotProjected = 0.0f;
-    if (pItem->pPrim != RedRenderer::m_pPrimPrev)
+    if (RedRenderer::m_pPrimPrev != pItem->pPrim)
     {
         RedRenderer::m_pPrimPrev = pItem->pPrim;
         pRegs = m_VSConstants.GetRegisterArray(12, 4);
@@ -5477,21 +5498,20 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
             pRegs[12].component[0] = 1.0f;
             pRegs[12].component[1] = 0.0f;
         }
-        pRegs[12].component[2] = (uiRVF & 0x8000) ? (1.0f / 2048.0f) : 1.0f;
+        pRegs[12].component[2] = 1.0f / 2048.0f;
+        if (!(uiRVF & 0x8000))
+        {
+            pRegs[12].component[2] = 1.0f;
+        }
         pRegs[12].component[3] = 1.0f;
 
         if (uiRVF & 0x1000)
         {
-            const PblBox& rBox = pItem->pPrim->m_bbox;
-            const float fScale = 1.0f / 65534.0f;
-            pRegs[13].component[3] = 0.0f;
-            pRegs[13].component[0] = (rBox._vMax.x - rBox._vMin.x) * fScale;
-            pRegs[13].component[1] = (rBox._vMax.y - rBox._vMin.y) * fScale;
-            pRegs[13].component[2] = (rBox._vMax.z - rBox._vMin.z) * fScale;
-            pRegs[14].component[3] = 1.0f;
-            pRegs[14].component[0] = (rBox._vMax.x + rBox._vMin.x) * 0.5f;
-            pRegs[14].component[1] = (rBox._vMax.y + rBox._vMin.y) * 0.5f;
-            pRegs[14].component[2] = (rBox._vMax.z + rBox._vMin.z) * 0.5f;
+            const PblBox& box = pItem->pPrim->m_bbox;
+            const PblVector3 vSize = (box._vMax - box._vMin) * (1.0f / 65534.0f);
+            pRegs[13].SetFloats(vSize.x, vSize.y, vSize.z, 0.0f);
+            const PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
+            pRegs[14].SetFloats(vCenter.x, vCenter.y, vCenter.z, 1.0f);
         }
         else
         {
@@ -5507,19 +5527,15 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
 
         if (uiRVF & 0x80)
         {
-            pRegs[15].component[0] = 0.0f;
-            pRegs[15].component[1] = 1.0f;
+            pRegs[15].SetFloats(0.0f, 1.0f, 0.0f, 1.0f);
         }
         else
         {
-            pRegs[15].component[0] = 1.0f;
-            pRegs[15].component[1] = 0.0f;
+            pRegs[15].SetFloats(1.0f, 0.0f, 0.0f, 1.0f);
         }
-        pRegs[15].component[2] = 0.0f;
-        pRegs[15].component[3] = 1.0f;
     }
 
-    if (pItem->pmObjWorld != RedRenderer::m_pmObjWorldPrev)
+    if (RedRenderer::m_pmObjWorldPrev != pItem->pmObjWorld)
     {
         RedRenderer::m_pmObjWorldPrev = pItem->pmObjWorld;
         pRegs = m_VSConstants.GetRegisterArray(16, 3);
@@ -5775,7 +5791,8 @@ void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int ui
         RedRenderer::m_pmBoneMatricesPrev != pItem->pBoneMatrices)
     {
         RedRenderer::m_pmBoneMatricesPrev = pItem->pBoneMatrices;
-        pRegs = m_VSConstants.GetRegisterArray(51, 3 * pItem->numBoneMatrices);
+        const int iBoneRegs = 3 * pItem->numBoneMatrices;
+        pRegs = m_VSConstants.GetRegisterArray(51, iBoneRegs);
         for (unsigned short i = 0; i < pItem->numBoneMatrices; ++i)
         {
             pRegs[51 + 3 * i].SetMatrix4x3(pItem->pBoneMatrices[i]);
@@ -5808,8 +5825,8 @@ void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int ui
         {
             const PblBox& box = pItem->pPrim->m_bbox;
             const PblVector3 vSize = (box._vMax - box._vMin) * (1.0f / 65534.0f);
-            const PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
             pRegs[13].SetFloats(vSize.x, vSize.y, vSize.z, 0.0f);
+            const PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
             pRegs[14].SetFloats(vCenter.x, vCenter.y, vCenter.z, 1.0f);
         }
         else

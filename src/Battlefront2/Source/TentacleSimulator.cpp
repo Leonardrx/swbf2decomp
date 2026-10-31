@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <math.h>
 #include <d3dx9math.h>
 
@@ -107,7 +108,7 @@ void TentacleSimulator::EnforceCylinderCollision(const PblMatrix& matrix, float 
             }
             const float radialX = m[0] * dx + m[1] * dy + m[2] * dz;
             const float radialZ = m[8] * dx + m[9] * dy + m[10] * dz;
-            const float radialDistance = sqrtf(radialX * radialX + radialZ * radialZ);
+            const float radialDistance = PblMath::Sqrt(radialX * radialX + radialZ * radialZ);
             const float radialDepth = fRadius - radialDistance;
             if (radialDepth <= 0.0f)
             {
@@ -434,7 +435,7 @@ void TentacleSimulator::UpdatePositions(float fDeltaTime, const PblVector3& vVel
             float fDx = vPos.x - tPos[t][b].x;
             float fDy = vPos.y - tPos[t][b].y;
             float fDz = vPos.z - tPos[t][b].z;
-            float fLength = sqrtf(fDx * fDx + fDy * fDy + fDz * fDz);
+            float fLength = PblMath::Sqrt(fDx * fDx + fDy * fDy + fDz * fDz);
 
             float fRestLength = 0.25f;
             if (b != mBonesPerTentacle - 1)
@@ -444,7 +445,7 @@ void TentacleSimulator::UpdatePositions(float fDeltaTime, const PblVector3& vVel
                 float fBx = p1[0] - p0[0];
                 float fBy = p1[1] - p0[1];
                 float fBz = p1[2] - p0[2];
-                fRestLength = sqrtf(fBx * fBx + fBy * fBy + fBz * fBz);
+                fRestLength = PblMath::Sqrt(fBx * fBx + fBy * fBy + fBz * fBz);
             }
 
             float fScale = (fLength - fRestLength) / fLength;

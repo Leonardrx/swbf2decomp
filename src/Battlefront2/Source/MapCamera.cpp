@@ -136,7 +136,7 @@ void MapCamera::Update(float fDeltaTime)
         float dx = mZoomNewPos.x - mZoomOldPos.x;
         float dy = mZoomNewPos.y - mZoomOldPos.y;
         float dz = mZoomNewPos.z - mZoomOldPos.z;
-        mZoomDist = sqrtf(dx * dx + dy * dy + dz * dz);
+        mZoomDist = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     mZoomRatio += fDeltaTime * 0.5f;

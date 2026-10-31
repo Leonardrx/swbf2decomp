@@ -711,7 +711,7 @@ bool Character::Update(float fDeltaTime)
                 float fX = mPostMatrix.GetTranslation().x - vPos.x;
                 float fY = mPostMatrix.GetTranslation().y - vPos.y;
                 float fZ = mPostMatrix.GetTranslation().z - vPos.z;
-                float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+                float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
                 Damageable* pDamageable = GetDamageable(pObject);
                 float fWeight = pDamageable->mMaxHealth > 0.0f
                                     ? 2.0f - pDamageable->mCurHealth / pDamageable->mMaxHealth

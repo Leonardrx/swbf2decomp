@@ -1368,7 +1368,7 @@ bool EntityPathFollower::ShotAtByEnemy(BranchParams& params)
 
     PblVector3 vAttacker = mAttacker->GetControllable()->GetMatrix().GetTranslation();
     const PblVector3& vPosition = params.mMatrix.GetTranslation();
-    float fDist = sqrtf((vPosition.x - vAttacker.x) * (vPosition.x - vAttacker.x) +
+    float fDist = PblMath::Sqrt((vPosition.x - vAttacker.x) * (vPosition.x - vAttacker.x) +
                         (vPosition.y - vAttacker.y) * (vPosition.y - vAttacker.y) +
                         (vPosition.z - vAttacker.z) * (vPosition.z - vAttacker.z));
     float fRight = PblRandom::GetGlobalFloatRange(0.0f, 2.0f);
@@ -1437,7 +1437,7 @@ void EntityPathFollower::PickupCTFFlag(BranchParams& params)
         SetPoint(vPosition, 1);
         SetPoint(vFlag, 2);
         PblVector3 vDelta = vFlag - vPosition;
-        float fLength = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+        float fLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
         float fInv = 1.0f / fLength;
         float fBeyond = fLength * 3.0f;
         if (!(200.0f > fBeyond))

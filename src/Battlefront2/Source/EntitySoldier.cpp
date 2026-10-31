@@ -2383,11 +2383,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
         VisionManager::AddFakeRayhitResult(UnitControllerPtr(mCtrl), pOther->GetGameObject());
     }
 
-    if (pOther->GetCollisionType() == COLL_ITEM)
-    {
-        pOther->CollisionCallback(pResult, this, pRestrictor);
-    }
-    else
+    if (pOther->GetCollisionType() != COLL_ITEM)
     {
         PblVector3 vRelVel = mVelocity;
         if (pOther->GetGameObject())
@@ -2439,7 +2435,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
             }
         }
 
-        if (AIUtil::ShouldSoldierDodgeThisType(pOther->GetCollisionType()) && fabs(vSeparation.y) < 0.3f)
+        if (AIUtil::ShouldSoldierDodgeThisType(pOther->GetCollisionType()) && (float)fabs((double)vSeparation.y) < 0.3f)
         {
             mAILastCollisionNormal.x += vSeparation.x;
             mAILastCollisionNormal.y += vSeparation.y;
@@ -2492,7 +2488,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
                         vNormal.x -= mGroundNormal.x * fDot;
                         vNormal.y -= mGroundNormal.y * fDot;
                         vNormal.z -= mGroundNormal.z * fDot;
-                        float fLength = sqrtf(vNormal.x * vNormal.x + vNormal.y * vNormal.y + vNormal.z * vNormal.z);
+                        float fLength = PblMath::Sqrt(vNormal.x * vNormal.x + vNormal.y * vNormal.y + vNormal.z * vNormal.z);
                         if (fLength > 0.0f)
                         {
                             float fInv = 1.0f / fLength;
@@ -2555,7 +2551,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
                         if (vNormal.y < 0.0f)
                         {
                             vNormal.y = 0.0f;
-                            float fLength = sqrtf(vNormal.x * vNormal.x + 0.0f + vNormal.z * vNormal.z);
+                            float fLength = PblMath::Sqrt(vNormal.x * vNormal.x + 0.0f + vNormal.z * vNormal.z);
                             if (fLength > 0.0f)
                             {
                                 float fInv = 1.0f / fLength;
@@ -2578,7 +2574,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
                     else if (vNormal.y > 0.0f)
                     {
                         vNormal.y = 0.0f;
-                        float fLength = sqrtf(vNormal.x * vNormal.x + 0.0f + vNormal.z * vNormal.z);
+                        float fLength = PblMath::Sqrt(vNormal.x * vNormal.x + 0.0f + vNormal.z * vNormal.z);
                         if (fLength > 0.0f)
                         {
                             float fInv = 1.0f / fLength;
@@ -2595,7 +2591,7 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
                         vNormal.x -= mGroundNormal.x * fDot;
                         vNormal.y -= mGroundNormal.y * fDot;
                         vNormal.z -= mGroundNormal.z * fDot;
-                        float fLength = sqrtf(vNormal.x * vNormal.x + vNormal.y * vNormal.y + vNormal.z * vNormal.z);
+                        float fLength = PblMath::Sqrt(vNormal.x * vNormal.x + vNormal.y * vNormal.y + vNormal.z * vNormal.z);
                         if (fLength > 0.0f)
                         {
                             float fInv = 1.0f / fLength;
@@ -2630,11 +2626,11 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
             {
                 mCollisionState = COLLSTATE_COLLIDE_WITH_RIGID;
             }
-            if (fabs(mVelocity.x) < 0.1f)
+            if ((mVelocity.x < 0.0f ? -mVelocity.x : mVelocity.x) < 0.1f)
             {
                 mVelocity.x = 0.0f;
             }
-            if (fabs(mVelocity.z) < 0.1f)
+            if ((mVelocity.z < 0.0f ? -mVelocity.z : mVelocity.z) < 0.1f)
             {
                 mVelocity.z = 0.0f;
             }
@@ -2683,9 +2679,13 @@ bool EntitySoldier::CollisionCallback(const CollisionResult* pResult, CollisionO
                 return true;
             }
             PblVector3 vPush(vSeparation.x * pResult->mOverlap, 0.0f, vSeparation.z * pResult->mOverlap);
-            RestrictObject(vPush, sqrtf(vPush.x * vPush.x + 0.0f + vPush.z * vPush.z), pRestrictor);
+            RestrictObject(vPush, PblMath::Sqrt(vPush.x * vPush.x + 0.0f + vPush.z * vPush.z), pRestrictor);
             return true;
         }
+    }
+    else
+    {
+        pOther->CollisionCallback(pResult, this, pRestrictor);
     }
 
     PblVector3 vOldPos = mMatrix.GetTranslation();
@@ -2994,7 +2994,7 @@ void EntitySoldier::UpdateWeaponAndAimer(float fDeltaTime)
 
             PblVector3 vOldStart(mEyeDir.x * fBehind + vOldAimStart.x, vOldAimStart.y + mEyeDir.y * fBehind,
                                  vOldAimStart.z + mEyeDir.z * fBehind);
-            float fDist = sqrtf((vOldAimPoint.x - vOldStart.x) * (vOldAimPoint.x - vOldStart.x) +
+            float fDist = PblMath::Sqrt((vOldAimPoint.x - vOldStart.x) * (vOldAimPoint.x - vOldStart.x) +
                                 (vOldAimPoint.y - vOldStart.y) * (vOldAimPoint.y - vOldStart.y) +
                                 (vOldAimPoint.z - vOldStart.z) * (vOldAimPoint.z - vOldStart.z));
             mTargetInfo.mAimPoint =
@@ -3112,7 +3112,7 @@ bool EntitySoldier::UpdateBoardVsChangeClass()
             const PblVector3& vMe = GetCollisionCenter();
             const PblVector3& vPost = pPost->GetGameObject()->GetCollisionCenter();
             PblVector3 vDir(vPost.x - vMe.x, vPost.y - vMe.y, vPost.z - vMe.z);
-            float fDist = sqrtf(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+            float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
             if (fDist > 0.0001f)
             {
                 float fInv = 1.0f / fDist;
@@ -3133,7 +3133,7 @@ bool EntitySoldier::UpdateBoardVsChangeClass()
                 const PblVector3& vMe = GetPosition();
                 const PblVector3& vOther = aObjects[i]->GetPosition();
                 PblVector3 vDir(vOther.x - vMe.x, vOther.y - vMe.y, vOther.z - vMe.z);
-                float fDist = sqrtf(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+                float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
                 if (fDist > 0.0001f)
                 {
                     float fInv = 1.0f / fDist;
@@ -3204,7 +3204,7 @@ bool EntitySoldier::UpdateBoardVsChangeClass()
             const PblVector3& vMe = GetCollisionCenter();
             const PblVector3& vPost = pPost->GetGameObject()->GetCollisionCenter();
             PblVector3 vDir(vPost.x - vMe.x, vPost.y - vMe.y, vPost.z - vMe.z);
-            float fDist = sqrtf(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
+            float fDist = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
             if (fDist > 0.0001f)
             {
                 float fInv = 1.0f / fDist;
@@ -3225,7 +3225,7 @@ bool EntitySoldier::UpdateBoardVsChangeClass()
                 const PblVector3& vMe = GetPosition();
                 const PblVector3& vOther = aObjects[i]->GetPosition();
                 PblVector3 vDir(vOther.x - vMe.x, vOther.y - vMe.y, vOther.z - vMe.z);
-                float fDist = sqrtf(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
+                float fDist = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
                 if (fDist > 0.0001f)
                 {
                     float fInv = 1.0f / fDist;
@@ -3983,7 +3983,7 @@ float EntitySoldier::GetSoundRadius() const
         fWeaponRadius = pWeapon->GetSoundRadius() * 0.5f;
     }
     const PblVector3& vVelocity = GetVelocity();
-    float fRadius = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z) *
+    float fRadius = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z) *
                     mClass->mNoiseFactor;
     if (fRadius < 0.0f)
     {
@@ -5981,7 +5981,7 @@ bool EntitySoldier::Update(float fDeltaTime)
             D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mNew), reinterpret_cast<const D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mObject));
             const PblVector3& vUp = mMatrix.GetYAxis();
             const PblVector3& vFront = mNew.GetZAxis();
-            if (fabs(vUp.y * vFront.y + vUp.x * vFront.x + vUp.z * vFront.z) < 0.99f)
+            if ((float)fabs((double)(vUp.y * vFront.y + vUp.x * vFront.x + vUp.z * vFront.z)) < 0.99f)
             {
                 SetMatrix(NormalMatrix(vFront, vUp, mNew.GetTranslation()));
                 if (mSoldierAnimator)
@@ -7628,26 +7628,8 @@ bool EntitySoldier::Update(float fDeltaTime)
                 else
                 {
                     AI::EventInfo queryInfo(AI::EVQ_SC_IsFollowingChr, this);
-                    if (pUnit->SendEvent(&queryInfo))
+                    if (!pUnit->SendEvent(&queryInfo))
                     {
-                        AI::EventInfo stopInfo(AI::EVT_SC_StopFollowChr, this);
-                        pUnit->SendEvent(&stopInfo);
-                        AI::VOHelper::Play(AI::VOT_SC_StopFollow, this, 0, pTarget, 0.0f);
-                        AI::EventType eCommand = AI::EVT_SC_StopFollowChr;
-                        EventManager::CharacterEvent::mIssueAICommand.Trigger(*mCharacter, eCommand);
-                        const unsigned short* pText = RedLocalizeDB::Find(0x0e0280e5, false);
-                        for (unsigned int i = 0; i < NetGame::GetNumLocalPlayers(); ++i)
-                        {
-                            if (NetGame::GetLocalPlayer(i) == mCharacter)
-                            {
-                                MessageDisplay::Instance(i, MessageDisplay::DISPLAY_SYSTEM_MSG)
-                                    ->AddMessage(pText, RedColor::CYAN);
-                            }
-                        }
-                    }
-                    else
-                    {
-
                         if (ReserveManager::GetOpenReservableSlots(this, GetTeam(), RT_FORMATION) < 1)
                         {
                             AI::EventInfo stopInfo(AI::EVT_SC_StopFollowChr, this);
@@ -7659,6 +7641,23 @@ bool EntitySoldier::Update(float fDeltaTime)
                         AI::EventType eCommand = AI::EVT_SC_FollowChr;
                         EventManager::CharacterEvent::mIssueAICommand.Trigger(*mCharacter, eCommand);
                         const unsigned short* pText = RedLocalizeDB::Find(0x731fd493, false);
+                        for (unsigned int i = 0; i < NetGame::GetNumLocalPlayers(); ++i)
+                        {
+                            if (NetGame::GetLocalPlayer(i) == mCharacter)
+                            {
+                                MessageDisplay::Instance(i, MessageDisplay::DISPLAY_SYSTEM_MSG)
+                                    ->AddMessage(pText, RedColor::CYAN);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        AI::EventInfo stopInfo(AI::EVT_SC_StopFollowChr, this);
+                        pUnit->SendEvent(&stopInfo);
+                        AI::VOHelper::Play(AI::VOT_SC_StopFollow, this, 0, pTarget, 0.0f);
+                        AI::EventType eCommand = AI::EVT_SC_StopFollowChr;
+                        EventManager::CharacterEvent::mIssueAICommand.Trigger(*mCharacter, eCommand);
+                        const unsigned short* pText = RedLocalizeDB::Find(0x0e0280e5, false);
                         for (unsigned int i = 0; i < NetGame::GetNumLocalPlayers(); ++i)
                         {
                             if (NetGame::GetLocalPlayer(i) == mCharacter)
@@ -9323,7 +9322,7 @@ void EntitySoldier::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, 
 
     const PblVector3& vCenter = GetCollisionCenter();
     PblVector3 vDiff(vCenter.x - vPos.x, vCenter.y - vPos.y, vCenter.z - vPos.z);
-    float fDist = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+    float fDist = PblMath::Sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
     if (fDist > 0.0001f)
     {
         float fEffect = CalcRadiusEffect(fDist, fInnerRadius, fOuterRadius);

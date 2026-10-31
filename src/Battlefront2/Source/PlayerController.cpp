@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include "PlayerController.h"
 #include "AIUtil.h"
@@ -990,7 +991,7 @@ void PlayerController::CheckForVisibleCriticalPts()
         float fX = mBody.m[3][0] - vFirePos.x;
         float fY = mBody.m[3][1] - vFirePos.y;
         float fZ = mBody.m[3][2] - vFirePos.z;
-        float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+        float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
         if (fDist > 50.0f)
         {
             return;

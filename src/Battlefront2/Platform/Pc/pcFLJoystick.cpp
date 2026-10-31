@@ -688,8 +688,8 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
 
         for (int iAxis = 0; iAxis < 8; iAxis++)
         {
-            float fAxis = pJoystick->m_fAxis[iAxis];
-            if (fabs(fAxis) < 1.0f)
+            float fAxis = _redJoystick[iPort]->m_fAxis[iAxis];
+            if ((float)fabs((double)fAxis) < 1.0f)
             {
                 if (fAxis < -1.0f)
                 {

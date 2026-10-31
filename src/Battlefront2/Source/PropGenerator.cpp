@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "PropGenerator.h"
 #include "PebbleFL/Common/PblVector.h"
 
@@ -575,7 +576,7 @@ void CreateTreeLineOnPath(unsigned int uPathName, PblFileChunk& chunk)
         PblVector3 vDelta(vEnd.x - vPrevious.x, vEnd.y - vPrevious.y, vEnd.z - vPrevious.z);
         while (vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z > fSpacingSquared)
         {
-            const float fInvLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+            const float fInvLength = 1.0f / PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
             const PblVector3 vDirection(vDelta.x * fInvLength, vDelta.y * fInvLength, vDelta.z * fInvLength);
             if (iNumClasses)
             {

@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include <math.h>
 
@@ -310,7 +311,7 @@ void SpaceDustEffect::Update(float fDeltaTime)
         }
         else
         {
-            fSpeed = sqrtf(fLengthSq);
+            fSpeed = PblMath::Sqrt(fLengthSq);
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vVelocity));
         }
     }
@@ -456,7 +457,7 @@ void SpaceDustEffect::Render(int value)
                                 vVelocity.z * vVelocity.z;
         if (fLengthSq >= 0.0001f)
         {
-            fSpeed = sqrtf(fLengthSq);
+            fSpeed = PblMath::Sqrt(fLengthSq);
         }
     }
     float fT = (fSpeed - mParticleLengthMinSpeed) / (mParticleLengthMaxSpeed - mParticleLengthMinSpeed);

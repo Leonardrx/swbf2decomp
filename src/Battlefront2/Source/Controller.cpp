@@ -158,7 +158,7 @@ float Controller::_GetTargetBubbleSize() const
     }
 
     const PblVector3& vVelocity = pObject->GetVelocity();
-    float fSpeed = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y
+    float fSpeed = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y
                          + vVelocity.z * vVelocity.z);
     float fMaxSpeed = pObject->GetMaxSpeed();
     if (fMaxSpeed < 0.1f)

@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include "ItemTimerDisplay.h"
 
@@ -190,7 +191,7 @@ bool ItemTimerDisplay::DisplayThread::Update(float fDeltaTime)
             continue;
         }
 
-        float fDist = sqrtf((vPos.x - vCamPos.x) * (vPos.x - vCamPos.x) +
+        float fDist = PblMath::Sqrt((vPos.x - vCamPos.x) * (vPos.x - vCamPos.x) +
                             (vPos.y - vCamPos.y) * (vPos.y - vCamPos.y) +
                             (vPos.z - vCamPos.z) * (vPos.z - vCamPos.z));
         unsigned char uAlpha = 0xff;

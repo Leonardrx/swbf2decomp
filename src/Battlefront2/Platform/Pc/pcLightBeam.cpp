@@ -239,11 +239,11 @@ void LightBeamEffect::RenderLightBeam(const LightBeam* pBeam, unsigned int uiFla
     {
         return;
     }
-    if (((float)fabs(vView.x) - fRadius) * fNear * 2.0f > -(vView.z * fWidth))
+    if (((float)fabs((double)(vView.x)) - fRadius) * fNear * 2.0f > -(vView.z * fWidth))
     {
         return;
     }
-    if (((float)fabs(vView.y) - fRadius) * fNear * 2.0f > -(vView.z * fHeight))
+    if (((float)fabs((double)(vView.y)) - fRadius) * fNear * 2.0f > -(vView.z * fHeight))
     {
         return;
     }
@@ -283,10 +283,10 @@ void LightBeamEffect::RenderLightBeam(const LightBeam* pBeam, unsigned int uiFla
         if (pBeam->_fHeadSizeX != pBeam->_fHeadSizeZ || pBeam->_fTailSizeX != pBeam->_fTailSizeZ)
         {
             const PblMatrix& mWorld = pBeam->m_mWorldMatrix;
-            const float fAcrossX = (float)fabs(mWorld.m[0][0] * vSide.x + mWorld.m[0][1] * vSide.y
-                                               + mWorld.m[0][2] * vSide.z);
-            const float fAcrossZ = (float)fabs(mWorld.m[2][0] * vSide.x + mWorld.m[2][1] * vSide.y
-                                               + mWorld.m[2][2] * vSide.z);
+            const float fAcrossX = (float)fabs((double)(mWorld.m[0][0] * vSide.x + mWorld.m[0][1] * vSide.y
+                                               + mWorld.m[0][2] * vSide.z));
+            const float fAcrossZ = (float)fabs((double)(mWorld.m[2][0] * vSide.x + mWorld.m[2][1] * vSide.y
+                                               + mWorld.m[2][2] * vSide.z));
             if (pBeam->_fHeadSizeX != pBeam->_fHeadSizeZ)
             {
                 fHeadSize = (float)sqrt((double)(pBeam->_fHeadSizeX * pBeam->_fHeadSizeX * fAcrossX * fAcrossX
@@ -380,7 +380,7 @@ void LightBeamEffect::RenderLightBeam(const LightBeam* pBeam, unsigned int uiFla
 
         RedColor edgeColor = pBeam->_color;
         edgeColor.a = 0;
-        const float fFadeWidth = (float)fabs(fCos) * (fTailSize - pBeam->_fFadeLength) + pBeam->_fFadeLength;
+        const float fFadeWidth = (float)fabs((double)(fCos)) * (fTailSize - pBeam->_fFadeLength) + pBeam->_fFadeLength;
         const float fFadeIntensity = pBeam->_fFadeAmount * fIntensity;
         const float fMaxSize = (fTailSize > fHeadSize ? fTailSize : fHeadSize) * 1.01f;
         const PblBox box(-fMaxSize, -0.01f, -1.0f,

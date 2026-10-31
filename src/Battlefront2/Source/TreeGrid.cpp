@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <new>
 #include <d3dx9math.h>
 #include <math.h>
@@ -329,7 +330,7 @@ void TreeGrid::CallbackOnLazyRay(const PblVector3& rFrom, const PblVector3& rTo,
     }
 
     PblVector3 vDir(rTo.x - rFrom.x, rTo.y - rFrom.y, rTo.z - rFrom.z);
-    float fLength = sqrtf(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
+    float fLength = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
     PblVector3 vNormal;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
     vDir = vNormal;

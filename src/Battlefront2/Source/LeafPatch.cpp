@@ -409,7 +409,7 @@ void LeafPatchClass::Init()
         const float fY = particle.mPos.y * mHeightScale - mBoundingOffset.y;
         const float fZ = particle.mPos.z - mBoundingOffset.z;
         const float fHalfSize = particle.mSize * 0.5f;
-        const float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+        const float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
         const float fScaled = mHeightScale * fHalfSize;
         const float fRadius = fDist + Max(fHalfSize, fScaled);
         mBoundingRadius = Max(fRadius, mBoundingRadius);

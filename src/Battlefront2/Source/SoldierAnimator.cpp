@@ -863,7 +863,7 @@ void SoldierAnimator::SetupPose(RedPose& pose)
             float fForward = (z.y * mMovement.y + mMovement.x * z.x + z.z * mMovement.z) / fDeltaTime;
             float fSide = (mMovement.y * x.y + x.x * mMovement.x + mMovement.z * x.z) / fDeltaTime;
             fAngle = atan2f(fSide, fForward);
-            fSpeed = sqrtf(fSide * fSide + fForward * fForward) / pAnim->GetVelocityZ();
+            fSpeed = PblMath::Sqrt(fSide * fSide + fForward * fForward) / pAnim->GetVelocityZ();
             if (bFirstPerson)
             {
                 fSpeed *= FIRST_PERSON_ANIMATION_SCALE;
@@ -978,7 +978,7 @@ void SoldierAnimator::SetupPose(RedPose& pose)
             float fSpeed;
             if (fDeltaTime > 0.0f)
             {
-                fSpeed = sqrtf(mMovement.x * mMovement.x + mMovement.y * mMovement.y + mMovement.z * mMovement.z) /
+                fSpeed = PblMath::Sqrt(mMovement.x * mMovement.x + mMovement.y * mMovement.y + mMovement.z * mMovement.z) /
                          (fDeltaTime * 10.0f);
             }
             else

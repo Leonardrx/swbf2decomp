@@ -430,7 +430,7 @@ void PrecipitationEffect::Render(int value)
         float fLengthSq = vStreak.y * vStreak.y + vStreak.x * vStreak.x + vStreak.z * vStreak.z;
         if (fLengthSq > BOX_SIZE * BOX_SIZE)
         {
-            float fRatio = BOX_SIZE / sqrtf(fLengthSq);
+            float fRatio = BOX_SIZE / PblMath::Sqrt(fLengthSq);
             vStreak.x = vStreak.x * fRatio;
             vStreak.y = fRatio * vStreak.y;
             vStreak.z = vStreak.z * fRatio;

@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include <math.h>
 
@@ -182,7 +183,7 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vNewPos), reinterpret_cast<const D3DXVECTOR3*>(&mCollOffset), reinterpret_cast<const D3DXMATRIX*>(&world));
         mPosition = vNewPos;
 
-        float fSpeed = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+        float fSpeed = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                              mVelocity.z * mVelocity.z);
         const PblVector3& vFirePos = mFireWeapon->mAimer->mFirePos;
         PblVector3 vDelta(mPosition.x - vFirePos.x, mPosition.y - vFirePos.y, mPosition.z - vFirePos.z);
@@ -208,7 +209,7 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
             const PblVector3& vPos = GetPosition();
             float fDx = vCenter.x - vPos.x;
             float fDz = vCenter.z - vPos.z;
-            if (fRadius * 2.0f <= sqrtf(fDz * fDz + fDx * fDx))
+            if (fRadius * 2.0f <= PblMath::Sqrt(fDz * fDz + fDx * fDx))
             {
                 return true;
             }
@@ -235,8 +236,8 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
         float fDx = vFirePos.x - vPos.x;
         float fDy = vFirePos.y - vPos.y;
         float fDz = vFirePos.z - vPos.z;
-        float fDist = sqrtf(fDy * fDy + fDx * fDx + fDz * fDz);
-        float fStep = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+        float fDist = PblMath::Sqrt(fDy * fDy + fDx * fDx + fDz * fDz);
+        float fStep = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                             mVelocity.z * mVelocity.z) * fDeltaTime;
         if (fStep > fDist)
         {

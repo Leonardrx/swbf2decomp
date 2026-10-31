@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "AmmoCounter.h"
 #include <d3dx9math.h>
 #include "LuaCallbacks_Mission.h"
@@ -3642,7 +3643,7 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         vDir.y = (vMax.y - vMin.y) * PblRandom::GetSim().GetFloat() + vMin.y;
         vDir.z = (vMax.z - vMin.z) * PblRandom::GetSim().GetFloat() + vMin.z;
         const PblVector3& vUp =
-            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+            (float)fabs((double)(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z)) < 0.99f
                 ? gVectorUnitZ
                 : gVectorUnitY;
         EntityDesc desc;
@@ -3688,7 +3689,7 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
             float fDX = vTo.x - vFrom.x;
             float fDY = vTo.y - vFrom.y;
             float fDZ = vTo.z - vFrom.z;
-            fLength += sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            fLength += PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
             pKey->length = fLength;
             pKey->segmentIndex = i - 1;
             ++pKey;
@@ -3701,13 +3702,13 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
         GetPoint(PblRandom::GetSim().GetFloat() * fLength, pKeys, iNumKeys,
                  pSegments, vPosition, vDir);
         const PblVector3& vPathUp =
-            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+            (float)fabs((double)(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z)) < 0.99f
                 ? gVectorUnitZ
                 : gVectorUnitY;
         PblMatrix mPath = DirectionMatrix(vDir, vPathUp, vPosition);
 
         PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
-        float fOffsetLength = sqrtf(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
+        float fOffsetLength = PblMath::Sqrt(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
         float fRadius = PblRandom::GetSim().GetFloat() * fDensity;
         PblVector3 vOffset(vUnit.x / fOffsetLength * fRadius, vUnit.y / fOffsetLength * fRadius, 0.0f);
         vPosition = mPath.ApplyTransform(vOffset);
@@ -3716,7 +3717,7 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
         vDir.y = (vMax.y - vMin.y) * PblRandom::GetSim().GetFloat() + vMin.y;
         vDir.z = (vMax.z - vMin.z) * PblRandom::GetSim().GetFloat() + vMin.z;
         const PblVector3& vUp =
-            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+            (float)fabs((double)(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z)) < 0.99f
                 ? gVectorUnitZ
                 : gVectorUnitY;
         EntityDesc desc;

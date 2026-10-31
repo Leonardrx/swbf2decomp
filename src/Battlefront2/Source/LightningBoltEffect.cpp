@@ -327,7 +327,7 @@ bool LightningBoltEffectObject::UpdateBolt(float fDeltaTime)
         PblVector3 vCenter(mTargetPos.x + vDelta.x * 0.5f, mTargetPos.y + vDelta.y * 0.5f,
                            mTargetPos.z + vDelta.z * 0.5f);
         SetRenderPos(vCenter);
-        SetRenderRadius(sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f);
+        SetRenderRadius(PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f);
         Activate();
     }
     return true;
@@ -408,7 +408,7 @@ void LightningBoltEffectObject::Render(const PblVector3& vStart, const PblVector
     int iBranches = 0;
 
     PblVector3 vDir(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
-    float fLength = sqrtf(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
+    float fLength = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
     float fTexCoord = 0.0f;
     if (fLength <= 0.0f)
     {

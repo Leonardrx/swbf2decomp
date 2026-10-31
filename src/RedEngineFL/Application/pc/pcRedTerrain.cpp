@@ -669,60 +669,57 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
     for (int i = 0; i < RedTerrain::_iNumLayers; ++i)
     {
         float s = 1.0f / RedTerrain::_fLayerMetersPerTexture[i];
-        PblVector4 vScale0 = { 0.0f, 0.0f, 0.0f, 0.0f };
-        PblVector4 vScale1 = { 0.0f, 0.0f, 0.0f, 0.0f };
         switch (RedTerrain::_uiLayerTextureOrientation[i])
         {
         case 1:
-            vScale0.x = s;
-            vScale1.y = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(s, 0.0f, 0.0f, 0.0f),
+                                         PblVector4(0.0f, s, 0.0f, 0.0f));
             break;
         case 2:
-            vScale0.y = s;
-            vScale1.z = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, s, 0.0f, 0.0f),
+                                         PblVector4(0.0f, 0.0f, s, 0.0f));
             break;
         case 3:
-            vScale0.z = s;
-            vScale1.x = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, 0.0f, s, 0.0f),
+                                         PblVector4(s, 0.0f, 0.0f, 0.0f));
             break;
         case 4:
-            vScale0.y = s;
-            vScale1.x = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, s, 0.0f, 0.0f),
+                                         PblVector4(s, 0.0f, 0.0f, 0.0f));
             break;
         case 5:
-            vScale0.z = s;
-            vScale1.y = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, 0.0f, s, 0.0f),
+                                         PblVector4(0.0f, s, 0.0f, 0.0f));
             break;
         case 6:
-            vScale0.x = -s;
-            vScale1.z = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(-s, 0.0f, 0.0f, 0.0f),
+                                         PblVector4(0.0f, 0.0f, s, 0.0f));
             break;
         case 7:
-            vScale0.x = -s;
-            vScale1.y = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(-s, 0.0f, 0.0f, 0.0f),
+                                         PblVector4(0.0f, s, 0.0f, 0.0f));
             break;
         case 8:
-            vScale0.y = -s;
-            vScale1.z = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, -s, 0.0f, 0.0f),
+                                         PblVector4(0.0f, 0.0f, s, 0.0f));
             break;
         case 9:
-            vScale0.z = -s;
-            vScale1.x = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, 0.0f, -s, 0.0f),
+                                         PblVector4(s, 0.0f, 0.0f, 0.0f));
             break;
         case 10:
-            vScale0.y = -s;
-            vScale1.x = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, -s, 0.0f, 0.0f),
+                                         PblVector4(s, 0.0f, 0.0f, 0.0f));
             break;
         case 11:
-            vScale0.z = -s;
-            vScale1.y = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(0.0f, 0.0f, -s, 0.0f),
+                                         PblVector4(0.0f, s, 0.0f, 0.0f));
             break;
         default:
-            vScale0.x = s;
-            vScale1.z = s;
+            pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], PblVector4(s, 0.0f, 0.0f, 0.0f),
+                                         PblVector4(0.0f, 0.0f, s, 0.0f));
             break;
         }
-        pcTerrainShader2::_InitLayer(i, RedTerrain::_uiLayerTextureHash[i], vScale0, vScale1);
     }
 
     m_fDetailMaxDistance = (float)RedTerrain::_iPatchPointsPerDimension * RedTerrain::_fMetersPerPoint;
@@ -734,11 +731,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
     {
         m_fDetailMaxDistance = 16.0f;
     }
-    {
-        PblVector4 vScale0 = { RedTerrain::_fPointsPerMeter, 0.0f, 0.0f, 0.0f };
-        PblVector4 vScale1 = { 0.0f, 0.0f, RedTerrain::_fPointsPerMeter, 0.0f };
-        pcTerrainShader2::_InitDetail(RedTerrain::_uiDetailTextureHash, vScale0, vScale1, m_fDetailMaxDistance);
-    }
+    pcTerrainShader2::_InitDetail(RedTerrain::_uiDetailTextureHash,
+                                  PblVector4(RedTerrain::_fPointsPerMeter, 0.0f, 0.0f, 0.0f),
+                                  PblVector4(0.0f, 0.0f, RedTerrain::_fPointsPerMeter, 0.0f), m_fDetailMaxDistance);
 
     int iPatch = 0;
     unsigned int uiDefaultStartIndex = 0;
@@ -749,7 +744,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
     {
         PblFileChunk child = chunk.ReadNextChild();
 
-        if (child._iId == 0x48435450)
+        switch (child._iId)
+        {
+        case 0x48435450:
         {
             unsigned int auiLayer[4] = { 0, 0, 0, 0 };
             unsigned int auiFormat[3] = { 0, 0, 0 };
@@ -769,7 +766,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
             while (child.HasMoreChildren())
             {
                 PblFileChunk leaf = child.ReadNextChild();
-                if (leaf._iId == 0x4F464E49)
+                switch (leaf._iId)
+                {
+                case 0x4F464E49:
                 {
                     uiNumLayers = leaf._pFile->Read8();
                     for (unsigned char j = 0; j < uiNumLayers; ++j)
@@ -797,8 +796,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                     patch.iHeightMin = leaf._pFile->Read16();
                     patch.iHeightMax = leaf._pFile->Read16();
                     iHeightShift = leaf._pFile->Read16();
+                    break;
                 }
-                else if (leaf._iId == 0x46554256)
+                case 0x46554256:
                 {
                     unsigned int uiNumVertices = leaf._pFile->Read32();
                     unsigned int uiVertexSize = leaf._pFile->Read32();
@@ -822,8 +822,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                         }
                         ++iNumVB;
                     }
+                    break;
                 }
-                else if (leaf._iId == 0x46554249)
+                case 0x46554249:
                 {
                     if (iNumVB == iNumUncompressedVB)
                     {
@@ -834,6 +835,8 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                             apIB[iNumVB - 1] = ReadIndexBuffer(leaf, uiNumIndices, auiStartIndex[iNumVB - 1]);
                         }
                     }
+                    break;
+                }
                 }
             }
 
@@ -902,8 +905,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                     32.0f);
             }
             ++iPatch;
+            break;
         }
-        else if (child._iId == 0x4E4D4F43)
+        case 0x4E4D4F43:
         {
             while (child.HasMoreChildren())
             {
@@ -914,8 +918,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                     m_pIBDefault = ReadIndexBuffer(leaf, uiDefaultNumIndices, uiDefaultStartIndex);
                 }
             }
+            break;
         }
-        else if (child._iId == 0x52574F4C)
+        case 0x52574F4C:
         {
             while (child.HasMoreChildren())
             {
@@ -957,15 +962,18 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                             while (lp.HasMoreChildren())
                             {
                                 PblFileChunk leaf = lp.ReadNextChild();
-                                if (leaf._iId == 0x46554249)
+                                switch (leaf._iId)
+                                {
+                                case 0x46554249:
                                 {
                                     uiNumIndices = leaf._pFile->Read32();
                                     if (uiNumIndices)
                                     {
                                         pIB = ReadIndexBuffer(leaf, uiNumIndices, uiStartIndex);
                                     }
+                                    break;
                                 }
-                                else if (leaf._iId == 0x46554256)
+                                case 0x46554256:
                                 {
                                     unsigned int uiCount = leaf._pFile->Read32();
                                     unsigned int uiVertexSize = leaf._pFile->Read32();
@@ -987,8 +995,9 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                                         leaf._pFile->ReadData(pVB->Lock(uiCount, uiStartVertex), uiCount * uiVertexSize);
                                         pVB->Unlock();
                                     }
+                                    break;
                                 }
-                                else if (leaf._iId == 0x4F464E49)
+                                case 0x4F464E49:
                                 {
                                     PblBox& bbox = pLowRes->bbox;
                                     bbox._vMin.x = leaf._pFile->ReadFloat();
@@ -997,6 +1006,8 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                                     bbox._vMax.y = leaf._pFile->ReadFloat();
                                     bbox._vMin.z = leaf._pFile->ReadFloat();
                                     bbox._vMax.z = leaf._pFile->ReadFloat();
+                                    break;
+                                }
                                 }
                             }
 
@@ -1035,6 +1046,8 @@ void TerrainRenderable::Read(PblFileChunk& chunk)
                     }
                 }
             }
+            break;
+        }
         }
     }
 

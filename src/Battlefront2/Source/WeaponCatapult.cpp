@@ -122,7 +122,7 @@ void WeaponCatapult::SetArmAngle(float fAngle)
 
     PblQuaternion qArm(mArmPoseMatrix);
     const PblVector3 vOmega(fAngle, 0.0f, 0.0f);
-    const float fLength = sqrtf(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
+    const float fLength = PblMath::Sqrt(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
     if (fLength > 0.0001f)
     {
         const float fInv = 1.0f / fLength;

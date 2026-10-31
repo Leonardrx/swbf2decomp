@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #ifdef min
 #undef min
@@ -579,7 +580,7 @@ bool PathFinder::PushValidPointCallback(const TreeGridObject* pObj, TreeGridCall
             float fDX = test.mBoundCenter.x - test.mSrc.x;
             float fDY = test.mBoundCenter.y - test.mSrc.y;
             float fDZ = test.mBoundCenter.z - test.mSrc.z;
-            test.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            test.mBoundRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
             pPush->mTruncated = true;
             pPush->mObsTest = test;
         }
@@ -602,7 +603,7 @@ bool PathFinder::PushValidPoint(const PblVector3& rSrc, PblVector3& rDest, PblVe
     float fDX = test.mBoundCenter.x - test.mSrc.x;
     float fDY = test.mBoundCenter.y - test.mSrc.y;
     float fDZ = test.mBoundCenter.z - test.mSrc.z;
-    test.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+    test.mBoundRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
     data.mObsTest = test;
 
     PblVector3 dir(rDest.x - rSrc.x, rDest.y - rSrc.y, rDest.z - rSrc.z);
@@ -735,7 +736,7 @@ bool PathFinder::FindClosestObstacleIntersection(const PblVector3& rSrc, const P
     float fDX = test.mBoundCenter.x - test.mSrc.x;
     float fDY = test.mBoundCenter.y - test.mSrc.y;
     float fDZ = test.mBoundCenter.z - test.mSrc.z;
-    test.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+    test.mBoundRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
 
     *pDistSq = FLT_MAX;
     for (int i = 0; i < data.mLength; i++)
@@ -839,7 +840,7 @@ bool PathFinder::TestTrivialStraightLineHit(const PblVector3& from, const PblVec
     float fCX = test.mBoundCenter.x - test.mSrc.x;
     float fCY = test.mBoundCenter.y - test.mSrc.y;
     float fCZ = test.mBoundCenter.z - test.mSrc.z;
-    test.mBoundRadius = sqrtf(fCX * fCX + fCY * fCY + fCZ * fCZ);
+    test.mBoundRadius = PblMath::Sqrt(fCX * fCX + fCY * fCY + fCZ * fCZ);
 
     data.mObsTest = test;
     data.mProhibit = eProhibit;
@@ -901,7 +902,7 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
 
     float fDX = pParent->GetPos().x - rPos.x;
     float fDZ = pParent->GetPos().z - rPos.z;
-    float fDist = sqrtf(fDZ * fDZ + fDX * fDX);
+    float fDist = PblMath::Sqrt(fDZ * fDZ + fDX * fDX);
     float fCost = pParent->GetCostSoFar() + fDist;
 
     for (int i = 0; i < sOpenList->GetCount(); i++)
@@ -933,7 +934,7 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
 
     float fNewDX = rPos.x - pParent->GetPos().x;
     float fNewDZ = rPos.z - pParent->GetPos().z;
-    PathNode* pNode = new PathNode(rPos, pParent->GetCostSoFar() + sqrtf(fNewDZ * fNewDZ + fNewDX * fNewDX),
+    PathNode* pNode = new PathNode(rPos, pParent->GetCostSoFar() + PblMath::Sqrt(fNewDZ * fNewDZ + fNewDX * fNewDX),
                                    pParent);
     if (pNode)
     {
@@ -977,7 +978,7 @@ void PathFinder::NewPathFind(const PblVector3& vStart, const PblVector3& vGoal, 
     sComplete = false;
     sFoundDest = false;
     sPausedAtFinish = 0;
-    sPerpLength = sqrtf(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
+    sPerpLength = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
     float fInv = 1.0f / sPerpLength;
     sPerpVec = PblVector3(vDir.z * fInv, 0.0f, -(vDir.x * fInv));
     if (sPerpLength <= 25.0f)

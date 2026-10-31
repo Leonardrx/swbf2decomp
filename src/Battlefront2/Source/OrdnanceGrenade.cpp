@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include "OrdnanceGrenade.h"
 
@@ -243,7 +244,7 @@ bool OrdnanceGrenade::CheckCollision()
     PblVector3 vStart = GetOldPosition();
     const PblVector3& vEnd = GetPosition();
     PblVector3 vDir(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
-    const float fDist = sqrtf(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+    const float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;
@@ -317,7 +318,7 @@ bool OrdnanceGrenade::Collide(CollisionObject* pObject, const PblVector3& vPos,
 
             mVelocity -= vNormal * fDot;
             float fSlow = -(fFriction * fDot * (fRebound + 1.0f) /
-                            sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                            PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                   mVelocity.z * mVelocity.z));
             fSlow = fSlow < 1.0f ? fSlow : 1.0f;
             mVelocity -= mVelocity * fSlow;

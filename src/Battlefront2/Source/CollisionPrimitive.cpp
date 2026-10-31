@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -669,7 +670,7 @@ int CollisionPrimitive::GetClosestPoint(PblVector3& vMidPoint, float& fMaxDist, 
             float dx = vOutPos.x - vMidPoint.x;
             float dy = vOutPos.y - vMidPoint.y;
             float dz = vOutPos.z - vMidPoint.z;
-            float fDist = sqrtf(dx * dx + dy * dy + dz * dz);
+            float fDist = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
             if (fMaxDist > fDist && fDist < 1.0f)
             {
                 fMaxDist = fDist;
@@ -683,7 +684,7 @@ int CollisionPrimitive::GetClosestPoint(PblVector3& vMidPoint, float& fMaxDist, 
                 float ox = vOutPoint.x - vMidPoint.x;
                 float oy = vOutPoint.y - vMidPoint.y;
                 float oz = vOutPoint.z - vMidPoint.z;
-                fClosestDist = sqrtf(ox * ox + oy * oy + oz * oz);
+                fClosestDist = PblMath::Sqrt(ox * ox + oy * oy + oz * oz);
                 iClosest = iPoly;
             }
         }
@@ -803,7 +804,7 @@ int CollisionPrimitive::GetClosestPoint(PblVector3& vMidPoint, float& fMaxDist, 
             float fDist2 = dx * dx + dy * dy + dz * dz;
             if (iClosest < 0 || fMaxDist * fMaxDist > fDist2)
             {
-                fMaxDist = sqrtf(fDist2);
+                fMaxDist = PblMath::Sqrt(fDist2);
                 vOutPoint = vOutPos;
                 iClosest = iPoly;
             }
@@ -886,7 +887,7 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
         float cx = vClosestCylPoint.x - vOutPoint.x;
         float cy = vClosestCylPoint.y - vOutPoint.y;
         float cz = vClosestCylPoint.z - vOutPoint.z;
-        float fRadialOverlap = mRadius - sqrtf(cx * cx + cy * cy + cz * cz);
+        float fRadialOverlap = mRadius - PblMath::Sqrt(cx * cx + cy * cy + cz * cz);
         float fHalfHeight = mHeight * 0.5f;
         float fAxial = (float)fabs((vOutPoint.x - sLocalPos.x) * m.m[1][0] + (vOutPoint.y - sLocalPos.y) * m.m[1][1] +
                                    (vOutPoint.z - sLocalPos.z) * m.m[1][2]);
@@ -898,7 +899,7 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
             float dy = sLocalPos.y - vOutPoint.y;
             float dz = sLocalPos.z - vOutPoint.z;
             vCollisionDir = PblVector3(dx, dy, dz);
-            float fDist = sqrtf(dx * dx + dy * dy + dz * dz);
+            float fDist = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
             float fOverlap = fDist / (mHeight * 0.5f - fCapOverlap) * fCapOverlap;
             if ((mHeight * 0.25f * mHeight + mRadius * mRadius) * 0.8f < (fOverlap + fDist) * (fOverlap + fDist))
             {
@@ -926,7 +927,7 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
         float dy = sLocalPos.y - vOutPoint.y;
         float dz = sLocalPos.z - vOutPoint.z;
         vCollisionDir = PblVector3(dx, dy, dz);
-        fCollisionOverlap = sqrtf(dx * dx + dy * dy + dz * dz);
+        fCollisionOverlap = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
         if (fCollisionOverlap < 0.0001f)
         {
             return false;
@@ -983,7 +984,7 @@ bool CollisionPrimitive::CollideTerrain(const PblMatrix& matrix, PblVector3& vNo
         const float fA = matrix.m[0][1] * mRadius;
         const float fB = matrix.m[1][1] * fHalfHeight;
         const float fC = matrix.m[2][1] * mRadius;
-        fOffset = sqrtf(fA * fA + fB * fB + fC * fC);
+        fOffset = (float)sqrt((double)(fA * fA + fB * fB + fC * fC));
 
         PblVector3 vDir(matrix.m[1][0], matrix.m[1][1], matrix.m[1][2]);
         if (vDir.y > 0.0f)
@@ -1068,7 +1069,7 @@ bool CollisionPrimitive::CollideTerrain(const PblMatrix& matrix, PblVector3& vNo
     {
 
         const float fDot = matrix.m[1][0] * vNormal.x + matrix.m[1][1] * vNormal.y + matrix.m[1][2] * vNormal.z;
-        if (1.0f - fabsf(fDot) < 0.0001f)
+        if (1.0f - (float)fabs((double)fDot) < 0.0001f)
         {
             vPos.x -= mRadius * vSide.x;
             vPos.y -= mRadius * vSide.y;

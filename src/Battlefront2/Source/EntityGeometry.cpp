@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "EntityGeometry.h"
 #include "PebbleFL/Common/PblVector.h"
 
@@ -676,22 +677,22 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
         case 0x1ccafdcc:
             primitive.SetBox(a, b, c, -1.0f);
-            fRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
             fRadius = (float)sqrt((double)(a * a + b * b + c * c)) + fRadius;
             break;
         case 0x4a182b8f:
             primitive.SetCylinder(a, b);
-            fRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
             fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
             break;
         case 0x73f51491:
             primitive.SetAACylinder(a, b);
-            fRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
             fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
             break;
         default:
             primitive.SetSphere(a);
-            fRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ) + a;
+            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ) + a;
             break;
         }
         mPotentialCollisionRadius = __max(mPotentialCollisionRadius, fRadius);
@@ -784,7 +785,7 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
             float fHalfX = (float)fabs((double)(box._vMax.x - box._vMin.x)) * 0.5f;
             float fHalfY = (float)fabs((double)(box._vMax.y - box._vMin.y)) * 0.5f;
             float fHalfZ = (float)fabs((double)(box._vMax.z - box._vMin.z)) * 0.5f;
-            primitive.SetSphere(sqrtf(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
+            primitive.SetSphere(PblMath::Sqrt(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
             matrix.m[3][0] = fCenterX;
             matrix.m[3][1] = fCenterY;
             matrix.m[3][2] = fCenterZ;
@@ -1231,7 +1232,7 @@ void EntityGeometry::CreateChunkCluster(float fScale)
         float fDY = mChunk.m[3][1] - fCenterY;
         float fDZ = mChunk.m[3][2] - fCenterZ;
         float fDistSq = fDX * fDX + fDY * fDY + fDZ * fDZ;
-        float fUp = sqrtf(fDistSq) * pClass->mChunkUpFactor[i];
+        float fUp = PblMath::Sqrt(fDistSq) * pClass->mChunkUpFactor[i];
         PblVector3 vOut(fDX + 0.0f, fUp + fDY, fDZ + 0.0f);
         PblVector3 vDir;
         D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vOut);
@@ -1255,7 +1256,7 @@ void EntityGeometry::CreateChunkCluster(float fScale)
                 pDesc->mVelocity.z *= 0.25f;
             }
             const PblVector3& v = pDesc->mVelocity;
-            if (5.0f > sqrtf(v.x * v.x + v.y * v.y + v.z * v.z))
+            if (5.0f > PblMath::Sqrt(v.x * v.x + v.y * v.y + v.z * v.z))
             {
                 float fPush = PblRandom::GetSim().GetFloat() * 2.0f + 4.0f;
                 pDesc->mVelocity.x = vDir.x * fPush;

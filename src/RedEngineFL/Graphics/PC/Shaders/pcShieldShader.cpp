@@ -176,15 +176,12 @@ void pcShieldShader::Render_Fixed(const RenderItem* pItem, unsigned int) const
     }
     case 0:
     {
-        const RedColor& tweak = pItem->tweakColor;
-        unsigned char r = (unsigned char)(int)(m_colorDiffuse.r * (tweak.r * kInv255) + 0.5f);
-        unsigned char g = (unsigned char)(int)(m_colorDiffuse.g * (tweak.g * kInv255) + 0.5f);
-        unsigned char b = (unsigned char)(int)(m_colorDiffuse.b * (tweak.b * kInv255) + 0.5f);
+        RedColor color = pItem->tweakColor * m_colorDiffuse;
         const unsigned char a = (unsigned char)(int)((1.0f - m_fViewAngleFactor) * 255.0f);
-        r >>= 1;
-        g >>= 1;
-        b >>= 1;
-        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(a, r, g, b));
+        color.r >>= 1;
+        color.g >>= 1;
+        color.b >>= 1;
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(a, color.r, color.g, color.b));
         bLight = true;
         break;
     }

@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include <float.h>
 #include <math.h>
@@ -190,7 +191,7 @@ float ConnectivityArc::GetDistFrom(const PblVector3& v) const
         const float fDX = v.x - (vAB.x * fT + vA.x);
         const float fDY = v.y - (vAB.y * fT + vA.y);
         const float fDZ = v.z - (vAB.z * fT + vA.z);
-        const float fDist = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+        const float fDist = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
         if (fRadius > fDist)
         {
             return 0.0f;
@@ -201,13 +202,13 @@ float ConnectivityArc::GetDistFrom(const PblVector3& v) const
     float fDist;
     if (fT < 0.0f)
     {
-        fDist = sqrtf((v.x - n1->x) * (v.x - n1->x) + (v.y - n1->y) * (v.y - n1->y)
+        fDist = PblMath::Sqrt((v.x - n1->x) * (v.x - n1->x) + (v.y - n1->y) * (v.y - n1->y)
                       + (v.z - n1->z) * (v.z - n1->z))
                 - n1->w;
     }
     else
     {
-        fDist = sqrtf((v.x - n2->x) * (v.x - n2->x) + (v.y - n2->y) * (v.y - n2->y)
+        fDist = PblMath::Sqrt((v.x - n2->x) * (v.x - n2->x) + (v.y - n2->y) * (v.y - n2->y)
                       + (v.z - n2->z) * (v.z - n2->z))
                 - n2->w;
     }
@@ -423,7 +424,7 @@ bool ConnectivityGraph::Read(PblFileChunk& chunk)
                                               (vEnd.z + vStart.z) * 0.5f);
 
         const PblVector3& vCenter = mArcs[i].mBoundingCenter;
-        float fRadius = sqrtf((vStart.x - vCenter.x) * (vStart.x - vCenter.x)
+        float fRadius = PblMath::Sqrt((vStart.x - vCenter.x) * (vStart.x - vCenter.x)
                               + (vStart.y - vCenter.y) * (vStart.y - vCenter.y)
                               + (vStart.z - vCenter.z) * (vStart.z - vCenter.z));
         if (!(fRadius > mArcs[i].n1->w))
@@ -670,7 +671,7 @@ bool ConnectivityGraph::CanGetThereFromHere_QuickButNotSoPerfectlyAccurateTest(
         ConnectivityNode* pNode = &mNodes[i];
         if (eType & pNode->mAllowTypes)
         {
-            float fDist = sqrtf((vFrom.z - pNode->z) * (vFrom.z - pNode->z)
+            float fDist = PblMath::Sqrt((vFrom.z - pNode->z) * (vFrom.z - pNode->z)
                                 + (vFrom.x - pNode->x) * (vFrom.x - pNode->x))
                           - pNode->w;
             if (fDist < 0.0f)
@@ -754,7 +755,7 @@ const ConnectivityNode* ConnectivityGraph::GetRandomAccessibleNode(const UnitCon
         const ConnectivityNode* pNode = &mNodes[i];
         if (eType & pNode->mAllowTypes)
         {
-            float fDist = sqrtf((vPos.x - pNode->x) * (vPos.x - pNode->x)
+            float fDist = PblMath::Sqrt((vPos.x - pNode->x) * (vPos.x - pNode->x)
                                 + (vPos.z - pNode->z) * (vPos.z - pNode->z))
                           - pNode->w;
             if (fDist < 0.0f)

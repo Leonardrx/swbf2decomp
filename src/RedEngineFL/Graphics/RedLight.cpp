@@ -197,8 +197,8 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
         iMaxSpotLights = 0;
     }
 
-    PblVector3 vCenter((box._vMin.x + box._vMax.x) * 0.5f, (box._vMin.y + box._vMax.y) * 0.5f,
-                       (box._vMin.z + box._vMax.z) * 0.5f);
+    PblVector3 vCenter((box._vMax.x + box._vMin.x) * 0.5f, (box._vMax.y + box._vMin.y) * 0.5f,
+                       (box._vMax.z + box._vMin.z) * 0.5f);
     float fSizeX = box._vMax.x - box._vMin.x;
     float fSizeY = box._vMax.y - box._vMin.y;
     float fSizeZ = box._vMax.z - box._vMin.z;
@@ -218,7 +218,6 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
     state.envMapFactor = 1.0f;
     state.bStaticLighting = bStatic;
 
-    bool bShadowed = false;
     if (!bStatic && !bNoShadowRegions)
     {
         RedAmbientLight ambient;
@@ -228,7 +227,6 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
         if (RedShadowRegion::GetShadowValues(vCenter, fRadius, afDirectional, ambient, uiEnvMapHash,
                                              fEnvMapFactor))
         {
-            bShadowed = true;
             bDefault = false;
             afDirectional[0] *= m_sGlobalDirectionalFactor[0];
             afDirectional[1] *= m_sGlobalDirectionalFactor[1];
@@ -246,7 +244,7 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
             state.envMapFactor = fEnvMapFactor;
         }
     }
-    if (!bShadowed)
+    if (bDefault)
     {
         for (int i = 0; i < 2; ++i)
         {
@@ -1195,9 +1193,9 @@ void RedLight::ReadLight(PblConfig& config, unsigned int uiName)
     float fOffsetU = 0.0f;
     float fOffsetV = 0.0f;
     bool bBidirectional = false;
-    bool bCastShadow = false;
-    bool bCastSpecular = false;
     bool bStatic = false;
+    bool bCastSpecular = false;
+    bool bCastShadow = false;
     bool bOverbright = false;
     RedColorValue color;
     color.r = RedColor::BLACK.r * kf1by255;
@@ -1431,8 +1429,8 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
     RedLightingState state;
     memset(&state, 0, sizeof(state));
     state.pDirectionalLights[0] = m_sGlobalDirectionals[0];
-    state.pDirectionalLights[1] = m_sGlobalDirectionals[1];
     state.pDirectionalFactor[0] = m_sGlobalDirectionalFactor[0];
+    state.pDirectionalLights[1] = m_sGlobalDirectionals[1];
     state.pDirectionalFactor[1] = m_sGlobalDirectionalFactor[1];
     state.numDirectionalLights = 2;
     state.ambientLight = *m_sGlobalAmbient;

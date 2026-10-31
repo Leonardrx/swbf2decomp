@@ -260,28 +260,17 @@ void RedDebug::DrawCone(const PblMatrix& matrix, float fHeight, float fRadius0, 
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (float)i * fStep);
-        aCircle[i] = PblVector3(matrix.m[0][0] * fSin + matrix.m[2][0] * fCos,
-                                matrix.m[0][1] * fSin + matrix.m[2][1] * fCos,
-                                matrix.m[0][2] * fSin + matrix.m[2][2] * fCos);
+        aCircle[i] = matrix.GetXAxis() * fSin + matrix.GetZAxis() * fCos;
     }
 
-    const PblVector3 vTop(vBase.x + matrix.m[1][0] * fHeight,
-                          vBase.y + matrix.m[1][1] * fHeight,
-                          vBase.z + matrix.m[1][2] * fHeight);
+    const PblVector3 vTop = vBase + matrix.GetYAxis() * fHeight;
 
     for (int i = 0; i < 8; i++)
     {
         const PblVector3& c0 = aCircle[i];
-        const PblVector3& c1 = aCircle[(i + 1) % 8];
-        DrawLine3D(PblVector3(vBase.x + c0.x * fRadius0, vBase.y + c0.y * fRadius0, vBase.z + c0.z * fRadius0),
-                   PblVector3(vTop.x + c0.x * fRadius1, vTop.y + c0.y * fRadius1, vTop.z + c0.z * fRadius1),
-                   color);
-        DrawLine3D(PblVector3(vBase.x + c0.x * fRadius0, vBase.y + c0.y * fRadius0, vBase.z + c0.z * fRadius0),
-                   PblVector3(vBase.x + c1.x * fRadius0, vBase.y + c1.y * fRadius0, vBase.z + c1.z * fRadius0),
-                   color);
-        DrawLine3D(PblVector3(vTop.x + c0.x * fRadius1, vTop.y + c0.y * fRadius1, vTop.z + c0.z * fRadius1),
-                   PblVector3(vTop.x + c1.x * fRadius1, vTop.y + c1.y * fRadius1, vTop.z + c1.z * fRadius1),
-                   color);
+        DrawLine3D(vBase + c0 * fRadius0, vTop + c0 * fRadius1, color);
+        DrawLine3D(vBase + c0 * fRadius0, vBase + aCircle[(i + 1) % 8] * fRadius0, color);
+        DrawLine3D(vTop + c0 * fRadius1, vTop + aCircle[(i + 1) % 8] * fRadius1, color);
     }
 }
 

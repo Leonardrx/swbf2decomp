@@ -1965,7 +1965,7 @@ bool EntityDroideka::CollisionCallback(const CollisionResult* pResult, Collision
     }
 
     const PblVector3& vSeparation = pResult->mSeparationNormal;
-    if (AIUtil::ShouldSoldierDodgeThisType(pOther->GetCollisionType()) && fabs(vSeparation.y) < 0.3f)
+    if (AIUtil::ShouldSoldierDodgeThisType(pOther->GetCollisionType()) && (float)fabs((double)vSeparation.y) < 0.3f)
     {
         mAILastCollisionNormal.x += vSeparation.x;
         mAILastCollisionNormal.y += vSeparation.y;
@@ -2103,7 +2103,7 @@ bool EntityDroideka::CollisionCallback(const CollisionResult* pResult, Collision
             vFlat.x -= fDot * mGroundNormal.x;
             vFlat.y -= mGroundNormal.y * fDot;
             vFlat.z -= mGroundNormal.z * fDot;
-            float fLength = sqrtf(vFlat.x * vFlat.x + vFlat.y * vFlat.y + vFlat.z * vFlat.z);
+            float fLength = PblMath::Sqrt(vFlat.x * vFlat.x + vFlat.y * vFlat.y + vFlat.z * vFlat.z);
             if (fLength > 0.0f)
             {
                 float fInv = 1.0f / fLength;
@@ -2166,7 +2166,7 @@ bool EntityDroideka::CollisionCallback(const CollisionResult* pResult, Collision
         }
 
         PblVector3 vFlat(vNormal.x, 0.0f, vNormal.z);
-        float fLength = sqrtf(vFlat.x * vFlat.x + 0.0f + vFlat.z * vFlat.z);
+        float fLength = PblMath::Sqrt(vFlat.x * vFlat.x + 0.0f + vFlat.z * vFlat.z);
         float fInv = 1.0f / fLength;
         vFlat.x = fInv * vFlat.x;
         vFlat.y = fInv * 0.0f;
@@ -3189,9 +3189,9 @@ void EntityDroideka::BuildWorldMatrices()
         {
             kLegs = gMatrixIdentity;
         }
-        PblMatrix kRot;
         if (fabs(fPitch) > 0.04f)
         {
+            PblMatrix kRot;
             PblVector3 vAxis(-fCos6, 0.0f, fSin6);
             kRot.SetTranslation(gVectorZero);
             D3DXMatrixRotationAxis(reinterpret_cast<D3DXMATRIX*>(&kRot), reinterpret_cast<const D3DXVECTOR3*>(&vAxis), fPitch * -0.3333f);
@@ -3409,7 +3409,7 @@ bool EntityDroideka::PostCollisionUpdate(float fDeltaTime)
         if (iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mTarget)
         {
             PblVector3 vTarget = mWeapon[iIndex]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
-            fDist = sqrtf((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
+            fDist = PblMath::Sqrt((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
                           (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                           (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }

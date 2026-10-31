@@ -63,44 +63,50 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
     const unsigned int uiIndex = ucDeviceIndex;
 
     GUID cGuidDevice;
+    bool bCreateDevice = true;
 
-    if (uiIndex != 0xFEu)
+    switch (uiIndex)
     {
+    case 0xFEu:
 
-        switch (uiIndex)
+        mDevice = Engine::smDirectSound;
+        mDevice->AddRef();
+        bCreateDevice = false;
+        break;
+    case 0xFFu:
+
+        cGuidDevice = DSDEVID_DefaultVoicePlayback;
+        break;
+    default:
         {
-        case 0xFFu:
 
-            cGuidDevice = DSDEVID_DefaultVoicePlayback;
-            break;
-        default:
+            DSDeviceEnumerator cContext;
+
+            if (!cContext.Enumerate(DSDeviceEnumerator::type_Render, false))
+            {
+                return false;
+            }
+
+            cGuidDevice = cContext.GetDeviceIDByIndex(uiIndex);
+
+            GUID cNull;
+            memset(&cNull, 0, sizeof(cNull));
+
+            if (memcmp(&cGuidDevice, &DSDEVID_DefaultPlayback, sizeof(GUID)) == 0
+                || memcmp(&cGuidDevice, &cNull, sizeof(GUID)) == 0)
             {
 
-                DSDeviceEnumerator cContext;
-
-                if (!cContext.Enumerate(DSDeviceEnumerator::type_Render, false))
+                if (Engine::smDirectSound != 0)
                 {
-                    return false;
+                    return Open(0xFE, cFormat, fBufferMs);
                 }
-
-                cGuidDevice = cContext.GetDeviceIDByIndex(uiIndex);
-
-                GUID cNull;
-                memset(&cNull, 0, sizeof(cNull));
-
-                if (memcmp(&cGuidDevice, &DSDEVID_DefaultPlayback, sizeof(GUID)) == 0
-                    || memcmp(&cGuidDevice, &cNull, sizeof(GUID)) == 0)
-                {
-
-                    if (Engine::smDirectSound != 0)
-                    {
-                        return Open(0xFE, cFormat, fBufferMs);
-                    }
-                }
-
             }
-        }
 
+        }
+    }
+
+    if (bCreateDevice)
+    {
         IDirectSound** const ppDS = &mDevice;
 
         const HRESULT hr = DirectSoundCreate(&cGuidDevice, ppDS, 0);
@@ -110,12 +116,6 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
         }
 
         Engine::UpdateCooperativeLevel(*ppDS, true);
-    }
-    else
-    {
-
-        mDevice = Engine::smDirectSound;
-        Engine::smDirectSound->AddRef();
     }
 
     mIsOpen = SetFormat(cFormat.GetFormat(),

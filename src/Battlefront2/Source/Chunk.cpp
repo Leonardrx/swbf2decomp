@@ -497,7 +497,7 @@ void Chunk::Update(float fDeltaTime)
     vSpin.x *= fDeltaTime;
     vSpin.y *= fDeltaTime;
     vSpin.z *= fDeltaTime;
-    float fAngle = sqrtf(vSpin.x * vSpin.x + vSpin.y * vSpin.y + vSpin.z * vSpin.z);
+    float fAngle = PblMath::Sqrt(vSpin.x * vSpin.x + vSpin.y * vSpin.y + vSpin.z * vSpin.z);
     if (fAngle > EPSILON)
     {
         float fInv = 1.0f / fAngle;
@@ -662,10 +662,10 @@ bool Chunk::DoSimpleRigidCollision(const CollisionResult* pResult, CollisionObje
                 vRadius.x -= vAxis.x * fAlongAxis;
                 vRadius.y -= vAxis.y * fAlongAxis;
                 vRadius.z -= vAxis.z * fAlongAxis;
-                const float fRadius = sqrtf(vRadius.x * vRadius.x + vRadius.y * vRadius.y + vRadius.z * vRadius.z);
+                const float fRadius = PblMath::Sqrt(vRadius.x * vRadius.x + vRadius.y * vRadius.y + vRadius.z * vRadius.z);
                 if (fRadius > 0.0f)
                 {
-                    float fOmega = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
+                    float fOmega = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
                                           vVelocity.z * vVelocity.z) / fRadius;
                     if (vAxis.z * vVelocity.x - vAxis.x * vVelocity.z > 0.0f)
                     {
@@ -842,7 +842,7 @@ void Chunk::Render(unsigned char ucAlpha, float fDist, unsigned int uiFlags)
         vSpin.y *= fDt;
         vSpin.z *= fDt;
         PblVector3 vPos = mCollisionMatrix.GetTranslation();
-        float fAngle = sqrtf(vSpin.x * vSpin.x + vSpin.y * vSpin.y + vSpin.z * vSpin.z);
+        float fAngle = PblMath::Sqrt(vSpin.x * vSpin.x + vSpin.y * vSpin.y + vSpin.z * vSpin.z);
         if (fAngle > EPSILON)
         {
             float fInv = 1.0f / fAngle;

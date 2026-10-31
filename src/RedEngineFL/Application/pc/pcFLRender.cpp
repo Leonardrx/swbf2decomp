@@ -710,13 +710,13 @@ bool ReflectionRegion::_IsVisible(const RedCamera* pCamera) const
         return pCamera->ClassifyAABox(mMatrix.GetTranslation(),
                      PblVector3(mSize.x + fMargin, mSize.y + fMargin, mSize.z + fMargin))
                != RedCamera::VISIBILITY_NONE;
-    case type_cylinder_zaligned:
-        return pCamera->ClassifyAABox(mMatrix.GetTranslation(),
-                     PblVector3(mSize.x + fMargin, mSize.x + fMargin, mSize.y + fMargin))
-               != RedCamera::VISIBILITY_NONE;
     case type_cylinder_xaligned:
         return pCamera->ClassifyAABox(mMatrix.GetTranslation(),
                      PblVector3(mSize.y + fMargin, mSize.x + fMargin, mSize.x + fMargin))
+               != RedCamera::VISIBILITY_NONE;
+    case type_cylinder_zaligned:
+        return pCamera->ClassifyAABox(mMatrix.GetTranslation(),
+                     PblVector3(mSize.x + fMargin, mSize.x + fMargin, mSize.y + fMargin))
                != RedCamera::VISIBILITY_NONE;
     default:
         return false;

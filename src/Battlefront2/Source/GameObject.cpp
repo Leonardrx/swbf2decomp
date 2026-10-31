@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -307,7 +308,7 @@ void GameObject::ApplyRadiusDamage(const PblVector3& vPos, float fInnerRadius, f
     float fX = vCenter.x - vPos.x;
     float fY = vCenter.y - vPos.y;
     float fZ = vCenter.z - vPos.z;
-    float fEffect = CalcRadiusEffect(sqrtf(fX * fX + fY * fY + fZ * fZ), fInnerRadius, fOuterRadius);
+    float fEffect = CalcRadiusEffect(PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ), fInnerRadius, fOuterRadius);
     if (fEffect > 0.0f)
     {
         DamageDesc desc = damage;

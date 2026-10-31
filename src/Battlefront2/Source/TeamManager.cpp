@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "TeamManager.h"
 #include "GameObject.h"
 #include "NetGame.h"
@@ -164,7 +165,7 @@ int GetApproxObjectsAlongLine(const PblVector3& vStart, const PblVector3& vEnd, 
                              (vEnd.z + vStart.z) * 0.5f);
     const PblVector3 vDelta(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
     const PblVector3 vDir = AIUtil::GetSafeNormal(vDelta);
-    const float fHalfLength = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f;
+    const float fHalfLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f;
 
     GameObject* apObjects[1200];
     const int iCount = GetObjectsInRange(vCenter, fHalfLength, apObjects, iMax, pIgnore, eAffil);

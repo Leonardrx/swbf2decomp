@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <math.h>
 
 #include "Decal.h"
@@ -172,7 +173,7 @@ void DecalManager::Render(int value)
             const float fX = pDecal->vPos.x - mCamera.m[3][0];
             const float fY = pDecal->vPos.y - mCamera.m[3][1];
             const float fZ = pDecal->vPos.z - mCamera.m[3][2];
-            const float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
+            const float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
 
             static float sFadeRange = 50.0f;
             if (fDist < 100.0f)

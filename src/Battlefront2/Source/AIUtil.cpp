@@ -904,7 +904,7 @@ bool AIUtil::GetTangentPointToCircle(const PblVector3& vCenter, const PblVector3
 {
     const float dx = vPoint.x - vCenter.x;
     const float dz = vPoint.z - vCenter.z;
-    const float fDist = sqrtf(dz * dz + dx * dx);
+    const float fDist = PblMath::Sqrt(dz * dz + dx * dx);
     if (fRadius > fDist)
     {
         return false;
@@ -1399,7 +1399,7 @@ float AIUtil::GetCollisionRadius(const GameObject* pObj)
         const float fBarrierX = pHover->mBarrierX;
         if (fBarrierX > 0.0f)
         {
-            return sqrtf(pHover->mBarrierZ * pHover->mBarrierZ + fBarrierX * fBarrierX) * 0.5f;
+            return PblMath::Sqrt(pHover->mBarrierZ * pHover->mBarrierZ + fBarrierX * fBarrierX) * 0.5f;
         }
     }
 
@@ -1407,7 +1407,7 @@ float AIUtil::GetCollisionRadius(const GameObject* pObj)
     const PblVector3& vMax = pObj->GetModel()->_mModel->_TotalBoundingBox._vMax;
     const float dx = vMax.x - vMin.x;
     const float dz = vMax.z - vMin.z;
-    const float fDiag = sqrtf(dx * dx + dz * dz);
+    const float fDiag = PblMath::Sqrt(dx * dx + dz * dz);
     if (eType == ENTITY_HOVER)
     {
         return fDiag * 0.5f;

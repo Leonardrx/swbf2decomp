@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "WeatherEffect.h"
 #include "GameState.h"
 #include "CameraManager.h"
@@ -149,7 +150,7 @@ void WindEffect::Update(float fDeltaTime)
     m_vVelocity = m_vVelocityTarget;
     if (m_fTimer > 1.5f)
     {
-        float fLength = sqrtf(m_vBaseVelocity.x * m_vBaseVelocity.x +
+        float fLength = PblMath::Sqrt(m_vBaseVelocity.x * m_vBaseVelocity.x +
                               m_vBaseVelocity.y * m_vBaseVelocity.y +
                               m_vBaseVelocity.z * m_vBaseVelocity.z);
         if (fLength <= m_fVelocityRange * 0.01f)
@@ -660,7 +661,7 @@ void PrecipitationEffect::Update(float fDeltaTime)
                 const PblBox& other = aBoxes[uOther];
                 if (vPos.x > other._vMin.x && other._vMax.x > vPos.x && vPos.z > other._vMin.z &&
                     other._vMax.z > vPos.z &&
-                    50.0f > (float)fabs(vPos.y - CameraManager::sInstance->GetCamera(uOther)->GetMatrix().m[3][1]))
+                    50.0f > (float)fabs((double)(vPos.y - CameraManager::sInstance->GetCamera(uOther)->GetMatrix().m[3][1])))
                 {
                     break;
                 }

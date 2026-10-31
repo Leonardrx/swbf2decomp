@@ -178,10 +178,8 @@ bool StreamCaptureSource::Open(unsigned char ucDeviceIndex,
 {
     mLock.Wait();
 
-    const unsigned int uiIndex = ucDeviceIndex;
-
     GUID cGuidDevice;
-    switch (uiIndex)
+    switch (ucDeviceIndex)
     {
     case 0xFE:
         cGuidDevice = kDSDevIdDefaultCapture;
@@ -201,7 +199,7 @@ bool StreamCaptureSource::Open(unsigned char ucDeviceIndex,
             return false;
         }
 
-        cGuidDevice = cEnumerator.GetDeviceIDByIndex(uiIndex);
+        cGuidDevice = cEnumerator.GetDeviceIDByIndex(ucDeviceIndex);
         break;
     }
     }
@@ -225,18 +223,13 @@ bool StreamCaptureSource::Open(unsigned char ucDeviceIndex,
     cDesc.dwFlags = DSCBCAPS_WAVEMAPPED;
     cDesc.dwBufferBytes = mCaptureBufferSize;
     cDesc.lpwfxFormat = &cWaveFormat.Format;
-    cDesc.dwFXCount = 0;
-    cDesc.lpDSCFXDesc = 0;
 
-    IDirectSoundCapture8* const pDevice =
-        mCaptureDevice;
-
-    hr = pDevice->CreateCaptureBuffer(
+    hr = mCaptureDevice->CreateCaptureBuffer(
         &cDesc, (IDirectSoundCaptureBuffer**)&mCaptureBuffer, 0);
     if (Engine::Failed(hr, kFile, 133))
     {
 
-        pDevice->Release();
+        mCaptureDevice->Release();
         mLock.Signal();
         return false;
     }
@@ -245,7 +238,7 @@ bool StreamCaptureSource::Open(unsigned char ucDeviceIndex,
         SampleInfo::GetFrameSize(cFormat.GetFormat())
         * cFormat.GetNumChannels();
 
-    StreamCaptureSourceBase::Open((unsigned char)uiIndex, cFormat,
+    StreamCaptureSourceBase::Open(ucDeviceIndex, cFormat,
                                   uiPacketSize, ucNumPackets, pPackets);
 
     Flush(true);

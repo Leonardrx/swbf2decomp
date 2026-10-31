@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "SquadCommands.h"
 #include "Character.h"
 #include "Controllable.h"
@@ -193,7 +194,7 @@ void SquadCommands::VehicleGetIn(GameObject* pObject, Character* pCharacter)
         const float dx = vCandidate.x - vVehicle.x;
         const float dy = vCandidate.y - vVehicle.y;
         const float dz = vCandidate.z - vVehicle.z;
-        const float fDistance = sqrtf(dx * dx + dy * dy + dz * dz);
+        const float fDistance = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
         const float fInverseDistance = 1.0f / fDistance;
         const float fDirX = dx * fInverseDistance;
         const float fDirY = dy * fInverseDistance;

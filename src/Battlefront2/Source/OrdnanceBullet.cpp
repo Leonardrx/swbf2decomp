@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include "OrdnanceBullet.h"
 #include "PebbleFL/Common/PblVector.h"
@@ -461,7 +462,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     if (((OrdnanceBulletClass*)mClass)->mStraightBullet && mCheckStaticCollision)
     {
-        const float fSpeed = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+        const float fSpeed = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                    mVelocity.z * mVelocity.z);
         const float fInv = 1.0f / fSpeed;
         const PblVector3 vDir(mVelocity.x * fInv, mVelocity.y * fInv, mVelocity.z * fInv);

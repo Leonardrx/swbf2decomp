@@ -270,7 +270,7 @@ void GrassPatchClass::Init()
                 const float fX = (PblRandom::_Global.GetFloat() * 2.0f - 1.0f) * mRadiusFadeMax;
                 mParticle[i].mPos = PblVector3(fX, 0.0f, fZ);
 
-                const float fDist = sqrtf(mParticle[i].mPos.x * mParticle[i].mPos.x
+                const float fDist = PblMath::Sqrt(mParticle[i].mPos.x * mParticle[i].mPos.x
                                           + mParticle[i].mPos.y * mParticle[i].mPos.y
                                           + mParticle[i].mPos.z * mParticle[i].mPos.z);
                 if (fDist < mRadiusFadeMin)
@@ -388,7 +388,7 @@ void GrassPatchClass::Init()
         const float fX = vPos.x - mBoundingOffset.x;
         const float fY = vPos.y - mBoundingOffset.y;
         const float fZ = vPos.z - mBoundingOffset.z;
-        const float fRadius = sqrtf(fX * fX + fY * fY + fZ * fZ) + mParticle[i].mSize;
+        const float fRadius = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ) + mParticle[i].mSize;
         mBoundingRadius = Max(fRadius, mBoundingRadius);
     }
 

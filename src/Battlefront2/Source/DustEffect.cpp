@@ -452,11 +452,11 @@ void DustEffectClass::CalcBoundingRadius()
         return;
     }
 
-    float fPosMin = sqrtf(mPosMin.x * mPosMin.x + mPosMin.y * mPosMin.y + mPosMin.z * mPosMin.z);
-    float fPosMax = sqrtf(mPosMax.x * mPosMax.x + mPosMax.y * mPosMax.y + mPosMax.z * mPosMax.z);
+    float fPosMin = PblMath::Sqrt(mPosMin.x * mPosMin.x + mPosMin.y * mPosMin.y + mPosMin.z * mPosMin.z);
+    float fPosMax = PblMath::Sqrt(mPosMax.x * mPosMax.x + mPosMax.y * mPosMax.y + mPosMax.z * mPosMax.z);
     float fPos = fPosMax > fPosMin ? fPosMax : fPosMin;
-    float fVelMin = sqrtf(mVelMin.x * mVelMin.x + mVelMin.y * mVelMin.y + mVelMin.z * mVelMin.z);
-    float fVelMax = sqrtf(mVelMax.x * mVelMax.x + mVelMax.y * mVelMax.y + mVelMax.z * mVelMax.z);
+    float fVelMin = PblMath::Sqrt(mVelMin.x * mVelMin.x + mVelMin.y * mVelMin.y + mVelMin.z * mVelMin.z);
+    float fVelMax = PblMath::Sqrt(mVelMax.x * mVelMax.x + mVelMax.y * mVelMax.y + mVelMax.z * mVelMax.z);
     float fVel = fVelMax > fVelMin ? fVelMax : fVelMin;
     mBoundingRadius = mLifeTimeMax * fVel + fPos + fHalfSize;
 }

@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <d3dx9math.h>
 #include "LockOnManager.h"
 #include "CameraManager.h"
@@ -414,7 +415,7 @@ void LockOnManager::UpdateTargetVisibility(Controllable* const pCtrl, RedCamera*
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vLift), reinterpret_cast<const D3DXVECTOR3*>(&vUp), reinterpret_cast<const D3DXMATRIX*>(&pObject->GetMatrix()));
     }
 
-    float fDist = sqrtf((vPos.y - vEye.y) * (vPos.y - vEye.y) + (vPos.x - vEye.x) * (vPos.x - vEye.x) +
+    float fDist = PblMath::Sqrt((vPos.y - vEye.y) * (vPos.y - vEye.y) + (vPos.x - vEye.x) * (vPos.x - vEye.x) +
                         (vPos.z - vEye.z) * (vPos.z - vEye.z));
     if (fDist > rTarget.maxDistTrack)
     {

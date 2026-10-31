@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <math.h>
 
 #include "Restrictor.h"
@@ -50,7 +51,7 @@ PblVector3 Restrictor::RestrictMovement(const PblVector3& vDir, float& fDist)
             vResult.x = vResult.x - vNormal.x * fDot;
             vResult.y = vResult.y - vNormal.y * fDot;
             vResult.z = vResult.z - vNormal.z * fDot;
-            float fLength = sqrtf(vResult.x * vResult.x + vResult.y * vResult.y + vResult.z * vResult.z);
+            float fLength = PblMath::Sqrt(vResult.x * vResult.x + vResult.y * vResult.y + vResult.z * vResult.z);
             if (fLength > 0.0f)
             {
                 float fInv = 1.0f / fLength;

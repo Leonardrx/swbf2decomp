@@ -1226,7 +1226,7 @@ void EntityCloth::EnforceConstraint(ClothConstraint& constraint, float fRestitut
     const float fDeltaX = v1.x - v0.x;
     const float fDeltaY = v1.y - v0.y;
     const float fDeltaZ = v1.z - v0.z;
-    const float fLength = sqrtf(fDeltaX * fDeltaX + fDeltaY * fDeltaY + fDeltaZ * fDeltaZ);
+    const float fLength = PblMath::Sqrt(fDeltaX * fDeltaX + fDeltaY * fDeltaY + fDeltaZ * fDeltaZ);
     const float fDiff = (fLength - constraint.restLength) / fLength;
 
     const unsigned int uiNumFixed = mData->m_uiNumFixedPoints;
@@ -1316,7 +1316,7 @@ void EntityCloth::EnforceCylinderCollision(const PblMatrix& mMatrix, float fHeig
         }
         const PblVector3 vRadial(mMatrix.m[0][0] * fDX + mMatrix.m[0][1] * fDY + mMatrix.m[0][2] * fDZ, 0.0f,
                                  mMatrix.m[2][0] * fDX + mMatrix.m[2][1] * fDY + mMatrix.m[2][2] * fDZ);
-        const float fDist = sqrtf(vRadial.x * vRadial.x + vRadial.y * vRadial.y + vRadial.z * vRadial.z);
+        const float fDist = PblMath::Sqrt(vRadial.x * vRadial.x + vRadial.y * vRadial.y + vRadial.z * vRadial.z);
         const float fPenetration = fRadius - fDist;
         if (fPenetration <= 0.0f)
         {

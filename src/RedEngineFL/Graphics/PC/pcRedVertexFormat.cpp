@@ -345,7 +345,7 @@ IDirect3DVertexDeclaration9* pcRedVertexFormat::CreateVertexDeclaration(
     const D3DVERTEXELEMENT9 kEnd = D3DDECL_END();
     aElements[uiCount] = kEnd;
 
-    IDirect3DVertexDeclaration9* pDeclaration = 0;
+    IDirect3DVertexDeclaration9* pDeclaration;
     RedRenderer::pcGetDevice()->CreateVertexDeclaration(aElements, &pDeclaration);
     return pDeclaration;
 }

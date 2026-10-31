@@ -906,15 +906,17 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
         RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
         if (uiState == 1)
         {
-            const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
+            const PblVector3 vFacing = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
             PblMatrix mFacing(gMatrixIdentity);
             PblMatrix mScaled(gMatrixIdentity);
-            const float fAngle = (float)atan2((double)mCamera.m[2][2], (double)mCamera.m[2][0]) - PblMath::fHalfPi;
+            const float fAngle = (float)atan2((double)vFacing.z, (double)vFacing.x) - PblMath::fHalfPi;
             D3DXMATRIXA16 mRotation, mScale;
             D3DXMatrixMultiply((D3DXMATRIX*)&mFacing, (D3DXMATRIX*)&mFacing, D3DXMatrixRotationZ(&mRotation, fAngle));
             D3DXMatrixMultiply((D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mScaled,
                                D3DXMatrixScaling(&mScale, 0.03f, 0.03f, 0.03f));
-            D3DXMatrixMultiply(&_IdentityMatrix, (D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mFacing);
+            PblMatrix mResult;
+            D3DXMatrixMultiply((D3DXMATRIX*)&mResult, (D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mFacing);
+            _IdentityMatrix = reinterpret_cast<const D3DXMATRIX&>(mResult);
 
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
             RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
@@ -993,8 +995,8 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
     pRegs[40].component[1] = 0.5f;
     pRegs[40].component[2] = -0.5f;
     pRegs[40].component[3] = 0.0f;
-    const float fStart = FLRenderer::GetNearSceneFadeStart() * RedRenderer::GetCamera()->_fZoom;
-    const float fEnd = FLRenderer::GetNearSceneFadeEnd() * RedRenderer::GetCamera()->_fZoom;
+    const float fStart = RedRenderer::GetCamera()->_fZoom * FLRenderer::GetNearSceneFadeStart();
+    const float fEnd = RedRenderer::GetCamera()->_fZoom * FLRenderer::GetNearSceneFadeEnd();
     bool bFade = false;
     if (fStart > 0.0f && fEnd > fStart)
     {
@@ -1045,18 +1047,32 @@ void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
     s_d3dMat.Ambient = s_d3dMat.Diffuse;
     RedRenderer::pcGetDevice()->SetMaterial(&s_d3dMat);
 
+    if (uiPass == 0)
+    {
+        const PblMatrix m(PblVector4(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f),
+                          PblVector4(m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f),
+                          PblVector4(m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f),
+                          PblVector4(0.0f, 0.0f, 0.0f, 1.0f));
+        RedRenderer::pcSetTexture(0, m_diffuseMap2);
+        RedRenderer::pcFFSetTextureTransform(0, m);
+        const RedColor blend((unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
+                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f));
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, blend.GetARGB());
+    }
+
     if (uiPass == 1)
     {
-        PblMatrix m1;
-        m1.SetXAxis(m_specularMaskTransform1(0, 0), m_specularMaskTransform1(0, 1), 0.0f, 0.0f);
-        m1.SetYAxis(m_specularMaskTransform1(1, 0), m_specularMaskTransform1(1, 1), 0.0f, 0.0f);
-        m1.SetZAxis(m_specularMaskTransform1(2, 0), m_specularMaskTransform1(2, 1), 0.0f, 0.0f);
-        m1.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
-        PblMatrix m2;
-        m2.SetXAxis(m_specularMaskTransform2(0, 0), m_specularMaskTransform2(0, 1), 0.0f, 0.0f);
-        m2.SetYAxis(m_specularMaskTransform2(1, 0), m_specularMaskTransform2(1, 1), 0.0f, 0.0f);
-        m2.SetZAxis(m_specularMaskTransform2(2, 0), m_specularMaskTransform2(2, 1), 0.0f, 0.0f);
-        m2.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
+        const PblVector4 vTranslation(0.0f, 0.0f, 0.0f, 1.0f);
+        const PblMatrix m1(PblVector4(m_specularMaskTransform1(0, 0), m_specularMaskTransform1(0, 1), 0.0f, 0.0f),
+                           PblVector4(m_specularMaskTransform1(1, 0), m_specularMaskTransform1(1, 1), 0.0f, 0.0f),
+                           PblVector4(m_specularMaskTransform1(2, 0), m_specularMaskTransform1(2, 1), 0.0f, 0.0f),
+                           vTranslation);
+        const PblMatrix m2(PblVector4(m_specularMaskTransform2(0, 0), m_specularMaskTransform2(0, 1), 0.0f, 0.0f),
+                           PblVector4(m_specularMaskTransform2(1, 0), m_specularMaskTransform2(1, 1), 0.0f, 0.0f),
+                           PblVector4(m_specularMaskTransform2(2, 0), m_specularMaskTransform2(2, 1), 0.0f, 0.0f),
+                           vTranslation);
         RedRenderer::pcSetTexture(0, m_specularMask1);
         RedRenderer::pcSetTexture(1, m_specularMask2);
         RedRenderer::pcFFSetTextureTransform(0, m1);
@@ -1066,22 +1082,6 @@ void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
     }
     else
     {
-        if (uiPass == 0)
-        {
-            PblMatrix m;
-            m.SetXAxis(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f);
-            m.SetYAxis(m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f);
-            m.SetZAxis(m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f);
-            m.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
-            RedRenderer::pcSetTexture(0, m_diffuseMap2);
-            RedRenderer::pcFFSetTextureTransform(0, m);
-            const RedColor blend((unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                                 (unsigned char)(int)(m_diffuseMapBlend * 255.0f));
-            RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, blend.GetARGB());
-        }
-
         const RedColorValue& ambient = RedLight::GetGlobalAmbientLight()->m_color;
         const RedColor ambientColor((unsigned char)(int)(ambient.r * 255.0f),
                                     (unsigned char)(int)(ambient.g * 255.0f),

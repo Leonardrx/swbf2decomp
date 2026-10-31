@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include "EntityProp.h"
 #include "PebbleFL/Common/PblVector.h"
 
@@ -194,7 +195,7 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
 
     float fHalfX = (mAABB._vMax.x - mAABB._vMin.x) * 0.5f;
     float fHalfZ = (mAABB._vMax.z - mAABB._vMin.z) * 0.5f;
-    float f2dRadius = sqrtf(fHalfX * fHalfX + 0.0f + fHalfZ * fHalfZ);
+    float f2dRadius = PblMath::Sqrt(fHalfX * fHalfX + 0.0f + fHalfZ * fHalfZ);
     if (GetCollisionRadius() > f2dRadius)
     {
         Set2DCollisionRadius(f2dRadius);
@@ -362,13 +363,13 @@ void EntityProp::UpdateSound()
         const float fLength2EstAlpha = 0.94805944f;
         const float fLength2EstBeta = 0.39269909f;
 
-        float fA = (float)fabs(vPos.x - mPrevPos.x);
-        float fB = (float)fabs(vPos.y - mPrevPos.y);
+        float fA = (float)fabs((double)(vPos.x - mPrevPos.x));
+        float fB = (float)fabs((double)(vPos.y - mPrevPos.y));
         float fEst = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                              : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 
-        fA = (float)fabs(fEst);
-        fB = (float)fabs(vPos.z - mPrevPos.z);
+        fA = (float)fabs((double)fEst);
+        fB = (float)fabs((double)(vPos.z - mPrevPos.z));
         fMove = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                         : fA * fLength2EstBeta + fB * fLength2EstAlpha;
     }

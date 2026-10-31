@@ -298,7 +298,7 @@ EntityHologram::EntityHologram(EntityHologramClass* pClass, const EntityDesc& de
         float fDX = vCenter.x - vReflected.x;
         float fDY = vCenter.y - vReflected.y;
         float fDZ = vCenter.z - vReflected.z;
-        float fDist = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+        float fDist = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
         if (fDist > fRadius * 2.0f)
         {
             vCenter = Interpolate(vCenter, vReflected, fRadius / fDist);
@@ -791,7 +791,7 @@ void EntityHologram::SetStoredMatrix(const PblMatrix& mMatrix)
         float fDX = vCenter.x - vReflected.x;
         float fDY = vCenter.y - vReflected.y;
         float fDZ = vCenter.z - vReflected.z;
-        float fDist = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+        float fDist = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
         if (fDist > fRadius * 2.0f)
         {
             vCenter = Interpolate(vCenter, vReflected, fRadius / fDist);

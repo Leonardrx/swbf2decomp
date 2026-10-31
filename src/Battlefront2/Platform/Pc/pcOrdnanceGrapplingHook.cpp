@@ -165,7 +165,7 @@ void OrdnanceGrapplingHook::Render(unsigned char ucViewport, float fDist, unsign
     PblVector3 vWaveDirection;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vWaveDirection), reinterpret_cast<const D3DXVECTOR3*>(&vWave));
 
-    float fLength = sqrtf(vDirection.x * vDirection.x + vDirection.y * vDirection.y
+    float fLength = PblMath::Sqrt(vDirection.x * vDirection.x + vDirection.y * vDirection.y
                           + vDirection.z * vDirection.z);
     if (fLength < 0.0001f)
     {

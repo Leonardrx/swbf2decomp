@@ -326,10 +326,10 @@ void ExplosionClass::SetProperty(unsigned int uProperty, const char* pszValue)
             float fCenterZ = (box._vMin.z + box._vMax.z) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
-            float fHalfX = (float)fabs(box._vMax.x - box._vMin.x) * 0.5f;
-            float fHalfY = (float)fabs(box._vMax.y - box._vMin.y) * 0.5f;
-            float fHalfZ = (float)fabs(box._vMax.z - box._vMin.z) * 0.5f;
-            primitive.SetSphere(sqrtf(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
+            float fHalfX = (float)fabs((double)(box._vMax.x - box._vMin.x)) * 0.5f;
+            float fHalfY = (float)fabs((double)(box._vMax.y - box._vMin.y)) * 0.5f;
+            float fHalfZ = (float)fabs((double)(box._vMax.z - box._vMin.z)) * 0.5f;
+            primitive.SetSphere(PblMath::Sqrt(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
             matrix.m[3][0] = fCenterX;
             matrix.m[3][1] = fCenterY;
             matrix.m[3][2] = fCenterZ;

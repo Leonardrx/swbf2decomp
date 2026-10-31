@@ -762,9 +762,7 @@ void pcNormalShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) cons
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
 
             PblMatrix mCamera = RedRenderer::GetCamera()->GetMatrix();
-            mCamera.m[2][0] = -mCamera.m[2][0];
-            mCamera.m[2][1] = -mCamera.m[2][1];
-            mCamera.m[2][2] = -mCamera.m[2][2];
+            mCamera[2] = -mCamera[2];
             mCamera.m[2][3] = 0.0f;
             const PblVector4& vU = RedShadowMap::_vShadowMapTransformU;
             const PblVector4& vV = RedShadowMap::_vShadowMapTransformV;

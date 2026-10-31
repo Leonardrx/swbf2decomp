@@ -2685,7 +2685,7 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
             return false;
         }
         float fOverlap = pResult->mOverlap;
-        float fHorizontal = sqrtf((vSeparation.x * fOverlap) * (vSeparation.x * fOverlap) +
+        float fHorizontal = PblMath::Sqrt((vSeparation.x * fOverlap) * (vSeparation.x * fOverlap) +
                                   (vSeparation.z * fOverlap) * (vSeparation.z * fOverlap));
         if (fHorizontal > 0.0f)
         {
@@ -4002,7 +4002,7 @@ bool EntityWalker::Update(float fDeltaTime)
     }
     if (fDeltaTime > 0.0f && VehicleEngine::IsOn())
     {
-        float fSpeed = sqrtf(mVelocityNoGrav.x * mVelocityNoGrav.x + mVelocityNoGrav.y * mVelocityNoGrav.y +
+        float fSpeed = PblMath::Sqrt(mVelocityNoGrav.x * mVelocityNoGrav.x + mVelocityNoGrav.y * mVelocityNoGrav.y +
                              mVelocityNoGrav.z * mVelocityNoGrav.z);
         bool bFirstPerson = mTracker && mTracker->IsFirstPersonView();
         bool bLocal = mPlayerId >= 0 &&
@@ -4207,7 +4207,7 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
         if (iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mTarget)
         {
             PblVector3 vTarget = mWeapon[iIndex]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
-            fDist = sqrtf((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
+            fDist = PblMath::Sqrt((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
                           (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                           (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }

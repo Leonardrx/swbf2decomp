@@ -106,7 +106,7 @@ void ShieldEffect::PlatformRender(const PblMatrix& mMatrix, unsigned char ucView
     {
         PblMatrix mBillboard = RedRenderer::GetCamera()->GetMatrix();
         const PblVector3& vX = mMatrix.GetXAxis();
-        const float fScale = sqrtf(vX.x * vX.x + vX.y * vX.y + vX.z * vX.z);
+        const float fScale = PblMath::Sqrt(vX.x * vX.x + vX.y * vX.y + vX.z * vX.z);
         mBillboard.Scale(fScale);
         mBillboard.SetTranslation(mMatrix.GetTranslation());
 

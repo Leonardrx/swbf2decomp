@@ -610,14 +610,9 @@ void RedWater::OceanCreatePatch(PblComplex* pFreq)
         }
         for (int z = 0; z < m_pointsPerPatchZ; ++z)
         {
-            int iz = z;
-            if (iz >= m_divisionsPerPatchZ)
-            {
-                iz -= m_divisionsPerPatchZ;
-            }
             PblVector3& vPos = pPositions[x * m_pointsPerPatchZ + z];
             vPos.x = (float)x / ((float)m_pointsPerPatchX - 1.0f);
-            vPos.y = (pFreq[ix * m_divisionsPerPatchZ + iz].real - m_minPatchHeight) / fRange;
+            vPos.y = (pFreq[ix * m_divisionsPerPatchZ + ((z >= m_divisionsPerPatchZ) ? z - m_divisionsPerPatchZ : z)].real - m_minPatchHeight) / fRange;
             vPos.z = (float)z / ((float)m_pointsPerPatchZ - 1.0f);
         }
     }
@@ -627,10 +622,10 @@ void RedWater::OceanCreatePatch(PblComplex* pFreq)
         for (int z = 0; z < m_pointsPerPatchZ; ++z)
         {
             int iRow = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x) % m_divisionsPerPatchX);
-            int iRowNext = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x + 1) % m_divisionsPerPatchX);
-            int iRowPrev = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x - 1) % m_divisionsPerPatchX);
             int iCol = (m_divisionsPerPatchZ + z) % m_divisionsPerPatchZ;
             int iColPrev = (m_divisionsPerPatchZ + z - 1) % m_divisionsPerPatchZ;
+            int iRowNext = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x + 1) % m_divisionsPerPatchX);
+            int iRowPrev = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x - 1) % m_divisionsPerPatchX);
             int iColNext = (m_divisionsPerPatchZ + z + 1) % m_divisionsPerPatchZ;
             float fDX = m_metersPerPatch / (float)m_divisionsPerPatchX;
             float fDZ = m_metersPerPatch / (float)m_divisionsPerPatchZ;
@@ -1022,12 +1017,12 @@ void RedWater::ReadConfig(PblConfig& config)
         {
             RedWater::m_highResLowResRatio = m_divisionsPerPatchX;
         }
+        m_divisionsPerPatchX *= iReduction;
         m_divisionsPerPatchZ *= iReduction;
         m_tilesU *= iReduction;
-        m_divisionsPerPatchX *= iReduction;
+        m_tilesV *= iReduction;
         m_pointsPerPatchX = m_divisionsPerPatchX + 1;
         m_pointsPerPatchZ = m_divisionsPerPatchZ + 1;
-        m_tilesV *= iReduction;
         m_velocityU /= iReduction;
         m_velocityV /= iReduction;
         OceanInit();
@@ -1101,26 +1096,17 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
         PblVector3(1.0f, 1.0f, 0.0f), PblVector3(1.0f, -1.0f, 0.0f)};
 
     PblVector3 vWorldCorners[4];
-    PblVector3 vLocal;
-    vLocal.x = -fHalfWidth;
-    vLocal.y = -fHalfHeight;
-    vLocal.z = -fNear;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[0], (const D3DXVECTOR3*)&vLocal,
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[0],
+                           (const D3DXVECTOR3*)&PblVector3(-fHalfWidth, -fHalfHeight, -fNear),
                            (const D3DXMATRIX*)&mCamera);
-    vLocal.x = -fHalfWidth;
-    vLocal.y = fHalfHeight;
-    vLocal.z = -fNear;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[1], (const D3DXVECTOR3*)&vLocal,
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[1],
+                           (const D3DXVECTOR3*)&PblVector3(-fHalfWidth, fHalfHeight, -fNear),
                            (const D3DXMATRIX*)&mCamera);
-    vLocal.x = fHalfWidth;
-    vLocal.y = fHalfHeight;
-    vLocal.z = -fNear;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[2], (const D3DXVECTOR3*)&vLocal,
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[2],
+                           (const D3DXVECTOR3*)&PblVector3(fHalfWidth, fHalfHeight, -fNear),
                            (const D3DXMATRIX*)&mCamera);
-    vLocal.x = fHalfWidth;
-    vLocal.y = -fHalfHeight;
-    vLocal.z = -fNear;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[3], (const D3DXVECTOR3*)&vLocal,
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vWorldCorners[3],
+                           (const D3DXVECTOR3*)&PblVector3(fHalfWidth, -fHalfHeight, -fNear),
                            (const D3DXMATRIX*)&mCamera);
 
     PblVector3 vVerts[5];

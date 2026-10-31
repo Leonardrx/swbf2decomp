@@ -1281,8 +1281,8 @@ void GetClosestPoints_SegmentSegment(const PblVector3& vSStart, const PblVector3
         }
     }
 
-    float sc = fabs(sN) < SMALL ? 0.0f : sN / sD;
-    float tc = fabs(tN) < SMALL ? 0.0f : tN / tD;
+    float sc = (float)fabs((double)sN) < SMALL ? 0.0f : sN / sD;
+    float tc = (float)fabs((double)tN) < SMALL ? 0.0f : tN / tD;
     vSPoint = vSStart + u * sc;
     vTPoint = vTStart + v * tc;
 }

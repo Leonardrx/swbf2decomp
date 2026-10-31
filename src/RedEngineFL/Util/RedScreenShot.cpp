@@ -53,13 +53,13 @@ bool StitchImage(Accumulator<RedScreenShot::Pixel>* pAccumulators, int iTilesX, 
     header.idLength = 0;
     header.colorMapType = 0;
     header.imageType = 2;
+    header.bitsPerPixel = 24;
+    header.descriptor = 32;
+    header.width = outWidth;
     memset(header.colorMapSpec, 0, sizeof(header.colorMapSpec));
     header.xOrigin = 0;
     header.yOrigin = 0;
-    header.width = outWidth;
     header.height = outHeight;
-    header.bitsPerPixel = 24;
-    header.descriptor = 32;
     file.WriteData(&header, sizeof(header));
 
     const int iRowBytes = 3 * uiWidth;
@@ -299,12 +299,15 @@ void AccumulateFrameBuffer(Accumulator<Pixel>& accum)
         const unsigned int* pRow = (const unsigned int*)((unsigned char*)rect.pBits + rect.Pitch * y);
         for (unsigned short x = 0; x < desc.Width; ++x)
         {
-            unsigned int uColor = pRow[x];
+            const unsigned char ucBlue = (unsigned char)pRow[x];
+            const unsigned int uColor = pRow[x];
+            const unsigned char ucGreen = (unsigned char)(uColor >> 8);
+            const unsigned char ucRed = (unsigned char)(uColor >> 16);
             int iIndex = x + desc.Width * y;
             Pixel pixel = accum.Get(iIndex);
-            pixel.r += (unsigned char)(uColor >> 16) / 255.0f;
-            pixel.g += (unsigned char)(uColor >> 8) / 255.0f;
-            pixel.b += (unsigned char)uColor / 255.0f;
+            pixel.r += ucRed / 255.0f;
+            pixel.g += ucGreen / 255.0f;
+            pixel.b += ucBlue / 255.0f;
             accum.Set(iIndex, pixel);
         }
     }

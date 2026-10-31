@@ -1,3 +1,4 @@
+#include "PebbleFL/Common/PblMath.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -394,7 +395,7 @@ bool Ordnance::CheckCollision()
     const PblVector3 vStart = GetOldPosition();
     const PblVector3& vEnd = GetPosition();
     PblVector3 vDir = vEnd - vStart;
-    const float fDist = sqrtf(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+    const float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;

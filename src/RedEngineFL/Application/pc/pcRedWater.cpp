@@ -1631,6 +1631,7 @@ static void ReadTextureList(PblConfig::Data& data, unsigned int* puiTextures,
 // FUNCTION: SWBF2 0x0071fa60
 void RedWater::PlatformReadConfigData(PblConfig::Data& data)
 {
+    char buffer[256];
     switch (data.GetId())
     {
     case 0x8A81DE8B:
@@ -1659,16 +1660,31 @@ void RedWater::PlatformReadConfigData(PblConfig::Data& data)
         m_fSpecularMaskScrollV = data.GetFloatArg(1);
         break;
     case 0xC0311180:
-        ReadTextureList(data, m_uiSpecularMaskTextures, m_uiNumSpecularMaskTextures,
-                        m_fSpecularMaskTexturesFrameRate);
+        m_uiNumSpecularMaskTextures = (int)data.GetFloatArg(1);
+        for (unsigned int i = 0; i < m_uiNumSpecularMaskTextures; ++i)
+        {
+            sprintf(buffer, "%s%d", data.GetStringArg(0), i);
+            m_uiSpecularMaskTextures[i] = PblHash(buffer);
+        }
+        m_fSpecularMaskTexturesFrameRate = data.GetFloatArg(2);
         break;
     case 0x11D65039:
-        ReadTextureList(data, m_uiBumpMapTextures, m_uiNumBumpMapTextures,
-                        m_fBumpMapTexturesFrameRate);
+        m_uiNumBumpMapTextures = (int)data.GetFloatArg(1);
+        for (unsigned int i = 0; i < m_uiNumBumpMapTextures; ++i)
+        {
+            sprintf(buffer, "%s%d", data.GetStringArg(0), i);
+            m_uiBumpMapTextures[i] = PblHash(buffer);
+        }
+        m_fBumpMapTexturesFrameRate = data.GetFloatArg(2);
         break;
     case 0xEAC587AC:
-        ReadTextureList(data, m_uiNormalMapTextures, m_uiNumNormalMapTextures,
-                        m_fNormalMapTexturesFrameRate);
+        m_uiNumNormalMapTextures = (int)data.GetFloatArg(1);
+        for (unsigned int i = 0; i < m_uiNumNormalMapTextures; ++i)
+        {
+            sprintf(buffer, "%s%d", data.GetStringArg(0), i);
+            m_uiNormalMapTextures[i] = PblHash(buffer);
+        }
+        m_fNormalMapTexturesFrameRate = data.GetFloatArg(2);
         break;
     }
 }
@@ -1999,8 +2015,8 @@ void RedWater::pcAccumulateNormalMap()
     RedTextureTransform transform;
     transform.m_bTransform = 1;
     transform.m_Transform[0][0] = m_tilesU;
-    transform.m_Transform[0][1] = 0.0f;
     transform.m_Transform[1][0] = 0.0f;
+    transform.m_Transform[0][1] = 0.0f;
     transform.m_Transform[1][1] = m_tilesV;
     transform.m_Transform[2][0] = m_tilesU * 0.0f;
     transform.m_Transform[2][1] = m_tilesV * 0.0f;
@@ -2143,8 +2159,8 @@ void RedWater::pcRenderFarOceanWaterPatches()
     const RedCamera* pCamera = RedRenderer::GetCamera();
     float fTime = m_waterTimeStamp.GetElapsed();
     float fScrollU = m_velocityU * fTime;
-    float fScrollV = m_velocityV * fTime;
     fScrollU -= (float)(int)fScrollU;
+    float fScrollV = m_velocityV * fTime;
     fScrollV -= (float)(int)fScrollV;
 
     RedTextureTransform baseTransform;
@@ -2158,8 +2174,8 @@ void RedWater::pcRenderFarOceanWaterPatches()
     RedTextureTransform foamTransform;
     foamTransform.m_bTransform = 1;
     foamTransform.m_Transform[0][0] = RedWater::m_foamTilesU;
-    foamTransform.m_Transform[0][1] = 0.0f;
     foamTransform.m_Transform[1][0] = 0.0f;
+    foamTransform.m_Transform[0][1] = 0.0f;
     foamTransform.m_Transform[1][1] = RedWater::m_foamTilesV;
     foamTransform.m_Transform[2][0] = RedWater::m_foamTilesU * fScrollU;
     foamTransform.m_Transform[2][1] = RedWater::m_foamTilesV * fScrollV;
@@ -2640,8 +2656,8 @@ void RedWater::pcRenderOceanWaterPatches()
     const RedCamera* pCamera = RedRenderer::GetCamera();
     float fTime = m_waterTimeStamp.GetElapsed();
     float fScrollU = m_velocityU * fTime;
-    float fScrollV = m_velocityV * fTime;
     fScrollU -= (float)(int)fScrollU;
+    float fScrollV = m_velocityV * fTime;
     fScrollV -= (float)(int)fScrollV;
 
     RedTextureTransform baseTransform;
@@ -2655,8 +2671,8 @@ void RedWater::pcRenderOceanWaterPatches()
     RedTextureTransform foamTransform;
     foamTransform.m_bTransform = 1;
     foamTransform.m_Transform[0][0] = RedWater::m_foamTilesU;
-    foamTransform.m_Transform[0][1] = 0.0f;
     foamTransform.m_Transform[1][0] = 0.0f;
+    foamTransform.m_Transform[0][1] = 0.0f;
     foamTransform.m_Transform[1][1] = RedWater::m_foamTilesV;
     foamTransform.m_Transform[2][0] = RedWater::m_foamTilesU * fScrollU;
     foamTransform.m_Transform[2][1] = RedWater::m_foamTilesV * fScrollV;

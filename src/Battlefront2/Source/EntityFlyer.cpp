@@ -2814,7 +2814,7 @@ bool EntityFlyer::PostCollisionUpdate(float fDeltaTime)
                 mVelocity.z -= gVectorUnitY.z * fApproach;
                 float fBounce = fApproach * -1.125f;
                 float fDrag = fBounce * 0.25f /
-                              sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z);
+                              PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z);
                 if (!(1.0f > fDrag))
                 {
                     fDrag = 1.0f;
@@ -2830,7 +2830,7 @@ bool EntityFlyer::PostCollisionUpdate(float fDeltaTime)
                 if (mState != LANDING)
                 {
                     float fSplash =
-                        sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z) /
+                        PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z) /
                             40.0f +
                         0.01f;
                     if (!(1.0f > fSplash))
@@ -4934,7 +4934,7 @@ bool EntityFlyer::CollisionCallback(const CollisionResult* pResult, CollisionObj
                 mVelocity.y -= vNormal.y * fApproach;
                 mVelocity.z -= vNormal.z * fApproach;
                 float fDrag = fBounce * 0.125f /
-                              sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z);
+                              PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z);
                 if (!(1.0f > fDrag))
                 {
                     fDrag = 1.0f;
@@ -4970,7 +4970,7 @@ bool EntityFlyer::CollisionCallback(const CollisionResult* pResult, CollisionObj
                 else
                 {
                     float fImpact =
-                        sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z) /
+                        PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z) /
                             40.0f +
                         0.01f;
                     if (!(1.0f > fImpact))
@@ -5298,7 +5298,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
     float fDx = pDest->x - vPos.x;
     float fDy = pDest->y - vPos.y;
     float fDz = pDest->z - vPos.z;
-    float fDist = sqrtf(fDy * fDy + fDx * fDx + fDz * fDz);
+    float fDist = PblMath::Sqrt(fDy * fDy + fDx * fDx + fDz * fDz);
     float fLook = mSetSpeed * 1.5f;
     if (!(fLook > 1.0f))
     {
@@ -5359,7 +5359,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
         fGround = fHeight;
     }
 
-    float fHoriz = sqrtf((pDest->z - vPos.z) * (pDest->z - vPos.z) + (pDest->x - vPos.x) * (pDest->x - vPos.x));
+    float fHoriz = PblMath::Sqrt((pDest->z - vPos.z) * (pDest->z - vPos.z) + (pDest->x - vPos.x) * (pDest->x - vPos.x));
     float fY = fHoriz * (fGround + 25.0f - vPos.y) / fLook + vPos.y;
     if (bTaper)
     {
@@ -5481,7 +5481,7 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
     float fDx = pPos->x - pPosition->x;
     float fDy = pPos->y - pPosition->y;
     float fDz = pPos->z - pPosition->z;
-    float fDist = sqrtf(fDy * fDy + fDx * fDx + fDz * fDz);
+    float fDist = PblMath::Sqrt(fDy * fDy + fDx * fDx + fDz * fDz);
     float fMax = GetFlyerMaxSpeed();
     float fFar = fMax * 3.0f;
     if (fMax > fDist)

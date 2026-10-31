@@ -323,7 +323,7 @@ float CombatUtil::sCalcImpactTime_Missile(const DamageOwner& owner,
     OrdnanceMissileClass* pMissile = const_cast<OrdnanceMissileClass*>(pClass);
     const PblVector3& vTarget = pTarget->GetPosition();
     const PblVector3& vShooter = pShooter->GetPosition();
-    float fDistance = sqrtf(LengthSq(vShooter - vTarget));
+    float fDistance = PblMath::Sqrt(LengthSq(vShooter - vTarget));
     float fAccel = pClass->mAcceleration;
     float fStartSpeed;
     if (fAccel < 9000.0f)
@@ -368,7 +368,7 @@ float CombatUtil::sCalcImpactTime(const DamageOwner& owner, const OrdnanceClass*
     const GameObject* pShooter = owner.mGameObject;
     const PblVector3& vTarget = pTarget->GetPosition();
     const PblVector3& vShooter = pShooter->GetPosition();
-    float fDistance = sqrtf(LengthSq(vShooter - vTarget));
+    float fDistance = PblMath::Sqrt(LengthSq(vShooter - vTarget));
     return fDistance / pOrdnance->GetVelocity();
 }
 
@@ -1780,7 +1780,7 @@ bool CombatUtil::CanTurretFaceDisturbance(const Controllable* pMe, const Mounted
     float fYaw = atan2f(vLocal.x, vLocal.z);
     if (fYaw >= pClass->mMinYaw && pClass->mMaxYaw >= fYaw)
     {
-        float fPitch = asinf(vLocal.y / sqrtf(LengthSq(vLocal)));
+        float fPitch = asinf(vLocal.y / PblMath::Sqrt(LengthSq(vLocal)));
         if (fPitch >= pClass->mMinPitch && pClass->mMaxPitch >= fPitch)
         {
             return true;

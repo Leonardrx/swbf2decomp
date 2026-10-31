@@ -583,7 +583,7 @@ bool PowerupStation::Update(float fDeltaTime)
         PblQuaternion q = PblQuaternion(mRenderMatrix);
         PblVector3 vPos = mMatrix.GetTranslation();
         float fAngle = (float)mRotateDir * mClass->mIdleRotateSpeed * fDeltaTime;
-        if (fabs(fAngle) > 0.0001f)
+        if ((float)fabs((double)fAngle) > 0.0001f)
         {
             q = q * PblQuaternion(gVectorUnitY, fAngle);
         }
@@ -597,7 +597,7 @@ bool PowerupStation::Update(float fDeltaTime)
                 PblVector3 vWobblePos = pWobbleMatrix->GetTranslation();
                 *pWobbleMatrix = gMatrixIdentity;
                 PblQuaternion qWobble = PblQuaternion(*pWobbleMatrix);
-                if (fabs(fWobble) > 0.0001f)
+                if ((float)fabs((double)fWobble) > 0.0001f)
                 {
                     qWobble = qWobble * PblQuaternion(gVectorUnitZ, fWobble);
                 }
@@ -754,7 +754,7 @@ bool PowerupStation::Update(float fDeltaTime)
             PblVector3 vNodePos = pMatrix->GetTranslation();
             *pMatrix = mDefault;
             PblQuaternion q = PblQuaternion(*pMatrix);
-            if (fabs(fAngle) > 0.0001f)
+            if ((float)fabs((double)fAngle) > 0.0001f)
             {
                 q = q * PblQuaternion(gVectorUnitX, fAngle);
             }
@@ -794,7 +794,7 @@ bool PowerupStation::Update(float fDeltaTime)
         PblVector3 vNodePos = pMatrix->GetTranslation();
         *pMatrix = mDefault;
         PblQuaternion q = PblQuaternion(*pMatrix);
-        if (fabs(fAngle) > 0.0001f)
+        if ((float)fabs((double)fAngle) > 0.0001f)
         {
             q = q * PblQuaternion(gVectorUnitZ, fAngle);
         }

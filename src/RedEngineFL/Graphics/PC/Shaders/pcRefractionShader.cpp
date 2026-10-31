@@ -274,7 +274,7 @@ void pcRefractionShader::Begin_Prog1(unsigned int uiState, unsigned int) const
         PblMatrix mTmp;
         PblMatrix mRot = gMatrixIdentity;
         PblMatrix mScale = gMatrixIdentity;
-        const float fAngle = atan2f(vZ.z, vZ.x) - PblMath::fHalfPi;
+        const float fAngle = (float)atan2((double)vZ.z, (double)vZ.x) - PblMath::fHalfPi;
 
         D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mRot), reinterpret_cast<const D3DXMATRIX*>(&mRot), D3DXMatrixRotationZ(reinterpret_cast<D3DXMATRIX*>(&mTmp), fAngle));
         D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mScale), reinterpret_cast<const D3DXMATRIX*>(&mScale),
@@ -631,9 +631,11 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
     color.b = (unsigned char)(int)(color.b * (pItem->tweakColor.b * (1.0f / 255.0f)) + 0.5f);
     color.a = (unsigned char)(int)(color.a * (pItem->tweakColor.a * (1.0f / 255.0f)) + 0.5f);
 
-    const RedColor refraction = pItem->pShadingState
-                                    ? pItem->pShadingState->GetColorParam(0xbc6f8a5e)
-                                    : m_colorRefraction;
+    RedColor refraction = m_colorRefraction;
+    if (pItem->pShadingState)
+    {
+        refraction = pItem->pShadingState->GetColorParam(0xbc6f8a5e);
+    }
     const float fAlpha = refraction.a * (1.0f / 255.0f);
 
     RedRenderer::pcSetCullMode((m_material.materialFlags & 0x10000) ? PCREDCULL_NONE
@@ -727,10 +729,7 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
         }
 
         RedColorValue psConst[2];
-        psConst[0].r = 1.0f;
-        psConst[0].g = 1.0f;
-        psConst[0].b = 1.0f;
-        psConst[0].a = fAlpha;
+        psConst[0] = RedColorValue(1.0f, 1.0f, 1.0f, fAlpha);
         if (pItem->pLightingState->pProjectedLight)
         {
             const RedLight* pLight = pItem->pLightingState->pProjectedLight;

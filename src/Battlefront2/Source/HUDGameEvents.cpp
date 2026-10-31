@@ -2213,10 +2213,10 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     }
 
     const float fEnergy = pBar->m_fEnergy;
-    const Character* pCharacter = pControllable->mCharacter;
-    if (pCharacter && BonusManager::Instance()->IsTeamBonusActive(pCharacter->mTeamNumber, 0x85ad826d))
+    if (pControllable->mCharacter &&
+        BonusManager::Instance()->IsTeamBonusActive(pControllable->mCharacter->mTeamNumber, 0x85ad826d))
     {
-        const int iPlayer = pCharacter->mPlayerId;
+        const int iPlayer = pControllable->mCharacter->mPlayerId;
         if (iPlayer >= 0 && iPlayer < 1)
         {
             EventClass* pPulseRate = gPlayerEvents[iPlayer].energyRegenPulseRate;
@@ -2244,7 +2244,7 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     {
         fFraction = pBar->m_fEnergy / fEnergyMax;
     }
-    HUD::Event ev5(events.energyFraction, (float)fabs(fFraction));
+    HUD::Event ev5(events.energyFraction, (float)fabs((double)fFraction));
     ev5.Send();
     if (pBar->m_bOverheat)
     {
