@@ -230,8 +230,9 @@ void UnitFollowAgent::ExitState()
 // FUNCTION: SWBF2 0x006683e0
 bool UnitFollowAgent::CheckForForwardHintNodes()
 {
-
-    if (ReserveManager::GetReserveOrder(ResolveHandle(mTarget), mCtrl->mOwner->GetGameObject(), RT_FORMATION) > 2)
+    Controllable* pMe = mCtrl->mOwner;
+    const GameObject* pTarget = ResolveHandle(mTarget);
+    if (ReserveManager::GetReserveOrder(pTarget, pMe->GetGameObject(), RT_FORMATION) > 2)
     {
         return false;
     }
@@ -241,11 +242,12 @@ bool UnitFollowAgent::CheckForForwardHintNodes()
 // FUNCTION: SWBF2 0x00668480
 bool UnitFollowAgent::IsInLooseRange()
 {
+    Controllable* pMe = mCtrl->mOwner;
     const GameObject* pTarget = ResolveHandle(mTarget);
-    const PblMatrix& mine = mCtrl->mOwner->GetMatrix();
-    const PblVector3* theirs = GetTargetPosition(pTarget);
-    float dx = theirs->x - mine.m[3][0];
-    float dz = theirs->z - mine.m[3][2];
+    const PblMatrix& mine = pMe->GetMatrix();
+    const PblVector3& theirs = static_cast<const CollisionObject&>(*pTarget).GetPosition();
+    float dx = theirs.x - mine.m[3][0];
+    float dz = theirs.z - mine.m[3][2];
     return (dx * dx + dz * dz) < 400.0f;
 }
 

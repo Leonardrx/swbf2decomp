@@ -218,13 +218,16 @@ void AddTipsToDatabase(LoadDisplay::IDDatabase& database, const char* pcName)
     _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, 1);
     acBuffer[sizeof(acBuffer) - 1] = 0;
     unsigned int uiHash = PblHash(acBuffer);
-    int i = 2;
-    while (RedLocalizeDB::Find(uiHash, true))
+    if (RedLocalizeDB::Find(uiHash, true))
     {
-        database.AddID(0, uiHash);
-        _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, i++);
-        acBuffer[sizeof(acBuffer) - 1] = 0;
-        uiHash = PblHash(acBuffer);
+        int i = 2;
+        do
+        {
+            database.AddID(0, uiHash);
+            _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, i++);
+            acBuffer[sizeof(acBuffer) - 1] = 0;
+            uiHash = PblHash(acBuffer);
+        } while (RedLocalizeDB::Find(uiHash, true));
     }
 }
 
@@ -1001,7 +1004,7 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     m_LEDColor.r = item.GetUint8Arg(0);
                     m_LEDColor.g = item.GetUint8Arg(1);
                     m_LEDColor.b = item.GetUint8Arg(2);
-                    m_LEDColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : 0xff;
+                    m_LEDColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : (unsigned char)0xff;
                     break;
                 case CFG_TIPSTIME:
                     m_timePerTip = item.GetFloatArg(0);
@@ -1068,7 +1071,7 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                             m_loadingColorPallete[m_loadingColorPalleteSize].g = color.GetUint8Arg(1);
                             m_loadingColorPallete[m_loadingColorPalleteSize].b = color.GetUint8Arg(2);
                             m_loadingColorPallete[m_loadingColorPalleteSize].a =
-                                color.GetNumArgs() > 3 ? color.GetUint8Arg(3) : 0xff;
+                                color.GetNumArgs() > 3 ? color.GetUint8Arg(3) : (unsigned char)0xff;
                             ++m_loadingColorPalleteSize;
                         }
                     }
@@ -1086,7 +1089,7 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     tipsColor.r = item.GetUint8Arg(0);
                     tipsColor.g = item.GetUint8Arg(1);
                     tipsColor.b = item.GetUint8Arg(2);
-                    tipsColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : 0xff;
+                    tipsColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : (unsigned char)0xff;
                     m_textLevelTips.SetColor(tipsColor);
                     }
                     break;
@@ -1251,11 +1254,12 @@ void LoadDisplay::ProgressIndicator::SetAllOn()
     for (int i = 0; i < m_numLEDs; ++i)
     {
         m_pIntensity[i] = 1.0f;
-        m_pLED[i].SetColor(RedColor(
-            (unsigned char)(m_pColor[i].r * m_pIntensity[i]),
-            (unsigned char)(m_pColor[i].g * m_pIntensity[i]),
-            (unsigned char)(m_pColor[i].b * m_pIntensity[i]),
-            m_pColor[i].a));
+        RedColor color;
+        color.r = (unsigned char)(m_pColor[i].r * m_pIntensity[i]);
+        color.g = (unsigned char)(m_pColor[i].g * m_pIntensity[i]);
+        color.b = (unsigned char)(m_pColor[i].b * m_pIntensity[i]);
+        color.a = m_pColor[i].a;
+        m_pLED[i].SetColor(color);
     }
 }
 

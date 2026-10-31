@@ -412,8 +412,8 @@ void LensFlare::Emit<FlareCompressedVertex>(FlareCompressedVertex*& pVertices,
     pVertices[13] = pVertices[12];
     pVertices += 14;
 
-    RedColor half(_color, _color.a >> 1);
     RedColor clear(_color, 0);
+    RedColor half(_color, _color.a >> 1);
     EmitRing(pVertices, pos, angle, 0.0f, _fSize, _fSize * 4.0f,
              _color, half, clear, 12, fU, fV);
 }

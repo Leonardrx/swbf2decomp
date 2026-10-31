@@ -45,8 +45,7 @@ UnitCombatInfo::UnitCombatInfo(State eState, PblHandle<const GameObject> who)
     : UnitCmdInfo(CMD_COMBAT, 0, PblVector3(0, 0, 0), 0)
 {
     SetState(eState);
-    const GameObject* pWho = (who.mObject && who.mObject->mHandleId == who.mSavedHandleId) ? who.mObject : 0;
-    mWho = const_cast<GameObject*>(pWho);
+    mWho = PblHandle<GameObject>(const_cast<GameObject*>(static_cast<const GameObject*>(who)));
 }
 
 // FUNCTION: SWBF2 0x006627d0

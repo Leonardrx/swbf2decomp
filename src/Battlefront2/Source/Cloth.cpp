@@ -698,12 +698,12 @@ void ClothData::PlatformBindInit(EntityClothClass* pClass)
 EntityCloth::EntityCloth(EntityClothClass* pClass, const EntityDesc& desc)
     : mClass(pClass)
 {
-    mDesc = desc;
     m_pFixedPos = 0;
     m_pAcceleration = 0;
     m_pNormal = 0;
     m_pOldPos = 0;
     m_pPos = 0;
+    mDesc = desc;
     bank_ = 0;
     priority_ = 0.0f;
     CreateData_();
@@ -953,7 +953,7 @@ void EntityCloth::EnforceSphereCollision(const PblMatrix& mMatrix, float fRadius
         float sqDist = SquaredLength(dir);
         if (sqDist < fRadius * fRadius)
         {
-            m_pPos[i] = mMatrix.GetTranslation() + dir * (fRadius / PblMath::Sqrt(sqDist));
+            m_pPos[i] = mMatrix.GetTranslation() + dir * (fRadius / (float)sqrt((double)sqDist));
         }
     }
 }
@@ -1408,21 +1408,21 @@ void ClothData::PostReadInit()
         const PblVector3& v1 = m_pPos[m_pStretchPairs[i].i1];
         const PblVector3& v0 = m_pPos[m_pStretchPairs[i].i0];
         PblVector3 vDelta(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z);
-        m_pStretchPairs[i].restLength = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+        m_pStretchPairs[i].restLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     }
     for (unsigned int i = 0; i < m_uiNumBendPairs; ++i)
     {
         const PblVector3& v1 = m_pPos[m_pBendPairs[i].i1];
         const PblVector3& v0 = m_pPos[m_pBendPairs[i].i0];
         PblVector3 vDelta(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z);
-        m_pBendPairs[i].restLength = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+        m_pBendPairs[i].restLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     }
     for (unsigned int i = 0; i < m_uiNumCrossPairs; ++i)
     {
         const PblVector3& v1 = m_pPos[m_pCrossPairs[i].i1];
         const PblVector3& v0 = m_pPos[m_pCrossPairs[i].i0];
         PblVector3 vDelta(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z);
-        m_pCrossPairs[i].restLength = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+        m_pCrossPairs[i].restLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     }
 
     PblBox box;
@@ -1431,8 +1431,8 @@ void ClothData::PostReadInit()
         box.AddPoint(m_pPos[i]);
     }
     PblVector3 vDiagonal(box._vMax.x - box._vMin.x, box._vMax.y - box._vMin.y, box._vMax.z - box._vMin.z);
-    float fRadius = sqrtf(vDiagonal.x * vDiagonal.x + vDiagonal.y * vDiagonal.y + vDiagonal.z * vDiagonal.z) * 0.5f;
-    m_fBoundingRadius = 2.0f * fRadius;
+    float fRadius = PblMath::Sqrt(vDiagonal.x * vDiagonal.x + vDiagonal.y * vDiagonal.y + vDiagonal.z * vDiagonal.z) * 0.5f;
+    m_fBoundingRadius = fRadius + fRadius;
 }
 
 // TEMPLATE: SWBF2 0x0045c310

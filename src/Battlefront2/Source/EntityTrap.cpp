@@ -336,8 +336,14 @@ void EntityTrapClass::SetProperty(unsigned int uProperty, const char* pszValue)
 
     case 0x619005ab:
     {
-        GameModel* pModel = mUnbuiltModel ? mUnbuiltModel : mModel;
-        pModel->GetRedModel(0)->GetBoneMatrix(PblTEMPHash(pszValue), mBuildOffset);
+        if (mUnbuiltModel)
+        {
+            mUnbuiltModel->GetRedModel(0)->GetBoneMatrix(PblTEMPHash(pszValue), mBuildOffset);
+        }
+        else
+        {
+            mModel->GetRedModel(0)->GetBoneMatrix(PblTEMPHash(pszValue), mBuildOffset);
+        }
         break;
     }
 
@@ -834,8 +840,8 @@ Entity* EntityTrapClass::Build(const EntityDesc& desc)
         PblMatrix mBody = kBoxDesc.mMatrix;
         mBody.SetTranslation(kBoxDesc.mMatrix.GetTranslation() + vOffset);
         mBody.m[3][3] = 1.0f;
-        PblMatrix mInverse = pTrap->GetMatrix().GetInverseFast();
-        PblMatrix mLocal = mBody * mInverse;
+        PblMatrix mLocal;
+        mLocal = mBody * pTrap->GetMatrix().GetInverseFast();
 
         mBuildBoxCollisionModel.AddBody(new CollisionBodyPrimitive(kPrimitive, "main_body", mLocal, 0));
         pTrap->SetCollisionModel(&mBuildBoxCollisionModel);

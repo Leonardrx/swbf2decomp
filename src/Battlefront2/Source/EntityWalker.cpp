@@ -350,7 +350,7 @@ void EntityWalker::RotateY(const PblAngle& rAngle)
     kRot.m[3][3] = 1.0f;
 
     PblMatrix kOut;
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&kOut), reinterpret_cast<const D3DXMATRIX*>(&kRot), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    kOut = kRot * mMatrix;
     mMatrix = kOut;
 }
 
@@ -1614,9 +1614,7 @@ bool EntityWalker::Jump()
         return false;
     }
 
-    float fForwardSpeed = mVelocity.x * mMatrix.m[2][0] +
-                          mVelocity.y * mMatrix.m[2][1] +
-                          mVelocity.z * mMatrix.m[2][2];
+    float fForwardSpeed = DotProduct(mVelocity, mMatrix.GetZAxis());
     if (fForwardSpeed < mClass->mJumpMinSpeed)
     {
         return false;
@@ -1630,12 +1628,7 @@ bool EntityWalker::Jump()
     if (mClass->mJumpForwardSpeedBoost > 1.0f && fForwardSpeed > 0.0f)
     {
         float fBoost = (mClass->mJumpForwardSpeedBoost - 1.0f) * fForwardSpeed;
-        float fBoostX = fBoost * mMatrix.m[2][0];
-        float fBoostY = mMatrix.m[2][1] * fBoost;
-        float fBoostZ = mMatrix.m[2][2] * fBoost;
-        mVelocity.x += fBoostX;
-        mVelocity.y += fBoostY;
-        mVelocity.z += fBoostZ;
+        mVelocity += mMatrix.GetZAxis() * fBoost;
     }
     m_bIsGrounded = false;
     m_bIsJumping = true;
@@ -1985,15 +1978,17 @@ FoleyFX* EntityWalker::GetFoleyFX() const
 void EntityWalker::DoFootImpactEffects()
 {
     int iNumFeet = mClass->mNumFeet;
+    if (iNumFeet <= 0)
+    {
+        return;
+    }
     unsigned int uBit = 1;
     for (int i = 0; i < iNumFeet; ++i)
     {
         bool bImpact = false;
         float fHalfHeight = mCollisionModel->GetHeightFromMaskID(mClass->mFootPrimitives[i]) * 0.5f;
         PblMatrix mFoot = mCollisionModel->GetWorldMatrix(mClass->mFootPrimitives[i], mMatrix, GetPose());
-        PblVector3 vFootPos(mFoot.m[3][0] - mFoot.m[1][0] * fHalfHeight,
-                            mFoot.m[3][1] - mFoot.m[1][1] * fHalfHeight,
-                            mFoot.m[3][2] - mFoot.m[1][2] * fHalfHeight);
+        PblVector3 vFootPos = mFoot.GetTranslation() - mFoot.GetYAxis() * fHalfHeight;
         mFoot.SetTranslation(vFootPos);
         PblVector3 vSplash = vFootPos;
         vSplash.y = mMatrix.m[3][1];
@@ -3071,8 +3066,7 @@ void EntityWalker::ApplyAttackDamage(const PblVector3& vPosition, float fRadius,
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
         if (fDamage > 0.0f)
         {
-            static_cast<Damageable*>(pObjects[i])->ApplyDamage(damage, vNormal, pObjects[i]->GetCollisionCenter(),
-                                                               -1, 0xffffffff);
+            pObjects[i]->ApplyDamage(damage, vNormal, pObjects[i]->GetCollisionCenter(), -1, 0xffffffff);
         }
         if (fPush > 0.0f)
         {
@@ -4381,7 +4375,7 @@ bool EntityWalker::UpdateIndirect(float fDeltaTime)
         vToDest.z = dest.mPos.z - vMyPos.z;
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToDest));
-        if (mMe.m[2][1] * vDir.y + vDir.x * mMe.m[2][0] + mMe.m[2][2] * vDir.z > 0.8660254f)
+        if (DotProduct(vDir, mMe.GetZAxis()) > 0.8660254f)
         {
             float fStrafe = mControlStrafe;
             float fThrust = mControlMove;
@@ -4399,12 +4393,16 @@ bool EntityWalker::UpdateIndirect(float fDeltaTime)
         }
     }
 
-    float fThrust = mControlMove;
-    float fStrafe = mControlStrafe;
-    float fTurn = mControlTurn;
-    float fPitch = mControlPitch;
+    float fThrust;
+    float fStrafe;
+    float fTurn;
+    float fPitch;
     float fUnusedStrafe;
     float fUnusedPitch;
+    fPitch = mControlPitch;
+    fStrafe = mControlStrafe;
+    fThrust = mControlMove;
+    fTurn = mControlTurn;
     AIUtil::UpdatePhysics(this, fDeltaTime, dest, heading, mClass->mMaxSpeed, 0.0f, mClass->mMaxTurnSpeed, 0.0f, &fThrust,
                &fUnusedStrafe, &fStrafe, &fUnusedPitch);
     AIUtil::CalculateHeadingControls(this, fDeltaTime, dest, heading, mClass->mMaxYawSpeed, &fTurn,
@@ -4581,9 +4579,7 @@ void EntityWalker::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         mPrevAimerPos = vJoint;
     }
 
-    vEye.x += (vJoint.x - mPrevAimerPos.x) * mClass->mFPWalkScale * 2.0f;
-    vEye.y += (vJoint.y - mPrevAimerPos.y) * mClass->mFPWalkScale * 2.0f;
-    vEye.z += (vJoint.z - mPrevAimerPos.z) * mClass->mFPWalkScale * 2.0f;
+    vEye += (vJoint - mPrevAimerPos) * mClass->mFPWalkScale * 2.0f;
     rMatrix = DirectionMatrix(PblVector3(-vAim.x, -vAim.y, -vAim.z),
                               matrix.GetYAxis(), vEye);
 

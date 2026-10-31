@@ -136,7 +136,9 @@ void UnitTrooperAgent::EnterState()
     switch (mCurState)
     {
     case STATE_START:
-        if (AIUtil::IsNearPost(mCtrl->mOwner, mPost, gVectorZero))
+    {
+        auto pOwner = mCtrl->mOwner;
+        if (AIUtil::IsNearPost(pOwner, mPost, gVectorZero))
         {
             SetNextState(STATE_Patrol);
         }
@@ -149,6 +151,7 @@ void UnitTrooperAgent::EnterState()
             SquadCommands::AIShoutOrder(order, 0.0f);
         }
         break;
+    }
 
     case STATE_Goto:
         if (mRepairHelper.CheckForRecipientAndInit())
@@ -162,7 +165,7 @@ void UnitTrooperAgent::EnterState()
         mCPOffset = AIUtil::GetCommandPostOffset(mPost);
         mCPTime = GameLoop::GetMissionTime();
         GetLowLevel().SetNavigator_Goto(
-            PblVector3(mCPPos.x + mCPOffset.x, mCPPos.y + mCPOffset.y, mCPPos.z + mCPOffset.z), 0, false,
+            mCPPos + mCPOffset, 0, false,
             false);
         break;
 

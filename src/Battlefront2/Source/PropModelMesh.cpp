@@ -257,7 +257,11 @@ float GetPropDistanceScale(PropModelMesh::Type eType)
 // FUNCTION: SWBF2 0x0062c660
 void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int uiFlags)
 {
-    if (!mModel || !bPropModelEnable)
+    if (!mModel)
+    {
+        return;
+    }
+    if (!bPropModelEnable)
     {
         return;
     }
@@ -274,8 +278,8 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
         }
 
         const PblMatrix& camMatrix = pCamera->GetMatrix();
-        const float dz = mMatrix.m[3][2] - camMatrix.m[3][2];
         const float dx = mMatrix.m[3][0] - camMatrix.m[3][0];
+        const float dz = mMatrix.m[3][2] - camMatrix.m[3][2];
         float fCamDist = PblMath::Sqrt(dx * dx + dz * dz);
 
         if (fMaxDist > fCamDist)
@@ -449,8 +453,9 @@ void PropObjectMesh::Setup()
     mModel->SetupMatrix(mMatrix, mRotation);
     mSetupFlag = 1;
 
+    const PropModelMesh* pModel = mModel;
     float fLight = RedTerrain::GetInterpolatedLight(mMatrix.m[3][0], mMatrix.m[3][2]);
-    if (mModel->mType == PropModelMesh::PMM_MESH)
+    if (pModel->mType == PropModelMesh::PMM_MESH)
     {
         fLight += 0.5f;
     }
@@ -470,12 +475,14 @@ void PropObjectMesh::Setup()
     PblRandom rand(seed.u ^ 0xC71C2830u);
     rand.GetInt();
 
-    const float fVariation = mModel->mColorVariation;
+    const float fVariation = pModel->mColorVariation;
+    const unsigned char b = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
+    const unsigned char g = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
+    const unsigned char r = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
     mColor.a = 0xff;
-
-    mColor.b = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
-    mColor.g = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
-    mColor.r = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
+    mColor.b = b;
+    mColor.g = g;
+    mColor.r = r;
 
     mSound.Stop(true);
     mElapsedTime = 0.0f;

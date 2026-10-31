@@ -89,7 +89,7 @@ int GetFormationType(const UnitController* pCtrl)
                 if (pTeam)
                 {
                     const unsigned int value = pTeam->mSide;
-                    return (static_cast<unsigned int>(value - 2) > 1) + 2;
+                    return (value >= 2 && value <= 3) ? 2 : 3;
                 }
             }
         }

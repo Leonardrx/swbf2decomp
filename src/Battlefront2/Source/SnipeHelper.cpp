@@ -192,7 +192,7 @@ void SnipeHelper::UpdateState(float dt)
         PblVector3 vTarget;
         if (GetAttackHelper()->GetVisibleTarget())
         {
-            vTarget = (GetCollisionObject(GetAttackHelper()->GetVisibleTarget())->GetMatrix()).GetTranslation();
+            vTarget = GetAttackHelper()->GetVisibleTarget()->GetMatrix().GetTranslation();
         }
         else if (GetAttackHelper()->HasTarget())
         {
@@ -241,7 +241,7 @@ bool SnipeHelper::IsWithinSnipeFOV(const PblVector3& vPos) const
     PblVector3 vZ = AIUtil::GetSafeNormal(mHint->GetZAxis());
     PblVector3 vMyPos = GetMe()->GetMatrix().GetTranslation();
     PblVector3 vDir = AIUtil::GetSafeNormal(PblVector3(vPos.x - vMyPos.x, vPos.y - vMyPos.y, vPos.z - vMyPos.z));
-    return vZ.x * vDir.x + vZ.y * vDir.y + vZ.z * vDir.z > PblMath::Cos(FOV_ANGLE * 0.5f);
+    return vDir.x * vZ.x + vZ.y * vDir.y + vZ.z * vDir.z > PblMath::Cos(FOV_ANGLE * 0.5f);
 }
 
 // FUNCTION: SWBF2 0x0063bc60
@@ -287,6 +287,7 @@ const SnipeHint* SnipeHelper::FindSnipeHint() const
         heap.Push(apHints[i], -DistSq(vMyPos, apHints[i]->GetCollisionCenter()));
     }
 
+    int iObjects;
     int iTried = 0;
     while (!heap.IsEmpty())
     {
@@ -308,17 +309,18 @@ const SnipeHint* SnipeHelper::FindSnipeHint() const
 
         PblVector3 vHintPos = pHint->GetCollisionCenter();
         GameObject* apObjects[1200];
-        int iObjects = TeamManager::GetApproxObjectsAlongLine(vMyPos, vHintPos, 12.0f, apObjects, 1200,
-                                                              pMe, AI::AFFIL_ENEMY);
-        int j;
-        for (j = 0; j < iObjects; ++j)
+        iObjects = TeamManager::GetApproxObjectsAlongLine(vMyPos, vHintPos, 12.0f, apObjects, 1200,
+                                                          pMe, AI::AFFIL_ENEMY);
+        bool bBlocked = false;
+        for (int j = 0; j < iObjects; ++j)
         {
             if (AIUtil::IsValidEnemy(pMe, apObjects[j]))
             {
+                bBlocked = true;
                 break;
             }
         }
-        if (j < iObjects)
+        if (bBlocked)
         {
             continue;
         }
@@ -377,22 +379,17 @@ bool SnipeHelper::HELPERSeeEnemyInterrupt(const GameObject* pEnemy) const
     {
         return true;
     }
-    const PblMatrix& rEnemy = GetCollisionObject(pEnemy)->GetMatrix();
-    if (IsWithinSnipeFOV(rEnemy.GetTranslation()))
+    if (IsWithinSnipeFOV(pEnemy->GetMatrix().GetTranslation()))
     {
         return false;
     }
-    return DistSq((GetCollisionObject(pEnemy)->GetMatrix()).GetTranslation(), GetMe()->GetMatrix().GetTranslation()) < 1600.0f;
+    return SquaredLength(pEnemy->GetMatrix().GetTranslation() - GetMe()->GetMatrix().GetTranslation()) < 1600.0f;
 }
 
 // FUNCTION: SWBF2 0x0063c1a0
 bool SnipeHelper::HELPERHearEnemyInterrupt(const GameObject* pEnemy) const
 {
-    if (mCurState == STATE_SNIPE)
-    {
-        return !IsWithinSnipeFOV(pEnemy->GetMatrix().GetTranslation());
-    }
-    return true;
+    return mCurState != STATE_SNIPE || !IsWithinSnipeFOV(pEnemy->GetMatrix().GetTranslation());
 }
 
 // FUNCTION: SWBF2 0x0063c1e0

@@ -59,7 +59,7 @@ void FallingLeafParticle::RespawnLeaf(const PblVector3& vPos, LeafSpawner* pSpaw
     mConstantWindVelocity.SetAll(0.0f);
 
     PblQuaternion q = PblQuaternion(gMatrixIdentity);
-    PblVector3 vOmega(0.0f, PblRandom::GetGlobalFloat() * PblMath::fTwoPi, 0.0f);
+    PblVector3 vOmega(0.0f, PblRandom::_Global.GetFloat() * 6.2831855f, 0.0f);
     float fAngle = sqrtf(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
     if (fAngle > EPSILON)
     {
@@ -76,11 +76,11 @@ void FallingLeafParticle::RespawnLeaf(const PblVector3& vPos, LeafSpawner* pSpaw
     SetRenderPos(vPos);
     Activate();
 
-    mFallTime = PblRandom::GetGlobalFloat() * PblMath::fTwoPi;
-    mRandomness = PblRandom::GetGlobalFloat();
+    mFallTime = PblRandom::_Global.GetFloat() * 6.2831855f;
+    mRandomness = PblRandom::_Global.GetFloat();
     if (eState == LEAF_NONE)
     {
-        eState = (PblRandom::GetGlobalFloat() < 0.2f) ? LEAF_TUMBLE : LEAF_PERIODIC_FLUTTER;
+        eState = (PblRandom::_Global.GetFloat() < 0.2f) ? LEAF_TUMBLE : LEAF_PERIODIC_FLUTTER;
     }
     mState = eState;
     mSpawner = pSpawner;
@@ -137,10 +137,10 @@ void FallingLeafParticle::DoFlutterUpdate(float fDeltaTime)
 // FUNCTION: SWBF2 0x0056bc10
 void FallingLeafParticle::DoTumbleUpdate(float fDeltaTime)
 {
-    PblVector3 vPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
+    PblVector3 vPos = mMatrix.GetTranslation();
 
     PblQuaternion q = PblQuaternion(mInitMatrix);
-    PblVector3 vOmega((mRandomness + 2.0f) * PblMath::fTwoPi * mFallTime, 0.0f, 0.0f);
+    PblVector3 vOmega((mRandomness + 2.0f) * 6.2831855f * mFallTime, 0.0f, 0.0f);
     float fAngle = sqrtf(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
     if (fAngle > EPSILON)
     {
@@ -155,9 +155,9 @@ void FallingLeafParticle::DoTumbleUpdate(float fDeltaTime)
     vPos.x -= 0.0f;
     vPos.y -= (mRandomness + 1.0f) * fDeltaTime;
     vPos.z -= 0.0f;
-    mMatrix.m[3][0] = mInitMatrix.m[2][0] * fSpeed * fDeltaTime + vPos.x;
-    mMatrix.m[3][1] = mInitMatrix.m[2][1] * fSpeed * fDeltaTime + vPos.y;
-    mMatrix.m[3][2] = mInitMatrix.m[2][2] * fSpeed * fDeltaTime + vPos.z;
+    mMatrix.SetTranslation(PblVector3(mInitMatrix.m[2][0] * fSpeed * fDeltaTime + vPos.x,
+                                      mInitMatrix.m[2][1] * fSpeed * fDeltaTime + vPos.y,
+                                      mInitMatrix.m[2][2] * fSpeed * fDeltaTime + vPos.z));
     mMatrix.m[3][3] = 1.0f;
 }
 

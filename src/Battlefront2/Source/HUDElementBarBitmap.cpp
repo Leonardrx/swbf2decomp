@@ -174,6 +174,7 @@ bool HUD::ElementBarBitmap::ReadData(PblConfig& config, PblConfig::Data& data)
 // FUNCTION: SWBF2 0x0054aec0
 void HUD::ElementBarBitmap::Update(const float fElapsed)
 {
+    float fT = 0.0f;
     HUD::Element::Update(fElapsed);
     if (!mFlashyBit.RedInterfaceElement::IsEnabled() || mIncreasedValue)
     {
@@ -185,7 +186,6 @@ void HUD::ElementBarBitmap::Update(const float fElapsed)
     float fFlashyLeft, fFlashyTop, fFlashyRight, fFlashyBottom;
     mFlashyBit.RedBitmapElement::GetRect(fFlashyLeft, fFlashyTop, fFlashyRight, fFlashyBottom);
 
-    float fT = 0.0f;
     if (mFlashyBit.mFader.GetPhase() == HUD::Envelope::phase_Release)
     {
         const float fFade = mFlashyBit.mFader.GetElapsed();

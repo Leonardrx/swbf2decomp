@@ -349,10 +349,9 @@ void GodrayManager::Update(float fDeltaTime)
     m_uiFrame = (m_uiFrame + 1 == 0) ? 1 : m_uiFrame + 1;
     m_fTime += fDeltaTime;
 
-    const PblVector3 vSunDir = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
-
-    PblVector3 vAxisIn(vSunDir.y * 0.0f - vSunDir.z, vSunDir.z * 0.0f - vSunDir.x * 0.0f,
-                       vSunDir.x - vSunDir.y * 0.0f);
+    PblVector3 vAxisIn = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
+    vAxisIn = PblVector3(vAxisIn.y * 0.0f - vAxisIn.z, vAxisIn.z * 0.0f - vAxisIn.x * 0.0f,
+                         vAxisIn.x - vAxisIn.y * 0.0f);
     D3DXVec3Normalize((D3DXVECTOR3*)&vAxisIn, (const D3DXVECTOR3*)&vAxisIn);
     PblMatrix mRotation;
     D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotation, (const D3DXVECTOR3*)&vAxisIn, m_fOffsetAngle);
@@ -855,10 +854,9 @@ Entity* GodrayClass::Build(const EntityDesc& desc)
         godrayDesc.color = m_color;
         const float fSpread = mSpreadRadius * 2.0f;
 
-        const float fZ = vPos.z + (PblRandom::GetGlobalFloat() - 0.5f) * fSpread;
-        const float fY = vPos.y + (PblRandom::GetGlobalFloat() - 0.5f) * fSpread;
-        const float fX = vPos.x + (PblRandom::GetGlobalFloat() - 0.5f) * fSpread;
-        PblVector3 vGodrayPos(fX, fY, fZ);
+        PblVector3 vGodrayPos(PblRandom::GetGlobalFloatRange(vPos.x, fSpread),
+                              PblRandom::GetGlobalFloatRange(vPos.y, fSpread),
+                              PblRandom::GetGlobalFloatRange(vPos.z, fSpread));
         GodrayManager::s_pInstance->AddGodray(godrayDesc, vGodrayPos);
     }
     return 0;

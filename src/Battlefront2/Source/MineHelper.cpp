@@ -182,7 +182,8 @@ bool sContainsEnemyMines(const MinefieldHint* pHint, const GameObject* pMe)
                                                        pMe, AI::AFFIL_ENEMY);
     for (int i = 0; i < iCount; ++i)
     {
-        if (apObjects[i]->GetGameObject()->IsRtti(EntityMine::rttiHashEntityMine))
+        const GameObject* pObject = apObjects[i];
+        if (pObject->GetEntity()->IsRtti(EntityMine::rttiHashEntityMine))
         {
             return true;
         }
@@ -207,7 +208,7 @@ bool MineHelper::FindMinePos(const MinefieldHint* pHint, PblVector3* pPos) const
     for (int i = 0; i < iCount; ++i)
     {
         const GameObject* pObject = apObjects[i];
-        if (pObject->GetGameObject()->IsRtti(EntityMine::rttiHashEntityMine))
+        if (pObject->GetEntity()->IsRtti(EntityMine::rttiHashEntityMine))
         {
             apMinePositions[iMineCount++] = &pObject->GetMatrix().GetTranslation();
         }
@@ -335,7 +336,8 @@ bool MineHelper::SetMineWpn(bool* pbSwitching)
             {
                 if (pCurrentWeapon != pWeapon)
                 {
-                    UnitControllerPtr(GetMe()->mCtrl)->mLowLevel.SetNextWeapon(iWeapon);
+                    AILowLevel& rLowLevel = UnitControllerPtr(GetMe()->mCtrl)->mLowLevel;
+                    rLowLevel.SetNextWeapon(iWeapon);
                     *pbSwitching = true;
                 }
                 return true;

@@ -15,7 +15,7 @@ OrbitalStrikeClass::OrbitalStrikeClass(unsigned int uHash)
     (void)uHash;
 
     mAimAzimuth = 0.0f;
-    mAimElevation = 1.5707964f;
+    mAimElevation = PblMath::fHalfPi;
     mAimDistance = 100.0f;
     mSalvoCount = 1;
     mSalvoDelay = 0.0f;

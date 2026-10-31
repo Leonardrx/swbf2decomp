@@ -391,6 +391,7 @@ void LightsaberTrail::_SetSample(float fTime) const
     if (fTime > m_afTime[uiEnd])
     {
         const unsigned char uiSampleNext = m_uiSampleNext;
+        float fNextTime;
         do
         {
             const unsigned char uiNext = (uiEnd + 1) % MAX_SAMPLES_PER_TRAIL;
@@ -402,14 +403,10 @@ void LightsaberTrail::_SetSample(float fTime) const
             uiEnd = uiNext;
             LightsaberTrail::s_uiSamplePrev = uiPrevious;
             LightsaberTrail::s_uiSample = uiEnd;
-            const float fNextTime = m_afTime[uiEnd];
+            fNextTime = m_afTime[uiEnd];
             LightsaberTrail::s_fDeltaTimeInv = 1.0f / (fNextTime - m_afTime[uiPrevious]);
-            if (fTime <= fNextTime)
-            {
-                break;
-            }
         }
-        while (true);
+        while (fTime > fNextTime);
     }
 }
 

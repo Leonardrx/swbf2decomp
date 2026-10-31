@@ -74,7 +74,8 @@ PblMatrix NormalMatrix(const PblVector3& vDir, const PblVector3& vNormal, const 
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
     PblVector3 vFront = CrossProduct(vRight, vUp);
 
-    return PblMatrix(vRight, vUp, vFront, vPos);
+    PblMatrix mResult(vRight, vUp, vFront, vPos);
+    return mResult;
 }
 
 
@@ -631,7 +632,14 @@ CommandPost* CommandPost::BuildPost(GameObject* pObject, CommandPostClass* pClas
 {
     int iIndex = sForcedIndex;
     sForcedIndex = -1;
-    if (iIndex < 0)
+    if (iIndex >= 0)
+    {
+        if (*sPostCount <= iIndex)
+        {
+            *sPostCount = iIndex + 1;
+        }
+    }
+    else
     {
         for (int i = 0; i < *sPostCount; i++)
         {
@@ -650,10 +658,6 @@ CommandPost* CommandPost::BuildPost(GameObject* pObject, CommandPostClass* pClas
             iIndex = *sPostCount;
             *sPostCount = iIndex + 1;
         }
-    }
-    else if (iIndex >= *sPostCount)
-    {
-        *sPostCount = iIndex + 1;
     }
 
     if (!sPostArray[iIndex])
@@ -1146,7 +1150,7 @@ bool CommandPost::CanTeamSpawnHere(int iTeam) const
     {
         return mSpawnPath || mClass->mSpawnCount > 0;
     }
-    return Team::sTeams[GetGameObject()->mTeam]->GetAffiliation(iTeam) > 0 && mAllyPath;
+    return Team::sTeams[GetGameObject()->mTeam]->GetAffiliation(iTeam) > 0 ? mAllyPath != 0 : false;
 }
 
 // FUNCTION: SWBF2 0x0047c640

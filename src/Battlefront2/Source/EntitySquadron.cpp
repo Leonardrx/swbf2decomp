@@ -376,15 +376,8 @@ const EntityFormation* EntitySquadronClass::SelectFormation(unsigned int uNumSlo
         return 0;
     }
 
-    float fIndex = PblRandom::_Global.GetFloat() * (float)iNumFound;
-    float fMax = (float)iNumFound - 1.0f;
-    if (0.0f > fIndex)
-    {
-        fIndex = 0.0f;
-    }
-    else if (fIndex > fMax)
-    {
-        fIndex = fMax;
-    }
+    float fCount = (float)iNumFound;
+    float fIndex = fCount * PblRandom::_Global.GetFloat();
+    fIndex = Clamp(fIndex, 0.0f, fCount - 1.0f);
     return ppFormations[(int)fIndex];
 }

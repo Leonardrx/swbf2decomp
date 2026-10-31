@@ -430,8 +430,8 @@ void AILowLevel::ProcessBarrageWpn(const Weapon* pWpn, bool* pFire)
         {
             int iMin = pWpn->mClass->GetBarrageMin();
             int iMax = pWpn->mClass->GetBarrageMax();
-            float fRand = AIUtil::GetRandomFloat(0.0f, (float)(iMax - iMin));
-            int iTotal = (int)(fRand * AIDifficulty::GetBarrageCountMultiplier(mOwner) + (float)iMin);
+            int iTotal = (int)(AIUtil::GetRandomFloat(0.0f, (float)(iMax - iMin))
+                               * AIDifficulty::GetBarrageCountMultiplier(mOwner) + (float)iMin);
             mBarrageState = STATE_WAITING;
             if (iTotal < 2)
             {
@@ -502,8 +502,8 @@ void AILowLevel::ProcessTriggerSingle(float dt, ControllableHeading* pHeading,
             *pFire = true;
             mTriggerSingleState = STATE_TRIGGER_UP;
             float fScale = Max(0.0f, 1.0f - AIDifficulty::GetTriggerSingleWaitDelayMultiplier(mOwner));
-            float fDelay = AIUtil::GetRandomFloat(fScale * 0.2f, fScale * 2.0f);
-            mTriggerSingleWaitUntil = fDelay + GameLoop::GetMissionTime();
+            mTriggerSingleWaitUntil = AIUtil::GetRandomFloat(fScale * 0.2f, fScale * 2.0f)
+                                      + GameLoop::GetMissionTime();
         }
         else
         {
@@ -813,12 +813,12 @@ bool AILowLevel::UpdateIndirect(float fDeltaTime)
         if (iCurIndex != mNextWeaponIndex)
         {
             Weapon* pCurWpn = mOwner->mOwner->GetWeaponPtr(iCurIndex);
-            if (pCurWpn->mSelectedFlag)
+            if (pCurWpn->IsSelected())
             {
                 pCurWpn->Deselect(0, pNextWpn->mClass->mIsOffhand);
             }
             mOwner->mOwner->SetWeaponIndex(mNextWeaponIndex, mOwner->mOwner->mWpnChannel);
-            if (!pNextWpn->mSelectedFlag)
+            if (!pNextWpn->IsSelected())
             {
                 pNextWpn->Select(0, pCurWpn->mClass->mIsOffhand);
             }
@@ -931,12 +931,15 @@ void AILowLevel::SetNavigator_Goto(const PblVector3& dest, const Obstacle* pIgno
 
     if (!mOwner->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer) && priority)
     {
-        if (ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1)
-            && (ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1)->mAllowTypes
-                & AIUtil::GetAIType(pObj)))
+        if (ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1))
         {
-            mNavigator = new NavigatorGraphFollower(this, vDest, ignore, 2, bRollIntoDest);
-            return;
+            unsigned int uAllowTypes =
+                ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1)->mAllowTypes;
+            if (uAllowTypes & AIUtil::GetAIType(pObj))
+            {
+                mNavigator = new NavigatorGraphFollower(this, vDest, ignore, 2, bRollIntoDest);
+                return;
+            }
         }
         if (ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1))
         {

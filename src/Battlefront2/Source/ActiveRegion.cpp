@@ -76,15 +76,16 @@ ActiveRegion::ActiveRegion(RedRegion& region) : mRegion(region), mPlayers(GetPla
 ActiveRegion* __fastcall Activate(RedRegion* pRegion)
 {
     ActiveRegion* pActive = sMap.Find(pRegion->mId);
-    if (!pActive)
+    if (pActive)
     {
-        void* pStorage = ActiveRegion::sMemoryPool.Allocate(sizeof(ActiveRegion));
-        if (pStorage)
-        {
-            pActive = ::new (pStorage) ActiveRegion(*pRegion);
-        }
+        return pActive;
     }
-    return pActive;
+    void* pStorage = ActiveRegion::sMemoryPool.Allocate(sizeof(ActiveRegion));
+    if (!pStorage)
+    {
+        return 0;
+    }
+    return ::new (pStorage) ActiveRegion(*pRegion);
 }
 
 // FUNCTION: SWBF2 0x00437bc0

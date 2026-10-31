@@ -144,7 +144,11 @@ void NavigatorGraphFollower::EnterState()
     unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();
     if (uArcFlags)
     {
-        unsigned int uFlags = (uArcFlags & 2) ? AIPathNode::AIPN_JUMP : 0;
+        unsigned int uFlags = 0;
+        if (uArcFlags & 2)
+        {
+            uFlags = AIPathNode::AIPN_JUMP;
+        }
         if (uArcFlags & 4)
         {
             uFlags |= AIPathNode::AIPN_JETJUMP;
@@ -168,7 +172,8 @@ void NavigatorGraphFollower::EnterState()
     }
     else
     {
-        PathManager::RequestPath(mOwner->mOwner, vFrom, vDest, AIUtil::GetCollisionRadius(pObj),
+        UnitController* pController = mOwner->mOwner;
+        PathManager::RequestPath(pController, vFrom, vDest, AIUtil::GetCollisionRadius(pObj),
                                  AIUtil::GetAIType(pObj), 1, 0, (const Obstacle**)mIgnore,
                                  mIgnoreCnt);
     }
@@ -215,13 +220,16 @@ void NavigatorGraphFollower::ReceivePathResult(AIPath* pPath)
     PblVector3 vTo = mGraphFollower->GetCurrentDestination();
     if (!PathFinder::IsPointValid(vTo, AIUtil::GetCollisionRadius(pObj), AIUtil::GetAIType(pObj), 0, 0, 0))
     {
-        if (mGraphFollower->GetNewValidRandomPoint(AIUtil::GetCollisionRadius(pObj)) != true)
+        if (mGraphFollower->GetNewValidRandomPoint(AIUtil::GetCollisionRadius(pObj)) == true)
+        {
+            vTo = mGraphFollower->GetCurrentDestination();
+        }
+        else
         {
             delete mGraphFollower;
             mGraphFollower = 0;
             return;
         }
-        vTo = mGraphFollower->GetCurrentDestination();
     }
 
     unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();

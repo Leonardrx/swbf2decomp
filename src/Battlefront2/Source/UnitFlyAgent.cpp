@@ -229,7 +229,7 @@ EntityFlyer* UnitFlyAgent::GetFlyer()
 bool UnitFlyAgent::IsTransport() const
 {
     const GameObject* pResult = GetMe()->GetGameObject();
-    return pResult->GetGameObjectClass()->GetVehicleType() == 5;
+    return pResult->GetGameObjectClass()->GetVehicleType() == 5 ? true : false;
 }
 
 // FUNCTION: SWBF2 0x00667440

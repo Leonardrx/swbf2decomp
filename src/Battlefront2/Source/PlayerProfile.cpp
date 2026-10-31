@@ -575,34 +575,44 @@ void PlayerProfile::tPCOpt::ApplyPostLoadSettings()
 {
     RedRenderer::pcSetRenderOptions(renderOptions);
 
-    RedParticleRenderer::s_blurEnable = (RedRenderer::pcGetDeviceCaps().DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES) &&
-                  RedRenderer::pcGetRenderOptions().distortion;
-
-    SetPropDistanceScale(RedRenderer::pcGetRenderOptions().mNearSceneFadeFactor * 1.7f);
-
-    float fParticleBias;
-    QualityT particleQuality = RedRenderer::pcGetRenderOptions().particleQuality;
-    if (particleQuality == QUALITY_MEDIUM)
+    if (RedRenderer::pcGetDeviceCaps().DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES)
     {
-        fParticleBias = 40.0f;
-    }
-    else if (particleQuality == QUALITY_HIGH)
-    {
-        fParticleBias = 80.0f;
+        const auto& options = RedRenderer::pcGetRenderOptions();
+        RedParticleRenderer::s_blurEnable = true;
+        if (!options.distortion)
+        {
+            RedParticleRenderer::s_blurEnable = false;
+        }
     }
     else
     {
-        fParticleBias = 0.0f;
+        RedParticleRenderer::s_blurEnable = false;
     }
-    ParticleSystem::SetFadeBias(fParticleBias);
+
+    SetPropDistanceScale(RedRenderer::pcGetRenderOptions().mNearSceneFadeFactor * 1.7f);
+
+    QualityT particleQuality = RedRenderer::pcGetRenderOptions().particleQuality;
+    if (particleQuality == QUALITY_MEDIUM)
+    {
+        ParticleSystem::SetFadeBias(40.0f);
+    }
+    else if (particleQuality == QUALITY_HIGH)
+    {
+        ParticleSystem::SetFadeBias(80.0f);
+    }
+    else
+    {
+        ParticleSystem::SetFadeBias(0.0f);
+    }
 
     ColorControl* pColorControl = ColorControl::s_pInstance;
     if (pColorControl)
     {
         pColorControl->SetLevel(COLORCONTROL_GAMMA_CONTRAST,
                                 RedRenderer::pcGetRenderOptions().mGammaContrast);
-        ColorControl::s_pInstance->SetLevel(COLORCONTROL_GAMMA_BRIGHTNESS,
-                                            RedRenderer::pcGetRenderOptions().mGammaBrightness);
+        pColorControl = ColorControl::s_pInstance;
+        pColorControl->SetLevel(COLORCONTROL_GAMMA_BRIGHTNESS,
+                                RedRenderer::pcGetRenderOptions().mGammaBrightness);
         ColorControl::s_pInstance->Update(0.0f);
     }
 
@@ -1144,7 +1154,7 @@ void RawControllerInputs::ApplyDeadZone(int iLevel)
 
     float fValue = sDeadZoneScaleByLevel[iLevel];
     RedJoystick** ppObject = _redJoystick;
-    for (int iRemaining = 10; iRemaining > 0; --iRemaining, ++ppObject)
+    for (int iRemaining = 10; iRemaining != 0; --iRemaining, ++ppObject)
     {
         if (*ppObject)
         {

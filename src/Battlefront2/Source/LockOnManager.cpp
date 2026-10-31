@@ -173,8 +173,8 @@ void LockOnManager::CreateAll()
     for (int n = 32; n != 0; --n, ++pTarget)
     {
         pTarget->obj.mObject = 0;
-        pTarget->obj.mSavedHandleId = 0;
         pTarget->teamMask = 0;
+        pTarget->obj.mSavedHandleId = 0;
     }
 }
 

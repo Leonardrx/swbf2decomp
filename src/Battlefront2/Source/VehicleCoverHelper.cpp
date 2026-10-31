@@ -311,8 +311,8 @@ bool VehicleCoverHelper::HELPERFaceTarget() const
         PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
         PblVector3 vHint = mHint->GetCollisionCenter();
         float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius() + 1.0f;
-        float dx = vHint.x - vMe.x;
         float dz = vHint.z - vMe.z;
+        float dx = vHint.x - vMe.x;
         return !(dx * dx + dz * dz > fRadius * fRadius);
     }
     return true;
@@ -369,6 +369,7 @@ const VehicleCoverHint* VehicleCoverHelper::SelectHint(int iCount, const BaseHin
     const GameObject* pMe = GetMe()->GetGameObject();
     float fBest = FLT_MAX;
     const VehicleCoverHint* pBest = NULL;
+    const BaseHint** ppLast = &ppHints[iCount - 1];
     while (iCount > 0)
     {
         --iCount;
@@ -383,7 +384,8 @@ const VehicleCoverHint* VehicleCoverHelper::SelectHint(int iCount, const BaseHin
                 pBest = pHint;
             }
         }
-        ppHints[i] = ppHints[iCount];
+        ppHints[i] = *ppLast;
+        --ppLast;
     }
     return pBest;
 }

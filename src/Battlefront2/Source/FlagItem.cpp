@@ -149,8 +149,8 @@ bool FlagItem::Drop()
 void FlagItem::ResetFlag()
 {
     FlagItem* pItem = this;
-    static_cast<CollisionObject&>(*pItem).SetMatrix(PblMatrix(pItem->mStartRotation,
-        pItem->mStartPosition));
+    const PblMatrix mStart(pItem->mStartRotation, pItem->mStartPosition);
+    static_cast<CollisionObject&>(*pItem).SetMatrix(mStart);
     pItem->mLastPosition = pItem->mStartPosition;
 
     if (!NetGame::IsEnabled() || !netEnabledNext || !netClientActive)
@@ -208,16 +208,13 @@ void FlagItem::SetupCollisionGeometry()
     pModel->AddBody(new CollisionBodyPrimitive(primitive, 0, matrix, 0));
 
     const float fRadius = mModel->_mModel->_BoundingSphere.GetRadius();
-    CollisionObject& collision = static_cast<CollisionObject&>(
-        *reinterpret_cast<GameObject*>(this));
-    collision.SetCollisionRadius(fRadius);
-    collision.Set2DCollisionRadius(fRadius);
-    const PblVector3& vPos = mMatrix.GetTranslation();
-    collision.SetCollisionCenter(vPos);
-    collision.SetCollisionModel(pModel);
-    collision.RecalculateAABB();
-    collision.RemoveFromCollisionManager();
-    collision.AddItemToCollisionManager();
+    SetCollisionRadius(fRadius);
+    Set2DCollisionRadius(fRadius);
+    SetCollisionCenter(mMatrix.GetTranslation());
+    SetCollisionModel(pModel);
+    RecalculateAABB();
+    RemoveFromCollisionManager();
+    AddItemToCollisionManager();
 }
 
 // FUNCTION: SWBF2 0x00524ab0
@@ -267,7 +264,8 @@ void Event<FlagItem, Character>::Callback::Trigger(FlagItem& item, Character& pa
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
                     pChild->Release();
                     break;
@@ -299,7 +297,8 @@ void Event<FlagItem, char>::Callback::Trigger(FlagItem& item, char& param)
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
                     pChild->Release();
                     break;
@@ -328,8 +327,7 @@ FlagItemClass::FlagItemClass(unsigned int uHash)
     mCarriedModel = 0;
     mDroppedInLandingZoneModel = 0;
     mCarriedOffset = gVectorZero;
-    mTeamColorize[0] = false;
-    mTeamColorize[1] = false;
+    memset(mTeamColorize, 0, sizeof(mTeamColorize));
     mCarriedSoldierBoneHash = 0xE5B51072u;
     mCarriedDroidekaBoneHash = 0x698AED8Au;
 }
@@ -679,9 +677,9 @@ bool FlagItem::PickUp(GameObject* pObject)
                 Character* pCharacter = pControllable->mCharacter;
                 if (pCharacter)
                 {
-                    for (PblList<FlagItem>::Node* pNode = sList->GetFirst(); pNode->_pObject; pNode = pNode->_pNext)
+                    for (PblList<FlagItem>::Itor i = sList->Begin(); i; ++i)
                     {
-                        if (pNode->_pObject->mOwner == pCharacter)
+                        if (i->mOwner == pCharacter)
                         {
                             return false;
                         }
@@ -785,6 +783,7 @@ bool FlagItem::Update(float fDeltaTime)
         return false;
     }
 
+    FlagItem* pItem = this;
     if (mOwner)
     {
         Controllable* pControllable = mOwner->mVehicle ? mOwner->mVehicle : mOwner->mUnit;
@@ -795,7 +794,7 @@ bool FlagItem::Update(float fDeltaTime)
             {
                 if (!pCarrier->IsAlive())
                 {
-                    Drop();
+                    pItem->Drop();
                 }
                 if (!NetGame::IsEnabled() || !netEnabledNext || !netClientActive)
                 {
@@ -805,48 +804,47 @@ bool FlagItem::Update(float fDeltaTime)
                         if (mCarriedTimer < 0.0f)
                         {
                             mCarriedTimer = FLT_MAX;
-                            BroadcastMessage(0x8dbebf7f /* "game.flag.carriedtoolong" */);
-                            ResetFlag();
+                            pItem->BroadcastMessage(0x8dbebf7f /* "game.flag.carriedtoolong" */);
+                            pItem->ResetFlag();
                         }
                     }
                 }
-                if (!GameLoop::mbHistoricalRules && IsASpaceMap() && IsInLandingZone())
+                if (!GameLoop::mbHistoricalRules && IsASpaceMap() && pItem->IsInLandingZone())
                 {
-                    ResetFlag();
+                    pItem->ResetFlag();
                     if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG ||
                         sFlagGameplayType == FLAG_GAMEPLAY_2FLAG)
                     {
-                        BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
+                        pItem->BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
                     }
                 }
             }
         }
         else
         {
-            ResetFlag();
+            pItem->ResetFlag();
         }
     }
 
     const PblVector3& vPos = mMatrix.GetTranslation();
-    FlagItemClass* pClass = static_cast<FlagItemClass*>(mClass);
     if (mAmbientSound.GetPlaying())
     {
-        mAmbientSound.Update(&pClass->mAmbientSound, &vPos, &mVelocity);
+        mAmbientSound.Update(&static_cast<FlagItemClass*>(mClass)->mAmbientSound, &vPos, &mVelocity);
     }
     else
     {
-        mAmbientSound.Play(&pClass->mAmbientSound, &vPos, &mVelocity, true);
+        mAmbientSound.Play(&static_cast<FlagItemClass*>(mClass)->mAmbientSound, &vPos, &mVelocity, true);
     }
 
     if (!EntityItem::Update(fDeltaTime) && !mOwner)
     {
-        ResetFlag();
+        pItem->ResetFlag();
         if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG || sFlagGameplayType == FLAG_GAMEPLAY_2FLAG)
         {
-            BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
+            pItem->BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
         }
     }
-    CheckFloatingInSpace();
+    pItem->CheckFloatingInSpace();
 
     SetCollisionCenter(vPos);
     RecalculateAABB();

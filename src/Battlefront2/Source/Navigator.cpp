@@ -412,14 +412,14 @@ bool Navigator::LookForPowerUps(float fRadius)
 
         const Obstacle* pBarrier = GetMyBarrier();
         if (PathFinder::TestTrivialStraightLineHit(GetMatrix().GetTranslation(),
-                                                   (AsCollisionObject(objects[iCount])->GetMatrix()).GetTranslation(),
+                                                   objects[iCount]->GetMatrix().GetTranslation(),
                                                    GetMyRadius(), GetMyProhibit(), &pBarrier, 1, false))
         {
             continue;
         }
 
         PblVector3 vStart = GetMatrix().GetTranslation();
-        PblVector3 vItem = (AsCollisionObject(objects[iCount])->GetMatrix()).GetTranslation();
+        PblVector3 vItem = objects[iCount]->GetMatrix().GetTranslation();
         PblVector3 vDelta(vItem.x - vStart.x, vItem.y - vStart.y, vItem.z - vStart.z);
         PblVector3 vNormal;
         D3DXVec3Normalize((D3DXVECTOR3*)&vNormal, (const D3DXVECTOR3*)&vDelta);

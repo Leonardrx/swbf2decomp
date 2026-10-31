@@ -356,13 +356,19 @@ void OrdnanceBeam::Render(unsigned char, float, unsigned int)
     const float fExtent = (fBeamWidth > fGlowWidth ? fBeamWidth : fGlowWidth) * 2.0f;
 
     PblVector3 vMin;
-    vMin.x = (vEnd.x > vStart.x ? vStart.x : vEnd.x) - fExtent;
-    vMin.y = (vEnd.y > vStart.y ? vStart.y : vEnd.y) - fExtent;
-    vMin.z = (vEnd.z > vStart.z ? vStart.z : vEnd.z) - fExtent;
+    vMin.z = (vEnd.z > vStart.z ? vStart.z : vEnd.z);
+    vMin.y = (vEnd.y > vStart.y ? vStart.y : vEnd.y);
+    vMin.x = (vEnd.x > vStart.x ? vStart.x : vEnd.x);
+    vMin.x -= fExtent;
+    vMin.y -= fExtent;
+    vMin.z -= fExtent;
     PblVector3 vMax;
-    vMax.x = (vStart.x > vEnd.x ? vStart.x : vEnd.x) + fExtent;
-    vMax.y = (vStart.y > vEnd.y ? vStart.y : vEnd.y) + fExtent;
-    vMax.z = (vStart.z > vEnd.z ? vStart.z : vEnd.z) + fExtent;
+    vMax.z = (vStart.z > vEnd.z ? vStart.z : vEnd.z);
+    vMax.y = (vStart.y > vEnd.y ? vStart.y : vEnd.y);
+    vMax.x = (vStart.x > vEnd.x ? vStart.x : vEnd.x);
+    vMax.x += fExtent;
+    vMax.y += fExtent;
+    vMax.z += fExtent;
     RedParticleRenderer::SubmitBounds(vMin, vMax);
 
     RedParticleRenderer::TexCoords texCoords;

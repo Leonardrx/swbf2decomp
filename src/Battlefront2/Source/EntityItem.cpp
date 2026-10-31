@@ -307,8 +307,9 @@ EntityItem::EntityItem(EntityItemClass* pClass, const EntityDesc& desc)
         }
     }
 
-    if (pClass->mTrailEffect &&
-        (!NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost())))
+    const bool bNetBuildsTrail =
+        !NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost());
+    if (pClass->mTrailEffect && bNetBuildsTrail)
     {
         mTrailEmitterObj = pClass->mTrailEffect->BuildEffect();
         if (mTrailEmitterObj)
@@ -372,7 +373,7 @@ bool EntityItem::Update(float fDeltaTime)
         {
             float fHalfDrop = mClass->mGravity * -9.8f * 0.5f * fDeltaTime;
             mVelocity.y += fHalfDrop;
-            SetPosition(GetPosition() + mVelocity * fDeltaTime);
+            SetPosition(mVelocity * fDeltaTime + GetPosition());
             mVelocity.y += fHalfDrop;
             if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -1000.0f)
             {
@@ -399,7 +400,11 @@ bool EntityItem::Update(float fDeltaTime)
         gameObjectInterpolator.SetNext(mNetUniqueId, mStationary ? 0 : &mMatrix);
         return true;
     }
-    return NetGame::IsEnabled() && NetGame::IsClient();
+    if (NetGame::IsEnabled() && NetGame::IsClient())
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004cb450

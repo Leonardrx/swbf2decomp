@@ -22,11 +22,6 @@ void PrecipitationEffect::RainShadowRegion::UpdateVisibility(const RedCamera* pC
     case type_cylinder:
         m_bVisible = pCamera->ClassifyBox(mMatrix, mSize) != RedCamera::VISIBILITY_NONE;
         break;
-    case type_box_aligned:
-    case type_cylinder_yaligned:
-        m_bVisible = pCamera->ClassifyAABox(mMatrix.GetTranslation(), mSize)
-                     != RedCamera::VISIBILITY_NONE;
-        break;
     case type_plane:
         m_bVisible = pCamera->ClassifyPlane(mMatrix.GetZAxis(), mSize.w)
                      != RedCamera::VISIBILITY_NONE;
@@ -39,6 +34,11 @@ void PrecipitationEffect::RainShadowRegion::UpdateVisibility(const RedCamera* pC
     case type_cylinder_zaligned:
         m_bVisible = pCamera->ClassifyAABox(mMatrix.GetTranslation(),
                                            PblVector3(mSize.x, mSize.x, mSize.y))
+                     != RedCamera::VISIBILITY_NONE;
+        break;
+    case type_box_aligned:
+    case type_cylinder_yaligned:
+        m_bVisible = pCamera->ClassifyAABox(mMatrix.GetTranslation(), mSize)
                      != RedCamera::VISIBILITY_NONE;
         break;
     default:

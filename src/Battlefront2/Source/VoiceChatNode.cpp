@@ -92,7 +92,7 @@ bool VoiceChat::Node::OpenStatic(Transport* transport, float fSeconds, float fA,
     const unsigned char uiNodes = transport->GetNumNodes();
     const unsigned int uiNodesLog2 = transport->GetNumNodesLog2();
 
-    const unsigned int uiBitmapBytes = ((uiNodesLog2 + 8 + uiNodes) & ~7u) >> 3;
+    const unsigned int uiBitmapBytes = ((uiNodesLog2 + 8 + uiNodes) & ~7u) / 8;
     VoiceChat::Node::sReadHeader.mSize = uiBitmapBytes;
     VoiceChat::Node::sWriteHeader.mSize = uiBitmapBytes;
 
@@ -103,39 +103,39 @@ bool VoiceChat::Node::OpenStatic(Transport* transport, float fSeconds, float fA,
     VoiceChat::Node::sReadHeader.mBits = 0;
     VoiceChat::Node::sWriteHeader.mBits = 0;
 
-    if (!p)
+    if (p)
     {
-        VoiceChat::Node::sTransport = 0;
-        VoiceChat::Node::sReadHeader.mSize = 0;
-        return false;
+        char* pSecond = p + ((VoiceChat::Node::sReadHeader.mSize + 3) >> 2) * 4;
+        VoiceChat::Node::sWriteHeader.mBitmap = (unsigned char*)pSecond;
+
+        char* pPerNode = pSecond + ((VoiceChat::Node::sWriteHeader.mSize + 3) >> 2) * 4;
+        VoiceChat::Node::sReceiveMetrics = (ReceiveMetrics*)pPerNode;
+        VoiceChat::Node::sSendMetrics = (SendMetrics*)(pPerNode + uiNodes * sizeof(ReceiveMetrics));
+
+        memset(VoiceChat::Node::sReadHeader.mBitmap, 0, VoiceChat::Node::sWriteHeader.mSize + uiNodes * 68 + VoiceChat::Node::sReadHeader.mSize);
+
+        VoiceChat::Node::sTime = 0;
+        VoiceChat::Node::sBufferSizeMs = (1.0f / fSeconds) * 2.0f * 1000.0f;
+        VoiceChat::Node::sReceiveBufferSize = fA / 1000.0f;
+
+        for (unsigned char i = 0; i < uiNodes; ++i)
+        {
+            ((ReceiveMetrics*)pPerNode)[i].receiveLatency = fB / 1000.0f;
+        }
+
+        VoiceChat::Node::sSeqNumVariance = (unsigned short)(int)fSeconds;
+        if (VoiceChat::Node::sSeqNumVariance > 0x3FF)
+        {
+            VoiceChat::Node::sSeqNumVariance = 0x3FF;
+        }
+
+        VoiceChat::Node::SetSkipOutOfSequence(false, 0.2f);
+        return true;
     }
 
-    char* pSecond = p + ((VoiceChat::Node::sReadHeader.mSize + 3) >> 2) * 4;
-    VoiceChat::Node::sWriteHeader.mBitmap = (unsigned char*)pSecond;
-
-    char* pPerNode = pSecond + ((VoiceChat::Node::sWriteHeader.mSize + 3) >> 2) * 4;
-    VoiceChat::Node::sReceiveMetrics = (ReceiveMetrics*)pPerNode;
-    VoiceChat::Node::sSendMetrics = (SendMetrics*)(pPerNode + uiNodes * sizeof(ReceiveMetrics));
-
-    memset(VoiceChat::Node::sReadHeader.mBitmap, 0, VoiceChat::Node::sWriteHeader.mSize + uiNodes * 68 + VoiceChat::Node::sReadHeader.mSize);
-
-    VoiceChat::Node::sTime = 0;
-    VoiceChat::Node::sBufferSizeMs = (1.0f / fSeconds) * 2.0f * 1000.0f;
-    VoiceChat::Node::sReceiveBufferSize = fA / 1000.0f;
-
-    for (unsigned char i = 0; i < uiNodes; ++i)
-    {
-        ((ReceiveMetrics*)pPerNode)[i].receiveLatency = fB / 1000.0f;
-    }
-
-    VoiceChat::Node::sSeqNumVariance = (unsigned short)(int)fSeconds;
-    if (VoiceChat::Node::sSeqNumVariance > 0x3FF)
-    {
-        VoiceChat::Node::sSeqNumVariance = 0x3FF;
-    }
-
-    VoiceChat::Node::SetSkipOutOfSequence(false, 0.2f);
-    return true;
+    VoiceChat::Node::sTransport = 0;
+    VoiceChat::Node::sReadHeader.mSize = 0;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00672b00
@@ -857,9 +857,9 @@ void VoiceChat::Node::SendAudioPacketPeerRelay(const AudioPacket* const packet, 
     unsigned char node = first;
     unsigned char selected = 0xff;
     unsigned char grouped = 0;
-    for (unsigned int index = 0; index < numNodes; ++index)
+    for (unsigned char index = 0; index < numNodes; ++index)
     {
-        const bool last = index == numNodes - 1u;
+        const bool last = index == numNodes - 1;
         const bool receive = incoming ? VoiceChat::Node::sReadHeader.GetReceiveNode((*VoiceChat::Node::sTransport), node)
                                       : VoiceChat::Node::sTransport->GetSendPossible(first, node);
         bool handle = last;
@@ -918,10 +918,9 @@ bool VoiceChat::Node::SendAudioPacket(const AudioPacket* const audio, const Head
         {
             if (sendTime)
             {
-                const float previous = metrics->lastSendTimeDirect;
-                if (*sendTime > previous)
+                if (*sendTime > metrics->lastSendTimeDirect)
                 {
-                    metrics->lastSendInterval = *sendTime - previous;
+                    metrics->lastSendInterval = *sendTime - metrics->lastSendTimeDirect;
                     metrics->bandwidth = (float)bytes * 0.0078125f / metrics->lastSendInterval;
                 }
                 else

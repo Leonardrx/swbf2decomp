@@ -333,16 +333,19 @@ bool AttackPatterns::GetInRange()
     float fDistSq = vDiff.z * vDiff.z + vDiff.x * vDiff.x;
     if (GetNear() * GetNear() > fDistSq)
     {
-        vDest = vDir * 15.0f + vPos;
+        vDest.x = vDir.x * 15.0f + vPos.x;
+        vDest.y = vDir.y * 15.0f + vPos.y;
+        vDest.z = vDir.z * 15.0f + vPos.z;
     }
     else
     {
         fDistSq = vDiff.z * vDiff.z + vDiff.x * vDiff.x;
         if (fDistSq > GetFar() * GetFar())
         {
-            vDest.x = vPos.x - vDir.x * 15.0f;
-            vDest.y = vPos.y - vDir.y * 15.0f;
-            vDest.z = vPos.z - vDir.z * 15.0f;
+            PblVector3 vStep = vDir * 15.0f;
+            vDest.x = vPos.x - vStep.x;
+            vDest.y = vPos.y - vStep.y;
+            vDest.z = vPos.z - vStep.z;
         }
         else
         {
@@ -482,7 +485,8 @@ void AttackPatterns::DoStationary()
 
         float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius();
         float fDist = AIUtil::GetRandomFloat(fRadius, fRadius * 2.0f);
-        vDest += vSide * fDist;
+        PblVector3 vOffset = vSide * fDist;
+        vDest += vOffset;
         mOwner->GetLowLevel().SetNavigator_Goto(vDest, NULL, false, false);
     }
 
@@ -535,7 +539,7 @@ void AttackPatterns::DoSimple()
     }
     else
     {
-        bool bStop = mOwner->GetLowLevel().IsAtDest();
+        bool bStop = GetCtrl()->mLowLevel.IsAtDest();
         if (!bStop)
         {
             bStop = AIUtil::GetRandomIntPerSecond(1, 6) == 2;
@@ -730,8 +734,7 @@ void AttackPatterns::DoCriticalHit()
     {
         mFlankTimer = GameLoop::GetMissionTime() + 4.0f;
 
-        float fDist = CombatUtil::GetWeaponOptimalRange(GetMe());
-        fDist = (fDist > 30.0f) ? 30.0f : fDist;
+        float fDist = Min(30.0f, CombatUtil::GetWeaponOptimalRange(GetMe()));
 
         const CollisionObject* pTargetCol = GetGeometryCollision(pTarget);
         const PblMatrix& m = pTargetCol->GetMatrix();
@@ -919,7 +922,7 @@ bool AttackPatterns::GonePastGlancePos() const
 // FUNCTION: SWBF2 0x006613e0
 void AttackPatterns::DoGlance()
 {
-    if (mOwner->GetLowLevel().IsAtDest() || GonePastGlancePos())
+    if (GetCtrl()->mLowLevel.IsAtDest() || GonePastGlancePos())
     {
         mOnApproach = !mOnApproach;
         SetGlanceDest();
@@ -1287,7 +1290,7 @@ void AttackPatterns::DoLocate()
         return;
     }
 
-    if (mOwner->GetLowLevel().IsAtDest() && !mLocateAtDest)
+    if (GetCtrl()->mLowLevel.IsAtDest() && !mLocateAtDest)
     {
         mLocateAtDest = true;
         GetAttackHelper()->ResetWaitDelay();

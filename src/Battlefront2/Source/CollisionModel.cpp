@@ -263,20 +263,16 @@ bool CollisionModel::CheckForCollision_SSSC(CollisionObject* pCollider, Collisio
             if (pOther->ReceiveCollision(*pMatrix, ((CollisionBodyPrimitive*)pBody)->mPrimitive, pCollider,
                                          *pOtherMatrix, pReceiver, pRestrictor))
             {
-                int k;
-                for (k = 0; k < 3; ++k)
+                for (int k = 0; k < 3; ++k)
                 {
                     if (pCollider->mLastCollidedObjs[k] == pReceiver)
                     {
-                        break;
+                        return true;
                     }
                 }
-                if (k == 3)
-                {
-                    pCollider->mLastCollidedObjs[2] = pCollider->mLastCollidedObjs[1];
-                    pCollider->mLastCollidedObjs[1] = pCollider->mLastCollidedObjs[0];
-                    pCollider->mLastCollidedObjs[0] = pReceiver;
-                }
+                pCollider->mLastCollidedObjs[2] = pCollider->mLastCollidedObjs[1];
+                pCollider->mLastCollidedObjs[1] = pCollider->mLastCollidedObjs[0];
+                pCollider->mLastCollidedObjs[0] = pReceiver;
                 return true;
             }
         }

@@ -419,9 +419,9 @@ void UnitController::UpdateHighLevel()
     float dt = fTime - mLastUpdateTime;
     mLastUpdateTime = fTime;
 
-    static_cast<Trackable&>(*mOwner).GetGameObject();
-    const GameObject* pObj = static_cast<Trackable&>(*mOwner).GetGameObject();
-    if (!static_cast<const Damageable&>(*pObj).IsAlive())
+    mOwner->GetGameObject();
+    const GameObject* pObj = mOwner->GetGameObject();
+    if (!pObj->IsAlive())
     {
         mNextUpdateTime = fTime + 100000.0f;
         return;
@@ -444,7 +444,7 @@ void UnitController::UpdateHighLevel()
 
     if (Character* pCharacter = mOwner->mCharacter)
     {
-        pCharacter->mAdrenaline.Update(dt, static_cast<Trackable&>(*mOwner).GetGameObject());
+        pCharacter->mAdrenaline.Update(dt, mOwner->GetGameObject());
     }
 
     mThreatManager.Update(dt, this);
@@ -454,7 +454,7 @@ void UnitController::UpdateHighLevel()
     UseAutoTurrets();
     mOwner->SetCurrentCollision(0);
 
-    if (static_cast<Trackable&>(*mOwner).GetGameObject() && AIUtil::IsEndGame(0) &&
+    if (mOwner->GetGameObject() && AIUtil::IsEndGame(0) &&
         !AIUtil::ShouldStayInVehicle(mOwner))
     {
         mLowLevel.SetExitVehicle(0);
@@ -489,7 +489,7 @@ void UnitController::UpdateLowLevel(float dt)
         break;
     }
 
-    static_cast<Trackable&>(*mOwner).GetGameObject();
+    mOwner->GetGameObject();
     UpdateTargetBubbleSize(mLowLevelUpdateSkipDt);
     UpdateTotalVisFactor();
     mLowLevel.Update(mLowLevelUpdateSkipDt);
@@ -593,6 +593,7 @@ void UnitController::UpdateLodState()
         {
             continue;
         }
+        const Character& rCharacter = *pCharacter;
 
         int iCharLod = 3;
         const PblVector3& vPos = pCharacter->GetControllable()->GetMatrix().GetTranslation();
@@ -614,15 +615,13 @@ void UnitController::UpdateLodState()
             }
         }
 
-        if (!AIUtil::CanPotentiallySee(
-                mOwner, static_cast<const Trackable&>(*pCharacter->GetControllable()).GetGameObject(), 0))
+        if (!AIUtil::CanPotentiallySee(mOwner, rCharacter.GetControllable()->GetGameObject(), 0))
         {
             iCharLod--;
         }
 
-        const RedSceneObject& scene =
-            *static_cast<const Trackable&>(*pCharacter->GetControllable()).GetGameObject();
-        if (scene.PortalActive() && !scene.IsActive(pvs::GetCurrentFrame_()))
+        const GameObject* pSceneObj = rCharacter.GetControllable()->GetGameObject();
+        if (pSceneObj->PortalActive() && !pSceneObj->IsActive(pvs::GetCurrentFrame_()))
         {
             iCharLod--;
         }
@@ -645,7 +644,7 @@ void UnitController::UpdateLodState()
 
     if (!AIDebug::SkipCameraForLODs() && iLod != 4)
     {
-        float fRadius = AIUtil::GetCollisionRadius(static_cast<Trackable&>(*mOwner).GetGameObject()) * 3.0f;
+        float fRadius = AIUtil::GetCollisionRadius(mOwner->GetGameObject()) * 3.0f;
         if (CameraManager::sInstance->IsInsideAnyCamera(vMyPos, fRadius, (float)GetLODDistLow()))
         {
             iLod = 3;
@@ -674,26 +673,26 @@ void UnitController::SetRandomSeed(int iSeed)
 // FUNCTION: SWBF2 0x006640d0
 int UnitController::SendEvent(AI::EventInfo* pInfo)
 {
-    if (!mAgent)
+    int iResult = 0;
+    if (mAgent)
     {
-        return 0;
-    }
+        iResult = mAgent->EventHandler(pInfo);
+        if (pInfo->mNextCmd.GetCmdType() != CMD_NONE)
+        {
+            if (mAgent->ShouldQueueCurCmd(pInfo->mNextCmd))
+            {
+                CmdInfo curCmd = mAgent->mCtrl->CopyCurCmd();
+                mAgent->mCtrl->PrependQueueCommands(curCmd, pInfo->mNextCmd);
+            }
+            else
+            {
+                mAgent->mCtrl->PrependQueueCommand(pInfo->mNextCmd);
+            }
 
-    int iResult = mAgent->EventHandler(pInfo);
-    if (pInfo->mNextCmd.GetCmdType() != CMD_NONE)
-    {
-        if (mAgent->ShouldQueueCurCmd(pInfo->mNextCmd))
-        {
-            mAgent->mCtrl->PrependQueueCommands(mAgent->mCtrl->CopyCurCmd(), pInfo->mNextCmd);
-        }
-        else
-        {
-            mAgent->mCtrl->PrependQueueCommand(pInfo->mNextCmd);
-        }
-
-        if (mLodState >= 3)
-        {
-            ControllerManager::RequestControllerUpdateASAP(this);
+            if (mLodState >= 3)
+            {
+                ControllerManager::RequestControllerUpdateASAP(this);
+            }
         }
     }
     return iResult;
@@ -742,7 +741,11 @@ bool UnitController::IsTargetLOSPossiblyBlocked()
     {
         return false;
     }
-    return fDistSq > mLastShotDistSq * 4.0f;
+    if (fDistSq > mLastShotDistSq * 4.0f)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006642d0
@@ -793,15 +796,14 @@ void UnitController::UseBuffs()
         {
             GameObject* apUnits[3];
             Controllable* pOwner = mOwner;
-            const Team* pTeam = Team::GetPtr(static_cast<Trackable&>(*pOwner).GetGameObject()->GetTeam());
+            const Team* pTeam = Team::GetPtr(pOwner->GetGameObject()->GetTeam());
             if (ControllerManager::GetUnitsInRange(pOwner->GetMatrix().GetTranslation(), pClass->mMaxRange, apUnits, 3,
                                                    pTeam, AI::AFFIL_ALLYNEUTRAL) < 3)
             {
                 return;
             }
-            AILowLevel* pLowLevel = &mLowLevel;
-            pLowLevel->SetNextWeapon(i);
-            pLowLevel->SetFireRequest(true, false);
+            mLowLevel.SetNextWeapon(i);
+            mLowLevel.SetFireRequest(true, false);
         }
     }
 }

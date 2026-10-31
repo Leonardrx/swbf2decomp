@@ -111,7 +111,7 @@ void AIVisRegionManager::UpdateNextRegion()
         if (apObjects[i] && GetControllable(apObjects[i]))
         {
             Controller* pController = GetControllable(apObjects[i])->mCtrl;
-            if (pController && pRegion->IsPointInside(*(const PblVector3*)&static_cast<CollisionObject&>(*apObjects[i]).GetMatrix().m[3][0]))
+            if (pController && pRegion->IsPointInside(apObjects[i]->GetMatrix().GetTranslation()))
             {
                 pController->SetRegionVisFactor(pRegion->GetVisCrouch(), pRegion->GetVisStand());
             }

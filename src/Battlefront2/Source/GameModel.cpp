@@ -73,9 +73,7 @@ void GameModel::PrintDebugInfo(const RedModel* pModel, const PblVector3& vPos)
 {
     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
     const PblVector3 vForward(-mCamera.m[2][0], -mCamera.m[2][1], -mCamera.m[2][2]);
-    float fDist = (vPos.x - mCamera.m[3][0]) * vForward.x
-                + (vPos.y - mCamera.m[3][1]) * vForward.y
-                + (vPos.z - mCamera.m[3][2]) * vForward.z;
+    float fDist = DotProduct(vPos - mCamera.GetTranslation(), vForward);
     if (fDist > 0.0f && fDist < 100.0f)
     {
         int iNumVtx = pModel->_uiNumStripVtx;
@@ -95,21 +93,20 @@ void GameModel::PrintDebugInfo(const RedModel* pModel, const PblVector3& vPos)
         }
 
         int iNumSegments = pModel->_iNumSegments;
-        RedColor color2;
         if (iNumSegments > 6)
         {
-            color2 = RedColor::RED;
+            color = RedColor::RED;
         }
         else if (iNumSegments > 4)
         {
-            color2 = RedColor::YELLOW;
+            color = RedColor::YELLOW;
         }
         else
         {
-            color2 = RedColor::WHITE;
+            color = RedColor::WHITE;
         }
-        RedDebug::SetPrintfData(color2, RedGlyphCacheElement::TEXT_STYLE_SHADOW);
-        PblVector3 vText(vPos.x + 0.0f, vPos.y + (fDist * 0.02f + 0.5f), vPos.z + 0.0f);
+        RedDebug::SetPrintfData(color, RedGlyphCacheElement::TEXT_STYLE_SHADOW);
+        PblVector3 vText = vPos + PblVector3(0.0f, fDist * 0.02f + 0.5f, 0.0f);
         RedDebug::Printf3D(vText, "S:%d", iNumSegments);
     }
 }

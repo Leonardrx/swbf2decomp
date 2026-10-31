@@ -443,14 +443,14 @@ void FishParticleManager::SpawnFloatingFish(const PblVector3& vPos, float fRadiu
         float fPick = PblRandom::_Global.GetFloat();
         float fStep = 1.0f / sNumFishTypes;
         float fTotal = 0.0f;
-        for (int i = 0; i < sNumFishTypes; ++i)
+        for (int i = 1; i <= sNumFishTypes; ++i)
         {
             fTotal += fStep;
             if (fTotal >= fPick)
             {
                 float fDist = PblRandom::_Global.GetFloat() * fRadius;
                 PblVector3 vSpawn(vPos.x + vDir.x * fDist, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
-                pFish->RespawnFish(vSpawn, sFishTypes[i], FISH_FLOAT);
+                pFish->RespawnFish(vSpawn, sFishTypes[i - 1], FISH_FLOAT);
                 break;
             }
         }

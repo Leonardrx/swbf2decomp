@@ -77,48 +77,12 @@ EntityLight* EntityLightClass::Build(unsigned int uLightOdfNameHash)
 RedColor ReadColor(const PblConfig::Data& data)
 {
     RedColor color;
-    float f = data.GetFloatArg(0);
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > 255.0f)
-    {
-        f = 255.0f;
-    }
-    color.r = (unsigned char)(int)f;
-    f = data.GetFloatArg(1);
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > 255.0f)
-    {
-        f = 255.0f;
-    }
-    color.g = (unsigned char)(int)f;
-    f = data.GetFloatArg(2);
-    if (f < 0.0f)
-    {
-        f = 0.0f;
-    }
-    else if (f > 255.0f)
-    {
-        f = 255.0f;
-    }
-    color.b = (unsigned char)(int)f;
+    color.r = (unsigned char)(int)Clamp(data.GetFloatArg(0), 0.0f, 255.0f);
+    color.g = (unsigned char)(int)Clamp(data.GetFloatArg(1), 0.0f, 255.0f);
+    color.b = (unsigned char)(int)Clamp(data.GetFloatArg(2), 0.0f, 255.0f);
     if (data.GetNumArgs() > 3)
     {
-        f = data.GetFloatArg(3);
-        if (f < 0.0f)
-        {
-            f = 0.0f;
-        }
-        else if (f > 255.0f)
-        {
-            f = 255.0f;
-        }
-        color.a = (unsigned char)(int)f;
+        color.a = (unsigned char)(int)Clamp(data.GetFloatArg(3), 0.0f, 255.0f);
     }
     else
     {
@@ -678,16 +642,14 @@ bool EntityLight::Update(float fDeltaTime)
         if ((pClass->_uiFlags & EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY) &&
             (RedRenderer::GetFrameNumber() & 1))
         {
-            float fNewRandom = PblRandom::GetGlobalFloat();
+            pClass->_fRandom = PblRandom::GetGlobalFloat();
             pClass->_uiFlags &= ~EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY;
-            pClass->_fRandom = fNewRandom;
         }
         else if (!(pClass->_uiFlags & EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY) &&
                  !(RedRenderer::GetFrameNumber() & 1))
         {
-            float fNewRandom = PblRandom::GetGlobalFloat();
+            pClass->_fRandom = PblRandom::GetGlobalFloat();
             pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY;
-            pClass->_fRandom = fNewRandom;
         }
         fRandom = pClass->_fRandom;
     }
@@ -738,8 +700,7 @@ bool EntityLight::Update(float fDeltaTime)
         {
             _fLightFlickerTimer = fmod((double)_fLightFlickerTimer, (double)fPeriod);
         }
-        const float fOn = pClass->_fLightFlickerPeriodOn;
-        if (_fLightFlickerTimer > fOn)
+        if (_fLightFlickerTimer > pClass->_fLightFlickerPeriodOn)
         {
             _fLightFlickerIntensity = 0.0f;
         }
@@ -747,9 +708,9 @@ bool EntityLight::Update(float fDeltaTime)
         {
             _fLightFlickerIntensity = _fLightFlickerTimer / pClass->_fLightFadePeriod;
         }
-        else if (pClass->_fLightFadePeriod + _fLightFlickerTimer > fOn)
+        else if (pClass->_fLightFadePeriod + _fLightFlickerTimer > pClass->_fLightFlickerPeriodOn)
         {
-            _fLightFlickerIntensity = (fOn - _fLightFlickerTimer) / pClass->_fLightFadePeriod;
+            _fLightFlickerIntensity = (pClass->_fLightFlickerPeriodOn - _fLightFlickerTimer) / pClass->_fLightFadePeriod;
         }
         else
         {

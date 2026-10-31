@@ -877,7 +877,7 @@ void EntityDroid::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, fl
 {
     const PblVector3& vCenter = GetCollisionCenter();
     PblVector3 vDiff = vCenter - vPos;
-    float fDist = sqrtf(SquaredLength(vDiff));
+    float fDist = sqrt(SquaredLength(vDiff));
     if (fDist > 0.0001f)
     {
         float fEffect = CalcRadiusEffect(fDist, fInnerRadius, fOuterRadius);

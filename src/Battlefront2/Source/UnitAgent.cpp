@@ -415,7 +415,11 @@ bool UnitAgent::ShouldAgentGetInNearbyVehicle(const GameObject* pVehicle) const
     if (AIUtil::gStayInTurrets)
     {
         int eType = GetMe()->GetGameObject()->GetGameObjectClass()->GetSoldierType();
-        return eType != SOLDIER_REPAIR && eType != SOLDIER_PILOT;
+        if (eType == SOLDIER_REPAIR || eType == SOLDIER_PILOT)
+        {
+            return false;
+        }
+        return true;
     }
 
     if (GetAttackHelper(this).HasTarget())

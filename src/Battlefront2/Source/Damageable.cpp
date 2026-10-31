@@ -295,10 +295,11 @@ void Damageable::ApplyNetClientDamage(const DamageDesc& damage, unsigned int uFl
                         {
                             fAmount = 1.0f;
                         }
-                        RedColor color(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f));
                         float fTime = fAmount * 0.15f + 0.15f;
-                        ScreenFilterEffect::Instance()->TimedFilter(iViewport, fTime, 0.0f, fTime, color,
-                                                                    0xDE020766);
+                        ScreenFilterEffect::Instance()->TimedFilter(
+                            iViewport, fTime, 0.0f, fTime,
+                            RedColor(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f)),
+                            0xDE020766);
                     }
                 }
             }
@@ -563,11 +564,14 @@ bool Damageable::ApplyDamage(const DamageDesc& damage, const PblVector3& vDir,
         pAttackerObject && pAttackerObject->GetAffiliationToMe(GetGameObject()) < 0)
     {
         short sMedalsType = damage.mDamageOwner.mWeapon->mScoreForMedalsType;
-        MedalsMgr* pMedals = damage.mDamageOwner.mCharacter->mMedalsMgr;
-        if (sMedalsType >= 0 && pMedals)
+        if (sMedalsType >= 0)
         {
-            pMedals->AddMedalPoints(sMedalsType, !bAlive, fMultiplier > 1.0f, (HealthType)mHealthType, false,
-                                    false, 1);
+            MedalsMgr* pMedals = damage.mDamageOwner.mCharacter->mMedalsMgr;
+            if (pMedals)
+            {
+                pMedals->AddMedalPoints(sMedalsType, !bAlive, fMultiplier > 1.0f, (HealthType)mHealthType,
+                                        false, false, 1);
+            }
         }
     }
     return bAlive;
@@ -760,9 +764,9 @@ void Event<GameObject, DamageOwner>::Callback::Trigger(GameObject& item, DamageO
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
-                    pChild->Release();
                     break;
                 }
                 Callback* pNext = (Callback*)pChild->mSibling;
@@ -773,6 +777,10 @@ void Event<GameObject, DamageOwner>::Callback::Trigger(GameObject& item, DamageO
                 pChild->Trigger(item, param);
                 pChild->Release();
                 pChild = pNext;
+            }
+            if (pChild)
+            {
+                pChild->Release();
             }
         }
     }
@@ -792,7 +800,8 @@ void Event<GameObject, float>::Callback::Trigger(GameObject& item, float& param)
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
                     pChild->Release();
                     break;

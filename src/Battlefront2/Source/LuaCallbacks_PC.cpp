@@ -257,7 +257,7 @@ int ScriptCB_IsVideoModeSupported(lua_State*)
         {
             dwMultisampleType = LuaHelper::GetInt(3);
         }
-        if (iArgs > 3 && LuaHelper::IsNumber(4))
+        if (iArgs > 3 && lua_isnumber(LuaHelper::mState, 4))
         {
             dwMultisampleQuality = LuaHelper::GetInt(4);
         }
@@ -579,9 +579,9 @@ int ScriptCB_FillResolutionTable(lua_State* L)
     int iMultiSample = lua_isnumber(LuaHelper::mState, 1) ? LuaHelper::GetInt(1) : 0;
     int iMultiSampleQuality = lua_isnumber(LuaHelper::mState, 2) ? LuaHelper::GetInt(2) : 0;
 
+    int iIndex = 1;
     D3DDISPLAYMODE modes[50];
     unsigned int uiNumModes = RedRenderer::pcGetValidDisplayModes(modes, 50, 800, 600);
-    int iIndex = 1;
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
 
     int iCurSel = 1;

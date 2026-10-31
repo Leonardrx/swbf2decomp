@@ -239,7 +239,7 @@ unsigned int GrowStatsBucketCapacity(const StatsLeaderboardBucketVector* pThis, 
 // FUNCTION: SWBF2 0x00530d00
 void FillStatsBucketRange(void** ppFirst, void** ppLast, void* const* ppVal)
 {
-    unsigned int uiCount = (unsigned int)(ppLast - ppFirst);
+    unsigned int uiCount = ((unsigned int)ppLast - (unsigned int)ppFirst + 3) >> 2;
     if (ppFirst > ppLast)
     {
         uiCount = 0;
@@ -247,7 +247,11 @@ void FillStatsBucketRange(void** ppFirst, void** ppLast, void* const* ppVal)
 
     for (unsigned int i = 0; i < uiCount; i++)
     {
-        *ppFirst++ = *ppVal;
+        if (ppFirst)
+        {
+            *ppFirst = *ppVal;
+        }
+        ppFirst++;
     }
 }
 

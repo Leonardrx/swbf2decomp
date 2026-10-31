@@ -493,18 +493,21 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
         }
 
         bool bMessage = PeekMessageA(&msg, 0, 0, 0, PM_REMOVE) != 0;
-        if (!bActive && !bMessage)
-        {
-            Sleep(10);
-        }
         if (bMessage)
         {
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        else if (!GameState::Update())
+        else
         {
-            SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
+            if (!bActive)
+            {
+                Sleep(10);
+            }
+            if (!GameState::Update())
+            {
+                SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
+            }
         }
     }
 

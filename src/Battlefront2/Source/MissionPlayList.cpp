@@ -134,16 +134,16 @@ int MissionPlayList::GetCount()
 void MissionPlayList::RandomizeOrder()
 {
     sbRandomize = true;
-    unsigned int uCount = sPlaylistCount;
-    if (sPlaylistCount < 2)
+    int iCount = sPlaylistCount;
+    if (iCount < 2)
     {
         return;
     }
 
-    for (int i = sPlaylistCount * 7; i > 0; --i)
+    for (int i = 0; i < iCount * 7; ++i)
     {
-        unsigned int uA = (PblRandom::GetGlobalInt() >> 3) % uCount;
-        unsigned int uB = PblRandom::GetGlobalInt() % uCount;
+        unsigned int uA = (PblRandom::GetGlobalInt() >> 3) % iCount;
+        unsigned int uB = PblRandom::GetGlobalInt() % iCount;
         PlaylistEntry temp = sPlaylist[uA];
         sPlaylist[uA] = sPlaylist[uB];
         sPlaylist[uB] = temp;
@@ -180,14 +180,17 @@ bool MissionPlayList::SelectNextEntry()
 {
     if (sPlaylistPosn >= sPlaylistCount)
     {
-        if (!sbLoopForever)
+        if (sbLoopForever)
+        {
+            sPlaylistPosn = 0;
+            if (sbRandomize)
+            {
+                RandomizeOrder();
+            }
+        }
+        else
         {
             return false;
-        }
-        sPlaylistPosn = 0;
-        if (sbRandomize)
-        {
-            RandomizeOrder();
         }
     }
     GameLoop::SetNextMission(sPlaylist[sPlaylistPosn].mLuaFile);

@@ -119,15 +119,18 @@ void Music::Update(float fDeltaTime)
             {
                 Stop();
             }
+            if (mStream->GetPlayState() == Snd::SourceTransport::playState_stopped)
+            {
+                mPlayStateDesired = playState_stopped;
+                mPlayStateCurrent = playState_stopping;
+            }
         }
-        if (!mStream || mStream->GetPlayState() == Snd::SourceTransport::playState_stopped)
+        else
         {
             mPlayStateDesired = playState_stopped;
             mPlayStateCurrent = playState_stopping;
         }
-        mPlaybackTime += fDeltaTime;
-        break;
-
+        // fall through
     case playState_stopping:
         mPlaybackTime += fDeltaTime;
         break;
@@ -160,23 +163,26 @@ void Music::Update(float fDeltaTime)
                     mStream = Snd::EngineBase::GetOpenStream(pProps->mStreamID);
                 }
 
-                if (!mStream)
+                if (mStream)
                 {
-                    mPlayStateCurrent = playState_starting;
+                    if (!mStream->GetLocked())
+                    {
+                        mStream->Lock(true);
+                        pProps->SetupStream(mStream, 0);
+                        mStream->SetPitch(pProps->SourceVariation::CalculatePitch(pProps->mPitch));
+                        float fGain = pProps->SourceVariation::CalculateGain(pProps->mGain);
+                        mStream->SetGain(fGain);
+                        mStream->GetBus()->Fade(mFadeInTime, 1.0f, 0.0f);
+                        mStream->Play(false);
+                        mStream->SetPlaybackPosition(mPlaybackPosition);
+                        ++sMusicPlaying;
+                        mPlayStateCurrent = playState_starting;
+                        mPlaybackTime = 0.0f;
+                    }
                 }
-                else if (!mStream->GetLocked())
+                else
                 {
-                    mStream->Lock(true);
-                    pProps->SetupStream(mStream, 0);
-                    mStream->SetPitch(pProps->SourceVariation::CalculatePitch(pProps->mPitch));
-                    float fGain = pProps->SourceVariation::CalculateGain(pProps->mGain);
-                    mStream->SetGain(fGain);
-                    mStream->GetBus()->Fade(mFadeInTime, 1.0f, 0.0f);
-                    mStream->Play(false);
-                    mStream->SetPlaybackPosition(mPlaybackPosition);
-                    ++sMusicPlaying;
                     mPlayStateCurrent = playState_starting;
-                    mPlaybackTime = 0.0f;
                 }
             }
             break;
@@ -262,11 +268,6 @@ void Music::Update(float fDeltaTime)
             }
             break;
 
-        case playState_stopping:
-        case playState_stopped:
-            mPlayStateDesired = playState_stopped;
-            break;
-
         case playState_pausing:
             if (mStream)
             {
@@ -284,6 +285,11 @@ void Music::Update(float fDeltaTime)
             {
                 mPlayStateCurrent = playState_paused;
             }
+            break;
+
+        case playState_stopping:
+        case playState_stopped:
+            mPlayStateDesired = playState_stopped;
             break;
         }
         break;

@@ -5,20 +5,23 @@
 // FUNCTION: SWBF2 0x00630230
 void Restrictor::RestrictMovement(PblVector3& vMovement)
 {
-    for (int i = 0; i < mNumRestrictions; ++i)
+    if (mNumRestrictions > 0)
     {
-        float fNx = mRestrictions[i].x;
-        float fNy = mRestrictions[i].y;
-        float fNz = mRestrictions[i].z;
-        float fX = vMovement.x;
-        float fY = vMovement.y;
-        float fZ = vMovement.z;
-        float fDot = fNx * fX + fNy * fY + fNz * fZ;
-        if (fDot < 0.0f)
+        for (int i = 0; i < mNumRestrictions; ++i)
         {
-            vMovement.x = fX - fNx * fDot;
-            vMovement.y = fY - fNy * fDot;
-            vMovement.z = fZ - fNz * fDot;
+            float fNx = mRestrictions[i].x;
+            float fNy = mRestrictions[i].y;
+            float fNz = mRestrictions[i].z;
+            float fX = vMovement.x;
+            float fY = vMovement.y;
+            float fZ = vMovement.z;
+            float fDot = fNx * fX + fNy * fY + fNz * fZ;
+            if (fDot < 0.0f)
+            {
+                vMovement.x = fX - fNx * fDot;
+                vMovement.y = fY - fNy * fDot;
+                vMovement.z = fZ - fNz * fDot;
+            }
         }
     }
 }

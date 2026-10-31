@@ -361,7 +361,9 @@ void FirstPersonRenderable::UpdateDroidekaAimer(const PblMatrix& mMatrix)
     Weapon* pWeapon = mOwner->GetWeaponPtr(mOwner->GetActiveWeaponChannel());
     if (pWeaponBone && pWeapon)
     {
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mWeaponMatrix), reinterpret_cast<const D3DXMATRIX*>(pWeaponBone), reinterpret_cast<const D3DXMATRIX*>(&mModelMatrix));
+        PblMatrix mWeapon;
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mWeapon), reinterpret_cast<const D3DXMATRIX*>(pWeaponBone), reinterpret_cast<const D3DXMATRIX*>(&mModelMatrix));
+        mWeaponMatrix = mWeapon;
     }
 }
 
@@ -940,8 +942,8 @@ void FirstPersonRenderable::RenderSoldier(unsigned int uFlags) const
     if (mObjectModel)
     {
 
-        RedShadingPose shadingPose;
         RedShadingPose* pShadingPose = 0;
+        RedShadingPose shadingPose;
         if (mOwner)
         {
             GameObject* pObject = mOwner->GetGameObject();
@@ -950,11 +952,11 @@ void FirstPersonRenderable::RenderSoldier(unsigned int uFlags) const
                 unsigned char ucInvisibility = static_cast<EntitySoldier*>(pObject)->GetInvisibilityAlpha();
                 if (ucInvisibility)
                 {
+                    unsigned char ucCloak = 0xff;
                     if (ucInvisibility > 0xd8)
                     {
                         ucInvisibility = 0xd8;
                     }
-                    unsigned char ucCloak = 0xff;
                     if (ucInvisibility < 0x80)
                     {
                         ucCloak = (unsigned char)(ucInvisibility * 2);
@@ -1374,12 +1376,12 @@ void FirstPersonRenderable::SetAnimAndTransition(SOLDIERANIMATION aAnim,
     {
         return;
     }
+    fTransitionTimer = 0.0f;
     int iWeaponClass = mWeaponClass;
     if (iWeaponClass == WEAPONCLASS_NONE)
     {
         iWeaponClass = RIFLE;
     }
-    fTransitionTimer = 0.0f;
     fTransitionTimerMax = aTime;
     mTransitionAnim = aTrans;
     SetAnimation(FirstPerson::mAnim[iWeaponClass * NUM_SOLDIERANIMATIONS + aAnim], false);
@@ -1658,17 +1660,26 @@ void FirstPersonCameraManager::ViewBob(float fScale)
         PblVector3(0.0f, fBob, 0.0f),
         PblVector3(0.0f, 0.0f, 0.0f)
     };
-    PblVector3 vPosSlope[4] = {
-        PblVector3(0.1f, 0.1f, 0.0f),
-        PblVector3(0.2f, 0.2f, 0.0f),
-        PblVector3(0.2f, 0.1f, 0.0f),
-        PblVector3(0.0f, 0.0f, 0.0f)
-    };
-    PblVector3 vRot[4] = { PblVector3(0.0f, 0.0f, 0.0f), PblVector3(0.0f, 0.0f, 0.0f),
-                           PblVector3(0.0f, 0.0f, 0.0f), PblVector3(0.0f, 0.0f, 0.0f) };
-    PblVector3 vRotSlope[4] = { PblVector3(0.0f, 0.0f, 0.0f), PblVector3(0.0f, 0.0f, 0.0f),
-                                PblVector3(0.0f, 0.0f, 0.0f), PblVector3(0.0f, 0.0f, 0.0f) };
-    float fTime[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
+    PblVector3 vPosSlope[4];
+    vPosSlope[0] = PblVector3(0.1f, 0.1f, 0.0f);
+    vPosSlope[1] = PblVector3(0.2f, 0.2f, 0.0f);
+    vPosSlope[2] = PblVector3(0.2f, 0.1f, 0.0f);
+    vPosSlope[3] = PblVector3(0.0f, 0.0f, 0.0f);
+    PblVector3 vRot[4];
+    vRot[0] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRot[1] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRot[2] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRot[3] = PblVector3(0.0f, 0.0f, 0.0f);
+    PblVector3 vRotSlope[4];
+    vRotSlope[0] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRotSlope[1] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRotSlope[2] = PblVector3(0.0f, 0.0f, 0.0f);
+    vRotSlope[3] = PblVector3(0.0f, 0.0f, 0.0f);
+    float fTime[4];
+    fTime[0] = 0.2f;
+    fTime[1] = 0.2f;
+    fTime[2] = 0.2f;
+    fTime[3] = 0.2f;
     mIsBobbing = true;
     SetCameraPath(vPos, vPosSlope, vRot, vRotSlope, fTime, 4);
 }

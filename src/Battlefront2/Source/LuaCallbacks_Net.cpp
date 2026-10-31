@@ -1972,16 +1972,16 @@ int ScriptCB_IsQuickmatchPassworded(lua_State*)
     if (findGame)
     {
         bool passworded = false;
-        char* name = 0;
         char* mission;
-        int numPlayers = 0;
+        char* name = 0;
+        char* arg11 = 0;
         int maxPlayers;
         bool flag;
         float ping = 9.999f;
         int arg7 = 0;
+        int numPlayers = 0;
         int arg8;
         bool arg10;
-        char* arg11 = 0;
         bool arg12;
         findGame->GetInfo(name, mission, numPlayers, maxPlayers, flag,
                           ping, arg7, arg8, passworded, arg10, arg11, arg12);

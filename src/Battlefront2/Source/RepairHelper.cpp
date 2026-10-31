@@ -635,7 +635,7 @@ bool RepairHelper::Update(float dt)
             bool bNeedHealth;
             bool bNeedAmmo;
             FindAllAidNeeds(pTarget, health, ammo, false, &bNeedHealth, &bNeedAmmo);
-            if (mAidType.ammo ? !bNeedAmmo : !bNeedHealth)
+            if ((mAidType.ammo && !bNeedAmmo) || (!mAidType.ammo && !bNeedHealth))
             {
                 AI::VOHelper::Play(AI::VOT_RepairEnd, GetMe()->GetGameObject(), 0, pTarget, 0.0f);
                 return false;

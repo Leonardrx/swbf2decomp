@@ -518,18 +518,16 @@ void TentacleSimulator::EnforceCollisions(const RedPose* pPose, const PblMatrix&
 // FUNCTION: SWBF2 0x00656d00
 void TentacleSimulator::EnforceSphereCollision(const PblMatrix& mMatrix, float fRadius)
 {
-    const PblVector3& vCenter = mMatrix.GetTranslation();
     for (int i = 0; i < mNumTentacles; ++i)
     {
-        const float fRadiusSq = fRadius * fRadius;
         for (int j = 1; j < mBonesPerTentacle + 1; ++j)
         {
             PblVector3& vPos = tPos[i][j];
-            const PblVector3 vDelta = vPos - vCenter;
+            const PblVector3 vDelta = vPos - mMatrix.GetTranslation();
             const float fDistSq = SquaredLength(vDelta);
-            if (fRadiusSq > fDistSq)
+            if (fRadius * fRadius > fDistSq)
             {
-                vPos = vCenter + vDelta * (fRadius / sqrtf(fDistSq));
+                vPos = mMatrix.GetTranslation() + vDelta * (fRadius / (float)sqrt((double)fDistSq));
             }
         }
     }

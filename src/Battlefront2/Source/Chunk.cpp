@@ -281,16 +281,16 @@ void Chunk::SetData(ChunkDescriptor& desc)
     if (mPhysicsType == PHYSICS_COCKPIT)
     {
         const PblMatrix& m = mCollisionMatrix;
-        float fX = m.m[0][0] * mVelocity.x + m.m[0][1] * mVelocity.y + m.m[0][2] * mVelocity.z;
-        float fY = m.m[1][0] * mVelocity.x + m.m[1][1] * mVelocity.y + m.m[1][2] * mVelocity.z;
-        float fZ = m.m[2][0] * mVelocity.x + m.m[2][1] * mVelocity.y + m.m[2][2] * mVelocity.z;
+        float fX = m.m[0][1] * mVelocity.y + m.m[0][0] * mVelocity.x + m.m[0][2] * mVelocity.z;
+        float fY = m.m[1][1] * mVelocity.y + m.m[1][0] * mVelocity.x + m.m[1][2] * mVelocity.z;
+        float fZ = m.m[2][1] * mVelocity.y + m.m[2][0] * mVelocity.x + m.m[2][2] * mVelocity.z;
         if (fX > fY)
         {
             mForwardAxis = (fX > fZ) ? 0 : 2;
         }
         else
         {
-            mForwardAxis = (fY <= fZ) ? 2 : 1;
+            mForwardAxis = (fY > fZ) ? 1 : 2;
         }
     }
     mLinearDamping = desc.mLinearDamping;
@@ -979,26 +979,25 @@ void ChunkCluster::Render(unsigned char ucViewport, float fDist, unsigned int ui
 
     if (fY * fY + fX * fX + fZ * fZ < 800.0f && RedStencilShadow::GetShadowEnable())
     {
-        RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
-        if (!pLight->IsShadowCaster())
+        RedDirectionalLight* pLight = NULL;
+        if (RedLight::GetGlobalDirectionalLight(0)->IsShadowCaster())
+        {
+            pLight = RedLight::GetGlobalDirectionalLight(0);
+        }
+        else if (RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster())
         {
             pLight = RedLight::GetGlobalDirectionalLight(1);
-            if (!pLight->IsShadowCaster())
-            {
-                pLight = NULL;
-            }
         }
         float fLength;
         if (pLight)
         {
-            const PblVector3& vDir = pLight->m_vDirection;
-            float fMinLength = _Sphere.w * -2.0f / vDir.y;
+            float fMinLength = _Sphere.w * -2.0f / pLight->m_vDirection.y;
             uiFlags |= 0x10000;
             PblVector3 vStart = _Sphere;
             vStart.y = _Sphere.w + vStart.y;
             const GameObject* pIgnore = NULL;
             CollisionObject* pHit;
-            fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pIgnore, 1, 0x90, false) * 50.0f;
+            fLength = CollisionManager::RayHit(vStart, pLight->m_vDirection, 50.0f, pHit, NULL, &pIgnore, 1, 0x90, false) * 50.0f;
             if (fMinLength > fLength)
             {
                 fLength = fMinLength;

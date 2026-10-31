@@ -50,11 +50,13 @@ void DeathCamera::SetInfo(Trackable* pOwner, Character* pKiller, const PblMatrix
 
     PblVector3 vForward = rMatrix.GetZAxis();
     vForward.y = 0.0f;
-    PblVector3 vNormalized;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormalized), reinterpret_cast<const D3DXVECTOR3*>(&vForward));
-    PblVector3 vOffset = vNormalized;
-    vOffset.y = 0.5f;
-    mDeathMidPos = vOffset
+    {
+        PblVector3 vNormalized;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormalized), reinterpret_cast<const D3DXVECTOR3*>(&vForward));
+        vForward = vNormalized;
+    }
+    vForward.y = 0.5f;
+    mDeathMidPos = vForward
                    + (mOwner->GetGameObject()->GetMatrix().GetTranslation()
                       + PblVector3(0.0f, 1.0f, 0.0f));
 
@@ -176,15 +178,9 @@ PblMatrix DirectionMatrix(const PblVector3& vDir, const PblVector3& vUp, const P
     PblVector3 vFront;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFront), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
 
-    PblVector3 vCross(vUp.y * vDir.z - vUp.z * vDir.y,
-                      vUp.z * vDir.x - vUp.x * vDir.z,
-                      vUp.x * vDir.y - vUp.y * vDir.x);
+    PblVector3 vCross = CrossProduct(vUp, vDir);
     PblVector3 vRight;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
 
-    PblVector3 vNewUp(vFront.y * vRight.z - vFront.z * vRight.y,
-                      vFront.z * vRight.x - vFront.x * vRight.z,
-                      vFront.x * vRight.y - vFront.y * vRight.x);
-
-    return PblMatrix(vRight, vNewUp, vFront, vPos);
+    return PblMatrix(vRight, CrossProduct(vFront, vRight), vFront, vPos);
 }

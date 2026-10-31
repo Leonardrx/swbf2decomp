@@ -37,14 +37,14 @@ ControllableClass::ControllableClass()
       mPilotParentNodeHash(0),
       mPilotOffsetMatrix(gMatrixIdentity),
       mPilotAnimation(SoldierAnimationBank::INVALID_ANIMATION),
-      mAnimatedPilotNodeFlag(false),
-      mPilotDeathType(PILOTDEATH_FALL),
-      mPilotType(PILOT_VEHICLE),
       mIsPilotExposed(true),
       mIsPilotAnimation9Pose(false),
       mCanCapturePosts(false),
       mCanEnterVehicles(false)
 {
+    mAnimatedPilotNodeFlag = false;
+    mPilotType = PILOT_VEHICLE;
+    mPilotDeathType = PILOTDEATH_FALL;
     mCombatInterrupts = true;
     mIgnoreHintNodes = false;
     mShakeScale = 1.0f;

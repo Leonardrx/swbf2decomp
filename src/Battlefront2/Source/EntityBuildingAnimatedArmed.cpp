@@ -40,6 +40,9 @@ void EntityBuildingAnimatedArmedClass::SetProperty(unsigned int uProperty, const
         case 0xE520F713u: iSection = 5; break;
         case 0xE420F580u: iSection = 6; break;
         case 0xF3210D1Du: iSection = 7; break;
+        case 0xDBAA7975u:
+            sCurrentSection = -1;
+            return;
         default:
             sCurrentSection = -1;
             return;

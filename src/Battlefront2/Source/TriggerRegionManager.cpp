@@ -160,10 +160,9 @@ bool TriggerRegionManager::Update(float)
             case TRIGGER_LANDING:
                 if (((Entity*)apObjects[j])->IsRtti(EntityFlyer::rttiHashEntityFlyer))
                 {
-                    GameObject* pObject = apObjects[j];
-                    CollisionObject& rCollision = static_cast<CollisionObject&>(*pObject);
-                    ((EntityFlyer*)pObject)->SetInLandingRegion(data.mRegion->GetIntersectionFactor(
-                        rCollision.GetCollisionCenter(), rCollision.GetCollisionRadius()));
+                    EntityFlyer* pFlyer = (EntityFlyer*)apObjects[j];
+                    pFlyer->SetInLandingRegion(data.mRegion->GetIntersectionFactor(
+                        pFlyer->GetCollisionCenter(), pFlyer->GetCollisionRadius()));
                 }
                 break;
             }

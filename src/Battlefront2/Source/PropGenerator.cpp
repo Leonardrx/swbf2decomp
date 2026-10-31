@@ -807,12 +807,14 @@ void PropGenerator::AddObjectsFromClusterIndex(int iClusterIndex, int iLayer, Pb
 
     const int z = iClusterIndex / mClusterMapWidth;
     const int x = iClusterIndex - z * mClusterMapWidth;
-    SetRandSeed(iClusterIndex + z * 2 + iLayer);
-    int cz = z * 2;
-    for (int nz = 2; nz > 0; nz--, cz++)
+    const int iCellX = x * 2;
+    const int iCellZ = z * 2;
+    SetRandSeed(iClusterIndex + iCellZ + iLayer);
+    int cz = iCellZ;
+    for (int nz = 0; nz < 2; nz++, cz++)
     {
-        int cx = x * 2;
-        for (int nx = 2; nx > 0; nx--, cx++)
+        int cx = iCellX;
+        for (int nx = 0; nx < 2; nx++, cx++)
         {
             if (!((GetLayers(cx, cz) >> iLayer) & 1))
             {

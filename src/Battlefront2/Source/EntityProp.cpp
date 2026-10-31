@@ -896,7 +896,6 @@ Entity* EntityPropClass::Build(const EntityDesc& desc)
             for (int i = 0; i < mNumAttachedOdfs; ++i)
             {
                 EntityDesc attachDesc;
-                attachDesc.mMatrix = gMatrixIdentity;
                 PblMatrix matrix;
                 matrix = mAttachedOdfs[i].mMatrix * desc.mMatrix;
                 attachDesc.mMatrix = matrix;

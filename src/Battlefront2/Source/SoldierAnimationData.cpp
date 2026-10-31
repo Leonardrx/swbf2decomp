@@ -283,11 +283,13 @@ void SoldierAnimationData::InitLoadTimeData()
     memset(s_auiSyncTypeTable, 0, 256 * sizeof(unsigned int));
     memset(s_aszSyncTypeNames, 0, 256 * sizeof(char*));
 
+    int iScope;
     for (int iAnim = 0; iAnim < NUM_ACTION_ANIMATIONS; ++iAnim)
     {
+        iScope = 0;
         unsigned char uiAnimIndex = SoldierAnimType::GetAnimIndex((ActionAnimation)iAnim);
         const unsigned int uiBase = uiAnimIndex * 2;
-        for (int iScope = 0; iScope < NUM_SCOPES; ++iScope)
+        for (; iScope < NUM_SCOPES; ++iScope)
         {
             s_pAnimationNameTable->Store(PblHash(AnimIndexToName(uiAnimIndex, (Scope)iScope)),
                                          (void*)((uiBase + iScope) | 0x80000000));
@@ -297,9 +299,10 @@ void SoldierAnimationData::InitLoadTimeData()
     {
         for (int iAnim = 0; iAnim < NUM_MOVEMENT_ANIMATIONS; ++iAnim)
         {
+            iScope = 0;
             unsigned char uiAnimIndex = SoldierAnimType::GetAnimIndex((Posture)iPosture, (MovementAnimation)iAnim);
             const unsigned int uiBase = uiAnimIndex * 2;
-            for (int iScope = 0; iScope < NUM_SCOPES; ++iScope)
+            for (; iScope < NUM_SCOPES; ++iScope)
             {
                 s_pAnimationNameTable->Store(PblHash(AnimIndexToName(uiAnimIndex, (Scope)iScope)),
                                              (void*)((uiBase + iScope) | 0x80000000));
@@ -310,9 +313,10 @@ void SoldierAnimationData::InitLoadTimeData()
     {
         for (int iAnim = 0; iAnim < NUM_WEAPON_ANIMATIONS; ++iAnim)
         {
+            iScope = 0;
             unsigned char uiAnimIndex = SoldierAnimType::GetAnimIndex((Posture)iPosture, (WeaponAnimation)iAnim);
             const unsigned int uiBase = uiAnimIndex * 2;
-            for (int iScope = 0; iScope < NUM_SCOPES; ++iScope)
+            for (; iScope < NUM_SCOPES; ++iScope)
             {
                 s_pAnimationNameTable->Store(PblHash(AnimIndexToName(uiAnimIndex, (Scope)iScope)),
                                              (void*)((uiBase + iScope) | 0x80000000));

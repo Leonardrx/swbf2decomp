@@ -205,9 +205,6 @@ EntityHoverClass::EntityHoverClass(unsigned int uHash)
     m_bDynamicLighting = true;
     mHealthType = HEALTH_TYPE_VEHICLE;
     mPilotType = PILOT_VEHICLE;
-    mLODClass = 1;
-    mHoldForPlayer = true;
-    mCollisionModel.mDenyFlyerLand = true;
 
     mSetAltitude = 1.0f;
     mGravityScale = 1.0f;
@@ -219,13 +216,17 @@ EntityHoverClass::EntityHoverClass(unsigned int uHash)
     mForwardSpeed = 20.0f;
     mReverseSpeed = 10.0f;
     mStrafeSpeed = 15.0f;
+    mBoostSpeed = 0.0f;
+    mBoostAcceleration = 0.0f;
+    mBoostFOV = 0.0f;
+    mBoostTurnMultiplier = 0.5f;
     mSpinRate = 3.0f;
     mTurnRate = 2.0f;
-    mYawRate = 1.0f;
-    mPitchRate = 0.5f;
     mTurnFilter = 10.0f;
+    mYawRate = 1.0f;
     mYawMin = 0.0f;
     mYawMax = 0.0f;
+    mPitchRate = 0.5f;
     mPitchMin = -0.5f;
     mPitchMax = 0.5f;
     mThrustPitchAngle = 0.0f;
@@ -246,25 +247,20 @@ EntityHoverClass::EntityHoverClass(unsigned int uHash)
     sWeaponSection = 0;
     sWheelSection = 0;
 
+    memset(mWeaponClass, 0, sizeof(mWeaponClass));
+    memset(mWeaponAmmo, 0, sizeof(mWeaponAmmo));
     for (int i = 0; i < 4; ++i)
     {
-        mWeaponClass[i] = 0;
-        mWeaponAmmo[i].uiAmmo = 0;
-        mWeaponAmmo[i].uiHeat = 0;
         mWeaponAmmo[i].bFlagAmmoInfinite = 1;
-        mWeaponAmmo[i].bFlagShareHeat = 0;
-        mWeaponAmmo[i].bFlagShareAmmo = 0;
         mWeaponChannel[i] = i;
     }
 
     mWeaponCount = 0;
-    mAnimObj = 0;
-    mAnimFins = 0;
     mNoiseFactor = 1.0f;
-    mBarrierX = -1.0f;
     mBarrierZ = -1.0f;
-    mBarrierOX = 0.0f;
+    mBarrierX = -1.0f;
     mBarrierOZ = 0.0f;
+    mBarrierOX = 0.0f;
 
     mCameraSettings.mCameraMoveTensionL = 12.0f;
     mCameraSettings.mCameraMoveTensionR = 12.0f;
@@ -274,10 +270,9 @@ EntityHoverClass::EntityHoverClass(unsigned int uHash)
     mCameraSettings.mCameraMoveTensionB = 12.0f;
     mCameraSettings.mCameraAimTension = FLT_MAX;
 
+    memset(mTurretClass, 0, sizeof(mTurretClass));
     mPassengerSlotClass = 0;
     mNumPassengerSlots = 0;
-
-    memset(mTurretClass, 0, sizeof(mTurretClass));
 
     mExplosion = 0;
     mAttachHash = 0;
@@ -289,53 +284,47 @@ EntityHoverClass::EntityHoverClass(unsigned int uHash)
     mBlurEffect = 0.0f;
     mBlurStartV = 1.0f;
 
-    for (int i = 0; i < 6; ++i)
-    {
-        mWakeEmitterPrimitives[i] = -1;
-    }
-
     mNumWakeEmitters = 0;
+    memset(mWakeEmitterPrimitives, 0xff, sizeof(mWakeEmitterPrimitives));
+    mLODClass = 1;
     mSoundCloseToGroundHeight = 0.9f;
 
-    mMaxSuspensionOffset = 0.0f;
+    mAnimObj = 0;
+    mAnimFins = 0;
+    mFirstPersonModelHandle = -1;
     mMidSuspensionOffset = 0.0f;
+    mMaxSuspensionOffset = 0.0f;
     mSuspensionCenterHash = 0;
     mSuspensionLeftArmHash = 0;
     mSuspensionRightArmHash = 0;
 
-    mFirstPersonModelHandle = -1;
-    mFPModelAttachedtoCam = true;
     mMovingTurnOnly = false;
     mFloatsOnWater = true;
-    mRandomSpring = true;
+    mHoldForPlayer = true;
     mNumColliderBodies = 0;
+    mFPModelAttachedtoCam = true;
+    mCollisionModel.mDenyFlyerLand = true;
+    mRandomSpring = true;
 
     mEnergyBarClass.Init(100.0f, 20.0f);
 
     mEnergyAutoRestore = 0.0f;
     mEnergyBoostDrain = 0.0f;
-    mBoostSpeed = 0.0f;
-    mBoostAcceleration = 0.0f;
-    mBoostFOV = 0.0f;
-    mBoostTurnMultiplier = 0.5f;
     mTimeRequiredToEject = 3.0f;
     mEjectResist = 0.1f;
     mTimeTilReboard = 5.0f;
     mJumpTimeMin = 0.0f;
     mJumpTimeMax = 0.0f;
     mJumpForce = 0.0f;
-    mJumpMinSpeedMult = 0.3f;
     mJumpEnergyPerSec = 0.0f;
+    mJumpMinSpeedMult = 0.3f;
     mWheelCount = 0;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelTextureId[i] = 0;
-        mWheelVelocToU[i] = 0.0f;
-        mWheelVelocToV[i] = 0.0f;
-        mWheelOmegaToU[i] = 0.0f;
-        mWheelOmegaToV[i] = 0.0f;
-    }
+    memset(mWheelTextureId, 0, sizeof(mWheelTextureId));
+    memset(mWheelVelocToU, 0, sizeof(mWheelVelocToU));
+    memset(mWheelVelocToV, 0, sizeof(mWheelVelocToV));
+    memset(mWheelOmegaToU, 0, sizeof(mWheelOmegaToU));
+    memset(mWheelOmegaToV, 0, sizeof(mWheelOmegaToV));
 }
 
 // FUNCTION: SWBF2 0x004ca820
@@ -663,15 +652,9 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     memcpy(mCollisionScale, pBase->mCollisionScale, sizeof(mCollisionScale));
     mCollisionInflict = pBase->mCollisionInflict;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponClass[i] = pBase->mWeaponClass[i];
-    }
+    memcpy(mWeaponClass, pBase->mWeaponClass, sizeof(mWeaponClass));
     memcpy(mWeaponAmmo, pBase->mWeaponAmmo, sizeof(mWeaponAmmo));
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponChannel[i] = pBase->mWeaponChannel[i];
-    }
+    memcpy(mWeaponChannel, pBase->mWeaponChannel, sizeof(mWeaponChannel));
     mWeaponCount = pBase->mWeaponCount;
     mVehicleType = VEHICLE_UNKNOWN;
     mNoiseFactor = pBase->mNoiseFactor;
@@ -1492,8 +1475,15 @@ int EntityHover::GetJoystickIndex()
     {
         return -1;
     }
-    if (!NetGame::IsEnabled() || NetGame::IsClient() ||
-        (NetGame::IsHost() && NetGame::IsOneWorld() && !NetGame::IsDedicated()))
+    if (!NetGame::IsEnabled())
+    {
+        return NetGame::GetJoystickIndex(mPlayerId);
+    }
+    if (NetGame::IsClient())
+    {
+        return NetGame::GetJoystickIndex(mPlayerId);
+    }
+    if (NetGame::IsHost() && NetGame::IsOneWorld() && !NetGame::IsDedicated())
     {
         return NetGame::GetJoystickIndex(mPlayerId);
     }
@@ -3002,8 +2992,9 @@ void EntityHover::ApplyCollisionImpact(float fApproach, const PblVector3& vNorma
         return;
     }
 
-    float fUp = mMatrix.m[1][1] * vNormal.y + vNormal.x * mMatrix.m[1][0] + mMatrix.m[1][2] * vNormal.z;
-    float fFront = mMatrix.m[2][1] * vNormal.y + vNormal.x * mMatrix.m[2][0] + mMatrix.m[2][2] * vNormal.z;
+    const float fNormalX = vNormal.x;
+    float fUp = mMatrix.m[1][1] * vNormal.y + fNormalX * mMatrix.m[1][0] + mMatrix.m[1][2] * vNormal.z;
+    float fFront = mMatrix.m[2][1] * vNormal.y + fNormalX * mMatrix.m[2][0] + mMatrix.m[2][2] * vNormal.z;
     if (!(0.0f > fApproach))
     {
         return;

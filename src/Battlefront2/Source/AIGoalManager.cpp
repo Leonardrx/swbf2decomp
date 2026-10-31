@@ -117,53 +117,48 @@ AIGoal* AIGoalManager::AddGoal(unsigned char uTeam, AIGoalType eType, float fWei
         return 0;
     }
 
-    int i = 0;
-    do
+    for (int i = 0; i < MAX_GOALS; ++i)
     {
-        if (!mGoals[i])
+        if (mGoals[i])
         {
+            continue;
+        }
+        switch (eType)
+        {
+        case AIGOAL_CONQUEST:
+            mGoals[i] = new ConquestGoal(uTeam, fWeight);
+            break;
+        case AIGOAL_DEATHMATCH:
+            mGoals[i] = new DeathmatchGoal(uTeam, fWeight);
+            break;
+        case AIGOAL_DEFEND:
+            if (pTarget && pTarget->mType != GTT_NONE)
+            {
+                mGoals[i] = new DefendGoal(uTeam, fWeight, *pTarget);
+            }
+            break;
+        case AIGOAL_DESTROY:
+            if (pTarget && pTarget->mType != GTT_NONE)
+            {
+                mGoals[i] = new DestroyGoal(uTeam, fWeight, *pTarget);
+            }
+            break;
+        case AIGOAL_CTFOFFENSE:
+            mGoals[i] = new CTFGoal(uTeam, fWeight, *pTarget);
+            break;
+        case AIGOAL_CTFDEFENSE:
+            mGoals[i] = new CTFGoalD(uTeam, fWeight, *pTarget);
+            break;
+        case AIGOAL_FOLLOW:
+            if (pTarget && (pTarget->mType == GTT_CHARACTER || pTarget->mType == GTT_GAMEOBJECT))
+            {
+                mGoals[i] = new FollowGoal(uTeam, fWeight, *pTarget);
+            }
             break;
         }
-    } while (++i < MAX_GOALS);
-    if (i == MAX_GOALS)
-    {
-        return 0;
+        return mGoals[i];
     }
-
-    switch (eType)
-    {
-    case AIGOAL_CONQUEST:
-        mGoals[i] = new ConquestGoal(uTeam, fWeight);
-        break;
-    case AIGOAL_DEATHMATCH:
-        mGoals[i] = new DeathmatchGoal(uTeam, fWeight);
-        break;
-    case AIGOAL_DEFEND:
-        if (pTarget && pTarget->mType != GTT_NONE)
-        {
-            mGoals[i] = new DefendGoal(uTeam, fWeight, *pTarget);
-        }
-        break;
-    case AIGOAL_DESTROY:
-        if (pTarget && pTarget->mType != GTT_NONE)
-        {
-            mGoals[i] = new DestroyGoal(uTeam, fWeight, *pTarget);
-        }
-        break;
-    case AIGOAL_CTFOFFENSE:
-        mGoals[i] = new CTFGoal(uTeam, fWeight, *pTarget);
-        break;
-    case AIGOAL_CTFDEFENSE:
-        mGoals[i] = new CTFGoalD(uTeam, fWeight, *pTarget);
-        break;
-    case AIGOAL_FOLLOW:
-        if (pTarget && (pTarget->mType == GTT_CHARACTER || pTarget->mType == GTT_GAMEOBJECT))
-        {
-            mGoals[i] = new FollowGoal(uTeam, fWeight, *pTarget);
-        }
-        break;
-    }
-    return mGoals[i];
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0043a760

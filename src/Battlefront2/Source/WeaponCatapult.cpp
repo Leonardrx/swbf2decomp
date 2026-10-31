@@ -170,7 +170,8 @@ void WeaponCatapult::EnterFire()
                 {
                     mArmAccel = fRate / fSwing;
                     mArmSpeed = 0.0f;
-                    mStateLimit += (float)fabs((double)fSwing);
+                    const double dSwingMagnitude = fabs((double)fSwing);
+                    mStateLimit += (float)dSwingMagnitude;
                 }
             }
         }
@@ -267,7 +268,8 @@ bool WeaponCatapult::Fire()
     desc.mDirection = mAimer->mDirection;
     desc.mOwner = mOwner->GetGameObject();
     desc.mDamageOwner.mCharacter = mOwner->mCharacter;
-    desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+    PblHandle<GameObject> hOwner(mOwner->GetGameObject());
+    desc.mDamageOwner.mGameObject = hOwner;
     desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
     desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
     desc.mDamageOwner.mClass = GetEntityClass(mOwner->GetGameObject());

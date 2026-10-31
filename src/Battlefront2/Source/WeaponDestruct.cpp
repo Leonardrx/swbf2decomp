@@ -224,7 +224,7 @@ void WeaponDestruct::EnterFire()
         {
             if (bFlash)
             {
-                mClass->CreateMuzzleFlash(static_cast<CollisionObject&>(*mOwner->GetGameObject()).GetMatrix());
+                mClass->CreateMuzzleFlash(mOwner->GetGameObject()->GetMatrix());
             }
             mClass->mOrdnanceClass->Build(desc);
         }

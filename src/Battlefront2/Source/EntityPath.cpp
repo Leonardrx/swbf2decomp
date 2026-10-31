@@ -200,14 +200,12 @@ bool EntityPath::NodeProperties::ReadPropertyScope(PblConfig& config, PblConfig:
 
 // FUNCTION: SWBF2 0x004d14d0
 EntityPath::EntityPath()
-    : mNumClassIDs(0), mNodeProps(0), mSpeedFactor(1.0f), mVariance(0.0f, 0.0f, 0.0f),
-      mCount(0), mMaxCount(0xFFFFFFFF), mMaxSquadronSize(0xFFFFFFFF), mDirection(0),
-      mFrequency(1.0f), mEnableObject(0), mDirectionEntity(0)
+    : mNumClassIDs(0), mNodeProps(0), mSpeedFactor(1.0f),
+      mCount(0), mMaxCount(0xFFFFFFFF), mMaxSquadronSize(0xFFFFFFFF),
+      mPathRoll(false), mDifferentPath(true), mSingleDirection(false), mEnabled(true),
+      mDirection(0), mFrequency(1.0f), mEnableObject(0), mDirectionEntity(0)
 {
-    mPathRoll = false;
-    mDifferentPath = true;
-    mSingleDirection = false;
-    mEnabled = true;
+    mVariance.x = mVariance.y = mVariance.z = 0.0f;
     sList.Add((PblList<EntityPath>::Node*)&mNode, this);
 }
 
@@ -370,11 +368,7 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
     {
         fSuitability = 1.0f;
     }
-    else if (!(fSuitability > 0.0f))
-    {
-        return fSuitability;
-    }
-    if (!pDirection)
+    if (!(fSuitability > 0.0f) || !pDirection)
     {
         return fSuitability;
     }
@@ -533,15 +527,8 @@ bool EntityPath::ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
             *pcMaxCount++ = 0;
         }
         pPath->mClasses[pPath->mNumClassIDs].SetID(PblHash(acClass));
-        if (pcMaxCount)
-        {
-            const long lMaxCount = atol(pcMaxCount);
-            pPath->mClasses[pPath->mNumClassIDs++].SetMaxCount(lMaxCount);
-        }
-        else
-        {
-            pPath->mClasses[pPath->mNumClassIDs++].SetMaxCount(0xFFFFFFFF);
-        }
+        unsigned int uMaxCount = pcMaxCount ? (unsigned int)atol(pcMaxCount) : 0xFFFFFFFF;
+        pPath->mClasses[pPath->mNumClassIDs++].SetMaxCount(uMaxCount);
         return true;
     }
     case 0x60940EA9u:

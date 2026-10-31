@@ -235,37 +235,31 @@ void EntityMine::Kill()
 // FUNCTION: SWBF2 0x004cf740
 void EntityMine::ClientKill()
 {
-    const CollisionObject* pCollision = static_cast<const CollisionObject*>(this);
-    EntityMineClass* pClass = static_cast<EntityMineClass*>(mClass);
-
     if (mLifeTimer <= 0.1f)
     {
-        if (pClass->mExplosionExpire)
+        if (static_cast<EntityMineClass*>(mClass)->mExplosionExpire)
         {
-            pClass->mExplosionExpire->CreateExplosion(
-                pCollision->GetPosition(),
-                DamageOwner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f),
-                false, COLL_UNKNOWN);
+            DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
+            static_cast<EntityMineClass*>(mClass)->mExplosionExpire->CreateExplosion(
+                GetPosition(), owner, false, COLL_UNKNOWN);
         }
     }
     else if (IsAlive())
     {
-        if (pClass->mExplosionTrigger)
+        if (static_cast<EntityMineClass*>(mClass)->mExplosionTrigger)
         {
-            pClass->mExplosionTrigger->CreateExplosion(
-                pCollision->GetPosition(),
-                DamageOwner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f),
-                false, COLL_UNKNOWN);
+            DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
+            static_cast<EntityMineClass*>(mClass)->mExplosionTrigger->CreateExplosion(
+                GetPosition(), owner, false, COLL_UNKNOWN);
         }
     }
     else
     {
-        if (pClass->mExplosionDeath)
+        if (static_cast<EntityMineClass*>(mClass)->mExplosionDeath)
         {
-            pClass->mExplosionDeath->CreateExplosion(
-                pCollision->GetPosition(),
-                DamageOwner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f),
-                false, COLL_UNKNOWN);
+            DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
+            static_cast<EntityMineClass*>(mClass)->mExplosionDeath->CreateExplosion(
+                GetPosition(), owner, false, COLL_UNKNOWN);
         }
     }
 }

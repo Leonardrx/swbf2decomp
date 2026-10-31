@@ -554,12 +554,12 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
     const float fStep = 1.0f / (float)sNumBirdTypes;
     float fAccumulated = 0.0f;
     int iType = -1;
-    for (int i = 0; i < sNumBirdTypes; ++i)
+    for (int i = 1; i <= sNumBirdTypes; ++i)
     {
         fAccumulated += fStep;
         if (fAccumulated >= fChoice)
         {
-            iType = i;
+            iType = i - 1;
             break;
         }
     }
@@ -568,8 +568,7 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
         return;
     }
 
-    const BirdParticleType& type = sBirdTypes[iType];
-    const float fSize = type.mSize;
+    const float fSize = sBirdTypes[iType].mSize;
     const PblVector3 vUp(0.0f, 1.0f, 0.0f);
     PblVector3 vForward = Normalize(vVelocity) * 1.5f;
     PblVector3 vSide = Normalize(CrossProduct(vUp, vForward)) * 0.37f;
@@ -577,31 +576,31 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
     BirdParticle* pBird = GetFreeBird();
     if (pBird)
     {
-        pBird->RespawnFlockBird(vPosition, vVelocity, type);
+        pBird->RespawnFlockBird(vPosition, vVelocity, sBirdTypes[iType]);
     }
     pBird = GetFreeBird();
     if (pBird)
     {
         const PblVector3 vBirdPosition = vPosition + (vSide - vForward) * (fSize * 2.0f);
-        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, sBirdTypes[iType]);
     }
     pBird = GetFreeBird();
     if (pBird)
     {
         const PblVector3 vBirdPosition = vPosition + (-vSide - vForward) * (fSize * 2.0f);
-        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, sBirdTypes[iType]);
     }
     pBird = GetFreeBird();
     if (pBird)
     {
         const PblVector3 vBirdPosition = vPosition + (vSide - vForward) * (fSize * 4.0f);
-        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, sBirdTypes[iType]);
     }
     pBird = GetFreeBird();
     if (pBird)
     {
         const PblVector3 vBirdPosition = vPosition + (-vSide - vForward) * (fSize * 4.0f);
-        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, sBirdTypes[iType]);
     }
     sInstance->mFlockTimer = 0.0f;
 }
@@ -771,7 +770,7 @@ void BirdParticle::RespawnFlockBird(const PblVector3& vPos, const PblVector3& vV
     mState = BIRD_FLOCK;
     mTimeOffCamera = 0.0f;
     mTotalLifetime = 0.0f;
-    mFlapTime = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
+    mFlapTime = PblRandom::_Global.GetFloat() * (PblMath::fPi * 2.0f);
     mVelocity = vVelocity;
 
     PblVector3 vDir = Normalize(mVelocity);
@@ -979,8 +978,8 @@ void BirdParticleManager::ScatterRandomBirds(int iNum, const PblVector3& vPos)
         if (BirdParticleManager::sNumBirdTypes)
         {
             int iType = 1;
-            float fThreshold = 0.0f;
             float fStep = 1.0f / (float)BirdParticleManager::sNumBirdTypes;
+            float fThreshold = 0.0f;
             while (iType <= BirdParticleManager::sNumBirdTypes)
             {
                 fThreshold += fStep;

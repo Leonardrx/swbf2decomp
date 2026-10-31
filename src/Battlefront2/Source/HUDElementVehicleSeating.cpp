@@ -304,14 +304,15 @@ unsigned int HUD::ElementVehicleSeating::UpdateSeatingMarkers(const Character* c
             const Character* pPilotCharacter;
             if (pPilot)
             {
-                pPilotCharacter = pPilot->mCharacter;
                 if (pPilot->GetPlayerId() >= 0)
                 {
+                    pPilotCharacter = pPilot->mCharacter;
                     eState = pPilotCharacter != pCharacter ? seatingState_Player : seatingState_Self;
                 }
                 else
                 {
                     eState = seatingState_AI;
+                    pPilotCharacter = pPilot->mCharacter;
                 }
             }
             else
@@ -321,17 +322,20 @@ unsigned int HUD::ElementVehicleSeating::UpdateSeatingMarkers(const Character* c
             }
 
             const unsigned short* pText;
-            if (!pClass)
+            if (pClass)
             {
-                pText = 0;
-            }
-            else if (eState != seatingState_Empty && pPilotCharacter)
-            {
-                pText = pPilotCharacter->GetName();
+                if (eState != seatingState_Empty && pPilotCharacter)
+                {
+                    pText = pPilotCharacter->GetName();
+                }
+                else
+                {
+                    pText = RedLocalizeDB::Find(pClass->mLocalNameID, true);
+                }
             }
             else
             {
-                pText = RedLocalizeDB::Find(pClass->mLocalNameID, true);
+                pText = 0;
             }
 
             UpdateSeatingState(uSeat, eState, pText);

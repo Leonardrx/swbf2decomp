@@ -350,13 +350,20 @@ SoldierAnimationBank::WEAPON SoldierAnimationBank::AddWeapon(const char* pcName,
     }
 
     bool bHasAlertState;
-    if (pcAlertState && _stricmp(pcAlertState, "noalert") == 0)
+    if (pcAlertState)
     {
-        bHasAlertState = false;
-    }
-    else if (pcAlertState && _stricmp(pcAlertState, "alert") == 0)
-    {
-        bHasAlertState = true;
+        if (_stricmp(pcAlertState, "noalert") == 0)
+        {
+            bHasAlertState = false;
+        }
+        else if (_stricmp(pcAlertState, "alert") == 0)
+        {
+            bHasAlertState = true;
+        }
+        else
+        {
+            bHasAlertState = _GetWeapon(eParent)->bHasAlertState != 0;
+        }
     }
     else
     {
@@ -705,12 +712,8 @@ unsigned int SoldierAnimationBank::AddComboAnimation(COMBO eCombo, COMBO_ANIMATI
     {
         if (pCombo->aeAnimation[uiIndex] == eAnimation)
         {
-            break;
+            return uiIndex;
         }
-    }
-    if (uiIndex < pCombo->uiNumAnimations)
-    {
-        return uiIndex;
     }
 
     if (s_iNumComboAnimationsInPool >= MAX_COMBO_ANIMATION_POOL_SIZE)

@@ -359,7 +359,7 @@ bool ParticleEmitterObject::Update(float fDeltaTime)
         return false;
     }
 
-    mLifeTime = mLifeTime + fDeltaTime;
+    mLifeTime += fDeltaTime;
     if (FLEffectObject::Update(fDeltaTime))
     {
         if (!mStopFlag)
@@ -383,8 +383,7 @@ bool ParticleEmitterObject::Update(float fDeltaTime)
                 vMin = Min(vMin, p->mMatrix.GetTranslation());
                 vMax = Max(vMax, p->mMatrix.GetTranslation());
             }
-            mMidPos = PblVector3((vMax.x + vMin.x) * 0.5f, (vMax.y + vMin.y) * 0.5f,
-                                 (vMax.z + vMin.z) * 0.5f);
+            mMidPos = (vMax + vMin) * 0.5f;
             mMidSize.x = (float)fabs((double)(mMidPos.x - vMin.x));
             mMidSize.y = (float)fabs((double)(mMidPos.y - vMin.y));
             mMidSize.z = (float)fabs((double)(mMidPos.z - vMin.z));
@@ -847,11 +846,11 @@ void ParticleEmitterObject::Render_(unsigned char ucViewport, float fDist, unsig
 
     if (!mIsChildPEO)
     {
-        PblVector3 vMin(mMidPos.x - mMidSize.x, mMidPos.y - mMidSize.y, mMidPos.z - mMidSize.z);
+        PblVector3 vMin = mMidPos - mMidSize;
         vMin.x -= 450.0f;
         vMin.y -= 450.0f;
         vMin.z -= 450.0f;
-        PblVector3 vMax(mMidSize.x + mMidPos.x, mMidSize.y + mMidPos.y, mMidSize.z + mMidPos.z);
+        PblVector3 vMax = mMidPos + mMidSize;
         vMax.x += 450.0f;
         vMax.y += 450.0f;
         vMax.z += 450.0f;

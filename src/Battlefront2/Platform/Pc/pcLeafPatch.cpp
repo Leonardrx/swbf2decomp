@@ -36,16 +36,18 @@ LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
     const int count = m_pClass->mNumParticles;
     m_pIBReverse = pcRedIndexBuffer::Create(6 * count, true, true);
     unsigned short* indices = m_pIBReverse->Lock(6 * count, m_startIndexReverse);
-    for (short i = (short)(count - 1); i >= 0; --i)
+    short iReverse = (short)(count - 1);
+    unsigned short vReverse = (unsigned short)(iReverse * 4 + 2);
+    for (; iReverse >= 0; --iReverse)
     {
-        const unsigned short v = (unsigned short)(i * 4 + 2);
-        indices[0] = v - 2;
-        indices[1] = v - 1;
-        indices[2] = v;
-        indices[3] = v - 2;
-        indices[4] = v;
-        indices[5] = v + 1;
+        indices[0] = vReverse - 2;
+        indices[1] = vReverse - 1;
+        indices[2] = vReverse;
+        indices[3] = vReverse - 2;
+        indices[4] = vReverse;
+        indices[5] = vReverse + 1;
         indices += 6;
+        vReverse -= 4;
     }
     m_pIBReverse->Unlock();
     m_pIBForward = pcRedIndexBuffer::Create(6 * count, true, true);
@@ -64,7 +66,11 @@ LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
     m_pIBForward->Unlock();
     m_pVB = 0;
     mHeap = new PblHeap<int, float>(pClass->mNumParticles, 1000000.0f, 0);
-    m_iTexCoordType = pClass->mNumParts == 4 ? 1 : 0;
+    m_iTexCoordType = 0;
+    if (pClass->mNumParts == 4)
+    {
+        m_iTexCoordType = 1;
+    }
     Activate(0);
 }
 

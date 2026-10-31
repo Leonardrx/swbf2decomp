@@ -125,11 +125,7 @@ bool OrdnanceShell::Update(float fDeltaTime)
         mVelocity.y += mGravity * fDeltaTime;
     }
 
-    if (!OrdnanceBullet::Update(fDeltaTime))
-    {
-        return false;
-    }
-    return true;
+    return OrdnanceBullet::Update(fDeltaTime);
 }
 
 

@@ -69,7 +69,8 @@ const char EntityPropAnimated::rttiNameEntityPropAnimated[] = "EntityPropAnimate
 
 // FUNCTION: SWBF2 0x004db3c0
 EntityPropAnimated::EntityPropAnimated(EntityPropAnimatedClass* pClass, const EntityDesc& desc)
-    : EntityProp(pClass, desc), Thread()
+    : EntityProp(pClass, desc), Thread(), mAttachedSoldier(), mAttachedSoldierAnimation(-1), mAttachMatrix(0),
+      mIdleDelayTimer(0.0f)
 {
     mAnimObj = pClass->mAnimObj;
     mAnimatedClass = pClass;
@@ -82,7 +83,7 @@ EntityPropAnimated::EntityPropAnimated(EntityPropAnimatedClass* pClass, const En
     else
     {
         mAnimationTime = pClass->mAnimations[0]->m_u16NumFrames *
-                         PblRandom::GetGlobalFloat() / 30.0f;
+                         PblRandom::_Global.GetFloat() / 30.0f;
     }
     if (mShadowProxy)
     {
@@ -91,11 +92,6 @@ EntityPropAnimated::EntityPropAnimated(EntityPropAnimatedClass* pClass, const En
     mZephyrSkeleton.Open(*mAnimatedClass->mAnimObj->GetZephyrSkeletonShared(), mZephyrPoseStatic);
     mZephyrPoseStatic.Open(mZephyrSkeleton);
     mZephyrPoseDyn.Open(mZephyrSkeleton);
-    mAttachedSoldier.mObject = 0;
-    mAttachedSoldier.mSavedHandleId = 0;
-    mAttachedSoldierAnimation = -1;
-    mAttachMatrix = 0;
-    mIdleDelayTimer = 0.0f;
 }
 
 // FUNCTION: SWBF2 0x004db5d0

@@ -127,9 +127,7 @@ void Obstacle::UpdatePosition(const PblMatrix& rMatrix, float fOffsetX, float fO
         PblVector3 pos = rMatrix.GetTranslation() + forward * fOffsetZ + side * fOffsetX;
         float fDX = pos.x - mPosX;
         float fDZ = pos.z - mPosZ;
-        PblVector3 zAxis = GetZAxis();
-        if (fDX * fDX + fDZ * fDZ > 0.25f ||
-            zAxis.x * forward.x + zAxis.y * forward.y + zAxis.z * forward.z < 0.99f)
+        if (fDX * fDX + fDZ * fDZ > 0.25f || DotProduct(GetZAxis(), forward) < 0.99f)
         {
             mForwardX = forward.x;
             mForwardZ = forward.z;
@@ -232,7 +230,8 @@ float Obstacle::GetDistFromSideXZ(const PblVector3& rPos, float fRadius, int iSi
     PblVector3 closest;
     float fDistSq = GetDistanceSquaredFromLineSegment(v0, v1, pos, closest);
 
-    PblVector3 normal(v1.z - v0.z, 0.0f, -(v1.x - v0.x));
+    PblVector3 edge = v1 - v0;
+    PblVector3 normal(edge.z, 0.0f, -edge.x);
     PblVector3 n;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&n), reinterpret_cast<const D3DXVECTOR3*>(&normal));
     rClosest = (closest + n * 0.1f);
@@ -1067,9 +1066,10 @@ void PathFinder::CancelPathFind()
 // FUNCTION: SWBF2 0x00612440
 AIPath* PathFinder::GetPathResult()
 {
+    AIPath* pPath = 0;
     if (sFoundDest)
     {
-        AIPath* pPath = new AIPath;
+        pPath = new AIPath;
         if (pPath)
         {
             float fLastY = 0.0f;
@@ -1087,11 +1087,12 @@ AIPath* PathFinder::GetPathResult()
                 pPath->Prepend(vPos, 0);
             }
         }
-        return pPath;
     }
-
-    ++gPathResultFailureCount;
-    return 0;
+    else
+    {
+        ++gPathResultFailureCount;
+    }
+    return pPath;
 }
 
 // FUNCTION: SWBF2 0x00438690

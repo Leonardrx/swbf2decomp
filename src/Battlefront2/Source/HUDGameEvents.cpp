@@ -965,18 +965,18 @@ void HUD::GameEvents::Update(float fDeltaTime)
             }
             if (eMode == 1)
             {
-                HUD::Event ev10(events.pressSelectToReturn, true);
+                HUD::Event ev10(gPlayerEvents[i].pressSelectToReturn, true);
                 ev10.Send();
                 if (i == 0 && GameLoop::mNumCameras == 1)
                 {
                     if (ObjectiveManager::GetCurrentPopupText())
                     {
-                        HUD::Event ev11(events.objectiveDetails, true);
+                        HUD::Event ev11(gPlayerEvents[0].objectiveDetails, true);
                         ev11.Send();
                     }
                     if (PopupText::GetNumHints() > 0)
                     {
-                        HUD::Event ev12(events.hintsAvailable, true);
+                        HUD::Event ev12(gPlayerEvents[0].hintsAvailable, true);
                         ev12.Send();
                     }
                 }
@@ -1040,11 +1040,11 @@ void HUD::GameEvents::Update(float fDeltaTime)
         {
             UpdateHealth(pCharacter, pUnitObject, events, data);
             const GameObjectClass* pClass = pUnitObject->GetGameObjectClass();
-            UpdateJetpack(pUnitObject,
-                          pClass->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass)
-                              ? (const EntitySoldierClass*)pClass
-                              : 0,
-                          events, data);
+            const EntitySoldierClass* pSoldierClass =
+                pClass->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass)
+                    ? (const EntitySoldierClass*)pClass
+                    : 0;
+            UpdateJetpack(pUnitObject, pSoldierClass, events, data);
         }
         UpdateShield(pObject, events, data);
         UpdateFlags(pCharacter, pControllable, events, data);
@@ -2301,12 +2301,9 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
     {
         Team* pTeam = apTeams[i];
         const int iMaxReinforcements = pTeam->mMaxReinforcements;
-        int iReinforcements = pTeam->mCurReinforcements;
-        if (iMaxReinforcements == 0x7fffffff)
-        {
-            iReinforcements = 0x7fffffff;
-        }
+        const int iCurReinforcements = pTeam->mCurReinforcements;
         const int iPoints = pTeam->mPoints;
+        const int iReinforcements = iMaxReinforcements == 0x7fffffff ? 0x7fffffff : iCurReinforcements;
         TeamData& teamData = data.teamData[i];
         TeamEvents& teamEvents = events.teams[i];
 

@@ -378,10 +378,7 @@ Character::Character()
 {
     memset(mName, 0, sizeof(mName));
     memset(mRegularName, 0, sizeof(mRegularName));
-    for (int i = 0; i < 3; ++i)
-    {
-        mObjectHitTimer[i] = 0.0f;
-    }
+    memset(mObjectHitTimer, 0, sizeof(mObjectHitTimer));
     for (int i = 0; i < 3; ++i)
     {
         mObjectHitMultiplier[i] = 1.0f;
@@ -1522,7 +1519,7 @@ void Character::CheckOutOfBounds(float fDeltaTime)
             {
                 if (pUnits[i])
                 {
-                    static_cast<Damageable&>(*pUnits[i]->GetGameObject()).InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
+                    pUnits[i]->GetGameObject()->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
                 }
             }
         }
@@ -1798,7 +1795,8 @@ void Character::MakeAI()
         pFirst = sCharacters;
     }
     const int iIndex = pFirst - this;
-    ChangeTeam(2 - (iIndex & 1));
+    const bool bOdd = (iIndex & 1) != 0;
+    ChangeTeam(bOdd ? 1 : 2);
     mTeamPtr = Team::sTeams[mTeamNumber];
     unsigned short name[64];
     mTeamPtr->GenerateRandomName(name, mTeamNumber);

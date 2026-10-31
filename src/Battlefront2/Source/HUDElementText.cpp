@@ -354,16 +354,19 @@ void HUD::ElementText::FreeString(char** ppString)
 // FUNCTION: SWBF2 0x0055c3e0
 void HUD::ElementText::EventText(const HUD::Event& event, void* const pData)
 {
-    ElementText* pText = (ElementText*)pData;
-    RedTextElement& textElement = static_cast<RedTextElement&>(pText->GetRedInterfaceElement());
     switch (event.GetClass()->GetType())
     {
     case EventClass::type_Uint:
-        textElement.SetText(RedLocalizeDB::Find(event.GetData().uintValue, false), true);
+    {
+        const unsigned short* pText = RedLocalizeDB::Find(event.GetData().uintValue, false);
+        RedTextElement& textElement = static_cast<RedTextElement&>(((ElementText*)pData)->GetRedInterfaceElement());
+        textElement.SetText(pText, true);
         break;
+    }
     case EventClass::type_String:
     {
         const unsigned short* pString = event.GetData().string;
+        RedTextElement& textElement = static_cast<RedTextElement&>(((ElementText*)pData)->GetRedInterfaceElement());
         if (pString)
         {
             textElement.SetText(pString, true);

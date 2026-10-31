@@ -392,8 +392,7 @@ void CombatHelper::UpdateState(float dt)
     case STATE_Turn:
     {
         Controllable* pMe = GetMe();
-        PblVector3 vToTarget(mTargetPos.x - pMe->mEyePoint.x, mTargetPos.y - pMe->mEyePoint.y,
-                             mTargetPos.z - pMe->mEyePoint.z);
+        PblVector3 vToTarget = mTargetPos - pMe->mEyePoint;
         PblVector3 vFacing = GetMe()->mEyeDir;
         vToTarget.y = 0.0f;
         vFacing.y = 0.0f;
@@ -430,8 +429,7 @@ void CombatHelper::UpdateState(float dt)
             break;
         }
         Controllable* pMe = GetMe();
-        PblVector3 vToTarget(mTargetPos.x - pMe->mEyePoint.x, mTargetPos.y - pMe->mEyePoint.y,
-                             mTargetPos.z - pMe->mEyePoint.z);
+        PblVector3 vToTarget = mTargetPos - pMe->mEyePoint;
         PblVector3 vFacing = GetMe()->mEyeDir;
         vToTarget.y = 0.0f;
         vFacing.y = 0.0f;
@@ -446,13 +444,13 @@ void CombatHelper::UpdateState(float dt)
             }
             else if (GameLoop::GetMissionTime() > mWaitOverTime)
             {
-                if (mLookCount >= 2)
+                if (mLookCount < 2)
                 {
-                    SetNextState(100);
+                    SetRandomHeading();
+                    mWaiting = false;
                     break;
                 }
-                SetRandomHeading();
-                mWaiting = false;
+                SetNextState(100);
                 break;
             }
         }
@@ -543,9 +541,9 @@ void CombatHelper::UpdateState(float dt)
 
         if (GetMe()->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
-            const Damageable* pDamageable = static_cast<const Damageable*>(GetMe()->GetGameObject());
-            if (!pDamageable->mIsShielded &&
-                pDamageable->mCurShield > pDamageable->mMaxShield * 0.5f)
+            const EntityDroideka* pDroideka = static_cast<const EntityDroideka*>(GetMe()->GetGameObject());
+            if (!pDroideka->mIsShielded &&
+                pDroideka->mCurShield > pDroideka->mMaxShield * 0.5f)
             {
                 GetLowLevel().SetNextWeapon(1);
                 GetLowLevel().SetFireRequest(true, false);

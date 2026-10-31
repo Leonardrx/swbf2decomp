@@ -1006,23 +1006,27 @@ void HUD::Editor::DisplayProperties()
 
     EditHeap heap;
     char acBuffer[1024];
-    RedTextElement* pMenu = mMenu;
-    for (const Item::Factory::Property* pProperty = mElement->GetFactory()->PropertyGetFirst();
-         pProperty; pProperty = mElement->GetFactory()->PropertyGetNext(pProperty))
+    const Item::Factory::Property* pProperty = mElement->GetFactory()->PropertyGetFirst();
+    if (pProperty)
     {
-        if (uIndex >= uFirst && PropertyString(pProperty, acBuffer))
+        RedTextElement* pMenu = mMenu;
+        do
         {
-            RedTextElement* pText = pMenu++;
-            uCount++;
-            pText->SetText(acBuffer, true);
-            pText->m_color.a = (mProperty == pProperty) ? 0xff : 0x7f;
-            pText->Enable(true);
-        }
-        uIndex++;
-        if (uCount == 26)
-        {
-            break;
-        }
+            if (uIndex >= uFirst && PropertyString(pProperty, acBuffer))
+            {
+                RedTextElement* pText = pMenu++;
+                uCount++;
+                pText->SetText(acBuffer, true);
+                pText->m_color.a = (mProperty == pProperty) ? 0xff : 0x7f;
+                pText->Enable(true);
+            }
+            uIndex++;
+            if (uCount == 26)
+            {
+                break;
+            }
+            pProperty = mElement->GetFactory()->PropertyGetNext(pProperty);
+        } while (pProperty);
     }
     mBackdrop.SetRect(0.0f, 0.0f, (float)RedInterfaceScreen::GetScreenWidth(),
                       (float)uCount * 15.0f);

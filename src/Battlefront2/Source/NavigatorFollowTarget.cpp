@@ -136,7 +136,9 @@ void NavigatorFollowTarget::EnterState()
         return;
     }
 
-    if (mCurState == STATE_PATHING)
+    switch (mCurState)
+    {
+    case STATE_PATHING:
     {
         mCrumbHead = 1;
         mCrumbTail = 0;
@@ -152,9 +154,7 @@ void NavigatorFollowTarget::EnterState()
 
         const PblVector3& vMyPos = GetGameObject()->GetPosition();
         if (!ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1) ||
-            ((vMyPos.x - mGlobalDest.x) * (vMyPos.x - mGlobalDest.x) +
-             (vMyPos.y - mGlobalDest.y) * (vMyPos.y - mGlobalDest.y) +
-             (vMyPos.z - mGlobalDest.z) * (vMyPos.z - mGlobalDest.z) < 10000.0f &&
+            (SquaredLength(vMyPos - mGlobalDest) < 10000.0f &&
              !PathFinder::TestTrivialStraightLineHit(vMyPos, mGlobalDest, GetMyRadius(), GetMyProhibit(),
                                                      mIgnore, mIgnoreCnt, false)))
         {
@@ -168,6 +168,8 @@ void NavigatorFollowTarget::EnterState()
                                              (const Obstacle**)mIgnore, mIgnoreCnt, false);
             return;
         }
+        break;
+    }
     }
 
     if (mCurState < STATE_FOLLOWCRUMBS)
@@ -340,19 +342,28 @@ void NavigatorFollowTarget::UpdateFollowCrumbs()
 
     if (iNext == mCrumbHead && pMe && pHim && pMe->mClass->mJetFuelRechargeRate > 0.0f)
     {
-        if (pHim->mState == SoldierState::JET_HOVER && pMe->mClass->mJetTypeHover)
+        if (pHim->mState == SoldierState::JET_HOVER)
         {
-            mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
+            const bool bHover = pMe->mClass->mJetTypeHover;
+            if (bHover)
+            {
+                mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
+            }
         }
-        if (pHim->mState == SoldierState::JET_JUMP && !pMe->mClass->mJetTypeHover)
+        if (pHim->mState == SoldierState::JET_JUMP)
         {
-            mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
+            const bool bHover = pMe->mClass->mJetTypeHover;
+            if (!bHover)
+            {
+                mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
+            }
         }
     }
 
     if (pMe && pHim && pMe->mState == SoldierState::JET_HOVER)
     {
-        mOwner->mDesiredHoverHeight = GameObjectPosition(pHim).y;
+        const float fHoverHeight = GameObjectPosition(pHim).y;
+        mOwner->mDesiredHoverHeight = fHoverHeight;
         if (pHim->mState == SoldierState::STAND || pHim->mState == SoldierState::CROUCH)
         {
             mOwner->mJetJumpStop = true;

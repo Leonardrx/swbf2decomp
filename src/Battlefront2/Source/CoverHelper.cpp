@@ -366,7 +366,11 @@ bool CoverHelper::HELPERFaceTarget() const
         PblVector3 vHint = mHint->GetCollisionCenter();
         float dx = vHint.x - vMe.x;
         float dz = vHint.z - vMe.z;
-        return !(dx * dx + dz * dz > 9.0f);
+        if (dx * dx + dz * dz > 9.0f)
+        {
+            return false;
+        }
+        return true;
     }
     return true;
 }
@@ -399,8 +403,7 @@ const CoverHint* CoverHelper::SelectHint(int iCount, const BaseHint** ppHints) c
     const CoverHint* pBest = NULL;
     while (iCount > 0)
     {
-        --iCount;
-        int i = AIUtil::GetRandomInt(0, iCount);
+        int i = AIUtil::GetRandomInt(0, iCount - 1);
         const CoverHint* pHint = static_cast<const CoverHint*>(ppHints[i]);
         if (AIUtil::IsHintAvailable(pMe, pHint))
         {
@@ -411,7 +414,8 @@ const CoverHint* CoverHelper::SelectHint(int iCount, const BaseHint** ppHints) c
                 pBest = pHint;
             }
         }
-        ppHints[i] = ppHints[iCount];
+        ppHints[i] = ppHints[iCount - 1];
+        --iCount;
     }
     return pBest;
 }
@@ -490,8 +494,8 @@ float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
     PblVector3 vTargetToMe = vTarget - vMe;
     PblVector3 vTargetToHint = vTarget - vHint;
     const PblVector3& vForward = mTarget.GetXAxis();
-    float fMeSide = vForward.x * vTargetToMe.x + vForward.y * vTargetToMe.y + vForward.z * vTargetToMe.z;
-    float fHintSide = vForward.x * vTargetToHint.x + vForward.y * vTargetToHint.y + vForward.z * vTargetToHint.z;
+    float fMeSide = vForward.y * vTargetToMe.y + vForward.x * vTargetToMe.x + vForward.z * vTargetToMe.z;
+    float fHintSide = vForward.y * vTargetToHint.y + vForward.x * vTargetToHint.x + vForward.z * vTargetToHint.z;
     if ((fMeSide < 0.0f) != (fHintSide < 0.0f))
     {
         return FLT_MAX;
@@ -506,7 +510,7 @@ float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
     {
         return FLT_MAX;
     }
-    if (PathFinder::TestTrivialStraightLineHit(vMe, vHint, GetMe()->GetGameObject()))
+    if (PathFinder::TestTrivialStraightLineHit(vMe, vHint, GetMe()->GetGameObject()) == true)
     {
         return FLT_MAX;
     }

@@ -209,10 +209,7 @@ bool HUD::Matrix::ReadPosition(PblConfig::Data& data, unsigned int uHashID)
         {
             iMode = data.GetBoolArg(3) ? relativeMode_Viewport : relativeMode_Pixels;
         }
-        if (iMode < 0)
-        {
-            iMode = relativeMode_Pixels;
-        }
+        iMode = iMode < 0 ? 0 : iMode;
     }
     else
     {
@@ -688,8 +685,7 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
     case kColor:
     {
         const RedColor* pColor = (const RedColor*)pValue;
-        const RedColor color(*pColor, 0xff);
-        mElement->SetColor(color);
+        mElement->SetColor(RedColor(*pColor, 0xff));
         mColorDefault = RedColor(mElement->m_color);
         return true;
     }
@@ -804,7 +800,7 @@ bool HUD::Element::GetProperty(const unsigned int uHashID, void* pValue)
         *(float*)pValue = mAlpha;
         return true;
     case kFadeInTime:
-        *(float*)pValue = GetFadeInTime();
+        *(float*)pValue = mFader.GetPhaseTime(Envelope::phase_Attack);
         return true;
     case kScaleAll:
         *(float*)pValue = GetRuntimeScaleAll();
@@ -817,7 +813,7 @@ bool HUD::Element::GetProperty(const unsigned int uHashID, void* pValue)
         return true;
     }
     case kFadeOutTime:
-        *(float*)pValue = GetFadeOutTime();
+        *(float*)pValue = mFader.GetPhaseTime(Envelope::phase_Release);
         return true;
     case kEventDisable:
         *(const char**)pValue = mEventDisable.GetRegisteredClassName(false);
@@ -829,7 +825,7 @@ bool HUD::Element::GetProperty(const unsigned int uHashID, void* pValue)
         *(bool*)pValue = mUseChangeColor;
         return true;
     case kFadeHoldTime:
-        *(float*)pValue = GetFadeHoldTime();
+        *(float*)pValue = mFader.GetPhaseTime(Envelope::phase_Hold);
         return true;
     case kPosition:
         *(PblVector3*)pValue = mElement->GetPosition();
@@ -859,7 +855,7 @@ bool HUD::Element::GetProperty(const unsigned int uHashID, void* pValue)
         *(RedInterfaceElement::BlendModeT*)pValue = mElement->GetBlendMode();
         return true;
     case kFadeSustainTime:
-        *(float*)pValue = GetFadeSustainTime();
+        *(float*)pValue = mFader.GetPhaseTime(Envelope::phase_Sustain);
         return true;
     default:
         return false;

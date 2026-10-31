@@ -137,7 +137,15 @@ const PlayerController* PlayerControllerPtr(const Controller* pCtrl)
 // FUNCTION: SWBF2 0x0061a0f0
 PlayerController* PlayerControllerPtr(Controllable* pControllable)
 {
-    return pControllable ? PlayerControllerPtr(pControllable->mCtrl) : 0;
+    if (pControllable)
+    {
+        Controller* pCtrl = pControllable->mCtrl;
+        if (pCtrl && pCtrl->IsRtti(PlayerController::rttiHashPlayerController))
+        {
+            return static_cast<PlayerController*>(pControllable->mCtrl);
+        }
+    }
+    return 0;
 }
 
 const PlayerController* PlayerControllerPtr(const Controllable* pControllable)

@@ -242,8 +242,13 @@ bool MedalsMgr::IsAwardAvailableInternal(int iType) const
     if (iType >= 0)
     {
         CareerLevel eLevel = GetLevel(iType);
-        return (eLevel >= VETERAN && mMedalPoints[iType] >= GetPointsNeededForMedal(iType)) ||
-               eLevel >= LEGENDARY;
+        if (eLevel < VETERAN || mMedalPoints[iType] < GetPointsNeededForMedal(iType))
+        {
+            if (eLevel < LEGENDARY)
+            {
+                return false;
+            }
+        }
     }
     return true;
 }

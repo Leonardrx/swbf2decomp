@@ -216,14 +216,18 @@ void HUD::Item::Factory::Property::Init(char* pName, PblListSingle& list, Type e
     mData->mHashID = PblHash(pName);
     mData->mType = eType;
 
-    if (mData->mType >= type_Vector2 && mData->mType <= type_Vector4)
+    switch (mData->mType)
     {
+    case type_Vector2:
+    case type_Vector3:
+    case type_Vector4:
         for (int i = 0; i < 4; ++i)
         {
             mData->mInfo.vectorRange.range[i].minValue = -FLT_MAX;
             mData->mInfo.vectorRange.range[i].maxValue = FLT_MAX;
             mData->mInfo.vectorRange.range[i].stepValue = 1.0f;
         }
+        break;
     }
 
     list.AddLast(&mNode);

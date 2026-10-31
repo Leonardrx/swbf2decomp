@@ -210,13 +210,14 @@ void __cdecl PAAnimationGroup::ReadHierarchy(PblFileChunk& chunk)
         }
 
         PAHierarchy* pHierarchy = new PAHierarchy;
-        pHierarchy->mNumObjs = iNodeCount - 1;
+        const int iNumObjs = iNodeCount - 1;
+        pHierarchy->mNumObjs = iNumObjs;
         PAAnimationGroup::mHierarchies[PAAnimationGroup::mNumHierarchies++] = pHierarchy;
-        PAHierarchyNode* pNodes = new PAHierarchyNode[pHierarchy->mNumObjs];
+        PAHierarchyNode* pNodes = new PAHierarchyNode[iNumObjs];
         if (pNodes)
         {
             PAHierarchyNode* pNode = pNodes;
-            for (int n = pHierarchy->mNumObjs - 1; n >= 0; --n)
+            for (int n = iNumObjs - 1; n >= 0; --n)
             {
                 pNode->mObjHash = 0;
                 pNode->mHostGeometry = 0;
@@ -702,12 +703,12 @@ bool PAAnimationGroup::AddAnimation(unsigned int uiAnimHash, unsigned int uiObjH
     ++mNumAnims;
     sPAAnims[ucAnim].mAnimHash = uiAnimHash;
     sPAAnims[ucAnim].mObjHash = uiObjHash;
-    sPAAnims[ucAnim].mHostTimer = 0.0f;
-    sPAAnims[ucAnim].mClientTimer = 0.0f;
     sPAAnims[ucAnim].mTimer = &sPAAnims[ucAnim].mHostTimer;
+    *sPAAnims[ucAnim].mTimer = 0.0f;
+    sPAAnims[ucAnim].mClientTimer = 0.0f;
     sPAAnims[ucAnim].mInitialMatrix = gMatrixIdentity;
     sPAAnims[ucAnim].mGeometry = &sPAAnims[ucAnim].mHostGeometry;
-    sPAAnims[ucAnim].mHostGeometry = NULL;
+    *sPAAnims[ucAnim].mGeometry = NULL;
     sPAAnims[ucAnim].mClientGeometry = NULL;
     sNextAvailableAnim = ucAnim + 1;
     return true;

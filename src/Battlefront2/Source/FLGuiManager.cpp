@@ -650,12 +650,12 @@ bool GuiManager::CallLuaFunctionOfScope(const char* pcFunc, float fArg, bool bPo
         return false;
     }
     bool bPopup = mCurrentPopup[0] != 0;
+    if (bPopup && bPopupOnly)
+    {
+        return LuaHelper::CallTableProcWThis(mCurrentPopup, pcFunc, fArg);
+    }
     if (bPopup)
     {
-        if (bPopupOnly)
-        {
-            return LuaHelper::CallTableProcWThis(mCurrentPopup, pcFunc, fArg);
-        }
         LuaHelper::CallTableProcWThis(mCurrentPopup, pcFunc, fArg);
     }
     return LuaHelper::CallTableProcWThis(mCurrentScope, pcFunc, fArg);

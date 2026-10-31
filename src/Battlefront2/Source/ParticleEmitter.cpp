@@ -88,13 +88,14 @@ void ParticleEmitter::Reset(const ParticleEmitterClass* pClass)
     delete mNext;
 
     mClass = (ParticleEmitterClass*)pClass;
-    mSeed = pClass->mNextSeed;
-    if (mSeed == 0)
+    unsigned int uSeed = pClass->mNextSeed;
+    if (uSeed == 0)
     {
-        mSeed = PblRandom::GetGlobalInt();
+        uSeed = PblRandom::GetGlobalInt();
     }
 
-    PblRandom rand(mSeed ^ 0xC71C2830u);
+    PblRandom rand(uSeed ^ 0xC71C2830u);
+    mSeed = uSeed;
     mMaxParticles = (short)mClass->mMaxParticles.GetValue(rand);
     if (mMaxParticles > 128)
     {

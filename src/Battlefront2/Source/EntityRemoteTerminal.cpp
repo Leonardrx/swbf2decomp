@@ -643,19 +643,12 @@ void EntityRemoteTerminalClass::SetProperty(unsigned int uProperty, const char* 
         if (iNumBodies == 0 && mModel)
         {
             const PblBox& box = mModel->_mModel->_TotalBoundingBox;
-            float fCenterX = (box._vMin.x + box._vMax.x) * 0.5f;
-            float fCenterY = (box._vMin.y + box._vMax.y) * 0.5f;
-            float fCenterZ = (box._vMin.z + box._vMax.z) * 0.5f;
-            float fHalfX = (box._vMax.x - box._vMin.x) * 0.5f;
-            float fHalfY = (box._vMax.y - box._vMin.y) * 0.5f;
-            float fHalfZ = (box._vMax.z - box._vMin.z) * 0.5f;
+            PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
+            PblVector3 vHalf = (box._vMax - box._vMin) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
-            primitive.SetAACylinder((fHalfZ + fHalfX) * 0.5f, fHalfY * 2.0f);
-            matrix.m[3][0] = fCenterX;
-            matrix.m[3][1] = fCenterY;
-            matrix.m[3][2] = fCenterZ;
-            matrix.m[3][3] = 1.0f;
+            primitive.SetAACylinder((vHalf.z + vHalf.x) * 0.5f, vHalf.y * 2.0f);
+            matrix.SetTranslation(vCenter);
             mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, "main_body", matrix, 0));
         }
         if (pMesh)

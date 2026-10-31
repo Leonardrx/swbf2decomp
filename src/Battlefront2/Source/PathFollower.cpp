@@ -260,7 +260,8 @@ void PathFollower::AppendPath(const AIPath* pPath, bool b)
     if (mCtrl->mLodState >= 3)
     {
         float fRadius = AIUtil::GetCollisionRadius(mCtrl->mOwner->GetGameObject());
-        if (!GameObjectIsRtti(mCtrl->mOwner->GetGameObject(), EntityWalker::rttiHashEntityWalker) || fRadius > 3.0f)
+        GameObject* pOwnerObject = mCtrl->mOwner->GetGameObject();
+        if (!GameObjectIsRtti(pOwnerObject, EntityWalker::rttiHashEntityWalker) || fRadius > 3.0f)
         {
             int eType = AIUtil::GetAIType(mCtrl->mOwner->GetGameObject());
             mPath->SmoothCorners(fRadius * 10.0f, fRadius, eType);
@@ -795,10 +796,8 @@ void PathFollower::CheckStuck(float dt)
         mIsStuck = 2;
     }
 
-    fDX = mGotoPoint.x - vPos.x;
-    fDY = mGotoPoint.y - vPos.y;
-    fDZ = mGotoPoint.z - vPos.z;
-    float fDistSq = fDY * fDY + fDX * fDX + fDZ * fDZ;
+    const PblVector3 vToGoal = mGotoPoint - vPos;
+    float fDistSq = vToGoal.y * vToGoal.y + vToGoal.x * vToGoal.x + vToGoal.z * vToGoal.z;
     if (fDistSq < mMinDistToGoal)
     {
         mMinDistToGoal = fDistSq;

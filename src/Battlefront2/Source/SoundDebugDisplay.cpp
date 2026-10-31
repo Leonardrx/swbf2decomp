@@ -349,8 +349,7 @@ void SoundDebugDisplay::DisplayChaseInfo(float fDeltaTime)
     if (pObject)
     {
         const PblVector3& vVelocity = pObject->GetVelocity();
-        const float fSpeed = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
-                                   vVelocity.z * vVelocity.z);
+        const float fSpeed = Length(vVelocity);
         const float fAccel = (fSpeed - mSpeedPrev) / fDeltaTime;
         Printf("Speed %03.03f", fSpeed);
         if (fDeltaTime > 0.0f)

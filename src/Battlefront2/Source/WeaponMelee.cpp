@@ -213,14 +213,12 @@ void WeaponMeleeClass::Render(float fTurnOn, const PblMatrix& matrix, const RedP
             {
                 aMatrix[0] = *pBone * matrix;
                 apMatrix[0] = &aMatrix[0];
+                pModel->Render(apMatrix[0], 0, color, uiRenderFlags, 0);
             }
         }
         else
         {
             apMatrix[0] = &matrix;
-        }
-        if (apMatrix[0])
-        {
             pModel->Render(apMatrix[0], 0, color, uiRenderFlags, 0);
         }
     }
@@ -462,9 +460,9 @@ void WeaponMelee::RenderLightsaberTrail(unsigned int uiEdge, const PblMatrix* pM
 {
     WeaponMelee::TrailData** ppData = &m_pTrailData;
     WeaponMelee::TrailData* pSelected = 0;
-    while (*ppData)
+    WeaponMelee::TrailData* pData = *ppData;
+    while (pData)
     {
-        WeaponMelee::TrailData* pData = *ppData;
         if (pData->m_pTrail->m_uiNumSamples <= 0)
         {
             *ppData = pData->pNext;
@@ -478,6 +476,7 @@ void WeaponMelee::RenderLightsaberTrail(unsigned int uiEdge, const PblMatrix* pM
             }
             ppData = &pData->pNext;
         }
+        pData = *ppData;
     }
 
     const WeaponMeleeClass* pClass = static_cast<const WeaponMeleeClass*>(mClass);
@@ -864,11 +863,12 @@ bool WeaponMelee::_TestInputQueueForButtonEvent(const WeaponMelee::InputQueue& q
             const InputQueue::Event& event = queue[i];
             if (event.uiButton == iButton)
             {
-                if (event.fTime > fEnd)
+                const float fEventTime = event.fTime;
+                if (fEventTime > fEnd)
                 {
                     break;
                 }
-                if (fBegin > event.fTime)
+                if (fBegin > fEventTime)
                 {
                     iPressed = (event.uiButtonAction & 1) ? -1 : i;
                 }
@@ -879,7 +879,7 @@ bool WeaponMelee::_TestInputQueueForButtonEvent(const WeaponMelee::InputQueue& q
                         bReleased = true;
                         break;
                     }
-                    fMatch = event.fTime;
+                    fMatch = fEventTime;
                     return true;
                 }
             }
@@ -904,11 +904,12 @@ bool WeaponMelee::_TestInputQueueForButtonEvent(const WeaponMelee::InputQueue& q
             const InputQueue::Event& event = queue[i];
             if (event.uiButton == iButton)
             {
-                if (event.fTime > fEnd)
+                const float fEventTime = event.fTime;
+                if (fEventTime > fEnd)
                 {
                     break;
                 }
-                if (fBegin > event.fTime)
+                if (fBegin > fEventTime)
                 {
                     iReleased = (event.uiButtonAction & 1) ? i : -1;
                 }
@@ -916,7 +917,7 @@ bool WeaponMelee::_TestInputQueueForButtonEvent(const WeaponMelee::InputQueue& q
                 {
                     if (event.uiButtonAction & 1)
                     {
-                        fMatch = event.fTime;
+                        fMatch = fEventTime;
                         return true;
                     }
                     if (!(event.uiButtonAction & 2))
@@ -968,13 +969,14 @@ bool WeaponMelee::_TestInputQueueForButtonEvent(const WeaponMelee::InputQueue& q
             const InputQueue::Event& event = queue[i];
             if (event.uiButton == iButton && (event.uiButtonAction & uiMask) == uiRequired)
             {
-                if (event.fTime > fEnd)
+                const float fEventTime = event.fTime;
+                if (fEventTime > fEnd)
                 {
                     return false;
                 }
-                if (fBegin <= event.fTime)
+                if (fBegin <= fEventTime)
                 {
-                    fMatch = event.fTime;
+                    fMatch = fEventTime;
                     return true;
                 }
             }
@@ -1792,9 +1794,10 @@ void WeaponMeleeClass::_InitDeflectMatrices(int eMap)
     {
         const Combo::Deflect::DEFLECT_ANIM& anim = pDeflect->m_aDeflectAnim[i];
         unsigned int uiHardpoint = m_auiHardpoint[0];
-        if (anim.uiWeapon && anim.uiWeapon < m_uiNumWeapons)
+        unsigned char uiWeapon = anim.uiWeapon;
+        if (uiWeapon && uiWeapon < m_uiNumWeapons)
         {
-            uiHardpoint = m_auiHardpoint[anim.uiWeapon];
+            uiHardpoint = m_auiHardpoint[uiWeapon];
         }
         SoldierAnimatorClass::sInstance->GetAnimationBoneMatrix(
             static_cast<SoldierAnimationBank::MAP>(eMap), anim.uiAnimIndex,

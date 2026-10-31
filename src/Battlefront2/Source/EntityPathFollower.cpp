@@ -874,8 +874,8 @@ bool EntityPathFollower::Branch(BranchParams& params, const PblVector3* const pP
     }
     else
     {
-        int iPrev = mIndex - mDirection;
         const EntityPath::BranchRegion* pRegion = 0;
+        int iPrev = mIndex - mDirection;
         const EntityPath* pExcludePath = 0;
         const PblVector3* pExclude = 0;
         const EntityPath::NodeProperties* pProps =
@@ -935,13 +935,21 @@ bool EntityPathFollower::Branch(BranchParams& params, const PblVector3* const pP
     }
 
     bool bResult = false;
-    if (start.mAttrib.mPath && MoveTo(start, pPosition ? pPosition : &params.mMatrix.GetTranslation(), 0, params,
-                                      bHasFlag, false, bHavePosition))
+    if (start.mAttrib.mPath)
     {
-        bResult = true;
-        if (mbStraightLine)
+        if (MoveTo(start, pPosition ? pPosition : &params.mMatrix.GetTranslation(), 0, params, bHasFlag, false,
+                   bHavePosition))
         {
-            DelayPath(params, 100.0f);
+            bResult = true;
+            if (mbStraightLine)
+            {
+                DelayPath(params, 100.0f);
+            }
+        }
+        else
+        {
+            bResult = false;
+            Reset(params.mPathClass);
         }
     }
     else
@@ -1290,8 +1298,10 @@ bool EntityPathFollower::Update(BranchParams& params, float fElapsed, PblVector3
 void EntityPathFollower::UpdateSquadron(const EntityPathFollowerClass* const pClass, const PblMatrix& matrix,
                                         float fElapsed, const PblVector3& vPosition, PblVector3& vPoint)
 {
-    PblMatrix mCopy = matrix;
-    UpdatePosition(pClass, fElapsed, mCopy, vPoint);
+    {
+        PblMatrix mCopy = matrix;
+        UpdatePosition(pClass, fElapsed, mCopy, vPoint);
+    }
     if (!InSquadron() || IsSquadronLeader())
     {
         return;
@@ -1760,13 +1770,14 @@ bool EntityPathFollower::CalculateDistance(const PblVector3& vPosition, const En
 {
     PblVector3 vDist = *pPath->GetPointPosition(uIndex);
     vDist -= vPosition;
+    float fSquareDist = SquaredLength(vDist);
     attrib.mPath = pPath;
     attrib.mPointIndex = uIndex;
     attrib.SetVectorDistance(vDist);
-    attrib.mSquareDist = SquaredLength(vDist);
-    if (fBestSquareDist > attrib.mSquareDist && attrib.mSquareDist > fMinDist * fMinDist)
+    attrib.mSquareDist = fSquareDist;
+    if (fBestSquareDist > fSquareDist && fSquareDist > fMinDist * fMinDist)
     {
-        fBestSquareDist = attrib.mSquareDist;
+        fBestSquareDist = fSquareDist;
         return true;
     }
     return false;

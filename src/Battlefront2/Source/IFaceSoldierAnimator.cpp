@@ -139,19 +139,25 @@ RedPose* IFaceSoldierAnimator::UpdatePose()
     }
     if (mAnimTransitionTimeTotal > 0.0f)
     {
-        if (!(mAnimTransitionTime >= mAnimTransitionTimeTotal))
+        if (mAnimTransitionTime >= mAnimTransitionTimeTotal)
+        {
+            mAnimTransitionTimeTotal = 0.0f;
+            mZephyrPoseStatic.Set(mZephyrPoseDyn, mUpperBodyAnimMask, true);
+            mZephyrPoseStatic.Set(mZephyrPoseDynLower, mLowerBodyAnimMask, true);
+        }
+        else
         {
             mZephyrPoseStatic.Blend(mZephyrPoseDyn, mUpperBodyAnimMask,
                                     mAnimTransitionTime / mAnimTransitionTimeTotal);
             mZephyrPoseStatic.Blend(mZephyrPoseDynLower, mLowerBodyAnimMask,
                                     mAnimTransitionTime / mAnimTransitionTimeTotal);
-            mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);
-            return &mPose;
         }
-        mAnimTransitionTimeTotal = 0.0f;
     }
-    mZephyrPoseStatic.Set(mZephyrPoseDyn, mUpperBodyAnimMask, true);
-    mZephyrPoseStatic.Set(mZephyrPoseDynLower, mLowerBodyAnimMask, true);
+    else
+    {
+        mZephyrPoseStatic.Set(mZephyrPoseDyn, mUpperBodyAnimMask, true);
+        mZephyrPoseStatic.Set(mZephyrPoseDynLower, mLowerBodyAnimMask, true);
+    }
     mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);
     return &mPose;
 }

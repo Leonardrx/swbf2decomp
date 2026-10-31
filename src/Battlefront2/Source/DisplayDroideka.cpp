@@ -135,10 +135,8 @@ void DroidekaElement::RenderUsingContext(const PblMatrix& mContext, const RedCol
     mScreen.m[1][3] = 0.0f;
 
     float fScale = 0.75f / RedRenderer::GetScreenAspectRatio() * mDepth;
-    mScreen.m[3][0] *= fScale;
-    mScreen.m[3][1] *= fScale;
-    mScreen.m[3][2] *= fScale;
     mScreen.m[3][3] = 1.0f;
+    mScreen[3] = mScreen[3] * fScale;
 
     PblMatrix mWorld;
     PblQuaternion qUnit;

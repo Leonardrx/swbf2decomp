@@ -195,7 +195,11 @@ void AttackHelper::Fire()
 bool AttackHelper::TargetIsHiding() const
 {
     PblVector3 vPos = AIUtil::GetHisVisionTargetPos(GetMe(), AIUtil::GetAlivePtr(mTargetHandle, false));
-    return SquaredLength(mLastKnownTargetPos - vPos) < 9.0f;
+    if (SquaredLength(mLastKnownTargetPos - vPos) < 9.0f)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00447e10
@@ -274,7 +278,8 @@ void AttackHelper::SetVisibleTarget(GameObject const* pTarget)
     Reset();
     mTargetHandle.mObject = pTarget;
     mTargetHandle.mSavedHandleId = pTarget ? GameObjectHandleId(pTarget) : 0;
-    SetTargetInfo(pTarget, AIUtil::GetHisVisionTargetPos(GetMe(), pTarget));
+    PblVector3 vPos = AIUtil::GetHisVisionTargetPos(GetMe(), pTarget);
+    SetTargetInfo(pTarget, vPos);
 }
 
 // FUNCTION: SWBF2 0x00447f40

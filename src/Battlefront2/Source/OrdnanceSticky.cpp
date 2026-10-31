@@ -327,20 +327,21 @@ void OrdnanceSticky::Render(unsigned char ucViewport, float fDist, unsigned int 
     }
 
     PblMatrix mat;
-    if (mStickInfo)
+    StickInfo* pStick = mStickInfo;
+    if (pStick)
     {
-        if (!mStickInfo->mCollObject)
+        if (!pStick->mCollObject)
         {
             return;
         }
 
         {
-            PblQuaternion qRot;
+            D3DXQUATERNION qRot;
             PblMatrix mRot;
-            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRot), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRot), reinterpret_cast<const D3DXQUATERNION*>(&mStickInfo->mLocalRotation)));
+            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRot), D3DXQuaternionNormalize(&qRot, reinterpret_cast<const D3DXQUATERNION*>(&pStick->mLocalRotation)));
+            mRot.SetTranslation(pStick->mLocalPosition.x, pStick->mLocalPosition.y, pStick->mLocalPosition.z, 1.0f);
             mat = mRot;
         }
-        mat.SetTranslation(mStickInfo->mLocalPosition);
 
         CollisionObject* pObject = mStickInfo->mCollObject;
         CollisionModel* pModel = pObject->mCollisionModel;

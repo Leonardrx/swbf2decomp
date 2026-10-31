@@ -34,24 +34,31 @@ HUD::ElementBar::ElementBar()
 float HUD::ElementBar::SetValue(const float fValue)
 {
     const float fRange = mMaxValue - mMinValue;
+    float fClamped;
     if (mMinValue > fValue)
     {
-        mValue = mMinValue;
+        fClamped = mMinValue;
     }
     else if (fValue > mMaxValue)
     {
-        mValue = mMaxValue;
+        fClamped = mMaxValue;
     }
     else
     {
-        mValue = fValue;
+        fClamped = fValue;
     }
+    mValue = fClamped;
 
-    if (fRange == 0.0f)
+    float fResult;
+    if (fRange != 0.0f)
     {
-        return 0.0f;
+        fResult = (fClamped - mMinValue) / fRange;
     }
-    return (mValue - mMinValue) / fRange;
+    else
+    {
+        fResult = 0.0f;
+    }
+    return fResult;
 }
 
 // FUNCTION: SWBF2 0x0054a2c0

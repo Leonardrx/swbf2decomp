@@ -183,7 +183,6 @@ void HUD::ObjectiveList::SetupText()
     float fUsedHeight = 0.0f;
     bool bFull = false;
     int iNumShown = 0;
-    float fBottom, fTop, fRight, fLeft;
 
     for (PblList<Objective>::Itor it(_objectives.GetLast()); it != _objectives.End(); --it)
     {
@@ -207,6 +206,7 @@ void HUD::ObjectiveList::SetupText()
         }
         text.SetTextAlign(RedTextElement::TEXT_HALIGN_LEFT, RedTextElement::TEXT_VALIGN_TOP);
         text.SetTextBox((unsigned int)fWidth, 1000);
+        float fBottom, fTop, fRight, fLeft;
         text.GetRect(fLeft, fTop, fRight, fBottom);
         float fNewHeight = fBottom - fTop + 2.0f + fUsedHeight;
         if (fHeight >= fNewHeight && !bFull)
@@ -235,6 +235,7 @@ void HUD::ObjectiveList::SetupText()
         RedTextElement& text = it->_textElement;
         if (text.IsEnabled())
         {
+            float fBottom, fTop, fRight, fLeft;
             text.SetPosition(8.0f, fY);
             text.GetRect(fLeft, fTop, fRight, fBottom);
             fY += fBottom - fTop + 2.0f;

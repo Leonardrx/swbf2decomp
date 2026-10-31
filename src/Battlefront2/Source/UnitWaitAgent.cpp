@@ -61,15 +61,17 @@ void UnitWaitAgent::SetNewSearchHeading()
     }
     float fAngle = AIUtil::GetRandomFloat(-fRange, fRange);
 
-    const PblVector3& vAhead = mCtrl->GetOriginalAheadDir();
-    float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, fAngle);
-    PblVector3 vOffset((vAhead.x * fCos - vAhead.z * fSin) * 1000.0f,
-                       vAhead.y * 1000.0f,
-                       (vAhead.z * fCos + vAhead.x * fSin) * 1000.0f);
+    PblVector3 vRotated;
+    {
+        const PblVector3& vAhead = mCtrl->GetOriginalAheadDir();
+        float fSin, fCos;
+        PblMath::SinCos(&fSin, &fCos, fAngle);
+        vRotated = PblVector3(vAhead.x * fCos - vAhead.z * fSin,
+                              vAhead.y,
+                              vAhead.z * fCos + vAhead.x * fSin);
+    }
 
-    const PblMatrix& mat = GetMe()->GetMatrix();
-    mSearchPos = PblVector3(mat.m[3][0] + vOffset.x, mat.m[3][1] + vOffset.y, mat.m[3][2] + vOffset.z);
+    mSearchPos = GetMe()->GetMatrix().GetTranslation() + vRotated * 1000.0f;
 }
 
 // FUNCTION: SWBF2 0x0066b500

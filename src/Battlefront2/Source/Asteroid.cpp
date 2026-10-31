@@ -394,16 +394,25 @@ const PblVector3& Asteroid::GetVelocity() const
 // FUNCTION: SWBF2 0x00444560
 void Asteroid::SetPosition(const PblVector3& vPos)
 {
-    mMatrix[3] = vPos;
-    mMatrix.m[3][3] = 1.0f;
-    AsteroidCollisionFollows(this);
+    mMatrix.SetTranslation(vPos);
+    PblVector3 vCenter;
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter,
+                           (const D3DXVECTOR3*)&mModel->_mModel->_BoundingSphere.GetCenter(),
+                           (const D3DXMATRIX*)&mMatrix);
+    SetCollisionCenter(vCenter);
+    RecalculateAABB();
 }
 
 // FUNCTION: SWBF2 0x00444600
 void Asteroid::SetMatrix(const PblMatrix& matrix)
 {
     mMatrix = matrix;
-    AsteroidCollisionFollows(this);
+    PblVector3 vCenter;
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter,
+                           (const D3DXVECTOR3*)&mModel->_mModel->_BoundingSphere.GetCenter(),
+                           (const D3DXMATRIX*)&mMatrix);
+    SetCollisionCenter(vCenter);
+    RecalculateAABB();
 }
 
 // FUNCTION: SWBF2 0x004446b0

@@ -331,7 +331,7 @@ EntityHologram::EntityHologram(EntityHologramClass* pClass, const EntityDesc& de
 // FUNCTION: SWBF2 0x004bea60
 EntityHologram::~EntityHologram()
 {
-    Deactivate();
+    static_cast<RedSceneObject*>(this)->Deactivate();
     delete m_apOmniLight[0];
     m_apOmniLight[0] = 0;
     delete m_pLightBeam;

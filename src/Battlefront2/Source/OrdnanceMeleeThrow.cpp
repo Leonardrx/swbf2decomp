@@ -70,8 +70,8 @@ bool OrdnanceMeleeThrow::Collide(CollisionObject* pObject, const PblVector3& vPo
         if (pObject->mParent)
         {
             pVictim = pObject->mParent->GetGameObject();
-            iReturn = 1;
             iBodyId = -1;
+            iReturn = 1;
         }
     }
     else if (pObject->mParent)

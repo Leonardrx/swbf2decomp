@@ -113,14 +113,14 @@ static unsigned int GetStreamIndex(Snd::Stream* pStream);
 // FUNCTION: SWBF2 0x0059d0c0
 int ScriptCB_ToggleEffects(lua_State*)
 {
-    unsigned char ucEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
-    GameSoundEngine::ChangeMixConfig(Snd::Engine::GetMixConfig(), !ucEffects);
+    int iEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+    GameSoundEngine::ChangeMixConfig(Snd::Engine::GetMixConfig(), !iEffects);
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        unsigned char ucEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
-        opt.mEffectsEnabled = ucEnabled != 0;
+        const int iEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        opt.mEffectsEnabled = iEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -136,8 +136,7 @@ int ScriptCB_PreviousOutputMode(lua_State*)
     int iMode = Snd::EngineBase::smSpeakerConfig - 1;
     if (iMode <= 4 && Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_DirectSoundSoftware)
     {
-        unsigned char ucEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
-        GameSoundEngine::ChangeMixConfig(1, ucEffects != 0);
+        GameSoundEngine::ChangeMixConfig(1, (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0);
     }
     if (iMode == 0)
     {
@@ -158,7 +157,7 @@ int ScriptCB_PreviousOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        unsigned char ucEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        unsigned char ucEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
         opt.mEffectsEnabled = ucEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
@@ -199,7 +198,8 @@ int ScriptCB_NextOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        opt.mEffectsEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+        const int iEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        opt.mEffectsEnabled = iEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -221,7 +221,7 @@ int ScriptCB_SetOutputMode(lua_State*)
     {
         if (Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_DirectSoundSoftware)
         {
-            GameSoundEngine::ChangeMixConfig(1, Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable);
+            GameSoundEngine::ChangeMixConfig(1, (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0);
         }
     }
     else if (Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_Software)
@@ -239,7 +239,8 @@ int ScriptCB_SetOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        unsigned char ucEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+        opt.mEffectsEnabled = ucEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -268,7 +269,8 @@ int ScriptCB_PreviousMixConfig(lua_State*)
         if (pProfile)
         {
             PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-            opt.mEffectsEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+            const int iEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            opt.mEffectsEnabled = iEnabled != 0;
             opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
             opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
             pProfile->UpdateProfCRC();
@@ -298,7 +300,8 @@ int ScriptCB_NextMixConfig(lua_State*)
         if (pProfile)
         {
             PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-            opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            const int iEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            opt.mEffectsEnabled = iEnabled != 0;
             opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
             opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
             pProfile->UpdateProfCRC();
@@ -489,8 +492,11 @@ int ScriptCB_PlayAudioStreamUsingProperties(lua_State*)
     {
         return 0;
     }
-    const bool bOpenStream = lua_gettop(LuaHelper::mState) != 3
-        || (int)luaL_checknumber(LuaHelper::mState, 3) == 0;
+    bool bOpenStream = true;
+    if (lua_gettop(LuaHelper::mState) == 3)
+    {
+        bOpenStream = (int)luaL_checknumber(LuaHelper::mState, 3) == 0;
+    }
     if (bOpenStream)
     {
         unsigned int uiStreamID = pProps->mStreamID;
@@ -1211,35 +1217,31 @@ void UpdateDelayedSounds(float fDeltaTime)
     for (unsigned int i = 0; i < 2; ++i)
     {
         DelayedSound& delayed = sDelayedSounds[i];
-        if (!delayed.mSound.GetProperties())
+        if (delayed.mSound.GetProperties())
         {
-            continue;
+            delayed.mElapsed = fDeltaTime + delayed.mElapsed;
+            if (delayed.mElapsed >= delayed.mDelay)
+            {
+                if (delayed.mSound.GetPropertiesType() == GameSound::type_soundStream && delayed.mGain != -1.0f)
+                {
+                    ((Snd::SoundStream::Properties*)delayed.mSound.GetProperties())->SetGain(delayed.mGain);
+                }
+
+                delayed.mControllable.Play(&delayed.mSound, 0, 0, delayed.mQueue);
+
+                Snd::VoiceVirtualBus* pVoice = (Snd::VoiceVirtualBus*)delayed.mControllable.GetVoiceVirtual();
+                if (pVoice && delayed.mGain != -1.0f)
+                {
+                    pVoice->SetGain(delayed.mGain);
+                }
+
+                delayed.mGain = -1.0f;
+                delayed.mDelay = 0.0f;
+                delayed.mElapsed = 0.0f;
+                delayed.mQueue = true;
+                delayed.mSound.SetID(0u, false, false);
+            }
         }
-
-        delayed.mElapsed = fDeltaTime + delayed.mElapsed;
-        if (delayed.mElapsed < delayed.mDelay)
-        {
-            continue;
-        }
-
-        if (delayed.mSound.GetPropertiesType() == GameSound::type_soundStream && delayed.mGain != -1.0f)
-        {
-            ((Snd::SoundStream::Properties*)delayed.mSound.GetProperties())->SetGain(delayed.mGain);
-        }
-
-        delayed.mControllable.Play(&delayed.mSound, 0, 0, delayed.mQueue);
-
-        Snd::VoiceVirtualBus* pVoice = (Snd::VoiceVirtualBus*)delayed.mControllable.GetVoiceVirtual();
-        if (pVoice && delayed.mGain != -1.0f)
-        {
-            pVoice->SetGain(delayed.mGain);
-        }
-
-        delayed.mGain = -1.0f;
-        delayed.mDelay = 0.0f;
-        delayed.mElapsed = 0.0f;
-        delayed.mQueue = true;
-        delayed.mSound.SetID(0u, false, false);
     }
 }
 

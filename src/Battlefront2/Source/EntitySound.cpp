@@ -87,18 +87,18 @@ EntitySound::EntitySound(EntitySoundClass* pClass, const EntityDesc& desc)
     mSoundId = pClass->mSoundId;
     if (pClass->mFlags & 1)
     {
-        mFlags |= 1;
         mMinDistance = pClass->mMinDistance;
+        mFlags |= 1;
     }
     if (pClass->mFlags & 4)
     {
-        mFlags |= 4;
         mMuteDistance = pClass->mMuteDistance;
+        mFlags |= 4;
     }
     if (pClass->mFlags & 2)
     {
-        mFlags |= 2;
         mMaxDistance = pClass->mMaxDistance;
+        mFlags |= 2;
     }
     mPosition = desc.mMatrix.GetTranslation();
     sEntitySoundList.AddLast(&mNode);
@@ -224,10 +224,10 @@ EntitySound* EntitySoundClass::CreateSoundFromRegion(RedRegionDesc& desc, const 
         {
             pSound->SetMinDistance(desc.mSize.w / fScale);
         }
-        pSound->mFlags |= 4;
         pSound->mMuteDistance = desc.mSize.w;
-        pSound->mFlags |= 2;
+        pSound->mFlags |= 4;
         pSound->mMaxDistance = desc.mSize.w;
+        pSound->mFlags |= 2;
     }
     return pSound;
 }
@@ -300,20 +300,21 @@ void SoundSpaceRegion::DestroyAll()
     }
     for (unsigned int i = 0; i < uCount; ++i)
     {
-        PblListSingle::Node* pNode = 0;
-        if (!Snd::Space::smSpaceList.IsEmpty())
+        PblListSingle::Node* pNode = Snd::Space::smSpaceList.mHead.mNext;
+        if (pNode == &Snd::Space::smSpaceList.mHead)
         {
-            pNode = Snd::Space::smSpaceList.mHead.mNext;
+            pNode = 0;
+        }
+        else
+        {
             for (unsigned int uIndex = i; uIndex; --uIndex)
             {
                 pNode = pNode->mNext;
             }
         }
-        Snd::Space* pSpace = 0;
-        if (pNode != &Snd::Space::smSpaceList.mHead)
-        {
-            pSpace = reinterpret_cast<Snd::Space*>(reinterpret_cast<char*>(pNode) - offsetof(Snd::Space, mNode));
-        }
+        Snd::Space* pSpace = pNode == &Snd::Space::smSpaceList.mHead
+            ? 0
+            : reinterpret_cast<Snd::Space*>(reinterpret_cast<char*>(pNode) - offsetof(Snd::Space, mNode));
         while (pSpace->GetRegionCount())
         {
             SoundSpaceRegion* pRegion =

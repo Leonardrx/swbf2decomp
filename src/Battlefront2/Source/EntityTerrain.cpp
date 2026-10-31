@@ -56,8 +56,11 @@ float EntityTerrain::RayHit(const PblVector3& vStart, const PblVector3& vDir, fl
     {
         return 1.0f;
     }
-    PblVector3 vEnd = vStart + vDir * fLength;
-    float fHit = RedTerrain::RayHit(vStart, vEnd, 0.1f, 3.0f);
+    float fHit;
+    {
+        PblVector3 vEnd = vStart + vDir * fLength;
+        fHit = RedTerrain::RayHit(vStart, vEnd, 0.1f, 3.0f);
+    }
     if (fHit < 1.0f && pNormal)
     {
         float fDist = fHit * fLength;

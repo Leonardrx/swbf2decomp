@@ -209,12 +209,18 @@ Ordnance::Ordnance(OrdnanceClass* pClass, const OrdnanceDesc& desc)
 
     const bool bBuildTrail =
         !NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost());
-    mTrailEmitterObj = (pClass->mTrailEffect && bBuildTrail) ? pClass->mTrailEffect->BuildEffect() : 0;
-
-    if (mTrailEmitterObj)
+    if (pClass->mTrailEffect && bBuildTrail)
     {
-        mTrailEmitterObj->AttachEffectToVector(&mPosition, true);
-        mTrailEmitterObj->SetOrientation(desc.mDirection);
+        mTrailEmitterObj = pClass->mTrailEffect->BuildEffect();
+        if (mTrailEmitterObj)
+        {
+            mTrailEmitterObj->AttachEffectToVector(&mPosition, true);
+            mTrailEmitterObj->SetOrientation(desc.mDirection);
+        }
+    }
+    else
+    {
+        mTrailEmitterObj = 0;
     }
 
     if (!(NetGame::IsEnabled() && NetGame::IsClient()))

@@ -1293,7 +1293,7 @@ bool AIUtil::IsNearPost(const Controllable* pMe, const CommandPost* pPost, const
 {
     const PblVector3 vMyPos = pMe->GetMatrix().GetTranslation();
     const PblVector3 vDelta = GetCommandPostPos(pPost) + vOffset - vMyPos;
-    const float fDistSq = vDelta.z * vDelta.z + vDelta.x * vDelta.x;
+    const float fDistSq = vDelta.x * vDelta.x + vDelta.z * vDelta.z;
 
     float fRadius = pMe->GetGameObject()->GetMaxSpeed() * 0.5f;
     if (pPost->mCaptureRegion)
@@ -1331,7 +1331,7 @@ bool __cdecl CanPotentiallySee(Controllable* pMe, const GameObject* pObject, flo
     const PblVector3& vDir = pMe->mEyeDir;
     const PblVector3 vTarget = pObject->GetTargetPoint(vEye, vDir, -1);
     const PblVector3 vTo(vTarget.x - vEye.x, vTarget.y - vEye.y, vTarget.z - vEye.z);
-    const float fDistSq = vTo.x * vTo.x + vTo.y * vTo.y + vTo.z * vTo.z;
+    const float fDistSq = vTo.y * vTo.y + vTo.x * vTo.x + vTo.z * vTo.z;
     if (100.0f > fDistSq)
     {
         if (pOut)
@@ -1341,11 +1341,22 @@ bool __cdecl CanPotentiallySee(Controllable* pMe, const GameObject* pObject, flo
         return true;
     }
 
-    bool bResult = true;
+    bool bResult;
     if (fDistSq > 0.0001f)
     {
         const float fDot = vDir.x * vTo.x + vDir.y * vTo.y + vDir.z * vTo.z;
-        bResult = fDot > 0.0f && fDot * fDot > sCosHalfFOV * fDistSq * sCosHalfFOV;
+        if (fDot > 0.0f && fDot * fDot > sCosHalfFOV * fDistSq * sCosHalfFOV)
+        {
+            bResult = true;
+        }
+        else
+        {
+            bResult = false;
+        }
+    }
+    else
+    {
+        bResult = true;
     }
     if (pOut)
     {
@@ -1450,11 +1461,7 @@ bool AIUtil::AvoidBarriers(EntityFlyer* pFlyer, const PblVector3&  , PblVector3*
 
     const float fSide = pFlyer->mClass->mMaxFlyerSpeed * 2.0f;
     const float fDist = 30.0f > fSide ? 30.0f : fSide;
-    const PblVector3& vUp = gVectorUnitY;
-    PblVector3 vSide;
-    vSide.x = vForward.y * vUp.z - vForward.z * vUp.y;
-    vSide.y = vForward.z * vUp.x - vForward.x * vUp.z;
-    vSide.z = vForward.x * vUp.y - vForward.y * vUp.x;
+    const PblVector3 vSide = CrossProduct(vForward, gVectorUnitY);
     *pNewDest = PblVector3(vSide.x * fDist + vPos.x, vSide.y * fDist + vPos.y, vSide.z * fDist + vPos.z);
     return true;
 }

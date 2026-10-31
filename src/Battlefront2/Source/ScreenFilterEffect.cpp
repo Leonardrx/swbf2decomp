@@ -88,22 +88,22 @@ void ScreenFilterEffect::TimedFilter(int iViewport, float fDuration, float fFade
                                      float fFadeOutTime, RedColor color, unsigned int uiTextureHash)
 {
     FilterData& data = m_data[iViewport];
-    if (fFadeInTime < 0.0f)
-    {
-        data.uiState = 1;
-        data.fIntensity = 1.0f;
-    }
-    else
+    if (fFadeInTime >= 0.0f)
     {
         data.uiState = 2;
         data.fIntensity = 0.0f;
     }
+    else
+    {
+        data.uiState = 1;
+        data.fIntensity = 1.0f;
+    }
     float fNow = m_filterTimeStamp.GetElapsed();
     data.fStartFadeInTime = fNow;
-    data.uiTextureHash = uiTextureHash;
+    data.filterColor = color;
     data.fStopFadeOutTime = fNow + fDuration;
     data.fStopFadeInTime = fNow + fFadeInTime;
-    data.filterColor = color;
+    data.uiTextureHash = uiTextureHash;
     data.fStartFadeOutTime = data.fStopFadeOutTime - fFadeOutTime;
 }
 

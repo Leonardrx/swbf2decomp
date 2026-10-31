@@ -886,11 +886,10 @@ DamageDesc OrdnanceEmitterClass::GetDamage(const DamageOwner& owner, float fStre
 // FUNCTION: SWBF2 0x005fc2e0
 PblMatrix Aimer::GetFireMatrix() const
 {
-    PblVector3 vSide(mDirection.z, 0.0f, -mDirection.x);
-    PblVector3 vRight = Normalize(vSide);
-    PblVector3 vUp = CrossProduct(mDirection, vRight);
+    PblVector3 vRight(mDirection.z, 0.0f, -mDirection.x);
+    vRight = Normalize(vRight);
 
-    return PblMatrix(vRight, vUp, mDirection, mFirePos);
+    return PblMatrix(vRight, CrossProduct(mDirection, vRight), mDirection, mFirePos);
 }
 
 // TEMPLATE: SWBF2 0x005fe640

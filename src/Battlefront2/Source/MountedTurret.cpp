@@ -361,11 +361,13 @@ MountedTurret::MountedTurret(GameObject* pParent, MountedTurretClass* pClass, Re
         WeaponDesc desc;
         desc.mOwner = this;
         desc.mAimer = mAimer[i];
-        desc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
-        desc.mReload = &mControlReload;
+        desc.mTrigger = 0;
+        desc.mReload = 0;
         desc.mNumClips = 0;
         desc.m_pAmmoCounter = 0;
         desc.m_pEnergyBar = 0;
+        desc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
+        desc.mReload = &mControlReload;
 
         const WeaponAmmoDesc& ammo = mClass->mWeaponAmmo[i];
         if (ammo.bFlagShareAmmo)
@@ -1474,7 +1476,9 @@ void MountedTurret::Render(const PblMatrix& aRootMatrix, const PblMatrix& aInvRo
     if (pMount)
     {
         const PblVector3& vVelocity = mParent->GetVelocity();
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&pThis->mTurretWorldTranslation), reinterpret_cast<const D3DXVECTOR3*>(&pMount->GetTranslation()), reinterpret_cast<const D3DXMATRIX*>(&mParent->GetMatrix()));
+        PblVector3 vWorldTranslation;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorldTranslation), reinterpret_cast<const D3DXVECTOR3*>(&pMount->GetTranslation()), reinterpret_cast<const D3DXMATRIX*>(&mParent->GetMatrix()));
+        pThis->mTurretWorldTranslation = vWorldTranslation;
         pThis->mTurretPitchSound.Update(&mClass->mTurretPitchSound, &mTurretWorldTranslation, &vVelocity);
         pThis->mTurretYawSound.Update(&mClass->mTurretYawSound, &mTurretWorldTranslation, &vVelocity);
     }
@@ -1550,17 +1554,17 @@ MountedTurretClass::MountedTurretClass(unsigned int uHash)
     mMinPitch = -10.0f;
     mMaxPitch = 10.0f;
 
+    memset(mWeaponClass, 0, sizeof(mWeaponClass));
+    sWeaponSection = 0;
+    memset(mWeaponAmmo, 0, sizeof(mWeaponAmmo));
     for (int i = 0; i < 4; ++i)
     {
-        mWeaponClass[i] = 0;
-        mWeaponAmmo[i].uiAmmo = 0;
-        mWeaponAmmo[i].uiHeat = 0;
         mWeaponAmmo[i].bFlagAmmoInfinite = 1;
-        mWeaponAmmo[i].bFlagShareHeat = 0;
-        mWeaponAmmo[i].bFlagShareAmmo = 0;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
         mWeaponChannel[i] = i;
     }
-    sWeaponSection = 0;
     mWeaponCount = 0;
 
     mTurnRate = 2.0f;

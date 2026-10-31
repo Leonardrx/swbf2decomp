@@ -170,8 +170,9 @@ bool ItemTimerDisplay::DisplayThread::Update(float fDeltaTime)
     {
         const EntityItem* pObject = mItemArray[i];
         float fHeight = pObject->GetCollisionRadius() * 1.2f;
+        PblVector3 vOffset = gVectorUnitY * fHeight;
         const PblVector3& vCenter = pObject->GetCollisionCenter();
-        PblVector3 vPos = vCenter + gVectorUnitY * fHeight;
+        PblVector3 vPos = vCenter + vOffset;
 
         PblVector3 vScreen = pCamera->TransformWorldPointToProjectionSpace(vPos);
         if (vScreen.z < -1.0f || vScreen.z > 1.0f)

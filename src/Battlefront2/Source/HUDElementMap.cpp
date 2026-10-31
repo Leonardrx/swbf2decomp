@@ -849,7 +849,8 @@ void HUD::ElementMap::Update(const float fElapsed)
         {
             if (mMode == mode_Small)
             {
-                fRotation = -PblMath::Atan2(-mPlayerDirection.x, mPlayerDirection.z);
+                const float fNegX = -mPlayerDirection.x;
+                fRotation = -PblMath::Atan2(fNegX, mPlayerDirection.z);
             }
             else
             {
@@ -888,8 +889,8 @@ bool HUD::ElementMap::CalculateScreenCoordinates(const PblVector3& vPosition, fl
                                                  bool bClamp, float* const pfDistanceSq) const
 {
     const Dim& dim = mDim[mMode];
-    fY = (vPosition.z - dim.centerZ) * dim.scale;
     fX = (vPosition.x - dim.centerX) * dim.scale;
+    fY = (vPosition.z - dim.centerZ) * dim.scale;
     const float fDistanceSq = fY * fY + fX * fX;
     if (pfDistanceSq)
     {
@@ -911,14 +912,14 @@ bool HUD::ElementMap::CalculateScreenCoordinates(const PblVector3& vPosition, fl
     }
     else
     {
-        float fAbsX = fabsf(fX);
-        if (fAbsX > 0.5f || fabsf(fY) > 0.5f)
+        float fAbsX = fX < 0.0f ? -fX : fX;
+        if (fAbsX > 0.5f || (fY < 0.0f ? -fY : fY) > 0.5f)
         {
             if (!bClamp)
             {
                 return false;
             }
-            const float fAbsY = fabsf(fY);
+            const float fAbsY = fY < 0.0f ? -fY : fY;
             if (!(fAbsX > fAbsY))
             {
                 fAbsX = fAbsY;
@@ -991,11 +992,13 @@ void HUD::ElementMap::UpdatePlayerIcon()
         fNorth = sNorth;
     }
 
-    const float fViewAngle = PblMath::Atan2(-mPlayerDirection.x, mPlayerDirection.z) + fNorth;
+    const float fViewDirX = -mPlayerDirection.x;
+    const float fViewAngle = PblMath::Atan2(fViewDirX, mPlayerDirection.z) + fNorth;
     float fMoveAngle;
     if (mPlayerCharacter && mPlayerCharacter->mVehicle)
     {
-        fMoveAngle = PblMath::Atan2(-mPlayerMovementDirection.x, mPlayerMovementDirection.z) + fNorth;
+        const float fMoveDirX = -mPlayerMovementDirection.x;
+        fMoveAngle = PblMath::Atan2(fMoveDirX, mPlayerMovementDirection.z) + fNorth;
     }
     else
     {
@@ -1249,17 +1252,15 @@ bool HUD::ElementMap::IsInRadarRange(const Controllable* pPlayer, TargetManager:
     {
         return true;
     }
-    if (!(pClass->mMapParams.mRangeViewCone > fDistance))
+    if (pClass->mMapParams.mRangeViewCone > fDistance)
     {
-        return false;
-    }
-
-    const float fDot = vDelta.x * pPlayer->mEyeDir.x + vDelta.z * pPlayer->mEyeDir.z;
-    const float fEye = Length2EstXZ(pPlayer->mEyeDir.x, pPlayer->mEyeDir.z);
-    const float fDelta = Length2EstXZ(vDelta.x, vDelta.z);
-    if (fDot / (fDelta * fEye) > pClass->mMapParams.mViewConeCosine)
-    {
-        return true;
+        const float fDot = vDelta.x * pPlayer->mEyeDir.x + vDelta.z * pPlayer->mEyeDir.z;
+        const float fEye = Length2EstXZ(pPlayer->mEyeDir.x, pPlayer->mEyeDir.z);
+        const float fDelta = Length2EstXZ(vDelta.x, vDelta.z);
+        if (fDot / (fDelta * fEye) > pClass->mMapParams.mViewConeCosine)
+        {
+            return true;
+        }
     }
     return false;
 }
@@ -1650,8 +1651,7 @@ void HUD::ElementMap::SetMode(Mode eMode)
     }
 
     RedGroupElement::SetPosition(mPosition[eMode]);
-    mGroupMatrix[3] = mPosition[mMode];
-    mGroupMatrix.m[3][3] = 1.0f;
+    mGroupMatrix.SetTranslation(mPosition[mMode]);
     EnableModeElements(true);
 
     if (mMode != mode_Small && mInitialized)
@@ -2117,10 +2117,10 @@ void HUD::ElementMap::EventRefreshTarget(const HUD::Event& event, void* const pD
     GameObject* pObject = TargetManager::_gTarget[uIndex].actor;
     if (pObject)
     {
-        target.SetTexture(pObject->GetEntityClass()->mMapParams.mTexture);
+        const unsigned int uTexture = pObject->GetEntityClass()->mMapParams.mTexture;
+        target.SetTexture(uTexture);
     }
-    RedColor color = { 0, 0, 0, 0 };
-    target.SetColor(color);
+    target.SetColor(RedColor(0, 0, 0, 0));
     target.Enable(false);
 }
 
@@ -2142,10 +2142,10 @@ void HUD::ElementMap::EventRefreshPost(const HUD::Event& event, void* const pDat
     CommandPost* pPost = TargetManager::_gPost[uIndex].actor;
     if (pPost)
     {
-        post.SetTexture(pPost->mObject->GetEntityClass()->mMapParams.mTexture);
+        const unsigned int uTexture = pPost->mObject->GetEntityClass()->mMapParams.mTexture;
+        post.SetTexture(uTexture);
     }
-    RedColor color = { 0, 0, 0, 0 };
-    post.SetColor(color);
+    post.SetColor(RedColor(0, 0, 0, 0));
     post.Enable(false);
     pMap->mPostText[uIndex].Enable(false);
 }

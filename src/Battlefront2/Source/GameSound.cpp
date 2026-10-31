@@ -301,8 +301,14 @@ float GameSound::GetMuteDistance() const
         case type_sound:
             return ((const Snd::Sound::Properties*)mProps)->mMuteDistance;
         case type_soundLayered:
-            return ((const Snd::SoundLayered::Properties*)mProps)
-                ->FindLayerByIndex(0)->mSoundProps->mMuteDistance;
+        {
+            const Snd::SoundLayered::Properties* pLayered = (const Snd::SoundLayered::Properties*)mProps;
+            const PblListSingle::Node* pFirst = pLayered->mLayerList.GetFirst();
+            pFirst = (pFirst == pLayered->mLayerList.GetTerminator()) ? 0 : pFirst;
+            Snd::SoundLayered::Properties::Layer* pLayer = static_cast<Snd::SoundLayered::Properties::Layer*>(
+                pFirst->GetObjectA(&pLayered->mLayerList, offsetof(Snd::SoundLayered::Properties::Layer, mNode)));
+            return pLayer->mSoundProps->mMuteDistance;
+        }
         case type_soundStream:
             return ((const Snd::SoundStream::Properties*)mProps)->mMuteDistance;
         }
@@ -342,8 +348,14 @@ float GameSound::GetGain() const
     case type_sound:
         return ((const Snd::Sound::Properties*)mProps)->mGain;
     case type_soundLayered:
-        return ((const Snd::SoundLayered::Properties*)mProps)
-            ->FindLayerByIndex(0)->mSoundProps->mGain;
+    {
+        const Snd::SoundLayered::Properties* pLayered = (const Snd::SoundLayered::Properties*)mProps;
+        const PblListSingle::Node* pFirst = pLayered->mLayerList.GetFirst();
+        pFirst = (pFirst == pLayered->mLayerList.GetTerminator()) ? 0 : pFirst;
+        Snd::SoundLayered::Properties::Layer* pLayer = static_cast<Snd::SoundLayered::Properties::Layer*>(
+            pFirst->GetObjectA(&pLayered->mLayerList, offsetof(Snd::SoundLayered::Properties::Layer, mNode)));
+        return pLayer->mSoundProps->mGain;
+    }
     case type_soundStream:
         return ((const Snd::SoundStream::Properties*)mProps)->mGain;
     }
@@ -358,8 +370,14 @@ float GameSound::GetPitch() const
     case type_sound:
         return ((const Snd::Sound::Properties*)mProps)->mPitch;
     case type_soundLayered:
-        return ((const Snd::SoundLayered::Properties*)mProps)
-            ->FindLayerByIndex(0)->mSoundProps->mPitch;
+    {
+        const Snd::SoundLayered::Properties* pLayered = (const Snd::SoundLayered::Properties*)mProps;
+        const PblListSingle::Node* pFirst = pLayered->mLayerList.GetFirst();
+        pFirst = (pFirst == pLayered->mLayerList.GetTerminator()) ? 0 : pFirst;
+        Snd::SoundLayered::Properties::Layer* pLayer = static_cast<Snd::SoundLayered::Properties::Layer*>(
+            pFirst->GetObjectA(&pLayered->mLayerList, offsetof(Snd::SoundLayered::Properties::Layer, mNode)));
+        return pLayer->mSoundProps->mPitch;
+    }
     case type_soundStream:
         return ((const Snd::SoundStream::Properties*)mProps)->mPitch;
     }

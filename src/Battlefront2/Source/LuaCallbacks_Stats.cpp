@@ -1035,11 +1035,10 @@ int ScriptCB_GetPersonalStats(lua_State* L)
     PlayerStats* pStats = 0;
     if (fRank >= 0.0f)
     {
-        int iRank = (int)fRank - 1;
         for (int i = 0; i < pTeam->mMemberCount; ++i)
         {
             pStats = &pTeam->GetMemberPtr(i)->GetPlayerStats();
-            if (pStats->mRankOrder == iRank)
+            if (pStats->mRankOrder == (int)fRank - 1)
             {
                 break;
             }
@@ -1050,7 +1049,7 @@ int ScriptCB_GetPersonalStats(lua_State* L)
         pStats = &NetGame::GetLocalPlayer(GetStatsPageJoystick())->GetPlayerStats();
     }
 
-    for (int i = 0; i < 10; )
+    for (int i = 0; i < 10; ++i)
     {
         lua_newtable(LuaHelper::mState);
         switch (i)
@@ -1119,8 +1118,7 @@ int ScriptCB_GetPersonalStats(lua_State* L)
             }
             break;
         }
-        ++i;
-        lua_rawseti(LuaHelper::mState, -2, i);
+        lua_rawseti(LuaHelper::mState, -2, i + 1);
     }
 
     lua_pushstring(LuaHelper::mState, "stats_listbox_contents");

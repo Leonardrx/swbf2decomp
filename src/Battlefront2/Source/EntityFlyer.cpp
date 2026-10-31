@@ -226,11 +226,11 @@ static unsigned int sOrdnanceCollisionMask;
 EntityFlyerClass::EntityFlyerClass(unsigned int uHash)
     : GameObjectClass(uHash)
 {
+    mFlyingCollisionInited = false;
     m_bDynamicLighting = true;
     mHealthType = HEALTH_TYPE_VEHICLE;
     mPilotType = PILOT_VEHICLE;
 
-    mFlyingCollisionInited = false;
     mAnimObj = 0;
     mAnimTakeoff = 0;
     mAnimFins = 0;
@@ -352,8 +352,8 @@ EntityFlyerClass::EntityFlyerClass(unsigned int uHash)
     mAIType = 32;
     mBarrierX = mBarrierZ = -1.0f;
     mBarrierOX = mBarrierOZ = 0.0f;
-    mCollisionModel.mDenyFlyerLand = true;
     mHoldForPlayer = true;
+    mCollisionModel.mDenyFlyerLand = true;
     mFreeFlyTime = 2.0f;
     mSquadronSquaredDist = mSquadronMaxAngle = 0.0f;
     mTrickTimeMid = 1.0f;
@@ -2642,9 +2642,14 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
                 mFlipTarget -= 6.2831855f;
                 mBankPitchAngle -= 6.2831855f;
             }
-            if (mFlip < mFlipTarget)
+            if (mFlip >= mFlipTarget)
             {
-                return;
+                if (0.001f > (float)fabs((double)mFlipTarget))
+                {
+                    FlipStop();
+                    return;
+                }
+                mFlip = mFlipTarget;
             }
         }
         else
@@ -2656,17 +2661,16 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
                 mFlipTarget += 6.2831855f;
                 mBankPitchAngle += 6.2831855f;
             }
-            if (mFlipTarget < mFlip)
+            if (mFlipTarget >= mFlip)
             {
-                return;
+                if (0.001f > (float)fabs((double)mFlipTarget))
+                {
+                    FlipStop();
+                    return;
+                }
+                mFlip = mFlipTarget;
             }
         }
-        if (0.001f > (float)fabs((double)mFlipTarget))
-        {
-            FlipStop();
-            return;
-        }
-        mFlip = mFlipTarget;
         return;
     }
 

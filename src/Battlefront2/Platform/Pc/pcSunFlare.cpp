@@ -568,20 +568,15 @@ void SunFlare::_Render() const
         return;
     }
     const PblVector3& vAxis = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
-    if (vAxis.x * _vDirection.x + vAxis.y * _vDirection.y + vAxis.z * _vDirection.z > 0.0f)
+    if (_vDirection.x * vAxis.x + _vDirection.y * vAxis.y + _vDirection.z * vAxis.z > 0.0f)
     {
         return;
     }
 
     float fDistance = GetDistance();
-    float fOffsetX = _vDirection.x * fDistance;
-    float fOffsetY = _vDirection.y * fDistance;
-    float fOffsetZ = _vDirection.z * fDistance;
+    const PblVector3 vOffset = _vDirection * fDistance;
     const PblVector3& vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
-    PblVector3 vPosition;
-    vPosition.x = vCamera.x + fOffsetX;
-    vPosition.y = vCamera.y + fOffsetY;
-    vPosition.z = vCamera.z + fOffsetZ;
+    PblVector3 vPosition = vCamera + vOffset;
     {
         PblVector3 vView;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vView), reinterpret_cast<const D3DXVECTOR3*>(&vPosition), reinterpret_cast<const D3DXMATRIX*>(&RedRenderer::GetCamera()->GetMatrixInverse()));

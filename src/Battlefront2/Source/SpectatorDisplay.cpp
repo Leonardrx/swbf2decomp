@@ -183,9 +183,9 @@ void SpectatorDisplay::Init()
         fWidth = fRight - fLeft;
     }
 
-    float fHeight = 0.06f;
     float fScreenHeight = (float)RedInterfaceScreen::GetScreenHeight() *
                           RedInterfaceScreen::GetScreenSafeZone();
+    float fHeight = 0.06f;
     if (NetGame::IsHost())
     {
         fHeight = 0.15f;
@@ -228,7 +228,7 @@ bool SpectatorDisplay::Update(float fDeltaTime)
     {
         Hide();
     }
-    else if (NetGame::IsEnabled() && (NetGame::IsClient() || NetGame::IsOneWorld()))
+    else if (NetGame::IsEnabled() && ((netEnabledNext && netClientActive) || NetGame::IsOneWorld()))
     {
         UpdatePregame();
         ChangeSpectatedName();
@@ -261,7 +261,7 @@ void SpectatorDisplay::ChangeSpectatedName()
     int iSpectator = NetGame::GetSpectator(iLocal);
     SpawnDisplay* pSpawnDisplay = SpawnDisplay::Instance(mJoystickIndex);
     if (!pSpawnDisplay->GetOptionsAccepted() ||
-        (!pSpawnDisplay->IsSpectateMode() && iSpectator == -1))
+        (pSpawnDisplay->IsSpectateMode() != true && iSpectator == -1))
     {
         if (mMessageGroup.IsEnabled())
         {

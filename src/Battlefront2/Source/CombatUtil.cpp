@@ -770,21 +770,22 @@ bool CombatUtil::CanGetFireReservation(const WeaponClass* pClass, const GameObje
 // FUNCTION: SWBF2 0x0046ed90
 bool CombatUtil::sIsWeaponUnlocked(const Controllable* pMe, const WeaponClass* pClass)
 {
-    if (pMe && pMe->GetCharacter())
+    if (!pMe || !pMe->GetCharacter())
     {
-        MedalsMgr* pMedals = pMe->GetCharacter()->GetMedalsManager();
-        if (pMedals && pClass->mMedalsTypeToUnlock != -1)
-        {
-            bool bUnlocked = pMedals->IsAwardAvailable(pClass->mMedalsTypeToUnlock) ? true : false;
-            if (bUnlocked && pClass->mMedalsTypeToLock != -1 &&
-                pMedals->IsAwardAvailable(pClass->mMedalsTypeToLock))
-            {
-                bUnlocked = false;
-            }
-            return bUnlocked;
-        }
+        return true;
     }
-    return true;
+    MedalsMgr* pMedals = pMe->GetCharacter()->GetMedalsManager();
+    if (!pMedals || pClass->mMedalsTypeToUnlock == -1)
+    {
+        return true;
+    }
+    bool bUnlocked = pMedals->IsAwardAvailable(pClass->mMedalsTypeToUnlock) ? true : false;
+    short sLock = pClass->mMedalsTypeToLock;
+    if (bUnlocked && sLock != -1 && pMedals->IsAwardAvailable(sLock))
+    {
+        bUnlocked = false;
+    }
+    return bUnlocked;
 }
 
 // FUNCTION: SWBF2 0x0046ee00
@@ -796,15 +797,16 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
     *pbInRange = false;
     *pbInOptimalRange = false;
 
-    float fBestDamage = -1.0f;
-    bool bBestMultiShot = false;
-    bool bBestInRange = false;
     int iBest = -1;
+    bool bBestMultiShot = false;
+    float fBestDamage = -1.0f;
+    bool bBestInRange = false;
 
-    PblVector3 vPoint = pTarget->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
-    float fDistSq = (vPoint.y - pMe->mEyePoint.y) * (vPoint.y - pMe->mEyePoint.y) +
-                    (vPoint.x - pMe->mEyePoint.x) * (vPoint.x - pMe->mEyePoint.x) +
-                    (vPoint.z - pMe->mEyePoint.z) * (vPoint.z - pMe->mEyePoint.z);
+    const PblVector3& vEye = pMe->mEyePoint;
+    const PblVector3& vPoint = pTarget->GetTargetPoint(vEye, pMe->mEyeDir, -1);
+    float fDistSq = (vPoint.y - vEye.y) * (vPoint.y - vEye.y) +
+                    (vPoint.x - vEye.x) * (vPoint.x - vEye.x) +
+                    (vPoint.z - vEye.z) * (vPoint.z - vEye.z);
     bool bSoldier = pMe->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier);
 
     for (int i = 0; i < pMe->GetWeaponCount(); ++i)

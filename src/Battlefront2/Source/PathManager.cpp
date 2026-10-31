@@ -389,13 +389,10 @@ PathRequest* GetNextPathRequest()
             if (pReq->mPriority == uPriority)
             {
                 sRequests->Remove(&pReq->mNode);
-                UnitController* pObj = pReq->mUnit.mObject;
-                if (pObj && pObj->mHandleId == pReq->mUnit.mSavedHandleId)
+                if (pReq->mUnit)
                 {
                     return pReq;
                 }
-                pReq->mUnit.mObject = 0;
-                pReq->mUnit.mSavedHandleId = 0;
                 PathRequest::sMemoryPool.Free(pReq);
             }
         }
@@ -444,13 +441,7 @@ void Update(float fDeltaTime)
             if (PathFinder::IsCompleted())
             {
                 AIPath* pPath = PathFinder::GetPathResult();
-                UnitController* pUnit = sCurRequest->mUnit.mObject;
-                if (pUnit && pUnit->mHandleId != sCurRequest->mUnit.mSavedHandleId)
-                {
-                    sCurRequest->mUnit.mObject = 0;
-                    sCurRequest->mUnit.mSavedHandleId = 0;
-                    pUnit = 0;
-                }
+                UnitController* pUnit = sCurRequest->mUnit;
                 if (pUnit)
                 {
                     AI::EventInfo_PathResult event(pPath);

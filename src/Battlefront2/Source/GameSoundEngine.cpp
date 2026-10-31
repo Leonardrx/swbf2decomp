@@ -338,10 +338,11 @@ bool Open(float fSeconds, bool bSoundWorking)
 
                 for (i = 0; i < uiNodes; ++i)
                 {
-                    if (bAllOpen)
+                    if (!bAllOpen)
                     {
-                        bAllOpen &= ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C);
+                        break;
                     }
+                    bAllOpen &= ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C);
                 }
 
                 if (!bAllOpen)
@@ -695,8 +696,8 @@ void GameSoundEngine::Update(float fDeltaTime)
 
     const unsigned __int64 uiNow = PblTime::GetTickCount();
     const int iTicks = (int)((unsigned int)(uiNow - sLastSoundTick) & 0x7fffffff);
-    sLastSoundTick = uiNow;
     const float fElapsed = (float)iTicks * FrameUpdate::fOneOverTicksPerSecond;
+    sLastSoundTick = uiNow;
 
     sAccumulatedSoundTime += fElapsed;
     if (!(sAccumulatedSoundTime > 0.02f))

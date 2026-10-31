@@ -99,10 +99,8 @@ void DustEffect::Render(unsigned char ucViewport, float fDist, unsigned int uiFl
         SetRenderPos(mMatrix.GetTranslation());
     }
 
-    float fDistance = camMatrix.m[2][1] * (camMatrix.m[3][1] - mMatrix.m[3][1]) +
-                      camMatrix.m[2][0] * (camMatrix.m[3][0] - mMatrix.m[3][0]) +
-                      camMatrix.m[2][2] * (camMatrix.m[3][2] - mMatrix.m[3][2]) +
-                      mClass->mBoundingRadius;
+    PblVector3 vToCamera = camMatrix.GetTranslation() - mMatrix.GetTranslation();
+    float fDistance = DotProduct(vToCamera, camMatrix[2]) + mClass->mBoundingRadius;
 
     if (fDistance < mClass->mMinDistance || fDistance > mClass->mMaxDistance)
     {

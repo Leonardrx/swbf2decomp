@@ -364,9 +364,7 @@ bool NavigatorSlide::GetObjectSlideToPosition(PblVector3* pPos) const
     *pPos = (GameObjectGetMatrix(pObj)).GetTranslation();
     const PblVector3& myPos = GetMatrix().GetTranslation();
     PblVector3 dir(myPos.x - pPos->x, myPos.y - pPos->y, myPos.z - pPos->z);
-    PblVector3 normal = AIUtil::GetSafeNormalXZ(dir);
-    const float fOffset = mOffset;
-    const PblVector3 delta(normal.x * fOffset, normal.y * fOffset, normal.z * fOffset);
+    const PblVector3 delta = AIUtil::GetSafeNormalXZ(dir) * mOffset;
     pPos->x += delta.x;
     pPos->y += delta.y;
     pPos->z += delta.z;

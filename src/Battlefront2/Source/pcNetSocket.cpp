@@ -79,19 +79,20 @@ int NetSocket::OpenDirectSocket(bool bHost)
     {
         ++iPort;
     }
-    for (;;)
+    int iResult;
+    do
     {
         sockaddr_in addr;
-        addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_family = AF_INET;
         addr.sin_port = htons((u_short)iPort);
-        if (bind((SOCKET)netDirectSocket, (const sockaddr*)&addr, sizeof(addr)) != SOCKET_ERROR)
+        iResult = bind((SOCKET)netDirectSocket, (const sockaddr*)&addr, sizeof(addr));
+        if (iResult == SOCKET_ERROR)
         {
-            break;
+            DecodeError(WSAGetLastError());
+            ++iPort;
         }
-        DecodeError(WSAGetLastError());
-        ++iPort;
-    }
+    } while (iResult == SOCKET_ERROR);
     int iSize = 0x8000;
     setsockopt((SOCKET)netDirectSocket, SOL_SOCKET, SO_RCVBUF, (const char*)&iSize, sizeof(iSize));
     iSize = 0x10000;

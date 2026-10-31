@@ -281,11 +281,11 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
 // FUNCTION: SWBF2 0x0043cfa0
 Aimer::Aimer(AimerClass* pClass, const Controllable* pOwner, const PblMatrix* pParentMatrix,
              RedPose* pPose, Aimer* pNextAimer)
+    : mClass(pClass)
+    , mOwner(pOwner)
+    , mParentMatrix(pParentMatrix)
+    , mPose(pPose)
 {
-    mClass = pClass;
-    mOwner = pOwner;
-    mParentMatrix = pParentMatrix;
-    mPose = pPose;
     mWithinLimitsFlag = true;
     mOffsetPos = pClass->mOffsetPos;
 
@@ -467,10 +467,7 @@ bool Aimer::UpdateFire(Aimer*& pNextAimer, bool bFire)
         const PblMatrix mMatrix = GetMatrix();
         mPrevFirePos = mFirePos;
         const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[mCurrentBarrel];
-        PblVector3 vOffset;
-        vOffset.x = barrel.mOffset.x + barrel.mFireOffset.x;
-        vOffset.y = barrel.mOffset.y + barrel.mFireOffset.y;
-        vOffset.z = barrel.mOffset.z + barrel.mFireOffset.z;
+        PblVector3 vOffset = barrel.mOffset + barrel.mFireOffset;
         PblVector3 vPos;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
         mFirePos = vPos;

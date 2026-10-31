@@ -1064,8 +1064,8 @@ float CollisionManager::I_RayHit(const PblVector3& vStart, const PblVector3& vDi
         float fHit = mTerrain->RayHit(vStart, vDir, fLength, pNormal, pBodyId, false);
         if (fHit < 1.0f)
         {
-            data.mLength = fHit * data.mLength;
             data.mFirstHit = mTerrain;
+            data.mLength = fHit * data.mLength;
         }
     }
     if ((iFilter & COLL_WATER) && mWater)
@@ -1073,8 +1073,8 @@ float CollisionManager::I_RayHit(const PblVector3& vStart, const PblVector3& vDi
         float fHit = mWater->RayHit(vStart, vDir, data.mLength, pNormal, pBodyId, false);
         if (fHit < 1.0f)
         {
-            data.mLength = fHit * data.mLength;
             data.mFirstHit = mWater;
+            data.mLength = fHit * data.mLength;
         }
     }
 
@@ -1083,7 +1083,7 @@ float CollisionManager::I_RayHit(const PblVector3& vStart, const PblVector3& vDi
     PblVector3 vMax = Max(vStart, vEnd);
     if (mTreeGrid)
     {
-        mTreeGrid->CallbackOnLazyRay(vStart, vEnd, RayCallback, &data);
+        TreeGridCache::CallbackOnLazyRay(mTreeGrid, vStart, vEnd, RayCallback, &data);
     }
     else
     {
@@ -1204,7 +1204,7 @@ void CollisionManager::UpdateSimple(PblList<CollisionObject>& list, int iFilter)
 
         if (mTreeGrid)
         {
-            mTreeGrid->CallbackOnRect(data.mMinPos, data.mMaxPos, CollectDataCallback, &data);
+            TreeGridCache::CallbackOnRect(mTreeGrid, data.mMinPos, data.mMaxPos, CollectDataCallback, &data);
         }
         else
         {

@@ -49,17 +49,22 @@ void BlurEffect::PlatformCleanup()
 // FUNCTION: SWBF2 0x0040f890
 void BlurEffect::PlatformReadConfigData(PblConfig::Data& data)
 {
-    switch (data.GetId())
+    const unsigned int uiId = data.GetId();
+    if (uiId > 0x7E6C7187u)
     {
-    case 0x7E1194B8u:
-        m_constantBlend = data.GetFloatArg(0);
-        break;
-    case 0x7E6C7187u:
+        return;
+    }
+    if (uiId == 0x7E6C7187u)
+    {
         m_downSizeFactor = data.GetFloatArg(0);
-        break;
-    case 0x055CEA38u:
+    }
+    else if (uiId == 0x055CEA38u)
+    {
         (void)data.GetFloatArg(0);
-        break;
+    }
+    else if (uiId == 0x7E1194B8u)
+    {
+        m_constantBlend = data.GetFloatArg(0);
     }
 }
 

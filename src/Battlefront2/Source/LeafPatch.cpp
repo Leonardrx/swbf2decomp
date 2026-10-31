@@ -450,19 +450,20 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     , CollisionObject(COLL_LEAFPATCH, 0, 0, 0)
 {
     mClass = pClass;
-    mMatrix = gMatrixIdentity;
+    PblMatrix& rMatrix = mMatrix;
+    rMatrix = gMatrixIdentity;
 
-    mMatrix[1] = matrix[1];
-    mMatrix.m[1][3] = 0.0f;
+    rMatrix[1] = matrix[1];
+    rMatrix.m[1][3] = 0.0f;
 
-    const PblVector3 vBack = -mMatrix[2];
-    mMatrix[0] = Normalize(CrossProduct(vBack, mMatrix[1]));
-    mMatrix.m[0][3] = 0.0f;
+    const PblVector3 vBack = -rMatrix[2];
+    rMatrix[0] = Normalize(CrossProduct(vBack, rMatrix[1]));
+    rMatrix.m[0][3] = 0.0f;
 
-    mMatrix[2] = Normalize(CrossProduct(mMatrix[0], mMatrix[1]));
-    mMatrix.m[2][3] = 0.0f;
+    rMatrix[2] = Normalize(CrossProduct(rMatrix[0], rMatrix[1]));
+    rMatrix.m[2][3] = 0.0f;
 
-    mMatrix.SetTranslation(matrix.GetTranslation());
+    rMatrix.SetTranslation(matrix.GetTranslation());
 
     SetCollisionCenter(mMatrix.GetTranslation());
     SetCollisionRadius(mClass->mRadius);
@@ -471,7 +472,7 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mBoundingOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
     SetRenderPos(vCenter);
     SetRenderRadius(mClass->mBoundingRadius);
-    Activate();
+    static_cast<RedSceneObject*>(this)->Activate();
 
     mLod = 0.0f;
     mNumFallingLeaves = 0;
@@ -546,7 +547,11 @@ bool LeafPatch::RayTest(const PblVector3& vStart, const PblVector3& vDir, float 
     dx = vStart.x - vCenter2.x;
     dy = vStart.y - vCenter2.y;
     dz = vStart.z - vCenter2.z;
-    return !(fRadiusSq > dy * dy + dx * dx + dz * dz);
+    if (fRadiusSq > dy * dy + dx * dx + dz * dz)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0056d4d0

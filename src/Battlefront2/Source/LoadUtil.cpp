@@ -350,17 +350,18 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
                 bool bRead = bAllLvls;
                 if (uiCount && !bAllLvls)
                 {
-                    for (unsigned int i = 0; i < uiCount; ++i)
+                    unsigned int i = 0;
+                    for (; i < uiCount; ++i)
                     {
                         bRead = puiHashes[i] == lvl._iId;
                         if (bRead)
                         {
-                            if (i < 256)
-                            {
-                                abFound[i] = true;
-                            }
                             break;
                         }
+                    }
+                    if (bRead && i < 256)
+                    {
+                        abFound[i] = true;
                     }
                 }
                 if (bRead)
@@ -378,7 +379,8 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
             break;
         case 0x5F66617A:
         {
-            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
+            const unsigned int uiAllocSize = child._iSize + 8;
+            void* pData = RedAllocFromHeap(__RedTempHeap, uiAllocSize, 0);
             child.GetChunkData(pData);
             PblMemChunk memChunk(pData);
             RedAnimation::ReadZaf(memChunk);
@@ -396,7 +398,8 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
             break;
         case 0x5F61617A:
         {
-            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
+            const unsigned int uiAllocSize = child._iSize + 8;
+            void* pData = RedAllocFromHeap(__RedTempHeap, uiAllocSize, 0);
             child.GetChunkData(pData);
             PblMemChunk memChunk(pData);
             RedAnimation::ReadZaa(memChunk);
@@ -422,7 +425,7 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
         }
     }
 
-    return uiLvlsRead >= uiCount;
+    return uiCount <= uiLvlsRead;
 }
 
 // FUNCTION: SWBF2 0x00579930
@@ -810,26 +813,35 @@ BaseHint* ProcessHintInfo(PblFileChunk& chunk)
         }
     }
 
+    BaseHint* pHint = 0;
     switch (uType)
     {
     case 0x350CA8AF:
-        return new SnipeHint(desc);
+        pHint = new SnipeHint(desc);
+        break;
     case 0x340CA71C:
-        return new PatrolHint(desc);
+        pHint = new PatrolHint(desc);
+        break;
     case 0x370CABD5:
-        return new CoverHint(desc);
+        pHint = new CoverHint(desc);
+        break;
     case 0x310CA263:
-        return new JetJumpHint(desc);
+        pHint = new JetJumpHint(desc);
+        break;
     case 0x300CA0D0:
-        return new MinefieldHint(desc);
+        pHint = new MinefieldHint(desc);
+        break;
     case 0x330CA589:
-        return new LandHint(desc);
+        pHint = new LandHint(desc);
+        break;
     case 0x320CA3F6:
-        return new FortificationHint(desc);
+        pHint = new FortificationHint(desc);
+        break;
     case 0x3D0CB547:
-        return new VehicleCoverHint(desc);
+        pHint = new VehicleCoverHint(desc);
+        break;
     }
-    return 0;
+    return pHint;
 }
 }
 

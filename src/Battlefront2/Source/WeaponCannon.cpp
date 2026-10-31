@@ -435,25 +435,33 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
             }
 
             pClass = static_cast<const WeaponCannonClass*>(mClass);
-            float fTimer;
-            if (mWarmUp)
+            if (!mWarmUp)
             {
-                fTimer = (pClass->mWarmUpTime - mWarmCoolTimer) * mStateLimit / pClass->mWarmUpTime;
+                mSalvoCount = 0;
+                float fTimer = (pClass->mCoolDownTime - mWarmCoolTimer) * mStateLimit / pClass->mCoolDownTime;
+                if (fTimer < 0.0f)
+                {
+                    fTimer = 0.0f;
+                }
+                else if (fTimer > mStateLimit)
+                {
+                    fTimer = mStateLimit;
+                }
+                mStateTimer = fTimer;
             }
             else
             {
-                mSalvoCount = 0;
-                fTimer = (pClass->mCoolDownTime - mWarmCoolTimer) * mStateLimit / pClass->mCoolDownTime;
+                float fTimer = (pClass->mWarmUpTime - mWarmCoolTimer) * mStateLimit / pClass->mWarmUpTime;
+                if (fTimer < 0.0f)
+                {
+                    fTimer = 0.0f;
+                }
+                else if (fTimer > mStateLimit)
+                {
+                    fTimer = mStateLimit;
+                }
+                mStateTimer = fTimer;
             }
-            if (fTimer < 0.0f)
-            {
-                fTimer = 0.0f;
-            }
-            else if (fTimer > mStateLimit)
-            {
-                fTimer = mStateLimit;
-            }
-            mStateTimer = fTimer;
             break;
         }
 
@@ -500,9 +508,10 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
                         break;
                     }
 
-                    bool bFired = mAimer->WeaponShouldFire() && Fire();
-                    if (bFired)
+                    bool bFired;
+                    if (mAimer->WeaponShouldFire() && Fire())
                     {
+                        bFired = true;
                         if (netEnabledNext && netClientActive)
                         {
                             ++gDebugCount;
@@ -514,6 +523,10 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
                         bFirstShot = false;
                         m_pAmmoCounter->ExpendRounds(mClass->mRoundsPerShot);
                         m_pEnergyBar->SpendEnergy(mClass->mHeatPerShot);
+                    }
+                    else
+                    {
+                        bFired = false;
                     }
                     mAimer->UpdateFire(mAimer, bFired);
                 }

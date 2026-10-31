@@ -449,18 +449,17 @@ void SoldierAnimatorClass::SetupJointTransformAnimationFlag(ZephyrSkeletonShared
 void SoldierAnimatorClass::SetupBodyMasks(const ZephyrSkeletonShared* pSkel, PblBitVector<32>& upperBodyMask,
                                           PblBitVector<32>& lowerBodyMask)
 {
-    int iForearmJoint = (int)pSkel->m_kHashCRC2Joint.Find(0xb70e2184 /* "bone_r_forarm3" */) - 1;
+    const PblHashTable<unsigned int, 64>& kJoints = pSkel->m_kHashCRC2Joint;
+    int iForearmJoint = (int)kJoints.Find(0xb70e2184 /* "bone_r_forarm3" */) - 1;
     upperBodyMask.SetAll();
     lowerBodyMask.ClearAll();
     upperBodyMask.m_auiData[0] &= ~1u;
 
     if (iForearmJoint >= 0)
     {
-        for (const unsigned int* pJoint = s_auiLowerBodyJoints_b70e2184;
-             pJoint < s_auiLowerBodyJoints_b70e2184 + sizeof(s_auiLowerBodyJoints_b70e2184) / sizeof(unsigned int);
-             ++pJoint)
+        for (int i = 0; i < (int)(sizeof(s_auiLowerBodyJoints_b70e2184) / sizeof(unsigned int)); ++i)
         {
-            int iJoint = (int)pSkel->m_kHashCRC2Joint.Find(*pJoint) - 1;
+            int iJoint = (int)kJoints.Find(s_auiLowerBodyJoints_b70e2184[i]) - 1;
             unsigned int uiBit = 1 << iJoint;
             upperBodyMask.m_auiData[0] &= ~uiBit;
             lowerBodyMask.m_auiData[0] |= uiBit;
@@ -468,10 +467,9 @@ void SoldierAnimatorClass::SetupBodyMasks(const ZephyrSkeletonShared* pSkel, Pbl
     }
     else
     {
-        for (const unsigned int* pJoint = s_auiLowerBodyJoints;
-             pJoint < s_auiLowerBodyJoints + sizeof(s_auiLowerBodyJoints) / sizeof(unsigned int); ++pJoint)
+        for (int i = 0; i < (int)(sizeof(s_auiLowerBodyJoints) / sizeof(unsigned int)); ++i)
         {
-            int iJoint = (int)pSkel->m_kHashCRC2Joint.Find(*pJoint) - 1;
+            int iJoint = (int)kJoints.Find(s_auiLowerBodyJoints[i]) - 1;
             unsigned int uiBit = 1 << iJoint;
             upperBodyMask.m_auiData[0] &= ~uiBit;
             lowerBodyMask.m_auiData[0] |= uiBit;
@@ -554,8 +552,12 @@ bool SoldierAnimatorClass::_AddBank(const char* pcName)
     }
 
     bool bResult = _AddBank(pBank);
-    for (int i = 1; bResult && i < MAX_ANIMATION_BANK_FILES; ++i)
+    for (int i = 1; i < MAX_ANIMATION_BANK_FILES; ++i)
     {
+        if (!bResult)
+        {
+            break;
+        }
         sprintf(acName + iLen, "_%d", i);
         pBank = RedAnimation::Find(PblHash(acName));
         if (!pBank)
@@ -604,7 +606,8 @@ const PblMatrix* SoldierAnimatorClass::_GetBoneMatrix(unsigned int uiJointCrc, c
                                                       ZephyrPoseStatic<32>& poseStatic) const
 {
     RedStack stack;
-    RedPose* pPose = new (stack.Alloc(sizeof(RedPose))) RedPose;
+    RedPose* pPose = (RedPose*)stack.Alloc(sizeof(RedPose));
+    pPose->Clear();
     pPose->BindToSkeleton(NULL);
     pAnim->SetupDynamicPose(poseDyn, (pAnim->GetAnimationNumFrames() - 1) * ANIM_FRAME_SPEED * 0.5f);
     poseStatic.Set(poseDyn, true);

@@ -470,7 +470,8 @@ void SpawnDisplay::Show(Character* pCharacter)
                 pBus->Fade(sInGameBusFadeTime, sInGameBusGain, -1.0f);
             }
         }
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mJoystickIndex].spawnDisplayEnable, true).Send();
+        HUD::Event evEnable(HUD::GameEvents::gPlayerEvents[mJoystickIndex].spawnDisplayEnable, true);
+        evEnable.Send();
         mVisible = true;
         mVisibleTimer = 0.0f;
         ScreenTransition::sInstance->SetTransition(0, ScreenTransition::BLUR);
@@ -517,8 +518,10 @@ void SpawnDisplay::Show(Character* pCharacter)
     mGroupMainCB.Visible(true);
     mTextReady.Enable(true);
     mTextReady.Visible(true);
-    HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2).Send();
-    HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].index, mPlayerIdx).Send();
+    HUD::Event evMapMode(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+    evMapMode.Send();
+    HUD::Event evIndex(HUD::GameEvents::gPlayerEvents[mPlayerIdx].index, mPlayerIdx);
+    evIndex.Send();
     BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
     HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
     mTextSpawnTimer.Enable(false);
@@ -552,6 +555,9 @@ void SpawnDisplay::Show(Character* pCharacter)
         }
         RedInputManager::GetMouse(0)->SetCursorPos(RedInterfaceScreen::GetScreenWidth() / 2,
                                   RedInterfaceScreen::GetScreenHeight() / 2);
+        {
+            HUD::Event evUnsent(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+        }
 
         mGroupTimer.Enable(false);
         mGroupTimer.Visible(false);
@@ -579,7 +585,9 @@ void SpawnDisplay::Show(Character* pCharacter)
         SetupSlots();
         break;
     case eFINISHED:
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0).Send();
+    {
+        HUD::Event evFinished(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
+        evFinished.Send();
         BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
         HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
         mGroupTimer.Enable(true);
@@ -589,6 +597,7 @@ void SpawnDisplay::Show(Character* pCharacter)
         mBackdropModel.Enable(false);
         mBackdropModel.Visible(false);
         break;
+    }
     }
 
     if (mFirstShow)
@@ -1181,7 +1190,7 @@ void SpawnDisplay::ChangeMode(Mode)
         int iTeam = GetTeamSelection();
         for (int i = 0; i < 2; ++i)
         {
-            if (iTeam == i + 1 && iTeam != mTeamNumber)
+            if (i + 1 == iTeam && iTeam != mTeamNumber)
             {
                 SelectTeam(iTeam);
             }
@@ -1535,15 +1544,14 @@ void SpawnDisplay::UpdateInput()
 
     for (int i = 0; i < 2; ++i)
     {
-        RedBitmapElement* pIcon = m_pSideIcon[i];
-        if (pIcon->IsEnabled() && pIcon->TestHotSpot(fMouseX, fMouseY) &&
+        if (m_pSideIcon[i]->IsEnabled() && m_pSideIcon[i]->TestHotSpot(fMouseX, fMouseY) &&
             !(NetGame::IsEnabled() && netAutoAssignTeams))
         {
-            pIcon->m_color.a = (unsigned char)(int)fPulse;
+            m_pSideIcon[i]->m_color.a = (unsigned char)(int)fPulse;
         }
         else
         {
-            pIcon->m_color.a = 0x80;
+            m_pSideIcon[i]->m_color.a = 0x80;
         }
     }
 
@@ -1577,7 +1585,8 @@ void SpawnDisplay::UpdateInput()
 
         if (m_AcceptBox->TestHotSpot(fMouseX, fMouseY))
         {
-            Character* pCharacter = Character::FindPlayer(NetGame::GetLocalIndex(mPlayerIdx));
+            int iLocalIndex = NetGame::GetLocalIndex(mPlayerIdx);
+            Character* pCharacter = Character::FindPlayer(iLocalIndex);
             if ((mMode == eCHANGECLASS || mMode == eSPAWNDISPLAY) &&
                 Character::GetPlayerStats(pCharacter).IsClassSelectable(mClassIndex, 0))
             {

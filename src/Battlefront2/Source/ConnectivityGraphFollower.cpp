@@ -277,12 +277,11 @@ bool ConnectivityGraphFollower::GotoNextLeg()
 // FUNCTION: SWBF2 0x004828b0
 bool ConnectivityGraphFollower::CanGetNewRandomPoint() const
 {
-    const ConnectivityGraphFollower* pFollower = (const ConnectivityGraphFollower*)this;
-    if (pFollower->mCurDestNode == pFollower->mDestNode && pFollower->mDestClassification == 1)
+    if (mCurDestNode == mDestNode && mDestClassification == 1)
     {
         return false;
     }
-    return pFollower->mCurDestNode != 0;
+    return mCurDestNode ? true : false;
 }
 
 // FUNCTION: SWBF2 0x004828d0

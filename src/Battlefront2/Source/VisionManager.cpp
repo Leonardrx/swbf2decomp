@@ -322,6 +322,9 @@ int GetRelativePriority(const GameObject* pMe, const GameObject* pObj)
             return 3;
         case AIUtil::ENTITY_HOVER:
             return 15;
+        case AIUtil::ENTITY_ITEM:
+        case AIUtil::ENTITY_REMOTE_TERMINAL:
+            return 0;
         }
         break;
     case AIUtil::ENTITY_WALKER:
@@ -344,6 +347,9 @@ int GetRelativePriority(const GameObject* pMe, const GameObject* pObj)
             return 10;
         case AIUtil::ENTITY_BUILDING:
             return 8;
+        case AIUtil::ENTITY_ITEM:
+        case AIUtil::ENTITY_REMOTE_TERMINAL:
+            return 0;
         }
         break;
     case AIUtil::ENTITY_FLYER:
@@ -363,6 +369,9 @@ int GetRelativePriority(const GameObject* pMe, const GameObject* pObj)
             return 10;
         case AIUtil::ENTITY_BUILDING_ARMED:
             return 15;
+        case AIUtil::ENTITY_ITEM:
+        case AIUtil::ENTITY_REMOTE_TERMINAL:
+            return 0;
         }
         break;
     }

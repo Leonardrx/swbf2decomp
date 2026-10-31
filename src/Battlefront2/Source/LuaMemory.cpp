@@ -66,17 +66,18 @@ void LuaMemory::CreatePools(bool bMission)
     for (int iLeft = 48; iLeft != 0; --iLeft, ++pInfo, ++pDest, ++ppPool)
     {
         *pDest = *pInfo;
-        if (pDest->mCount == 0)
+        if (pDest->mCount != 0)
+        {
+            char acName[16];
+            sprintf(acName, "Lua%d", pInfo->mBin);
+            MemoryPool* pPool = new MemoryPool(acName, 0);
+            *ppPool = pPool;
+            pPool->Create(pInfo->mCount, pInfo->mBin * 4, 0);
+        }
+        else
         {
             *ppPool = 0;
-            continue;
         }
-
-        char acName[16];
-        sprintf(acName, "Lua%d", pInfo->mBin);
-        MemoryPool* pPool = new MemoryPool(acName, 0);
-        *ppPool = pPool;
-        pPool->Create(pInfo->mCount, pInfo->mBin * 4, 0);
     }
 
     RedSetCurrentHeap(iOldHeap);
@@ -107,9 +108,9 @@ MemoryPool* LuaMemory::LocatePool(unsigned int uiSize, void* pBlock)
         return 0;
     }
 
-    if (pPool && pPool->mUsed < pPool->mCount)
+    if (pPool)
     {
-        return pPool;
+        return (pPool->mUsed < pPool->mCount) ? pPool : 0;
     }
     return 0;
 }

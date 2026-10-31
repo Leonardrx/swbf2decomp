@@ -402,8 +402,8 @@ bool HUD::ElementBitmapBase::ReadData(PblConfig& config, PblConfig::Data& data)
 void HUD::ElementBitmapBase::WriteData(HUD::File& file, unsigned int uTabs)
 {
     RedBitmapElement* pBitmap = (RedBitmapElement*)mElement;
-    float fU0, fV0, fU1, fV1;
-    pBitmap->GetTexCoords(fU0, fV0, fU1, fV1);
+    float afTexCoords[4];
+    pBitmap->GetTexCoords(afTexCoords[0], afTexCoords[1], afTexCoords[2], afTexCoords[3]);
 
     file.WriteProperty("Bitmap", uTabs, mBitmapName, "");
     file.WriteProperty("BitmapStyle", uTabs, Factory::sBitmapStyleStrings[pBitmap->GetStyle()],
@@ -430,7 +430,8 @@ void HUD::ElementBitmapBase::WriteData(HUD::File& file, unsigned int uTabs)
                           gRelativeModeStrings[mRelativeMode]);
     }
 
-    file.WriteProperty("TexCoords", uTabs, fU0, fV0, fU1, fV1, 0.0f, 0.0f, 1.0f, 1.0f);
+    file.WriteProperty("TexCoords", uTabs, afTexCoords[0], afTexCoords[1], afTexCoords[2],
+                       afTexCoords[3], 0.0f, 0.0f, 1.0f, 1.0f);
     file.WriteProperty("EventBitmap", uTabs, mEventBitmap.GetRegisteredClassName(true), "");
     HUD::Element::WriteData(file, uTabs);
 }

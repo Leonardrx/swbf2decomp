@@ -4463,8 +4463,10 @@ int ScriptCB_GetIFaceLighting(lua_State* L)
 {
     const RedAmbientLight& rAmbient =
         RedInterfaceScreen::s_lightingState.ambientLight;
-    RedColorValue top = rAmbient.GetTopColor();
-    RedColorValue bottom = rAmbient.GetBottomColor();
+    RedColorValue top;
+    RedColorValue bottom;
+    top = rAmbient.GetTopColor();
+    bottom = rAmbient.GetBottomColor();
     lua_newtable(LuaHelper::mState);
     lua_pushstring(LuaHelper::mState, "ambient");
     lua_newtable(LuaHelper::mState);
@@ -4501,8 +4503,10 @@ int ScriptCB_SetIFaceLighting(lua_State* L)
     if (!lua_isnil(LuaHelper::mState, -1))
     {
         RedAmbientLight& rAmbient = RedInterfaceScreen::s_lightingState.ambientLight;
-        RedColorValue top = rAmbient.GetTopColor();
-        RedColorValue bottom = rAmbient.GetBottomColor();
+        RedColorValue top;
+        RedColorValue bottom;
+        top = rAmbient.GetTopColor();
+        bottom = rAmbient.GetBottomColor();
         Lua_Callbacks::TableReadColor("top", top);
         Lua_Callbacks::TableReadColor("bottom", bottom);
         rAmbient.SetTopColor(top);

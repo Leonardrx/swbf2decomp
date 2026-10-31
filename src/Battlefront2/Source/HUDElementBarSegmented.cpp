@@ -65,8 +65,10 @@ bool HUD::ElementBarSegmented::Segment::SetProperty(const unsigned int uHashID, 
     {
         mGroup->RefreshFormatting(false);
 
-        const float fFadeIn = mGroup->GetFadeInTime() > GetFadeInTime() ? mGroup->GetFadeInTime()
-                                                                        : GetFadeInTime();
+        const float fFadeIn =
+            mGroup->mFader.GetPhaseTime(HUD::Envelope::phase_Attack) > mFader.GetPhaseTime(HUD::Envelope::phase_Attack)
+                ? mGroup->mFader.GetPhaseTime(HUD::Envelope::phase_Attack)
+                : mFader.GetPhaseTime(HUD::Envelope::phase_Attack);
         const unsigned int uNumSegments = mGroup->mNumSegments;
         for (float fTime = 0.0f; fTime < fFadeIn; fTime += 0.1f)
         {
@@ -100,8 +102,8 @@ HUD::ElementBarSegmented::ElementBarSegmented(const char* const pName, Factory::
     mAngleEnd = 0.0f;
 
     mSegmentAll.SetFactory(HUD::Item::Factory::FindByHashID(0x46544626u));
-    mSegmentAll.mDynamicAlloc = false;
-    mSegmentAll.mWriteEnabled = false;
+    mSegmentAll.SetDynamicallyAllocated(false);
+    mSegmentAll.SetWriteEnabled(false);
     mSegmentAll.SetGroup(this);
     mSegmentAll.HUD::Item::SetName("Segment");
 }
@@ -259,8 +261,8 @@ void HUD::ElementBarSegmented::RefreshFormatting(bool bAddToGroup)
 {
     for (unsigned int i = 0; i < mNumSegments; ++i)
     {
-        mSegments[i].mDynamicAlloc = false;
-        mSegments[i].mWriteEnabled = false;
+        mSegments[i].SetDynamicallyAllocated(false);
+        mSegments[i].SetWriteEnabled(false);
         if (bAddToGroup)
         {
             HUD::ElementGroupBase::AddElement(&mSegments[i]);

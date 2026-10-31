@@ -202,9 +202,9 @@ Character* PlayerStats::GetNemesis(int, int iTeamStat) const
 // FUNCTION: SWBF2 0x0061fa00
 int PlayerStats::GetNemesisVal(int, int iTeamStat) const
 {
+    int iBest = 0;
     const int iStatId = mStatId;
     const int iOwnTeam = Character::GetPtr(iStatId)->mTeamNumber;
-    int iBest = 0;
     for (int iTeam = 0; iTeam < 2; ++iTeam)
     {
         for (int i = 0; i < Character::sCharacterLimit; ++i)
@@ -653,19 +653,17 @@ void PlayerStats::AddAllyKill(Character* pVictim, GameObject*)
     }
     else
     {
-        PblList<FlagItem>::Itor it(*FlagItem::sList);
-        for (; (FlagItem*)it; ++it)
+        bool bCarried = false;
+        for (PblList<FlagItem>::Itor it(*FlagItem::sList); (FlagItem*)it; ++it)
         {
             if (it->GetLastCarrierCharacter() == pVictim)
             {
+                PointsProcess(31, 0);
+                bCarried = true;
                 break;
             }
         }
-        if ((FlagItem*)it)
-        {
-            PointsProcess(31, 0);
-        }
-        else
+        if (!bCarried)
         {
             PointsProcess(4, 0);
         }

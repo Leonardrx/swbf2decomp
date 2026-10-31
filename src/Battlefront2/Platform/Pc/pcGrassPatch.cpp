@@ -294,9 +294,7 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
         mat.m[1][3] = 0.0f;
         float fAlpha = 1.0f - (float)color.a * (1.0f / 255.0f);
         float fFade = 1.0f - fAlpha * fAlpha;
-        mat.m[1][0] *= fFade;
-        mat.m[1][1] *= fFade;
-        mat.m[1][2] *= fFade;
+        mat[1] = mat[1] * fFade;
 
         RedColor opaque;
         opaque.b = color.b;

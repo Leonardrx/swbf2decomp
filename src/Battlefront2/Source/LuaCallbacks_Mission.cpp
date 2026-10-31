@@ -732,7 +732,7 @@ int SetCameraRotation(lua_State* L)
     qRot._fX = LuaHelper::GetFloat(2);
     qRot._fY = LuaHelper::GetFloat(3);
     qRot._fZ = LuaHelper::GetFloat(4);
-    CameraManager::Instance()->SetChaseCameraRotation(qRot, 0);
+    CameraManager::sInstance->mChaseCamera[0]->SetRotation(qRot);
     return 0;
 }
 
@@ -2882,10 +2882,9 @@ int GetCommandPostCaptureRegion(lua_State* L)
 int GetCommandPostTeam(lua_State* L)
 {
     CommandPost* pPost = CommandPost::FindPostByName(luaL_checklstring(LuaHelper::mState, 1, 0));
-    GameObject* pObject = pPost ? pPost->GetGameObject() : 0;
-    if (pObject)
+    if (pPost && pPost->GetGameObject())
     {
-        lua_pushnumber(LuaHelper::mState, (float)pObject->GetTeam());
+        lua_pushnumber(LuaHelper::mState, (float)pPost->GetGameObject()->GetTeam());
     }
     else
     {
@@ -3136,9 +3135,9 @@ int MapAddRegionMarker(lua_State* L)
             int iTeam = (int)(float)luaL_checknumber(LuaHelper::mState, 4);
             unsigned int uTeamMask = iTeam ? 1u << iTeam : ~0u;
             const char* pcColor = luaL_optlstring(LuaHelper::mState, 5, 0, 0);
-            bool bShowHud = lua_gettop(LuaHelper::mState) <= 5 ? true : lua_toboolean(LuaHelper::mState, 6) != 0;
-            bool bFlash = lua_gettop(LuaHelper::mState) <= 6 ? true : lua_toboolean(LuaHelper::mState, 7) != 0;
-            bool bPulse = lua_gettop(LuaHelper::mState) <= 7 ? true : lua_toboolean(LuaHelper::mState, 8) != 0;
+            bool bShowHud = lua_gettop(LuaHelper::mState) > 5 ? lua_toboolean(LuaHelper::mState, 6) != 0 : true;
+            bool bFlash = lua_gettop(LuaHelper::mState) > 6 ? lua_toboolean(LuaHelper::mState, 7) != 0 : true;
+            bool bPulse = lua_gettop(LuaHelper::mState) > 7 ? lua_toboolean(LuaHelper::mState, 8) != 0 : true;
             TargetManager::AddMarker(0, pRegion, PblHash(pcTexture), fScale, uTeamMask,
                                      PblHash(pcColor), bShowHud, bFlash, bPulse, fScale * 0.3f);
         }
@@ -3213,9 +3212,9 @@ int MapAddClassMarker(lua_State* L)
     int iTeam = (int)(float)luaL_checknumber(LuaHelper::mState, 4);
     unsigned int uTeamMask = iTeam ? 1u << iTeam : ~0u;
     const char* pcColor = luaL_optlstring(LuaHelper::mState, 5, 0, 0);
-    bool bShowHud = lua_gettop(LuaHelper::mState) <= 5 || lua_toboolean(LuaHelper::mState, 6) != 0;
-    bool bFlash = lua_gettop(LuaHelper::mState) <= 6 || lua_toboolean(LuaHelper::mState, 7) != 0;
-    bool bPulse = lua_gettop(LuaHelper::mState) <= 7 || lua_toboolean(LuaHelper::mState, 8) != 0;
+    bool bShowHud = lua_gettop(LuaHelper::mState) > 5 ? lua_toboolean(LuaHelper::mState, 6) != 0 : true;
+    bool bFlash = lua_gettop(LuaHelper::mState) > 6 ? lua_toboolean(LuaHelper::mState, 7) != 0 : true;
+    bool bPulse = lua_gettop(LuaHelper::mState) > 7 ? lua_toboolean(LuaHelper::mState, 8) != 0 : true;
     TargetManager::AddClassMarker(PblHash(pcClass), PblHash(pcTexture), fScale,
                                    uTeamMask, PblHash(pcColor), bShowHud, bFlash,
                                    bPulse, fScale * 0.3f);
@@ -4005,16 +4004,18 @@ int GetPathPoint(lua_State* L)
         const PblQuaternion& qRot = pPath->GetPointRotation(iPoint);
         PblQuaternion qInverse(qRot._fS, -qRot._fX, -qRot._fY, -qRot._fZ);
         const PblVector3& vPoint = pPath->GetPointPosition(iPoint);
-        D3DXQUATERNION qUnit;
         PblMatrix matrix;
-        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&matrix), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qInverse)));
+        {
+            D3DXQUATERNION qUnit;
+            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&matrix), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qInverse)));
+        }
         matrix.m[3][0] = vPoint.x;
         matrix.m[3][1] = vPoint.y;
         matrix.m[3][2] = vPoint.z;
         *(PblVector3*)&matrix.m[0][0] = PblVector3(-matrix.m[0][0], -matrix.m[0][1], -matrix.m[0][2]);
-        *(PblVector3*)&matrix.m[2][0] = PblVector3(-matrix.m[2][0], -matrix.m[2][1], -matrix.m[2][2]);
         matrix.m[3][3] = 1.0f;
         matrix.m[0][3] = 0.0f;
+        *(PblVector3*)&matrix.m[2][0] = PblVector3(-matrix.m[2][0], -matrix.m[2][1], -matrix.m[2][2]);
         matrix.m[2][3] = 0.0f;
         LuaHelper::PushObject<PblMatrix>(matrix);
         return 1;

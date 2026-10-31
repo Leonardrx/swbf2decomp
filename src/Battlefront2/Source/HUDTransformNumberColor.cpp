@@ -120,11 +120,16 @@ RedColor HUD::TransformNumberColor::CalculateOutputColor(float fInput) const
     const NumberColor& low = mMapping[i ? i - 1 : 0];
     const RedColor lowColor = low.color;
     const float fDelta = high.number - low.number;
+    RedColor result;
     if (fDelta == 0.0f)
     {
-        return highColor;
+        result = highColor;
     }
-    return Interpolate(lowColor, highColor, (fValue - low.number) / fDelta);
+    else
+    {
+        result = Interpolate(lowColor, highColor, (fValue - low.number) / fDelta);
+    }
+    return result;
 }
 
 // FUNCTION: SWBF2 0x00567fb0

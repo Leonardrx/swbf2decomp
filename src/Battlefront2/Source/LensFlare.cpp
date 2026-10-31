@@ -136,7 +136,7 @@ void LensFlare::DeactivateEffect()
 // FUNCTION: SWBF2 0x0056fa20
 bool LensFlare::Update(float fDeltaTime)
 {
-    return FLEffectObject::Update(fDeltaTime);
+    return FLEffectObject::Update(fDeltaTime) ? true : false;
 }
 
 // FUNCTION: SWBF2 0x0056fa40

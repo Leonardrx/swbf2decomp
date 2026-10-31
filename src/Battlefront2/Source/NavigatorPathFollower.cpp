@@ -105,7 +105,8 @@ void NavigatorPathFollower::ReceivePathResult(AIPath* pPath)
 
     if (mCurState == STATE_WAITFORPATH)
     {
-        mPathFollower = new PathFollower(mOwner->mOwner, pPath, (const Obstacle**)mIgnore,
+        UnitController* pController = mOwner->mOwner;
+        mPathFollower = new PathFollower(pController, pPath, (const Obstacle**)mIgnore,
                                          mIgnoreCnt, mDoCallbacksOnPts);
         SetNextState(STATE_FOLLOWPATH);
     }

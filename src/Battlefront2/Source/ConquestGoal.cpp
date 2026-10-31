@@ -200,7 +200,7 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
         float fPick = AIUtil::GetRandomFloat(0.0f, fTotal);
         float fSum = 0.0f;
         pValid = bValid;
-        for (CommandPostItor it = CommandPostManager::Instance()->GetItor(); it; ++it, ++pValid)
+        for (it = CommandPostManager::Instance()->GetItor(); it; ++it, ++pValid)
         {
             if (!*pValid)
             {
@@ -222,7 +222,7 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
 
     CommandPost* pPosts[16];
     int iCount = 0;
-    for (CommandPostItor it = CommandPostManager::Instance()->GetItor(); it; ++it)
+    for (it = CommandPostManager::Instance()->GetItor(); it; ++it)
     {
         pPosts[iCount++] = *it;
     }

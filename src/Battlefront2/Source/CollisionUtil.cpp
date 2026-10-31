@@ -60,13 +60,17 @@ bool CollisionUtil::CollideSphereRay(const PblVector3& rCenter, float fRadius,
     {
         return false;
     }
-    float fHalfChord = PblMath::Sqrt(fRadius2 - fPerp2);
+    float fHalfChord = (float)sqrt((double)(fRadius2 - fPerp2));
     float fHit = fDist2 > fRadius2 ? fProj - fHalfChord : fProj + fHalfChord;
     if (fHit < 0.0f)
     {
         return false;
     }
-    return fHit <= fLength;
+    if (fHit > fLength)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0046a810
@@ -76,7 +80,11 @@ bool CollisionUtil::CollideSpheres2(const PblVector3& rCenter1, float fRadius1,
     PblVector3 vDelta = rCenter2 - rCenter1;
     float fRadii = fRadius1 + fRadius2;
     float fDist2 = SquaredLength(vDelta);
-    return !(fDist2 >= fRadii * fRadii);
+    if (fDist2 >= fRadii * fRadii)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0046ae60
@@ -170,7 +178,9 @@ namespace CollisionUtil
 // FUNCTION: SWBF2 0x00469670
 bool IsPointInsideAxisAlignedCylinder(const PblVector3& vOffset, float fRadius, float fHalfHeight)
 {
-    if (fabsf(vOffset.y) > fHalfHeight)
+    float fY = vOffset.y;
+    float fAbsY = fY < 0.0f ? -fY : fY;
+    if (fAbsY > fHalfHeight)
     {
         return false;
     }
@@ -199,7 +209,10 @@ namespace CollisionUtil
 bool CollideSpheres(const PblVector3& vCenter, float fRadius, const PblVector3& vSphereCenter, float fSphereRadius,
                 PblVector3& vNormal, float& fDepth)
 {
-    PblVector3 vDelta = vSphereCenter - vCenter;
+    float fDx = vSphereCenter.x - vCenter.x;
+    float fDy = vSphereCenter.y - vCenter.y;
+    float fDz = vSphereCenter.z - vCenter.z;
+    PblVector3 vDelta(fDx, fDy, fDz);
     float fRadii = fRadius + fSphereRadius;
     float fDist = SquaredLength(vDelta);
     if (fDist >= fRadii * fRadii)
@@ -752,7 +765,7 @@ bool CollisionUtil::CollideAxisAlignedCylinders(PblVector3& vDelta, float fRadiu
                                                 float fHeightB, float& fDepth)
 {
     float fAbsY = Fabs(vDelta.y);
-    float fDistXZ = LengthXZ(vDelta);
+    float fDistXZ = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.z * vDelta.z);
     float fRadii = fRadiusA + fRadiusB;
     if (fDistXZ >= fRadii)
     {

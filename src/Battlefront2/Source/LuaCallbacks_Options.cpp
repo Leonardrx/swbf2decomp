@@ -365,15 +365,12 @@ int ScriptCB_SetGameRules(lua_State* L)
 
         const char* pInStr = LuaHelper::GetString(1);
         unsigned int NewHash = PblHash(pInStr);
-        int i;
-        for (i = 0; i < eGAMERULES_MAX; ++i)
+        int i = 0;
+        while (i < eGAMERULES_MAX && NewHash != gGameRulesNameHashes[i])
         {
-            if (NewHash == gGameRulesNameHashes[i])
-            {
-                break;
-            }
+            ++i;
         }
-        if (i != eGAMERULES_MAX)
+        if (i < eGAMERULES_MAX)
         {
             _SetGameRules((eGAME_RULES)i);
         }

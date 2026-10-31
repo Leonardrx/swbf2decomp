@@ -407,17 +407,21 @@ void GameObject::PlayDamageRegionSound(unsigned int uRegionId)
     {
         return;
     }
-    DamageRegionSound* pSound = 0;
-    for (PblListSingle::Node* pNode = pFirst;; pNode = pNode->mNext)
+    PblListSingle::Node* pNode = pFirst;
+    DamageRegionSound* pSound;
+    for (;;)
     {
+        pSound = (pNode == &list.mHead)
+                     ? 0
+                     : (DamageRegionSound*)((char*)pNode - offsetof(DamageRegionSound, mNode));
+        if (pSound->mRegionID == uRegionId)
+        {
+            break;
+        }
+        pNode = pNode->mNext;
         if (pNode == &list.mHead)
         {
             pSound = (DamageRegionSound*)((char*)pFirst - offsetof(DamageRegionSound, mNode));
-            break;
-        }
-        pSound = (DamageRegionSound*)((char*)pNode - offsetof(DamageRegionSound, mNode));
-        if (pSound->mRegionID == uRegionId)
-        {
             break;
         }
     }
@@ -1223,9 +1227,9 @@ void Event<GameObject, char>::Callback::Trigger(GameObject& item, char& param)
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
-                    pChild->Release();
                     break;
                 }
                 Callback* pNext = (Callback*)pChild->mSibling;
@@ -1236,6 +1240,10 @@ void Event<GameObject, char>::Callback::Trigger(GameObject& item, char& param)
                 pChild->Trigger(item, param);
                 pChild->Release();
                 pChild = pNext;
+            }
+            if (pChild)
+            {
+                pChild->Release();
             }
         }
     }

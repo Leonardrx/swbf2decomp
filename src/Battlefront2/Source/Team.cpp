@@ -155,14 +155,15 @@ void Team::CopyFromHost()
 
             sTeams[i]->SetName(sHostTeams[i]->mName);
             const unsigned int uIcon = sHostTeams[i]->GetIcon();
-            sTeams[i]->mIcon = uIcon;
-            if (!sTeams[i]->mConquestIcon)
+            Team* pTeam = sTeams[i];
+            pTeam->mIcon = uIcon;
+            if (!pTeam->mConquestIcon)
             {
-                sTeams[i]->mConquestIcon = uIcon;
+                pTeam->mConquestIcon = uIcon;
             }
-            if (!sTeams[i]->mCTFIcon)
+            if (!pTeam->mCTFIcon)
             {
-                sTeams[i]->mCTFIcon = uIcon;
+                pTeam->mCTFIcon = uIcon;
             }
             sTeams[i]->SetSide(sHostTeams[i]->mSide);
             sTeams[i]->mMaxReinforcements = sHostTeams[i]->mMaxReinforcements;

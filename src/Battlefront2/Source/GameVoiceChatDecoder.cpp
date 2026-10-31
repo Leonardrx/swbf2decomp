@@ -364,25 +364,22 @@ bool Decoder::ReceivePacket(unsigned int uiInput, const VoiceChat::AudioPacket* 
 {
     if (pPacket->mSize)
     {
-        if (mDecoders[uiInput].GetNumQueuedPackets() >= 1)
+        if (mDecoders[uiInput].GetNumQueuedPackets() < 1)
         {
-            return false;
+            Snd::StreamPacket* pOutput = static_cast<Snd::StreamSourceNProducer*>(this)->GetReadPacket(uiInput);
+            if (pOutput)
+            {
+                pOutput->mBuffer = pPacket->mData;
+                static_cast<Snd::StreamSourceNProducer*>(this)->PacketComplete(pOutput, pPacket->mSize,
+                                160 * (pPacket->mSize / 33u), false,
+                                pPacket->mDiscontinuity, 0, uiInput);
+                mDecoders[uiInput].Update();
+                mMixer.Update();
+                return true;
+            }
         }
-        Snd::StreamPacket* pOutput = static_cast<Snd::StreamSourceNProducer*>(this)->GetReadPacket(uiInput);
-        if (!pOutput)
-        {
-            return false;
-        }
-        pOutput->mBuffer = pPacket->mData;
-        static_cast<Snd::StreamSourceNProducer*>(this)->PacketComplete(pOutput, pPacket->mSize,
-                        160 * (pPacket->mSize / 33u), false,
-                        pPacket->mDiscontinuity, 0, uiInput);
-        mDecoders[uiInput].Update();
-        mMixer.Update();
-        return true;
     }
-
-    if (pPacket->mDiscontinuity)
+    else if (pPacket->mDiscontinuity)
     {
         mDecoders[uiInput].Flush();
         mMixer.Discontinuity(uiInput, true);

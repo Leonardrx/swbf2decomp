@@ -170,16 +170,21 @@ namespace
 // FUNCTION: SWBF2 0x00477720
 void EntityFlyer::SetPosition(const PblVector3& vPos)
 {
-    PblMatrix& matrix = mMatrix;
-    matrix.SetTranslation(vPos);
-    EntityFlyerUpdateCollisionSphere(this);
+    mMatrix.SetTranslation(vPos);
+    PblVector3 center;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&center), reinterpret_cast<const D3DXVECTOR3*>(&mModel->_mModel->_BoundingSphere.GetCenter()), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    SetCollisionCenter(center);
+    RecalculateAABB();
 }
 
 // FUNCTION: SWBF2 0x004777c0
 void EntityFlyer::SetMatrix(const PblMatrix& mMatrix)
 {
     this->mMatrix = mMatrix;
-    EntityFlyerUpdateCollisionSphere(this);
+    PblVector3 center;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&center), reinterpret_cast<const D3DXVECTOR3*>(&mModel->_mModel->_BoundingSphere.GetCenter()), reinterpret_cast<const D3DXMATRIX*>(&this->mMatrix));
+    SetCollisionCenter(center);
+    RecalculateAABB();
 }
 
 
@@ -314,7 +319,8 @@ bool EntityCarrier::DetachCargo(int iSlot)
 
     UpdateLandedHeight();
 
-    GetClass()->mSoundCargoDropoff.Play(&mMatrix.GetTranslation(), &GetVelocity(), true, true);
+    const PblVector3* pVelocity = &GetVelocity();
+    GetClass()->mSoundCargoDropoff.Play(&mMatrix.GetTranslation(), pVelocity, true, true);
     return true;
 }
 

@@ -210,7 +210,7 @@ int AI::PatrolPath::RequestPatrolPaths(const PblVector3& pos, float fRadius, int
             ppPaths[iCount++] = it;
             if (iCount >= iMax)
             {
-                break;
+                return iCount;
             }
         }
     }

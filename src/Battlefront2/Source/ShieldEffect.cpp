@@ -317,9 +317,7 @@ void ShieldEffect::Render(unsigned char ucViewport, float, unsigned int uiFlags)
         {
             for (int r = 0; r < 3; r++)
             {
-                mScaled.m[r][0] *= fScale;
-                mScaled.m[r][1] *= fScale;
-                mScaled.m[r][2] *= fScale;
+                mScaled[r] = mScaled[r] * fScale;
                 mScaled.m[r][3] = 0.0f;
             }
         }
