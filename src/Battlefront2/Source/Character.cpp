@@ -1240,13 +1240,13 @@ void Character::SelectPost(CommandPost* pPost)
     {
         if (mPost)
         {
-            mPost->PopSpawnQueue(mPlayerId >= 0, mTeamNumber == GetTeam(mPost->GetGameObject()));
+            mPost->PopSpawnQueue(IsPlayer(), mTeamNumber == GetTeam(mPost->GetGameObject()));
         }
         mPost = pPost;
         mSpawnSlot = -1;
         if (mPost)
         {
-            mSpawnSlot = mPost->PushSpawnQueue(mPlayerId >= 0, mTeamNumber == GetTeam(mPost->GetGameObject()));
+            mSpawnSlot = mPost->PushSpawnQueue(IsPlayer(), mTeamNumber == GetTeam(mPost->GetGameObject()));
         }
     }
     PblValues::Record(mSpawnSlot, PVT_MOVES_HIGH);
@@ -1868,10 +1868,16 @@ void Character::DestroyAll()
 {
     sCharacterCount = 0;
     sCharacterLimit = 0;
-    delete[] sCharacters;
-    sCharacters = 0;
-    delete[] sPlayerStats;
-    sPlayerStats = 0;
+    if (sCharacters)
+    {
+        delete[] sCharacters;
+        sCharacters = 0;
+    }
+    if (sPlayerStats)
+    {
+        delete[] sPlayerStats;
+        sPlayerStats = 0;
+    }
 }
 
 // GLOBAL: SWBF2 0x01e2fde7

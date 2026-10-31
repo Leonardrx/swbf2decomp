@@ -302,12 +302,11 @@ bool WeaponDispenser::Update(float fDeltaTime)
             }
             pClass->mTrackItemCount[iIndex] = iCount;
 
-            WeaponDispenserClass* pNext = (WeaponDispenserClass*)pClass->mNextCharge;
-            if (pNext == pClass || pNext == (WeaponDispenserClass*)mStart)
+            if (pClass == pClass->mNextCharge || pClass->mNextCharge == mStart)
             {
                 break;
             }
-            pClass = pNext;
+            pClass = (WeaponDispenserClass*)pClass->mNextCharge;
         }
         WeaponDispenserClass* pMyClass = (WeaponDispenserClass*)mClass;
         mItemArray = &pMyClass->mTrackItemArray[iIndex];

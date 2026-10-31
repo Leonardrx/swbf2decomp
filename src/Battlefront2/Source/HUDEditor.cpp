@@ -1150,9 +1150,9 @@ void HUD::Editor::KeyboardEvent(RedInputEventType eType, RedKeyboard* pKeyboard,
 // FUNCTION: SWBF2 0x00546e80
 void HUD::Editor::SetMode(Mode eMode)
 {
-    gEditMode = eMode;
     bool bEnable = false;
-    Mode eOldMode = mMode;
+    gEditMode = eMode;
+    const Mode eOldMode = mMode;
     mMode = eMode;
 
     switch (eMode)

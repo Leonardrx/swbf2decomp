@@ -176,14 +176,11 @@ void AsteroidClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (iNumBodies == 0 && mModel)
         {
             const PblBox& box = mModel->_mModel->_TotalBoundingBox;
-            const PblVector3 vCenter((box._vMin.x + box._vMax.x) * 0.5f, (box._vMin.y + box._vMax.y) * 0.5f,
-                                     (box._vMin.z + box._vMax.z) * 0.5f);
-            float fHalfX = (box._vMax.x - box._vMin.x) * 0.5f;
-            float fHalfY = (box._vMax.y - box._vMin.y) * 0.5f;
-            float fHalfZ = (box._vMax.z - box._vMin.z) * 0.5f;
+            const PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
+            const PblVector3 vHalf = (box._vMax - box._vMin) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
-            primitive.SetAACylinder((fHalfZ + fHalfX) * 0.5f, fHalfY * 2.0f);
+            primitive.SetAACylinder((vHalf.x + vHalf.z) * 0.5f, vHalf.y * 2.0f);
             matrix[3] = vCenter;
             matrix.m[3][3] = 1.0f;
             mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, "main_body", matrix, 0));
@@ -345,11 +342,11 @@ Asteroid::Asteroid(AsteroidClass* pClass, const EntityDesc& desc)
     const float fOmega =
         (mClass->mMaxOmega - mClass->mMinOmega) * PblRandom::_Global.GetFloat() + mClass->mMinOmega;
     const PblVector3 vAxis = PblRandom::GetGlobalVector3();
-    mOmega = PblVector3(vAxis.x * fOmega, vAxis.y * fOmega, vAxis.z * fOmega);
+    mOmega = vAxis * fOmega;
 
     const float fSpeed =
         (mClass->mMaxSpeed - mClass->mMinSpeed) * PblRandom::_Global.GetFloat() + mClass->mMinSpeed;
-    mVelocity = PblVector3(mMatrix.m[2][0] * fSpeed, mMatrix.m[2][1] * fSpeed, mMatrix.m[2][2] * fSpeed);
+    mVelocity = mMatrix.GetZAxis() * fSpeed;
     mMass = 10.0f;
     NetGame::Created(this);
 }

@@ -304,11 +304,8 @@ void GameObject::ApplyRadiusDamage(const PblVector3& vPos, float fInnerRadius, f
     {
         return;
     }
-    const PblVector3& vCenter = pCollision->GetCollisionCenter();
-    float fX = vCenter.x - vPos.x;
-    float fY = vCenter.y - vPos.y;
-    float fZ = vCenter.z - vPos.z;
-    float fEffect = CalcRadiusEffect(PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ), fInnerRadius, fOuterRadius);
+    float fEffect = CalcRadiusEffect(Length(pCollision->GetCollisionCenter() - vPos), fInnerRadius,
+                                     fOuterRadius);
     if (fEffect > 0.0f)
     {
         DamageDesc desc = damage;
@@ -827,8 +824,9 @@ GameObject::~GameObject()
     }
     TargetManager::RemoveMarker(this, 0, (unsigned int)-1);
     EventManager::ObjectEvent::mDelete.Trigger(*this, EventManager::noContext);
+    pvs::IManager& pvsManager = pvs::IManager::GetInstance();
     SetPortalActive(false);
-    pvs::IManager::GetInstance().UnregisterDynamic(*this);
+    pvsManager.UnregisterDynamic(*this);
     TeamManager::RemoveObject(this);
     if (mDisabledEffectHandle)
     {
@@ -901,8 +899,8 @@ static DamageEffectClass* sCurDamageEffect;
 // FUNCTION: SWBF2 0x005365c0
 void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    char acSound[256];
     char acRegion[256];
+    char acSound[256];
     char acBuffer[512];
     switch (uProperty)
     {
@@ -954,14 +952,7 @@ void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
         break;
     case 0x6196493c:
         mVOUnitType = atoi(pszValue);
-        if (mVOUnitType < 0)
-        {
-            mVOUnitType = 0;
-        }
-        else
-        {
-            mVOUnitType = __min(mVOUnitType, 255);
-        }
+        mVOUnitType = Clamp(mVOUnitType, 0, 255);
         break;
     case 0xa8da4b94:
         mDisabledEffect = PblHash(pszValue);
@@ -1100,29 +1091,22 @@ void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
     }
 
     case 0x06182385:
-    {
         sCurDamageEffect = 0;
-        int i;
-        for (i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
         {
             if (!mDamageEffectClass[i])
             {
+                mDamageEffectClass[i] = new DamageEffectClass;
+                sCurDamageEffect = mDamageEffectClass[i];
+                if (sCurDamageEffect)
+                {
+                    sCurDamageEffect->mPercent = (float)atof(pszValue) / 100.0f;
+                    sCurDamageEffect->mPercentStop = 0.0f;
+                }
                 break;
             }
         }
-        if (i == 10)
-        {
-            return;
-        }
-        mDamageEffectClass[i] = new DamageEffectClass;
-        sCurDamageEffect = mDamageEffectClass[i];
-        if (sCurDamageEffect)
-        {
-            sCurDamageEffect->mPercent = (float)atof(pszValue) / 100.0f;
-            sCurDamageEffect->mPercentStop = 0.0f;
-        }
         break;
-    }
     case 0x37fe5ca9:
         if (sCurDamageEffect)
         {

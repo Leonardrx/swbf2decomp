@@ -102,8 +102,8 @@ void ParticleEmitter::Reset(const ParticleEmitterClass* pClass)
         mMaxParticles = 128;
     }
     mSpawnDelay = mClass->mStartDelay.GetValue(rand);
-    mParticleCount = 0;
     mFirstInfo = 0;
+    mParticleCount = 0;
     mStopTime = 10000.0f;
     mColor.r = mClass->mRed.GetValue(rand);
     mColor.g = mClass->mGreen.GetValue(rand);

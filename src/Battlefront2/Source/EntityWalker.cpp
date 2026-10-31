@@ -1983,7 +1983,7 @@ void EntityWalker::DoFootImpactEffects()
         return;
     }
     unsigned int uBit = 1;
-    for (int i = 0; i < iNumFeet; ++i)
+    for (int i = 0; i < iNumFeet; ++i, uBit = _rotl(uBit, 1))
     {
         bool bImpact = false;
         float fHalfHeight = mCollisionModel->GetHeightFromMaskID(mClass->mFootPrimitives[i]) * 0.5f;
@@ -1997,26 +1997,27 @@ void EntityWalker::DoFootImpactEffects()
 
         if (!mClass->mStompDetectionType)
         {
-            if (mLastFootHeight[i] > fHeight && mClass->mStompThreshold + mMinFootHeight[i] > fHeight &&
-                mLastFootHeight[i] > mClass->mStompThreshold + mMinFootHeight[i])
+            float fStompHeight = mClass->mStompThreshold + mMinFootHeight[i];
+            if (mLastFootHeight[i] > fHeight && fStompHeight > fHeight && mLastFootHeight[i] > fStompHeight)
             {
                 bImpact = true;
             }
         }
         else
         {
+            unsigned int uState = mFootState;
             unsigned int uLifted = _rotl(uBit, 24);
             float fDrop = mLastFootHeight[i] - fHeight;
-            if (mFootState & uLifted)
+            if (uState & uLifted)
             {
                 if (fDrop > 0.1f)
                 {
-                    mFootState &= ~uLifted;
+                    mFootState = uState & ~uLifted;
                 }
             }
             else if (0.1f > fDrop)
             {
-                mFootState |= uLifted;
+                mFootState = uState | uLifted;
                 bImpact = true;
             }
         }
@@ -2104,7 +2105,6 @@ void EntityWalker::DoFootImpactEffects()
         {
             mFootState &= ~uBit;
         }
-        uBit = (uBit << 1) | (uBit >> 31);
     }
 }
 

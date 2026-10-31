@@ -455,7 +455,9 @@ PblTimeBase::Stamp TotalTimeStamp;
 float sDeltaTime;
 // GLOBAL: SWBF2 0x01f9c2cc
 float sSystemDeltaTime;
+// GLOBAL: SWBF2 0x01f9c2b8
 LARGE_INTEGER perfCount;
+// GLOBAL: SWBF2 0x01f9c2d0
 LARGE_INTEGER oldPerfCount;
 // GLOBAL: SWBF2 0x1e563a0
 __int64 maxAdvanceTicks;
@@ -574,10 +576,9 @@ void GameState::UpdateTime()
 
     if (!(g_fFixedRate > 0.0f))
     {
-        __int64 iMinTicks;
+        const __int64 iMinTicks = Frequency.QuadPart / 80;
         do
         {
-            iMinTicks = Frequency.QuadPart / 80;
             QueryPerformanceCounter(&perfCount);
             iDeltaTicks = perfCount.QuadPart - oldPerfCount.QuadPart;
             if (iDeltaTicks < iMinTicks)

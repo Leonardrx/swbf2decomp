@@ -305,7 +305,8 @@ bool OrdnanceGrenade::Collide(CollisionObject* pObject, const PblVector3& vPos,
             {
                 PblVector3 vDir;
                 D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mVelocity));
-                static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
+                Damageable* pDamageable = static_cast<Damageable*>(pVictim);
+                pDamageable->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
             }
         }
 

@@ -383,7 +383,8 @@ bool SnipeHelper::HELPERSeeEnemyInterrupt(const GameObject* pEnemy) const
     {
         return false;
     }
-    return SquaredLength(pEnemy->GetMatrix().GetTranslation() - GetMe()->GetMatrix().GetTranslation()) < 1600.0f;
+    bool bClose = SquaredLength(pEnemy->GetMatrix().GetTranslation() - GetMe()->GetMatrix().GetTranslation()) < 1600.0f;
+    return bClose;
 }
 
 // FUNCTION: SWBF2 0x0063c1a0

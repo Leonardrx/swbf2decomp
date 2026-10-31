@@ -74,8 +74,8 @@ void UnitHoldAgent::SetNewSearchHeading()
     }
     else
     {
-        const PblVector3& vDir = PblRandom::GetSim().GetVector3();
-        PblVector3 vOffset(vDir.x * 10.0f, 0.0f, vDir.z * 10.0f);
+        PblVector3 vOffset = PblRandom::GetSim().GetVector3() * 10.0f;
+        vOffset.y = 0.0f;
 
         mSearchPos = GetMe()->GetMatrix().GetTranslation() + vOffset;
     }

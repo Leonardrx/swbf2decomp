@@ -354,37 +354,37 @@ MountedTurret::MountedTurret(GameObject* pParent, MountedTurretClass* pClass, Re
             continue;
         }
 
-        mAimer[i] = new Aimer(&pClass->mAimerClass[i], this,
-                              pClass->mMountHash ? &mAimMatrix : &pParent->GetMatrix(),
-                              mPose, 0);
+        Aimer* pAimer = new Aimer(&pClass->mAimerClass[i], this,
+                                  pClass->mMountHash ? &mAimMatrix : &pParent->GetMatrix(),
+                                  mPose, 0);
 
         WeaponDesc desc;
+        desc.mAimer = pAimer;
+        desc.m_pEnergyBar = 0;
         desc.mOwner = this;
-        desc.mAimer = mAimer[i];
         desc.mTrigger = 0;
         desc.mReload = 0;
         desc.mNumClips = 0;
         desc.m_pAmmoCounter = 0;
-        desc.m_pEnergyBar = 0;
+        mAimer[i] = pAimer;
         desc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
         desc.mReload = &mControlReload;
 
-        const WeaponAmmoDesc& ammo = mClass->mWeaponAmmo[i];
-        if (ammo.bFlagShareAmmo)
+        if (mClass->mWeaponAmmo[i].bFlagShareAmmo)
         {
-            desc.m_pAmmoCounter = mWeapon[ammo.uiAmmo]->m_pAmmoCounter;
+            desc.m_pAmmoCounter = mWeapon[mClass->mWeaponAmmo[i].uiAmmo]->m_pAmmoCounter;
         }
-        else if (ammo.bFlagAmmoInfinite)
+        else if (mClass->mWeaponAmmo[i].bFlagAmmoInfinite)
         {
             desc.mNumClips = 0x7fffffff;
         }
         else
         {
-            desc.mNumClips = ammo.uiAmmo;
+            desc.mNumClips = mClass->mWeaponAmmo[i].uiAmmo;
         }
-        if (ammo.bFlagShareHeat)
+        if (mClass->mWeaponAmmo[i].bFlagShareHeat)
         {
-            desc.m_pEnergyBar = mWeapon[ammo.uiHeat]->m_pEnergyBar;
+            desc.m_pEnergyBar = mWeapon[mClass->mWeaponAmmo[i].uiHeat]->m_pEnergyBar;
         }
 
         mWeapon[i] = mClass->mWeaponClass[i]->Build(desc);

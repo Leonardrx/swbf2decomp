@@ -496,7 +496,7 @@ float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
     const PblVector3& vForward = mTarget.GetXAxis();
     float fMeSide = vForward.y * vTargetToMe.y + vForward.x * vTargetToMe.x + vForward.z * vTargetToMe.z;
     float fHintSide = vForward.y * vTargetToHint.y + vForward.x * vTargetToHint.x + vForward.z * vTargetToHint.z;
-    if ((fMeSide < 0.0f) != (fHintSide < 0.0f))
+    if ((fHintSide < 0.0f) != (fMeSide < 0.0f))
     {
         return FLT_MAX;
     }

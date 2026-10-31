@@ -323,8 +323,7 @@ int GetRelativePriority(const GameObject* pMe, const GameObject* pObj)
             return 3;
         case AIUtil::ENTITY_HOVER:
             return 15;
-        case AIUtil::ENTITY_ITEM:
-        case AIUtil::ENTITY_REMOTE_TERMINAL:
+        default:
             return 0;
         }
         break;

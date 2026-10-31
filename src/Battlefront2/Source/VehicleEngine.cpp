@@ -106,8 +106,14 @@ void VehicleEngine::Update(const VehicleEngineClass* pClass, float fDeltaTime,
 
     if (bCockpit)
     {
-        (bFirstPerson ? pClass->mCockpit1stPerson : pClass->mCockpit3rdPerson)
-            .Play(&pos, &vel, false, true);
+        if (bFirstPerson)
+        {
+            pClass->mCockpit1stPerson.Play(&pos, &vel, false, true);
+        }
+        else
+        {
+            pClass->mCockpit3rdPerson.Play(&pos, &vel, false, true);
+        }
     }
 
     mAttached.Update(&mAttachedProps, &pos, &vel);

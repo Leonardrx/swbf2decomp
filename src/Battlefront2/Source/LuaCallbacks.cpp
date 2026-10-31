@@ -645,26 +645,25 @@ int ScriptCB_getlocalizestr(lua_State*)
     }
 
     bool bOptional = iTop == 2;
-    if (!lua_isstring(LuaHelper::mState, 1))
+    if (lua_isstring(LuaHelper::mState, 1))
     {
-        return 0;
-    }
+        const char* pcKey = luaL_checklstring(LuaHelper::mState, 1, 0);
+        const unsigned short* pusString = RedLocalizeDB::Find(PblHash(pcKey), bOptional);
+        if (pusString)
+        {
+            LuaHelper::PushString(pusString);
+            return 1;
+        }
+        if (bOptional)
+        {
+            return 0;
+        }
 
-    const char* pcKey = luaL_checklstring(LuaHelper::mState, 1, 0);
-    const unsigned short* pusString = RedLocalizeDB::Find(PblHash(pcKey), bOptional);
-    if (pusString)
-    {
-        LuaHelper::PushString(pusString);
+        PblUnicode::ustrncnv(sTempReturnString16, pcKey, 255);
+        LuaHelper::PushString(sTempReturnString16);
         return 1;
     }
-    if (bOptional)
-    {
-        return 0;
-    }
-
-    PblUnicode::ustrncnv(sTempReturnString16, pcKey, 255);
-    LuaHelper::PushString(sTempReturnString16);
-    return 1;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0057e3d0
@@ -1398,7 +1397,8 @@ int ScriptCB_ShowMultipageText(lua_State*)
         unsigned short ausEmpty[5];
         if (!pusText)
         {
-            memset(ausEmpty, 0, sizeof(ausEmpty));
+            ausEmpty[0] = 0;
+            memset(&ausEmpty[1], 0, sizeof(ausEmpty) - sizeof(ausEmpty[0]));
             pusText = ausEmpty;
         }
         pTextElement->SetText(pusText, true);

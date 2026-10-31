@@ -553,9 +553,11 @@ bool Damageable::ApplyDamage(const DamageDesc& damage, const PblVector3& vDir,
     vFlat.x = vDir.x;
     vFlat.y = 0.0001f;
     vFlat.z = vDir.z;
-    PblVector3 vNormal;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
-    vFlat = vNormal;
+    {
+        PblVector3 vNormal;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
+        vFlat = vNormal;
+    }
     PblVector3 vHit = GetGameObject()->GetMatrix().GetTranslation() - vFlat * 30.0f;
     ApplyDamageCommon(damage, uFlags, fMultiplier, true, vHit);
 

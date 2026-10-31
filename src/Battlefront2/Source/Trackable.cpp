@@ -751,12 +751,13 @@ void CameraTrackSetting::SetupAmbientShiftComponent(float& rShift, float& rTarge
 // FUNCTION: SWBF2 0x0065a7f0
 bool CameraTrackSetting::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    float fX, fY, fZ;
     float* pA;
     float* pB;
     switch (uProperty)
     {
     case 0x41568C97:
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mCameraEyePointOffset.x = fX;
         mCameraEyePointOffset.y = fY;
@@ -765,19 +766,28 @@ bool CameraTrackSetting::SetProperty(unsigned int uProperty, const char* pszValu
         mCameraTrackCenter.y = fY;
         mCameraTrackCenter.z = fZ;
         return true;
+    }
     case 0xE85D5895:
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mCameraTrackCenter.x = fX;
         mCameraTrackCenter.y = fY;
         mCameraTrackCenter.z = fZ;
         return true;
+    }
     case 0xFD3D9507:
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mCameraTrackOffset.x = fX;
         mCameraTrackOffset.y = fY;
         mCameraTrackOffset.z = fZ;
         return true;
+    }
     case 0x21050BF6:
+    {
+        float fX;
         if (sscanf(pszValue, "%f", &fX))
         {
             mCameraMoveTensionL = fX;
@@ -788,6 +798,7 @@ bool CameraTrackSetting::SetProperty(unsigned int uProperty, const char* pszValu
             mCameraMoveTensionB = fX;
         }
         return true;
+    }
     case 0x88F1308A:
         pB = &mCameraMoveTensionR;
         pA = &mCameraMoveTensionL;

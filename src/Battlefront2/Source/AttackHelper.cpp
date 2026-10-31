@@ -148,14 +148,18 @@ void AttackHelper::Aim()
     {
         AILowLevel& lowLevel = LowLevelOf(GetMe()->mCtrl);
         lowLevel.SetTarget(pTarget);
-        return;
     }
-    AILowLevel& lowLevelClear = LowLevelOf(GetMe()->mCtrl);
-    lowLevelClear.SetTarget(0);
-    if (pTarget)
+    else if (pTarget)
     {
+        AILowLevel& lowLevelClear = LowLevelOf(GetMe()->mCtrl);
+        lowLevelClear.SetTarget(0);
         AILowLevel& lowLevelAim = LowLevelOf(GetMe()->mCtrl);
         lowLevelAim.SetAimPoint(mLastKnownTargetPos);
+    }
+    else
+    {
+        AILowLevel& lowLevelClear = LowLevelOf(GetMe()->mCtrl);
+        lowLevelClear.SetTarget(0);
     }
 }
 

@@ -2604,11 +2604,11 @@ void EntityFlyer::RollStop()
     mRollTarget = 0.0f;
     while (mBankRollAngle > 3.1415927f)
     {
-        mBankRollAngle -= 6.2831855f;
+        mBankRollAngle -= PblMath::fTwoPi;
     }
     while (-3.1415927f > mBankRollAngle)
     {
-        mBankRollAngle += 6.2831855f;
+        mBankRollAngle += PblMath::fTwoPi;
     }
     mInRoll = false;
 }
@@ -2638,9 +2638,9 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
             mFlip += fFlipSpeed * fDeltaTime;
             if (mFlip > 3.1415927f)
             {
-                mFlip -= 6.2831855f;
-                mFlipTarget -= 6.2831855f;
-                mBankPitchAngle -= 6.2831855f;
+                mFlip -= PblMath::fTwoPi;
+                mFlipTarget -= PblMath::fTwoPi;
+                mBankPitchAngle -= PblMath::fTwoPi;
             }
             if (mFlip >= mFlipTarget)
             {
@@ -2657,9 +2657,9 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
             mFlip -= fFlipSpeed * fDeltaTime;
             if (-3.1415927f > mFlip)
             {
-                mFlip += 6.2831855f;
-                mFlipTarget += 6.2831855f;
-                mBankPitchAngle += 6.2831855f;
+                mFlip += PblMath::fTwoPi;
+                mFlipTarget += PblMath::fTwoPi;
+                mBankPitchAngle += PblMath::fTwoPi;
             }
             if (mFlipTarget >= mFlip)
             {
@@ -2686,7 +2686,7 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
         mBankPitchAngle += 3.1415927f;
         while (mBankPitchAngle > 3.1415927f)
         {
-            mBankPitchAngle -= 6.2831855f;
+            mBankPitchAngle -= PblMath::fTwoPi;
         }
         if (0.0f > mRollTarget)
         {
@@ -2714,11 +2714,11 @@ void EntityFlyer::FlipStop()
     mFlipTarget = 0.0f;
     while (mBankPitchAngle > 3.1415927f)
     {
-        mBankPitchAngle -= 6.2831855f;
+        mBankPitchAngle -= PblMath::fTwoPi;
     }
     while (-3.1415927f > mBankPitchAngle)
     {
-        mBankPitchAngle += 6.2831855f;
+        mBankPitchAngle += PblMath::fTwoPi;
     }
     mInFlip = false;
 }
@@ -3095,7 +3095,7 @@ EntityPathFollower::BranchParams EntityFlyer::GetBranchParams()
     float fSin = PblMath::Sin(fTime * 1.17f);
     float fWave = PblMath::Cos(fTime * 2.33f) * fSin;
     float fBeat = PblMath::Sin(fTime * 0.43f) * fWave * 0.5f + 0.5f;
-    float fSpeed = fBeat * fBeat * (fHigh - fBase) + fBase;
+    float fSpeed = (fHigh - fBase) * (fBeat * fBeat) + fBase;
 
     return BranchParams(mClass, mMatrix, mClass->GetModel()->_mModel->_BoundingSphere.GetRadius(), this, fSpeed,
                         FLT_MAX, 0, -1.0f, false, false);
@@ -5260,7 +5260,7 @@ void EntityFlyer::TargetReact(Controllable* pAttacker)
             return;
         }
     }
-    else if (!((float)(int)AIDifficulty::GetFlyerEvasiveFrequency() * 100.0f > (float)iRoll))
+    else if ((float)iRoll >= (float)(int)AIDifficulty::GetFlyerEvasiveFrequency() * 100.0f)
     {
         return;
     }
@@ -5407,6 +5407,7 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
     *pfSpeedScale = lowLevel.mDest.mMaxSpeed;
     PblVector3* pPosition = pDir;
     *pPosition = GetMatrix().GetTranslation();
+    PblVector3 vDelta;
 
     if (GameLoop::GetMissionTime() > mNextBarrierCheck + 1.0f || lowLevel.mFlyerIgnoreBarriers)
     {
@@ -5423,7 +5424,9 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
             pDest->mHasDest = true;
             pDest->mPos = mSlidePos;
             pDest->mOriginalPos = mSlidePos;
-            PblVector3 vDelta(mSlidePos.x - pPosition->x, mSlidePos.y - pPosition->y, mSlidePos.z - pPosition->z);
+            vDelta.x = mSlidePos.x - pPosition->x;
+            vDelta.y = mSlidePos.y - pPosition->y;
+            vDelta.z = mSlidePos.z - pPosition->z;
             pDest->mDirection = AIUtil::GetSafeNormal(vDelta);
             pDest->mSafeHeightEnforce = SH_FULL;
         }
@@ -5458,15 +5461,17 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
         pDest->mSafeHeightEnforce == SH_TAPER || pDest->mSafeHeightEnforce == SH_TAPER_FACTOR)
     {
         float fTaperFactor = pDest->mSafeHeightEnforce == SH_TAPER_FACTOR ? pDest->mTaperFactor : -1.0f;
-        bool bTaper = pDest->mSafeHeightEnforce == SH_TAPER || pDest->mSafeHeightEnforce == SH_TAPER_FACTOR;
-        RaiseHeight(*pPosition, bTaper, pPos, pfSpeedScale, fTaperFactor);
+        RaiseHeight(*pPosition, pDest->mSafeHeightEnforce == SH_TAPER || pDest->mSafeHeightEnforce == SH_TAPER_FACTOR,
+                    pPos, pfSpeedScale, fTaperFactor);
         if (pPos->y > AIUtil::gMaxFlyHeight)
         {
             pPos->y = AIUtil::gMaxFlyHeight;
         }
     }
 
-    PblVector3 vDelta(pPos->x - pPosition->x, pPos->y - pPosition->y, pPos->z - pPosition->z);
+    vDelta.x = pPos->x - pPosition->x;
+    vDelta.y = pPos->y - pPosition->y;
+    vDelta.z = pPos->z - pPosition->z;
     PblVector3 vToDest;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vToDest), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
     float fScale = *pfSpeedScale;
@@ -5495,7 +5500,7 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
     float fNear = (fDist - fMax) / (fFar - fMax) * 0.7f + 0.3f;
 
     const PblVector3& vNose2 = GetMatrix().GetZAxis();
-    float fAlign = vNose2.x * pDest->mDirection.x + vNose2.y * pDest->mDirection.y + vNose2.z * pDest->mDirection.z;
+    float fAlign = pDest->mDirection.x * vNose2.x + vNose2.y * pDest->mDirection.y + vNose2.z * pDest->mDirection.z;
     if (!(fAlign > 0.5f))
     {
         fAlign = 0.5f;

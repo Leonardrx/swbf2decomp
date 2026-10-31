@@ -154,9 +154,9 @@ bool SkyObjectManager::SkyObjectClass::Update(float fDeltaTime)
     {
         if (mObjects[i].mAlpha >= 0.0f)
         {
-            float fDZ = mObjects[i].mMatrix.m[3][2] - mMidPos.z;
             float fDX = mObjects[i].mMatrix.m[3][0] - mMidPos.x;
-            if (fDX * fDX + fDZ * fDZ > mMaxDist * mMaxDist || mObjects[i].mLifeTime > mMaxLifeTime)
+            float fDZ = mObjects[i].mMatrix.m[3][2] - mMidPos.z;
+            if (mMaxDist * mMaxDist < fDX * fDX + fDZ * fDZ || mObjects[i].mLifeTime > mMaxLifeTime)
             {
                 mObjects[i].mAlpha = -1.0f;
             }

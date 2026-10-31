@@ -210,6 +210,7 @@ void PatrolHelper::UpdateState(float dt)
             SetNextState(STATE_GUARD_HINT);
             break;
         }
+        GetMe()->GetGameObject();
         mHint->Reserve(GetMe()->GetGameObject());
         if (GameLoop::GetMissionTime() > mNextPatrolTime)
         {
@@ -235,6 +236,7 @@ void PatrolHelper::UpdateState(float dt)
             SetNextState(STATE_START);
             break;
         }
+        GetMe()->GetGameObject();
         mHint->Reserve(GetMe()->GetGameObject());
         break;
 

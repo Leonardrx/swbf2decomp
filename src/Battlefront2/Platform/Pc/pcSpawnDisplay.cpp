@@ -505,44 +505,66 @@ void SpawnDisplay::Show(Character* pCharacter)
         Character::GetPlayerStats(pCharacter).TimingPause();
     }
 
-    if (!IsLocal(mPlayerIdx))
+    if (IsLocal(mPlayerIdx))
     {
-        return;
-    }
+        mGroupMainTL.Enable(true);
+        mGroupMainTL.Visible(true);
+        mGroupMainCC.Enable(true);
+        mGroupMainCC.Visible(true);
+        mGroupMainCB.Enable(true);
+        mGroupMainCB.Visible(true);
+        mTextReady.Enable(true);
+        mTextReady.Visible(true);
+        HUD::Event evMapMode(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+        evMapMode.Send();
+        HUD::Event evIndex(HUD::GameEvents::gPlayerEvents[mPlayerIdx].index, mPlayerIdx);
+        evIndex.Send();
+        BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
+        HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
+        mTextSpawnTimer.Enable(false);
+        mTextSpawnTimer.Visible(false);
 
-    mGroupMainTL.Enable(true);
-    mGroupMainTL.Visible(true);
-    mGroupMainCC.Enable(true);
-    mGroupMainCC.Visible(true);
-    mGroupMainCB.Enable(true);
-    mGroupMainCB.Visible(true);
-    mTextReady.Enable(true);
-    mTextReady.Visible(true);
-    HUD::Event evMapMode(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
-    evMapMode.Send();
-    HUD::Event evIndex(HUD::GameEvents::gPlayerEvents[mPlayerIdx].index, mPlayerIdx);
-    evIndex.Send();
-    BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
-    HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(true);
-    mTextSpawnTimer.Enable(false);
-    mTextSpawnTimer.Visible(false);
-
-    if (!NetGame::IsEnabled() && mMode == eSIDESELECT && (!GameLoop::GetCanSwitchSides() || gAttractMode))
-    {
-        mMode = eSPAWNDISPLAY;
-    }
-
-    switch (mMode)
-    {
-    case eSIDESELECT:
-        mGroupTimer.Enable(false);
-        mGroupTimer.Visible(false);
-        mBackdropModel.Enable(false);
-        mBackdropModel.Visible(false);
-        break;
-    case eSPAWNDISPLAY:
-        if (!GameLoop::GetCanSwitchSides())
+        if (!NetGame::IsEnabled() && mMode == eSIDESELECT && (!GameLoop::GetCanSwitchSides() || gAttractMode))
         {
+            mMode = eSPAWNDISPLAY;
+        }
+
+        switch (mMode)
+        {
+        case eSIDESELECT:
+            mGroupTimer.Enable(false);
+            mGroupTimer.Visible(false);
+            mBackdropModel.Enable(false);
+            mBackdropModel.Visible(false);
+            break;
+        case eSPAWNDISPLAY:
+            if (!GameLoop::GetCanSwitchSides())
+            {
+                for (int i = 0; i < 2; ++i)
+                {
+                    m_pSideBG[i]->Enable(false);
+                    m_pSideBG[i]->Visible(false);
+                    m_pSideIcon[i]->Enable(false);
+                    m_pSideIcon[i]->Visible(false);
+                    m_pSideModel[i]->Enable(false);
+                    m_pSideModel[i]->Visible(false);
+                }
+            }
+            RedInputManager::GetMouse(0)->SetCursorPos(RedInterfaceScreen::GetScreenWidth() / 2,
+                                      RedInterfaceScreen::GetScreenHeight() / 2);
+            {
+                HUD::Event evUnsent(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+            }
+
+            mGroupTimer.Enable(false);
+            mGroupTimer.Visible(false);
+            mTextSpawnTimer.SetText("", true);
+            SetupSlots();
+            mBackdropModel.Enable(false);
+            mBackdropModel.Visible(false);
+            GetCommandPost();
+            break;
+        case eCHANGECLASS:
             for (int i = 0; i < 2; ++i)
             {
                 m_pSideBG[i]->Enable(false);
@@ -552,61 +574,37 @@ void SpawnDisplay::Show(Character* pCharacter)
                 m_pSideModel[i]->Enable(false);
                 m_pSideModel[i]->Visible(false);
             }
-        }
-        RedInputManager::GetMouse(0)->SetCursorPos(RedInterfaceScreen::GetScreenWidth() / 2,
-                                  RedInterfaceScreen::GetScreenHeight() / 2);
+            RedInputManager::GetMouse(0)->SetCursorPos(RedInterfaceScreen::GetScreenWidth() / 2,
+                                      RedInterfaceScreen::GetScreenHeight() / 2);
+            mGroupTimer.Enable(false);
+            mGroupTimer.Visible(false);
+            mTextSpawnTimer.SetText("", true);
+            SetupSlots();
+            break;
+        case eFINISHED:
         {
-            HUD::Event evUnsent(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+            HUD::Event evFinished(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
+            evFinished.Send();
+            BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
+            HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
+            mGroupTimer.Enable(true);
+            mGroupTimer.Visible(true);
+            mTextSpawnTimer.Enable(true);
+            mTextSpawnTimer.Visible(true);
+            mBackdropModel.Enable(false);
+            mBackdropModel.Visible(false);
+            break;
+        }
         }
 
-        mGroupTimer.Enable(false);
-        mGroupTimer.Visible(false);
-        mTextSpawnTimer.SetText("", true);
-        SetupSlots();
-        mBackdropModel.Enable(false);
-        mBackdropModel.Visible(false);
-        GetCommandPost();
-        break;
-    case eCHANGECLASS:
-        for (int i = 0; i < 2; ++i)
+        if (mFirstShow)
         {
-            m_pSideBG[i]->Enable(false);
-            m_pSideBG[i]->Visible(false);
-            m_pSideIcon[i]->Enable(false);
-            m_pSideIcon[i]->Visible(false);
-            m_pSideModel[i]->Enable(false);
-            m_pSideModel[i]->Visible(false);
+            mFirstShow = false;
         }
-        RedInputManager::GetMouse(0)->SetCursorPos(RedInterfaceScreen::GetScreenWidth() / 2,
-                                  RedInterfaceScreen::GetScreenHeight() / 2);
-        mGroupTimer.Enable(false);
-        mGroupTimer.Visible(false);
-        mTextSpawnTimer.SetText("", true);
-        SetupSlots();
-        break;
-    case eFINISHED:
-    {
-        HUD::Event evFinished(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
-        evFinished.Send();
-        BootDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
-        HeroMessageDisplay::Instance(mPlayerIdx)->SetSpawnMode(false);
-        mGroupTimer.Enable(true);
-        mGroupTimer.Visible(true);
-        mTextSpawnTimer.Enable(true);
-        mTextSpawnTimer.Visible(true);
-        mBackdropModel.Enable(false);
-        mBackdropModel.Visible(false);
-        break;
-    }
-    }
-
-    if (mFirstShow)
-    {
-        mFirstShow = false;
-    }
-    else
-    {
-        CameraManager::sInstance->SetChaseCameraRandomShot(0);
+        else
+        {
+            CameraManager::sInstance->SetChaseCameraRandomShot(0);
+        }
     }
 }
 
@@ -1556,6 +1554,7 @@ void SpawnDisplay::UpdateInput()
     }
 
     int iClass;
+    int iOldClass;
     if (pInputs->IsAcceptPressed())
     {
         const int iSide = mTeamNumber % 2;
@@ -1579,6 +1578,7 @@ void SpawnDisplay::UpdateInput()
             RedGroupElement* pBorder = m_pSlotBorder[iClass];
             if (pBorder->IsEnabled() && pBorder->TestHotSpot(fMouseX, fMouseY))
             {
+                iOldClass = mClassIndex;
                 goto select_class;
             }
         }
@@ -1625,7 +1625,7 @@ void SpawnDisplay::UpdateInput()
     iClass = -1;
     for (unsigned char ucKey = 2; ucKey <= 11; ++ucKey)
     {
-        if (pJoystick->GetKeyboard()->IsKeyDown(ucKey))
+        if (ucKey != 0 && pJoystick->GetKeyboard()->IsKeyDown(ucKey))
         {
             iClass = ucKey - 2;
             break;
@@ -1635,14 +1635,19 @@ void SpawnDisplay::UpdateInput()
         Team* pTeam = Team::sTeams[mTeamNumber];
         int iCount = CanShowHeroes() ? pTeam->GetClassCount()
                                   : pTeam->GetClassCount() - pTeam->GetSpecialClassCount();
-        if (iClass < 0 || iClass >= iCount || iClass == mClassIndex)
+        if (iClass < 0 || iClass >= iCount)
         {
             return;
         }
     }
+    iOldClass = mClassIndex;
+    if (iClass == iOldClass)
+    {
+        return;
+    }
 
 select_class:
-    m_pInfoBoxText[mClassIndex]->m_color.a = 0x80;
+    m_pInfoBoxText[iOldClass]->m_color.a = 0x80;
     m_pUnitNameText[mClassIndex]->m_color.a = 0x80;
     SelectClass(iClass);
     m_pInfoBoxText[iClass]->m_color.a = 0xff;

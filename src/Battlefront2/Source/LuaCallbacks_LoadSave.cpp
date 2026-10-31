@@ -225,7 +225,12 @@ int ScriptCB_GetLoginList(lua_State* L)
 
     lua_setglobal(LuaHelper::mState, pcTableName);
     DoPeriodicLuaGC(false);
-    lua_pushnumber(LuaHelper::mState, (float)(SaveGameManager::InMemoryMode() == 1 ? 1 : 1024));
+    int iBlockSize = 1024;
+    if (SaveGameManager::InMemoryMode() == 1)
+    {
+        iBlockSize = 1;
+    }
+    lua_pushnumber(LuaHelper::mState, (float)iBlockSize);
     return 1;
 }
 
@@ -1152,8 +1157,7 @@ int ScriptCB_GetSavedMetagameList(lua_State* L)
         int iArg;
         const unsigned short* pusFile;
         SaveGameManager::ResetFileList();
-        int iIndex = 1;
-        while ((pusFile = SaveGameManager::GetNextFileName(2, &iArg)) != 0)
+        for (int iIndex = 1; (pusFile = SaveGameManager::GetNextFileName(2, &iArg)) != 0; ++iIndex)
         {
             lua_newtable(LuaHelper::mState);
             LuaHelper::TableWriteVal("filename", pusFile);
@@ -1164,7 +1168,7 @@ int ScriptCB_GetSavedMetagameList(lua_State* L)
             {
                 LuaHelper::TableWriteVal("isCurrent", true);
             }
-            lua_rawseti(LuaHelper::mState, -2, iIndex++);
+            lua_rawseti(LuaHelper::mState, -2, iIndex);
         }
     }
     else
@@ -1177,12 +1181,11 @@ int ScriptCB_GetSavedMetagameList(lua_State* L)
         SaveGameManager::ResetFileList();
         while ((pusFile = SaveGameManager::GetNextFileName(2, &iArg)) != 0)
         {
-            OneSavegame* pSave = &aSavegames[iCount];
             SaveFile::SplitMetagameFilename(pusFile, ausName, ausDate, 0, 0, 0);
-            memcpy(pSave->mFilename, pusFile, sizeof(pSave->mFilename));
-            memcpy(pSave->mGamename, ausName, sizeof(pSave->mGamename));
-            memcpy(pSave->mGamedate, ausDate, sizeof(pSave->mGamedate));
-            pSave->mIsCurrent = sCampaignFilename[0] && !PblUnicode::ustrcmp(sCampaignFilename, pusFile);
+            memcpy(aSavegames[iCount].mFilename, pusFile, sizeof(aSavegames[iCount].mFilename));
+            memcpy(aSavegames[iCount].mGamename, ausName, sizeof(aSavegames[iCount].mGamename));
+            memcpy(aSavegames[iCount].mGamedate, ausDate, sizeof(aSavegames[iCount].mGamedate));
+            aSavegames[iCount].mIsCurrent = sCampaignFilename[0] && !PblUnicode::ustrcmp(sCampaignFilename, pusFile);
             ++iCount;
         }
 
@@ -1229,8 +1232,7 @@ int ScriptCB_GetSavedCampaignList(lua_State*)
         int iArg;
         const unsigned short* pusFile;
         SaveGameManager::ResetFileList();
-        int iIndex = 1;
-        while ((pusFile = SaveGameManager::GetNextFileName(3, &iArg)) != 0)
+        for (int iIndex = 1; (pusFile = SaveGameManager::GetNextFileName(3, &iArg)) != 0; ++iIndex)
         {
             lua_newtable(LuaHelper::mState);
             LuaHelper::TableWriteVal("filename", pusFile);
@@ -1241,7 +1243,7 @@ int ScriptCB_GetSavedCampaignList(lua_State*)
             {
                 LuaHelper::TableWriteVal("isCurrent", true);
             }
-            lua_rawseti(LuaHelper::mState, -2, iIndex++);
+            lua_rawseti(LuaHelper::mState, -2, iIndex);
         }
     }
     else
@@ -1254,12 +1256,11 @@ int ScriptCB_GetSavedCampaignList(lua_State*)
         SaveGameManager::ResetFileList();
         while ((pusFile = SaveGameManager::GetNextFileName(3, &iArg)) != 0)
         {
-            OneSavegame* pSave = &aSavegames[iCount];
             SaveFile::SplitMetagameFilename(pusFile, ausName, ausDate, 0, 0, 0);
-            memcpy(pSave->mFilename, pusFile, sizeof(pSave->mFilename));
-            memcpy(pSave->mGamename, ausName, sizeof(pSave->mGamename));
-            memcpy(pSave->mGamedate, ausDate, sizeof(pSave->mGamedate));
-            pSave->mIsCurrent = sCampaignFilename[0] && !PblUnicode::ustrcmp(sCampaignFilename, pusFile);
+            memcpy(aSavegames[iCount].mFilename, pusFile, sizeof(aSavegames[iCount].mFilename));
+            memcpy(aSavegames[iCount].mGamename, ausName, sizeof(aSavegames[iCount].mGamename));
+            memcpy(aSavegames[iCount].mGamedate, ausDate, sizeof(aSavegames[iCount].mGamedate));
+            aSavegames[iCount].mIsCurrent = sCampaignFilename[0] && !PblUnicode::ustrcmp(sCampaignFilename, pusFile);
             ++iCount;
         }
 

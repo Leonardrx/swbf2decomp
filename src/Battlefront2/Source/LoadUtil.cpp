@@ -350,18 +350,17 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
                 bool bRead = bAllLvls;
                 if (uiCount && !bAllLvls)
                 {
-                    unsigned int i = 0;
-                    for (; i < uiCount; ++i)
+                    for (unsigned int i = 0; i < uiCount; ++i)
                     {
                         bRead = puiHashes[i] == lvl._iId;
-                        if (bRead)
+                        if (bRead == true)
                         {
+                            if (i < 256)
+                            {
+                                abFound[i] = true;
+                            }
                             break;
                         }
-                    }
-                    if (bRead && i < 256)
-                    {
-                        abFound[i] = true;
                     }
                 }
                 if (bRead)
@@ -425,7 +424,11 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
         }
     }
 
-    return uiCount <= uiLvlsRead;
+    if (uiLvlsRead >= uiCount)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00579930

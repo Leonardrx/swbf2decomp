@@ -209,7 +209,8 @@ void ParseCommandLine(char const* pcAppName, char const* pcCmdLine)
             ++i;
             apcArgv[iArgc++] = &szCmdLine[i];
 
-            while (szCmdLine[i] != '\0' && !(szCmdLine[i] == '"' && szCmdLine[i - 1] != '\\'))
+            while ((szCmdLine[i] != '\0' && szCmdLine[i] != '"') ||
+                   (szCmdLine[i] == '"' && szCmdLine[i - 1] == '\\'))
             {
                 if (szCmdLine[i] == '"' && szCmdLine[i - 1] == '\\')
                 {

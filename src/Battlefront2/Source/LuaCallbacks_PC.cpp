@@ -666,7 +666,7 @@ int ScriptCB_FillMultisampleTable(lua_State* L)
     {
         const int iType = aiType[i];
         unsigned short const* pusLabel;
-        unsigned short usDesc[32];
+        unsigned short usDesc[34];
         if (iType == D3DMULTISAMPLE_NONE)
         {
             char acKey[256];
@@ -895,8 +895,8 @@ int ScriptCB_SetPCVideoOptions(lua_State* L)
     if (!RedVideoConfig::VidMode_Usable(pProfile->mPCOptions.mResolutionX, pProfile->mPCOptions.mResolutionY,
                                         eMultiSample, ulMultiSampleQuality))
     {
-        ulMultiSampleQuality = 0;
         eMultiSample = D3DMULTISAMPLE_NONE;
+        ulMultiSampleQuality = 0;
     }
 
     bool bChanged = false;

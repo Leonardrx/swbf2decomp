@@ -101,7 +101,11 @@ HUD::ElementBarSegmented::ElementBarSegmented(const char* const pName, Factory::
     mAngleStart = 0.0f;
     mAngleEnd = 0.0f;
 
-    mSegmentAll.SetFactory(HUD::Item::Factory::FindByHashID(0x46544626u));
+    HUD::Item* pSegmentAll = &mSegmentAll;
+    if (pSegmentAll)
+    {
+        pSegmentAll->SetFactory(HUD::Item::Factory::FindByHashID(0x46544626u));
+    }
     mSegmentAll.SetDynamicallyAllocated(false);
     mSegmentAll.SetWriteEnabled(false);
     mSegmentAll.SetGroup(this);

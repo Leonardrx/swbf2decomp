@@ -217,25 +217,21 @@ bool ParticleEmitter::Update(float fTime)
             return false;
         }
 
-        if (mSpawnDelay > pInfo->mLifeTime)
+        while (mSpawnDelay > mFirstInfo->mLifeTime)
         {
-            ParticleEmitterInfoData* pNext;
-            do
+            ParticleEmitterInfoData* pNext = mFirstInfo->mNext;
+            if (!pNext)
             {
-                pNext = mFirstInfo->mNext;
-                if (!pNext)
-                {
-                    break;
-                }
-                pNext->mPrev = mFirstInfo->mPrev;
-                if (mFirstInfo->mPrev)
-                {
-                    mFirstInfo->mPrev->mNext = pNext;
-                }
-                mSpawnDelay -= mFirstInfo->mLifeTime;
-                mFirstInfo->Release();
-                mFirstInfo = pNext;
-            } while (mSpawnDelay > pNext->mLifeTime);
+                break;
+            }
+            pNext->mPrev = mFirstInfo->mPrev;
+            if (mFirstInfo->mPrev)
+            {
+                mFirstInfo->mPrev->mNext = pNext;
+            }
+            mSpawnDelay -= mFirstInfo->mLifeTime;
+            mFirstInfo->Release();
+            mFirstInfo = pNext;
         }
         pInfo = mFirstInfo;
     }

@@ -1367,10 +1367,7 @@ bool EntityPathFollower::ShotAtByEnemy(BranchParams& params)
     Reset(params.mPathClass);
 
     PblVector3 vAttacker = mAttacker->GetControllable()->GetMatrix().GetTranslation();
-    const PblVector3& vPosition = params.mMatrix.GetTranslation();
-    float fDist = PblMath::Sqrt((vPosition.x - vAttacker.x) * (vPosition.x - vAttacker.x) +
-                        (vPosition.y - vAttacker.y) * (vPosition.y - vAttacker.y) +
-                        (vPosition.z - vAttacker.z) * (vPosition.z - vAttacker.z));
+    float fDist = Length(params.mMatrix.GetTranslation() - vAttacker);
     float fRight = PblRandom::GetGlobalFloatRange(0.0f, 2.0f);
     float fUp = PblRandom::GetGlobalFloatRange(0.0f, 2.0f);
     Controllable* pAhead = mAttacker->GetControllable();
@@ -1652,9 +1649,9 @@ bool EntityPathFollower::SavePoints(const PblVector3* const pPosition, BranchPar
         else
         {
             BranchParams params = GetBranchParams();
-            const PblMatrix& matrix =
-                params.mGameObject ? static_cast<CollisionObject*>(params.mGameObject)->GetMatrix() : params.mMatrix;
-            vDirection = matrix.GetZAxis();
+            vDirection = params.mGameObject
+                             ? static_cast<CollisionObject*>(params.mGameObject)->GetMatrix().GetZAxis()
+                             : params.mMatrix.GetZAxis();
         }
         PblVector3 vZero = CalculateZeroPoint(GetPoint(1), vDirection, GetPoint(2));
         SetPoint(vZero, 0);

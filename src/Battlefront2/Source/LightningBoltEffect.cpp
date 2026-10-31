@@ -357,8 +357,8 @@ void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
     float fMaxZ = vStart.z > mTargetPos.z ? vStart.z : mTargetPos.z;
     float fMaxY = vStart.y > mTargetPos.y ? vStart.y : mTargetPos.y;
     float fMaxX = vStart.x > mTargetPos.x ? vStart.x : mTargetPos.x;
-    PblVector3 vMin(fMinX - 128.0f, fMinY - 128.0f, fMinZ - 128.0f);
     PblVector3 vMax(fMaxX + 128.0f, fMaxY + 128.0f, fMaxZ + 128.0f);
+    PblVector3 vMin(fMinX - 128.0f, fMinY - 128.0f, fMinZ - 128.0f);
     RedParticleRenderer::SubmitBounds(vMin, vMax);
     RedParticleRenderer::SubmitTexture(mClass->mTexture, BLEND_ADDITIVE, 0);
 
@@ -367,9 +367,10 @@ void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
     float fAlpha = (mStrength * 0.5f + 0.5f) * fFade;
     float fWidthScale = mStrength * 0.7f + 0.3f;
 
-    RedColor color(mClass->mColor, (unsigned char)(int)(mClass->mColor.a * fAlpha));
     Render(vStart, mTargetPos, mClass->mWidth * fWidthScale, mClass->mSpreadFactor, mRandSeed,
-           mRandSeed2, mInterpolation, color, mClass->mBreakDistance, mClass->mTextureSize,
+           mRandSeed2, mInterpolation,
+           RedColor(mClass->mColor, (unsigned char)(int)(mClass->mColor.a * fAlpha)),
+           mClass->mBreakDistance, mClass->mTextureSize,
            mClass->mBranchFactor, mClass->mMaxBranches, mClass->mBranchSpreadFactor,
            mClass->mBranchLength);
 
@@ -377,10 +378,11 @@ void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
     {
         for (int i = 0; i < Max((int)(mClass->mNumChildren * mStrength), 1); ++i)
         {
-            RedColor childColor(mClass->mChildColor, (unsigned char)(int)(mClass->mChildColor.a * fAlpha));
             Render(vStart, mTargetPos, mClass->mChildWidth * fWidthScale,
                    mClass->mChildSpreadFactor, PblRandom::GetGlobalInt(),
-                   PblRandom::GetGlobalInt(), 0.0f, childColor, mClass->mChildBreakDistance,
+                   PblRandom::GetGlobalInt(), 0.0f,
+                   RedColor(mClass->mChildColor, (unsigned char)(int)(mClass->mChildColor.a * fAlpha)),
+                   mClass->mChildBreakDistance,
                    mClass->mChildTextureSize, mClass->mBranchFactor, mClass->mMaxBranches,
                    mClass->mBranchSpreadFactor, mClass->mBranchLength);
         }

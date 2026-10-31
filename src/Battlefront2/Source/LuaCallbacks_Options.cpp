@@ -1733,30 +1733,36 @@ static const unsigned char kBase64Alphabet[] =
 int Base64Encode(unsigned char* dst, unsigned int capacity, unsigned int* length,
                const unsigned char* src, unsigned int size)
 {
+    unsigned int i, n;
+    int c1, c2, c3;
+    unsigned char* out;
+
     if (!size)
     {
         *length = 0;
         return 0;
     }
-    unsigned int groups = size / 3 + (size % 3 != 0);
-    if (groups > 0x3fffffff)
+
+    n = size / 3 + (size % 3 != 0);
+    if (n > 0x3fffffff)
     {
         *length = ~0u;
         return -42;
     }
-    if (capacity < groups * 4 + 1)
+
+    n *= 4;
+    if (capacity < n + 1)
     {
-        *length = groups * 4 + 1;
+        *length = n + 1;
         return -42;
     }
-    unsigned int whole = size / 3 * 3;
-    unsigned char* out = dst;
-    unsigned int i;
-    for (i = 0; i < whole; i += 3)
+
+    n = size / 3 * 3;
+    for (i = 0, out = dst; i < n; i += 3)
     {
-        int c1 = *src++;
-        int c2 = *src++;
-        int c3 = *src++;
+        c1 = *src++;
+        c2 = *src++;
+        c3 = *src++;
         *out++ = kBase64Alphabet[(c1 >> 2) & 63];
         *out++ = kBase64Alphabet[(((c1 & 3) << 4) + (c2 >> 4)) & 63];
         *out++ = kBase64Alphabet[(((c2 & 15) << 2) + (c3 >> 6)) & 63];
@@ -1764,8 +1770,8 @@ int Base64Encode(unsigned char* dst, unsigned int capacity, unsigned int* length
     }
     if (i < size)
     {
-        int c1 = *src++;
-        int c2 = i + 1 < size ? *src++ : 0;
+        c1 = *src++;
+        c2 = i + 1 < size ? *src++ : 0;
         *out++ = kBase64Alphabet[(c1 >> 2) & 63];
         *out++ = kBase64Alphabet[(((c1 & 3) << 4) + (c2 >> 4)) & 63];
         if (i + 1 < size)

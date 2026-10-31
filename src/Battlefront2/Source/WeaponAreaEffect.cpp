@@ -307,7 +307,8 @@ bool WeaponAreaEffect::FireDone() const
     {
         return false;
     }
-    return Weapon::FireDone();
+    const bool bDone = Weapon::FireDone();
+    return bDone ? true : false;
 }
 
 // FUNCTION: SWBF2 0x0067c900
@@ -393,9 +394,9 @@ int WeaponAreaEffect::UpdateTargets()
     int iCount = 0;
     for (int i = 0; i < MAX_TARGETS; ++i)
     {
-        if (GameObject* pTarget = m_apTarget[i])
+        if (m_apTarget[i] != 0)
         {
-            apTargets[iCount++] = pTarget;
+            apTargets[iCount++] = m_apTarget[i];
         }
     }
     return UpdateTargets(apTargets, iCount);

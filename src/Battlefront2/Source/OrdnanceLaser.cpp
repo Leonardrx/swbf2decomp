@@ -294,7 +294,10 @@ bool OrdnanceLaser::Update(float fDeltaTime)
     float fLength;
     if (mFinalCollisionOnNextUpdate)
     {
-        fLength = Length(mPosition - mStartPos);
+        const float dx = mPosition.x - mStartPos.x;
+        const float dy = mPosition.y - mStartPos.y;
+        const float dz = mPosition.z - mStartPos.z;
+        fLength = PblMath::Sqrt(dy * dy + dx * dx + dz * dz);
     }
     else
     {

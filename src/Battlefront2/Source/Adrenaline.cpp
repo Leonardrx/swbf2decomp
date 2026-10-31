@@ -50,10 +50,7 @@ void Adrenaline::Update(float fDeltaTime, const GameObject* pObject)
             continue;
         }
         PblVector3 vOther = pCharacter->GetControllable()->GetMatrix().GetTranslation();
-        float dx = vOther.x - vPos.x;
-        float dy = vOther.y - vPos.y;
-        float dz = vOther.z - vPos.z;
-        if (dx * dx + dy * dy + dz * dz < 625.0f)
+        if (SquaredLength(vOther - vPos) < 625.0f)
         {
             pCharacter->mAdrenaline.NearbyEnemy(fDeltaTime);
         }

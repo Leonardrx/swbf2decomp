@@ -423,12 +423,7 @@ void StopInGameMoviePlay()
 {
     if (g_InGameMoviePlayerState)
     {
-        float fElapsed;
-        {
-            LARGE_INTEGER liNow;
-            QueryPerformanceCounter(&liNow);
-            fElapsed = (float)(liNow.QuadPart - g_InGameMovieStartTime);
-        }
+        const float fElapsed = (float)(PblTime::GetTickCount() - g_InGameMovieStartTime);
         if (fElapsed / (float)PblTime::ticksPerSecond > g_MovieStopDelayTime)
         {
             g_InGameMoviePlayerState = 0;

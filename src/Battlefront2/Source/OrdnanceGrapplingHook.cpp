@@ -103,9 +103,8 @@ void OrdnanceGrapplingHook::HookFailure()
 bool OrdnanceGrapplingHook::Collide(CollisionObject* pObject, const PblVector3& vPos,
                                     const PblVector3& vNormal, int iBodyId)
 {
-    PblVector3 vDelta = vPos - mFireWeapon->mAimer->mFirePos;
     PblVector3 vDir;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&(vPos - mFireWeapon->mAimer->mFirePos)));
 
     CollisionObjectType eType = pObject->GetCollisionType();
     if (eType != COLL_STATIC && eType != COLL_RIGID)
@@ -121,9 +120,8 @@ bool OrdnanceGrapplingHook::Collide(CollisionObject* pObject, const PblVector3& 
         CollisionModel* pModel = pObject->mCollisionModel;
         PblMatrix world = pModel->GetWorldMatrix(iBodyId, mHitObject->GetMatrix(), pObject->GetPose());
         mCollBodyID = iBodyId;
-        PblMatrix inverse = world.GetInverseFast();
         PblVector3 vOffset;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXMATRIX*>(&world.GetInverseFast()));
         mCollOffset = vOffset;
     }
 
@@ -131,7 +129,7 @@ bool OrdnanceGrapplingHook::Collide(CollisionObject* pObject, const PblVector3& 
     mFinalCollisionOnNextUpdate = false;
     mDecrementLifeTime = false;
     mLifeTime = 20.0f;
-    mVelocity = PblVector3(mVelocity.x * 0.5f, mVelocity.y * 0.5f, mVelocity.z * 0.5f);
+    mVelocity = mVelocity * 0.5f;
 
     if (mOwner->IsRtti(EntitySoldier::rttiHashEntitySoldier))
     {

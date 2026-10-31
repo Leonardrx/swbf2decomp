@@ -562,10 +562,9 @@ void VoiceChat::Node::Decode(float fDeltaTime)
             {
                 ReceiveMetrics& metrics = VoiceChat::Node::sReceiveMetrics[i];
                 const float fTime = VoiceChat::Node::sTime;
-                const float fSinceStarve = fTime - metrics.lastStarveTime;
                 ++metrics.starvedCount;
+                metrics.starvedFrequency = (fTime - metrics.lastStarveTime + metrics.starvedFrequency) * 0.5f;
                 metrics.lastStarveTime = fTime;
-                metrics.starvedFrequency = (fSinceStarve + metrics.starvedFrequency) * 0.5f;
                 metrics.receiveLatency = VoiceChat::Node::sReceiveBufferSize;
                 UpdateReceiveStreamLatency(i);
                 if (!stream.activated && CalculateNumPackets(stream) >= stream.numPackets)

@@ -707,8 +707,9 @@ SoldierAnimationBank::COMBO_ANIMATION SoldierAnimationBank::AddComboAnimation(CO
 unsigned int SoldierAnimationBank::AddComboAnimation(COMBO eCombo, COMBO_ANIMATION eAnimation)
 {
     Combo* pCombo = _GetCombo(eCombo);
+    const unsigned int uiNumAnimations = pCombo->uiNumAnimations;
     unsigned int uiIndex;
-    for (uiIndex = 0; uiIndex < pCombo->uiNumAnimations; ++uiIndex)
+    for (uiIndex = 0; uiIndex < uiNumAnimations; ++uiIndex)
     {
         if (pCombo->aeAnimation[uiIndex] == eAnimation)
         {
@@ -718,21 +719,21 @@ unsigned int SoldierAnimationBank::AddComboAnimation(COMBO eCombo, COMBO_ANIMATI
 
     if (s_iNumComboAnimationsInPool >= MAX_COMBO_ANIMATION_POOL_SIZE)
     {
-        return pCombo->uiNumAnimations;
+        return uiNumAnimations;
     }
 
     COMBO_ANIMATION* peSlot = &s_aeComboAnimationPool[s_iNumComboAnimationsInPool];
-    if (pCombo->uiNumAnimations == 0)
+    if (uiNumAnimations == 0)
     {
         pCombo->aeAnimation = peSlot;
     }
-    else if (peSlot != &pCombo->aeAnimation[pCombo->uiNumAnimations])
+    else if (peSlot != &pCombo->aeAnimation[uiNumAnimations])
     {
-        return pCombo->uiNumAnimations;
+        return uiNumAnimations;
     }
 
     ++s_iNumComboAnimationsInPool;
-    pCombo->uiNumAnimations = uiIndex + 1;
+    pCombo->uiNumAnimations = uiNumAnimations + 1;
     *peSlot = eAnimation;
     return uiIndex;
 }

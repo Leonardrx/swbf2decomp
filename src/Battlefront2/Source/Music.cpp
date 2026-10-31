@@ -127,8 +127,8 @@ void Music::Update(float fDeltaTime)
         }
         else
         {
-            mPlayStateDesired = playState_stopped;
             mPlayStateCurrent = playState_stopping;
+            mPlayStateDesired = playState_stopped;
         }
         // fall through
     case playState_stopping:
@@ -223,12 +223,14 @@ void Music::Update(float fDeltaTime)
                 }
                 --sMusicPlaying;
                 mStream = 0;
+                mInactiveTime = 0.0f;
+                mPlaybackPosition = 0;
+                mNode.mNode.Remove();
+                sMusicInactive.Add(&mNode);
+                return;
             }
-            else
-            {
-                --sMusicPlaying;
-                mPlayStateCurrent = playState_stopped;
-            }
+            --sMusicPlaying;
+            mPlayStateCurrent = playState_stopped;
             mInactiveTime = 0.0f;
             mPlaybackPosition = 0;
             mNode.mNode.Remove();

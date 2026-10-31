@@ -597,9 +597,9 @@ bool PathFinder::PushValidPoint(const PblVector3& rSrc, PblVector3& rDest, PblVe
     ObstacleTest test;
     test.mSrc = rSrc;
     test.mDest = rDest;
-    test.mBoundCenter = PblVector3((test.mDest.x + test.mSrc.x) * 0.5f,
-                                   (test.mDest.y + test.mSrc.y) * 0.5f,
-                                   (test.mDest.z + test.mSrc.z) * 0.5f);
+    test.mBoundCenter = PblVector3((test.mSrc.x + test.mDest.x) * 0.5f,
+                                   (test.mSrc.y + test.mDest.y) * 0.5f,
+                                   (test.mSrc.z + test.mDest.z) * 0.5f);
     float fDX = test.mBoundCenter.x - test.mSrc.x;
     float fDY = test.mBoundCenter.y - test.mSrc.y;
     float fDZ = test.mBoundCenter.z - test.mSrc.z;

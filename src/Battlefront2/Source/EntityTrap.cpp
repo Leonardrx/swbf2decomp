@@ -840,10 +840,9 @@ Entity* EntityTrapClass::Build(const EntityDesc& desc)
         PblMatrix mBody = kBoxDesc.mMatrix;
         mBody.SetTranslation(kBoxDesc.mMatrix.GetTranslation() + vOffset);
         mBody.m[3][3] = 1.0f;
-        PblMatrix mLocal;
-        mLocal = mBody * pTrap->GetMatrix().GetInverseFast();
+        mBody = mBody * pTrap->GetMatrix().GetInverseFast();
 
-        mBuildBoxCollisionModel.AddBody(new CollisionBodyPrimitive(kPrimitive, "main_body", mLocal, 0));
+        mBuildBoxCollisionModel.AddBody(new CollisionBodyPrimitive(kPrimitive, "main_body", mBody, 0));
         pTrap->SetCollisionModel(&mBuildBoxCollisionModel);
         mBuildBoxCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(0));
         mBuildBoxCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(0));

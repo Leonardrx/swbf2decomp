@@ -600,7 +600,7 @@ void HUD::ElementMap::PostReadSetup()
     }
     else
     {
-        RedGroupElement::Scale(1.0f, 0.75f / RedRenderer::GetScreenAspectRatio());
+        RedGroupElement::Scale(0.75f / RedRenderer::GetScreenAspectRatio(), 1.0f);
     }
 }
 
@@ -2079,6 +2079,7 @@ void __cdecl HUD::ElementMap::WriteBitmapElement(HUD::ElementBitmapBase* pBitmap
 // FUNCTION: SWBF2 0x00555b70
 void HUD::ElementMap::EventRefreshMarker(const HUD::Event& event, void* const pData)
 {
+    ElementMap* pMap = (ElementMap*)pData;
     if (event.GetClass()->GetType() != HUD::EventClass::type_Uint)
     {
         return;
@@ -2089,7 +2090,6 @@ void HUD::ElementMap::EventRefreshMarker(const HUD::Event& event, void* const pD
         return;
     }
 
-    ElementMap* pMap = (ElementMap*)pData;
     const TargetManager::Marker& marker = TargetManager::gMarkers[index];
     RedBitmapElement& bitmap = pMap->mMarker[index];
     bitmap.SetTexture(marker.textureHash);

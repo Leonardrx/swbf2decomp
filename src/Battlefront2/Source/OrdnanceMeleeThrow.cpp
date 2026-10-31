@@ -413,8 +413,8 @@ bool OrdnanceMeleeThrow::Update(float fDeltaTime)
         mCheckStaticCollision = false;
     }
 
-    float fStep = fDeltaTime;
     mLifeTime -= fDeltaTime;
+    float fStep = fDeltaTime;
     if (mLifeTime <= 0.0f)
     {
         if (mLifeTime + fDeltaTime > 0.0f && m_pDamageData)

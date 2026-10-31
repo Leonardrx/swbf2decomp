@@ -348,9 +348,9 @@ void OrdnanceSticky::Render(unsigned char ucViewport, float fDist, unsigned int 
         CollisionModel* pModel = pObject->mCollisionModel;
         if (pModel)
         {
-            PblMatrix mBody = pModel->GetWorldMatrix(mStickInfo->mCollBodyID,
-                                                     pObject->GetMatrix(), pObject->GetPose());
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXMATRIX*>(&mBody));
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXMATRIX*>(&mat),
+                               reinterpret_cast<const D3DXMATRIX*>(&pModel->GetWorldMatrix(mStickInfo->mCollBodyID,
+                                                                                            pObject->GetMatrix(), pObject->GetPose())));
         }
     }
     else if (pClass->mAlignVertical)
@@ -436,7 +436,7 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
         if (pVictim)
         {
             bStick = (((OrdnanceStickyClass*)mClass)->mStickTypes &
-                      (1 << static_cast<Damageable*>(pVictim)->mHealthType)) != 0;
+                      (1 << pVictim->mHealthType)) != 0;
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mVelocity));
             static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
@@ -463,8 +463,7 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
         if (pModel)
         {
             PblMatrix mBody = pModel->GetWorldMatrix(iBodyId, pObject->GetMatrix(), pObject->GetPose());
-            const PblMatrix mInverse = mBody.GetInverseFast();
-            mStick *= mInverse;
+            mStick *= mBody.GetInverseFast();
             mStickInfo->mCollBodyID = iBodyId;
         }
         else
@@ -490,7 +489,7 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
             const float fFriction = 1.15f;
             mPosition = vPos + vNormal * 0.1f;
 
-            mVelocity -= vNormal * fDot;
+            mVelocity -= fDot * vNormal;
             float fSlow = -fFriction * fDot * (fRebound + 1.0f) /
                           PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                         mVelocity.z * mVelocity.z);

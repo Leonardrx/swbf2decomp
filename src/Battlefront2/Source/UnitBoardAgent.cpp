@@ -265,7 +265,7 @@ void UnitBoardAgent::UpdateStatePostVision(float dt)
             const CollisionObject* pMe = GetMe()->GetGameObject()->GetCollisionObject();
             const CollisionObject* pVehicleCol = pVehicle->GetCollisionObject();
             float fRange = pMe->GetCollisionRadius() + pVehicleCol->GetCollisionRadius() + 1.5f;
-            if (fRange * fRange > DistSq(pMe->GetCollisionCenter(), pVehicleCol->GetCollisionCenter()))
+            if (SquaredLength(pMe->GetCollisionCenter() - pVehicleCol->GetCollisionCenter()) < fRange * fRange)
             {
                 SetNextState(3);
             }

@@ -197,7 +197,7 @@ void WeaponDestruct::EnterFire()
         desc.mPosition = mOwner->GetGameObject()->GetCollisionObject()->GetCollisionCenter();
         desc.mOwner = mOwner->GetGameObject();
         desc.mDamageOwner.mCharacter = mOwner->mCharacter;
-        desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+        desc.mDamageOwner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
         desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
         desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
         desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetEntityClass();
@@ -235,7 +235,7 @@ void WeaponDestruct::EnterFire()
         OrbitalStrikeDesc desc = { PblVector3(0.0f, 0.0f, 0.0f), DamageOwner(0, 0, 0, 0, 0, 1.0f) };
         desc.mPosition = mOwner->GetGameObject()->GetCollisionObject()->GetCollisionCenter();
         desc.mDamageOwner.mCharacter = mOwner->mCharacter;
-        desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+        desc.mDamageOwner.mGameObject = PblHandle<GameObject>(mOwner->GetGameObject());
         desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
         desc.mDamageOwner.mTeam = mOwner->GetGameObject()->GetTeam();
         desc.mDamageOwner.mClass = mOwner->GetGameObject()->GetGameObjectClass();

@@ -761,9 +761,8 @@ void BirdParticle::RespawnFlockBird(const PblVector3& vPos, const PblVector3& vV
     mVelocity = vVelocity;
 
     PblVector3 vDir = Normalize(mVelocity);
-    PblVector3 vRight = Normalize(CrossProduct(vUp, vDir));
 
-    mMatrix[0] = vRight;
+    mMatrix[0] = Normalize(CrossProduct(vUp, vDir));
     mMatrix.m[0][3] = 0.0f;
     mMatrix[1] = vUp;
     mMatrix.m[1][3] = 0.0f;

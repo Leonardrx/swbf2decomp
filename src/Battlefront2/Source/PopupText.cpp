@@ -108,7 +108,7 @@ void __fastcall PopupText::ShowPopup(int iType, unsigned int uTextId)
             pBus->Fade(0.5f, 0.0f, -1.0f);
         }
         HUD::ElementMap* pMap = HUD::ElementMap::FindByPlayerIndex(0);
-        gMapEnabled[0] = pMap ? (static_cast<RedInterfaceElement*>(static_cast<RedGroupElement*>(pMap))->m_bEnabled != 0) : false;
+        gMapEnabled[0] = pMap && static_cast<RedInterfaceElement*>(static_cast<RedGroupElement*>(pMap))->IsEnabled();
         HUD::GameEvents::DisableAllForObjectiveDisplay(0, true);
         SpawnDisplay* pSpawn = SpawnDisplay::Instance(0);
         if (pSpawn->mVisible && pSpawn->mMode == SpawnDisplay::eCHANGECLASS)

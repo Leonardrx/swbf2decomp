@@ -673,11 +673,12 @@ void HUD::ElementTarget::Read(PblConfig& config, Factory::ItemCallback pCallback
     }
 
     const PblVector3& vPos = RedGroupElement::GetPosition();
-    RedGroupElement::SetPosition(
-        CameraManager::Instance()->GetNumCameras() <= 1
-            ? ConvertWideScreenX(vPos.x, sViewportWidth, sViewportHeight)
-            : vPos.x,
-        vPos.y, vPos.z);
+    float fX = vPos.x;
+    if (CameraManager::Instance()->GetNumCameras() <= 1)
+    {
+        fX = ConvertWideScreenX(fX, sViewportWidth, sViewportHeight);
+    }
+    RedGroupElement::SetPosition(fX, vPos.y, vPos.z);
 
     PostReadSetup();
 }

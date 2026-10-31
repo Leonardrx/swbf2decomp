@@ -142,8 +142,8 @@ int ScriptCB_PreviousOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        unsigned char ucEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
-        opt.mEffectsEnabled = ucEnabled != 0;
+        const int iEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+        opt.mEffectsEnabled = (unsigned char)iEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -182,13 +182,12 @@ int ScriptCB_NextOutputMode(lua_State*)
     Snd::Engine::SetSpeakerConfig((Snd::EngineBase::SpeakerConfig)iMode);
     if (pProfile)
     {
-        PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        const int iEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
-        opt.mEffectsEnabled = iEnabled != 0;
-        opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
-        opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
+        const int iEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+        pProfile->mSoundOptions.mEffectsEnabled = (unsigned char)iEnabled != 0;
+        pProfile->mSoundOptions.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
+        pProfile->mSoundOptions.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
-        opt.ApplySettings();
+        pProfile->mSoundOptions.ApplySettings();
     }
     return 0;
 }
@@ -223,13 +222,12 @@ int ScriptCB_SetOutputMode(lua_State*)
     Snd::Engine::SetSpeakerConfig((Snd::EngineBase::SpeakerConfig)iMode);
     if (pProfile)
     {
-        PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        unsigned char ucEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
-        opt.mEffectsEnabled = ucEnabled != 0;
-        opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
-        opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
+        const int iEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
+        pProfile->mSoundOptions.mEffectsEnabled = (unsigned char)iEnabled != 0;
+        pProfile->mSoundOptions.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
+        pProfile->mSoundOptions.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
-        opt.ApplySettings();
+        pProfile->mSoundOptions.ApplySettings();
     }
     return 0;
 }
@@ -1108,9 +1106,11 @@ int ScriptCB_GetEAXVersion(lua_State* L)
         && Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_DirectSoundHardware)
     {
         lua_pushnumber(LuaHelper::mState, (float)(int)Snd::Engine::GetEAXVersion());
-        return 1;
     }
-    lua_pushnumber(LuaHelper::mState, 0.0f);
+    else
+    {
+        lua_pushnumber(LuaHelper::mState, 0.0f);
+    }
     return 1;
 }
 

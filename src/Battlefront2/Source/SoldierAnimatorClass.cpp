@@ -1052,7 +1052,8 @@ SoldierAnimatorClass::AnimationMap* CachedBankStack::AddWeaponParent(SoldierAnim
     {
         return NULL;
     }
-    if (!Map(eParent, uiDepth))
+    Entry* pEntry = m_Stack.GetData(uiDepth);
+    if (!pEntry->apMap[eParent])
     {
         AddWeaponParent(eParent, uiDepth);
         Map(eParent, uiDepth) = m_Cache.AddMap(GetBank(uiDepth), eParent);
@@ -1069,7 +1070,8 @@ SoldierAnimatorClass::AnimationMap* CachedBankStack::AddBankParent(SoldierAnimat
     {
         return NULL;
     }
-    if (!Map(eWeapon, uiParentDepth))
+    Entry* pEntry = m_Stack.GetData(uiParentDepth);
+    if (!pEntry->apMap[eWeapon])
     {
         AddWeaponParent(eWeapon, uiParentDepth);
         AddBankParent(eWeapon, uiParentDepth);

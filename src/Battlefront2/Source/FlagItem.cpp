@@ -150,7 +150,7 @@ void FlagItem::ResetFlag()
 {
     FlagItem* pItem = this;
     const PblMatrix mStart(pItem->mStartRotation, pItem->mStartPosition);
-    static_cast<CollisionObject&>(*pItem).SetMatrix(mStart);
+    SetMatrix(mStart);
     pItem->mLastPosition = pItem->mStartPosition;
 
     if (!NetGame::IsEnabled() || !netEnabledNext || !netClientActive)

@@ -508,12 +508,7 @@ void PlayerStats::AddKill(Character* pVictim, GameObject* pObject)
         }
 
         int iAffiliation = pVictim->GetTeamPtr()->GetAffiliation(pPost->mBiasTeam);
-        const PblVector3& vPost = pPost->GetMatrix().GetTranslation();
-        const PblVector3& vObject = pObject->GetMatrix().GetTranslation();
-        float fX = vObject.x - vPost.x;
-        float fY = vObject.y - vPost.y;
-        float fZ = vObject.z - vPost.z;
-        float fDistSq = fX * fX + fY * fY + fZ * fZ;
+        float fDistSq = SquaredLength(pObject->GetMatrix().GetTranslation() - pPost->GetMatrix().GetTranslation());
         if (iAffiliation < 0 && pPost->mBiasTeam == iTeam + 1 && pPost->IsInsideCaptureRegion(pObject))
         {
             PointsProcess(23, 0);
@@ -541,12 +536,8 @@ void PlayerStats::AddKill(Character* pVictim, GameObject* pObject)
             continue;
         }
 
-        const PblVector3& vObject = pObject->GetMatrix().GetTranslation();
-        const PblVector3& vFlag = reinterpret_cast<GameObject*>((FlagItem*)it)->GetPosition();
-        float fX = vFlag.x - vObject.x;
-        float fY = vFlag.y - vObject.y;
-        float fZ = vFlag.z - vObject.z;
-        if (fX * fX + fY * fY + fZ * fZ <= 100.0f)
+        if (SquaredLength(reinterpret_cast<GameObject*>((FlagItem*)it)->GetPosition() -
+                          pObject->GetMatrix().GetTranslation()) <= 100.0f)
         {
             Controllable* pMine = Character::GetPtr(mStatId)->GetControllable();
             if (((FlagItem*)it)->GetCarrier())
@@ -1325,6 +1316,7 @@ void PlayerStats::Read(NetPktGroup& group)
     {
         for (int iHero = 0; iHero < 2; ++iHero)
         {
+            MaxCntStat<unsigned char>& killsPerSpawn = mKillsPerSpawn[iSide][iHero];
             group.ReadBits(uValue, 16);
             mKills[iSide][iHero].Set(static_cast<unsigned short>(uValue));
             group.ReadBits(uValue, 8);
@@ -1335,9 +1327,9 @@ void PlayerStats::Read(NetPktGroup& group)
             mKillingSpree[iSide][iHero].SetMax(static_cast<unsigned char>(uValue));
             group.ReadBits(uValue, 8);
             mKillsUnder25Health[iSide][iHero].Set(static_cast<unsigned char>(uValue));
-            mKillsPerSpawn[iSide][iHero].ResetCurrent();
             group.ReadBits(uValue, 8);
-            mKillsPerSpawn[iSide][iHero].SetMax(static_cast<unsigned char>(uValue));
+            killsPerSpawn.SetMax(static_cast<unsigned char>(uValue));
+            killsPerSpawn.ResetCurrent();
             group.ReadBits(uValue, 8);
             mFlagCaps[iSide][iHero].Set(static_cast<unsigned char>(uValue));
             group.ReadBits(uValue, 16);

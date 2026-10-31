@@ -331,10 +331,7 @@ void NavigatorSlide::UpdateInfantrySlideObject()
             const GameObject* pTarget = mOwner->mOwner->GetAttackHelperVisibleTarget();
             if (pTarget)
             {
-                const PblVector3& vel = pTarget->GetVelocity();
-                dest.x = vel.x + dest.x;
-                dest.y += vel.y;
-                dest.z += vel.z;
+                dest += pTarget->GetVelocity();
             }
             NextInfantrySlidePos(dest);
             mGlobalDest = dest;
@@ -364,7 +361,7 @@ bool NavigatorSlide::GetObjectSlideToPosition(PblVector3* pPos) const
     *pPos = (GameObjectGetMatrix(pObj)).GetTranslation();
     const PblVector3& myPos = GetMatrix().GetTranslation();
     PblVector3 dir(myPos.x - pPos->x, myPos.y - pPos->y, myPos.z - pPos->z);
-    const PblVector3 delta = AIUtil::GetSafeNormalXZ(dir) * mOffset;
+    const PblVector3 delta = mOffset * AIUtil::GetSafeNormalXZ(dir);
     pPos->x += delta.x;
     pPos->y += delta.y;
     pPos->z += delta.z;
@@ -394,10 +391,9 @@ void NavigatorSlide::NextVehicleSlidePos()
 
         const PblVector3 delta = mSlidePos - pos;
         PblVector3 dest = mSlidePos;
-        if (delta.z * delta.z + delta.x * delta.x > fStep * fStep)
+        if (SquaredLengthXZ(delta) > fStep * fStep)
         {
-            const PblVector3 normal = AIUtil::GetSafeNormalXZ(delta);
-            dest = pos + normal * fStep;
+            dest = pos + AIUtil::GetSafeNormalXZ(delta) * fStep;
         }
 
         float fDistSq;
@@ -415,9 +411,11 @@ void NavigatorSlide::NextVehicleSlidePos()
         {
             const float lx = left.x - pos.x;
             const float lz = left.z - pos.z;
+            const float fLeftDistSq = lz * lz + lx * lx;
             const float rx = right.x - pos.x;
             const float rz = right.z - pos.z;
-            mSlideDirection = (rz * rz + rx * rx > lz * lz + lx * lx) ? SLIDE_LEFT : SLIDE_RIGHT;
+            const float fRightDistSq = rz * rz + rx * rx;
+            mSlideDirection = (fLeftDistSq < fRightDistSq) ? SLIDE_LEFT : SLIDE_RIGHT;
         }
         if (mSlideDirection == SLIDE_LEFT)
         {

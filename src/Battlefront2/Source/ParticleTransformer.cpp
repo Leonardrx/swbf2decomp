@@ -96,7 +96,10 @@ bool ParticleTransformer::Update(Particle& particle, float fDeltaTime) const
     }
     else
     {
-        particle.mPosition += particle.mVelocity * particle.mLifeTime;
+        const PblVector3 vMove = particle.mVelocity * particle.mLifeTime;
+        particle.mPosition.x += vMove.x;
+        particle.mPosition.y += vMove.y;
+        particle.mPosition.z += vMove.z;
     }
 
     for (int i = 0; i < mNumSizeTrans; ++i)

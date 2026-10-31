@@ -235,13 +235,16 @@ void CameraManager::SetChaseCameraRandomShot(int iCam)
     }
     if (mNumShots > 2)
     {
-        for (int i = 0; i < 16; i++)
+        if (uiShot == sLastChaseShot)
         {
-            if (uiShot != sLastChaseShot)
+            for (int i = 0; i < 16; i++)
             {
-                break;
+                if (uiShot != sLastChaseShot)
+                {
+                    break;
+                }
+                uiShot = PblRandom::GetGlobalInt() % mNumShots;
             }
-            uiShot = PblRandom::GetGlobalInt() % mNumShots;
         }
         if (uiShot == sLastChaseShot)
         {
@@ -576,9 +579,9 @@ bool CameraInterpolator::Update(float)
                         (mOld.m[3][1] - mNew.m[3][1]) * fT + mNew.m[3][1],
                         (mOld.m[3][2] - mNew.m[3][2]) * fT + mNew.m[3][2]);
 
-        PblQuaternion qRot = Interpolate(qNew, qOld, fT);
+        D3DXQUATERNION qUnit;
         PblMatrix mBlend;
-        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mBlend), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRot), reinterpret_cast<const D3DXQUATERNION*>(&qRot)));
+        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mBlend), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&Interpolate(qNew, qOld, fT))));
         mBlend.m[3][0] = vPos.x;
         mBlend.m[3][1] = vPos.y;
         mBlend.m[3][2] = vPos.z;

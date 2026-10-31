@@ -313,10 +313,9 @@ int ShellLoop::Update(float fDeltaTime)
             if (iTimer > 5)
             {
                 mbNetCableErrorOnEnter = false;
-                GuiManager::Instance()->OpenError(
-                    (GuiManager::eErrorSeverity)sIngameErrorSeverity,
-                    RedLocalizeDB::Find(mpNoCableMessageHash, false),
-                    0, fnErrorBoxOk);
+                GuiManager* pGuiManager = GuiManager::Instance();
+                const unsigned short* pMessage = RedLocalizeDB::Find(mpNoCableMessageHash, false);
+                pGuiManager->OpenError((GuiManager::eErrorSeverity)sIngameErrorSeverity, pMessage, 0, fnErrorBoxOk);
                 iTimer = mbNetCableErrorTimer;
             }
         }

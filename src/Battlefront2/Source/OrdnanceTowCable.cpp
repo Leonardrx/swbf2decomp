@@ -145,8 +145,7 @@ void OrdnanceTowCable::TowCableFailure()
             break;
         }
 
-        PblVector3 vStart(point.mBodyOffset.x + 0.0f, point.mBodyOffset.y + 20.0f,
-                          point.mBodyOffset.z + 0.0f);
+        PblVector3 vStart = point.mBodyOffset + PblVector3(0.0f, 20.0f, 0.0f);
         PblVector3 vDown(0.0f, -1.0f, 0.0f);
         CollisionObject* pHit;
         float fHit = CollisionManager::RayHit(vStart, vDown, 512.0f, pHit, NULL, NULL, 0, 0x90, true);

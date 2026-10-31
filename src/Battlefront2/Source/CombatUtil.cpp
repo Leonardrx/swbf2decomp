@@ -800,10 +800,10 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
     int iBest = -1;
     bool bBestMultiShot = false;
     float fBestDamage = -1.0f;
-    bool bBestInRange = false;
 
     const PblVector3& vEye = pMe->mEyePoint;
     const PblVector3& vPoint = pTarget->GetTargetPoint(vEye, pMe->mEyeDir, -1);
+    bool bBestInRange = false;
     float fDistSq = (vPoint.y - vEye.y) * (vPoint.y - vEye.y) +
                     (vPoint.x - vEye.x) * (vPoint.x - vEye.x) +
                     (vPoint.z - vEye.z) * (vPoint.z - vEye.z);
@@ -894,10 +894,22 @@ bool CombatUtil::sSelectBestWeaponType(Controllable* pMe, const GameObject* pTar
             {
                 continue;
             }
-            if (bBestMultiShot ? (bMultiShot && bBetter) : (bMultiShot || bBetter))
+            bool bUse = false;
+            if (bBestMultiShot)
             {
-                fBestDamage = fDamage;
+                if (bMultiShot && bBetter)
+                {
+                    bUse = true;
+                }
+            }
+            else if (bMultiShot || bBetter)
+            {
+                bUse = true;
+            }
+            if (bUse)
+            {
                 iBest = i;
+                fBestDamage = fDamage;
                 bBestMultiShot = bMultiShot;
             }
         }

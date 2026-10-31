@@ -148,12 +148,11 @@ void AI::ConquestGoal::sIssueCmd(Character* pChr, const CommandPost* pPost)
 const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandPost* pPost, bool bSecondPass)
 {
     CommandPostItor it = CommandPostManager::Instance()->GetItor();
-    bool bValid[16] = {};
     float fTotal = 0.0f;
+    bool bValid[16] = {};
     const int iTeam = pChr->mTeamNumber;
 
-    bool* pValid = bValid;
-    for (; it; ++it, ++pValid)
+    for (int i = 0; it; ++it, ++i)
     {
         CommandPost* pCP = *it;
         if (!bSecondPass && pCP->GetGameObject() &&
@@ -162,25 +161,25 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
             continue;
         }
 
-        *pValid = true;
+        bValid[i] = true;
         if (sIsPilotingVehicle(pChr) &&
             (pChr->mVehicle->GetGameObject()->GetGameObjectClass()->mAIType & pCP->GetStrategicBan()))
         {
-            *pValid = false;
+            bValid[i] = false;
         }
         if (pCP == pPost)
         {
-            *pValid = false;
+            bValid[i] = false;
         }
 
         float fImportance = sGetImportance(pCP, iTeam);
         if (fImportance <= 0.0f)
         {
-            *pValid = false;
+            bValid[i] = false;
         }
 
         UnitController* pCtrl = pChr->GetControllable() ? UnitControllerPtr(pChr->GetControllable()->mCtrl) : 0;
-        if (!*pValid)
+        if (!bValid[i])
         {
             continue;
         }
@@ -189,7 +188,7 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
             !ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1)
                  ->CanGetThereFromHere_QuickButNotSoPerfectlyAccurateTest(pCtrl, AIUtil::GetCommandPostPos(pCP)))
         {
-            *pValid = false;
+            bValid[i] = false;
             continue;
         }
         fTotal += fImportance;
@@ -199,10 +198,10 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
     {
         float fPick = AIUtil::GetRandomFloat(0.0f, fTotal);
         float fSum = 0.0f;
-        pValid = bValid;
-        for (it = CommandPostManager::Instance()->GetItor(); it; ++it, ++pValid)
+        int i = 0;
+        for (it = CommandPostManager::Instance()->GetItor(); it; ++it, ++i)
         {
-            if (!*pValid)
+            if (!bValid[i])
             {
                 continue;
             }

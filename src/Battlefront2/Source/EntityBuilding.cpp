@@ -343,12 +343,12 @@ EntityBuilding::EntityBuilding(EntityBuildingClass* pClass, const EntityDesc& de
             PblMatrix mBone;
             if (mClass->mUnbuiltModel->_mLod[0]->GetBoneMatrix(0xD1E4CC7A, mBone))
             {
-                PblMatrix mWorld = mBone * GetMatrix();
+                PblMatrix mWorld = mBone * GetCollisionObject()->GetMatrix();
                 hologramDesc.mMatrix = mWorld;
             }
             else
             {
-                hologramDesc.mMatrix = GetMatrix();
+                hologramDesc.mMatrix = GetCollisionObject()->GetMatrix();
             }
             m_pHologram = (EntityHologram*)pClass->m_pHologramClass->Build(hologramDesc);
         }
@@ -504,7 +504,7 @@ void EntityBuilding::ClientKill()
         return;
     }
     DamageOwner& damageOwner = mDamageOwner;
-    DamageOwner owner(damageOwner.mCharacter, GetHandleObject(damageOwner.mGameObject), damageOwner.mTeam, pClass,
+    DamageOwner owner(damageOwner.mCharacter, damageOwner.mGameObject, damageOwner.mTeam, pClass,
                       0, 1.0f);
     PblVector3 vPos;
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mExplosionOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
@@ -617,7 +617,7 @@ void EntityBuilding::Kill()
     if (pClass->mExplosion)
     {
         DamageOwner& damageOwner = mDamageOwner;
-        DamageOwner owner(damageOwner.mCharacter, GetHandleObject(damageOwner.mGameObject), damageOwner.mTeam,
+        DamageOwner owner(damageOwner.mCharacter, damageOwner.mGameObject, damageOwner.mTeam,
                           pClass, 0, 1.0f);
         PblVector3 vPos;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mExplosionOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
@@ -801,8 +801,8 @@ void EntityBuilding::Render(unsigned char uFlags, float fDist, unsigned int uMas
         {
             iPlayer = iSpectator;
         }
-        Character* pCharacter = Character::FindPlayer(iPlayer);
-        Team* pTeam = pCharacter ? pCharacter->mTeamPtr : Team::sTeams[1];
+        Character* pCharacter = Character::GetPtr(iPlayer);
+        Team* pTeam = pCharacter && pCharacter->mPlayerId == iPlayer ? pCharacter->mTeamPtr : Team::sTeams[1];
 
         color *= pTeam->GetColor(GetGameObject()->GetTeam());
     }

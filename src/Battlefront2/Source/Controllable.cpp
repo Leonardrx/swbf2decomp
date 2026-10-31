@@ -933,10 +933,9 @@ void Controllable::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
     if (pPilot)
     {
         const PblMatrix& mPilotMatrix = pPilot->GetMatrix();
-        const PblMatrix mInverse = static_cast<EntitySoldier*>(pPilot)->mLastVehicleMatrix.GetInverseFast();
         PblMatrix mResult;
         PblMatrix mRelative;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mResult), reinterpret_cast<const D3DXMATRIX*>(&mPilotMatrix), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mResult), reinterpret_cast<const D3DXMATRIX*>(&mPilotMatrix), reinterpret_cast<const D3DXMATRIX*>(&static_cast<EntitySoldier*>(pPilot)->mLastVehicleMatrix.GetInverseFast()));
         mRelative = mResult;
         D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mResult), reinterpret_cast<const D3DXMATRIX*>(&mRelative), reinterpret_cast<const D3DXMATRIX*>(&mIn));
         mOut = mResult;

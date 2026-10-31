@@ -349,17 +349,17 @@ void GodrayManager::Update(float fDeltaTime)
     m_uiFrame = (m_uiFrame + 1 == 0) ? 1 : m_uiFrame + 1;
     m_fTime += fDeltaTime;
 
-    PblVector3 vAxisIn = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
-    vAxisIn = PblVector3(vAxisIn.y * 0.0f - vAxisIn.z, vAxisIn.z * 0.0f - vAxisIn.x * 0.0f,
-                         vAxisIn.x - vAxisIn.y * 0.0f);
-    D3DXVec3Normalize((D3DXVECTOR3*)&vAxisIn, (const D3DXVECTOR3*)&vAxisIn);
+    PblVector3 vTemp = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
+    vTemp = PblVector3(vTemp.y * 0.0f - vTemp.z, vTemp.z * 0.0f - vTemp.x * 0.0f,
+                       vTemp.x - vTemp.y * 0.0f);
+    PblVector3 vAxis;
+    D3DXVec3Normalize((D3DXVECTOR3*)&vAxis, (const D3DXVECTOR3*)&vTemp);
     PblMatrix mRotation;
-    D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotation, (const D3DXVECTOR3*)&vAxisIn, m_fOffsetAngle);
-    PblVector3 vLengthDir;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vLengthDir,
+    D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotation, (const D3DXVECTOR3*)&vAxis, m_fOffsetAngle);
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vTemp,
                             (const D3DXVECTOR3*)&RedLight::GetGlobalDirectionalLight(0)->m_vDirection,
                             (const D3DXMATRIX*)&mRotation);
-    m_vLengthDir = vLengthDir;
+    m_vLengthDir = vTemp;
 
     m_Rand.SetSeed((unsigned int)(m_fTime * 4099.0f));
 

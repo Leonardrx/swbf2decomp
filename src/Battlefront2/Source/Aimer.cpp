@@ -112,9 +112,7 @@ AimerClass::AimerClass()
     mRestDir.x = 0.0f;
     mRestDir.y = 0.0f;
     mRestDir.z = 1.0f;
-    mOffsetPos.x = 0.0f;
-    mOffsetPos.y = 0.0f;
-    mOffsetPos.z = 0.0f;
+    mOffsetPos.SetAll(0.0f);
     mOffsetRot = PblQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
     mMountHash = 0;
     mParentHash = 0;

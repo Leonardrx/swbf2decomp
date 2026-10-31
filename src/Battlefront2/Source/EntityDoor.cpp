@@ -328,12 +328,15 @@ bool EntityDoor::Update(float fDeltaTime)
                                                             mAnimatedClass->mAnimationTriggers[i].mTriggerRadius,
                                                             apUnits, 20, 0, AI::AFFIL_ALL);
             }
-            for (int j = 0; j < iCount; ++j)
+            if (iCount > 0)
             {
-                if (apUnits[j]->GetObjectData(0) == 2)
+                for (int j = 0; j < iCount; ++j)
                 {
-                    bTriggered = true;
-                    break;
+                    if (apUnits[j]->GetObjectData(0) == 2)
+                    {
+                        bTriggered = true;
+                        break;
+                    }
                 }
             }
         }

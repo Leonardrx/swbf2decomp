@@ -398,7 +398,7 @@ void CombatHelper::UpdateState(float dt)
         vFacing.y = 0.0f;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vTurnFacingDir), reinterpret_cast<const D3DXVECTOR3*>(&vFacing));
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vTurnTargetDir), reinterpret_cast<const D3DXVECTOR3*>(&vToTarget));
-        if (vTurnFacingDir.x * vTurnTargetDir.x + vTurnFacingDir.y * vTurnTargetDir.y + vTurnFacingDir.z * vTurnTargetDir.z > 0.939f)
+        if (vTurnTargetDir.x * vTurnFacingDir.x + vTurnFacingDir.y * vTurnTargetDir.y + vTurnFacingDir.z * vTurnTargetDir.z > 0.939f)
         {
             if (GetAttackHelper().HasTarget())
             {
@@ -435,7 +435,7 @@ void CombatHelper::UpdateState(float dt)
         vFacing.y = 0.0f;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vLookFacingDir), reinterpret_cast<const D3DXVECTOR3*>(&vFacing));
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vLookTargetDir), reinterpret_cast<const D3DXVECTOR3*>(&vToTarget));
-        if (vLookFacingDir.x * vLookTargetDir.x + vLookFacingDir.y * vLookTargetDir.y + vLookFacingDir.z * vLookTargetDir.z > 0.939f)
+        if (vLookTargetDir.x * vLookFacingDir.x + vLookFacingDir.y * vLookTargetDir.y + vLookFacingDir.z * vLookTargetDir.z > 0.939f)
         {
             if (!mWaiting)
             {
@@ -542,7 +542,7 @@ void CombatHelper::UpdateState(float dt)
         if (GetMe()->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
             const EntityDroideka* pDroideka = static_cast<const EntityDroideka*>(GetMe()->GetGameObject());
-            if (!pDroideka->mIsShielded &&
+            if (!pDroideka->IsShielded() &&
                 pDroideka->mCurShield > pDroideka->mMaxShield * 0.5f)
             {
                 GetLowLevel().SetNextWeapon(1);

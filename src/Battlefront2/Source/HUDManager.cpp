@@ -380,10 +380,10 @@ void HUD::Manager::Close()
 bool HUD::Manager::Write()
 {
     HUD::File file;
-    Manager::ConfigFile** ppConfig = gConfigFiles;
+    unsigned int uConfig = 0;
     for (Item* pItem = Item::GetFirst(); pItem; pItem = Item::GetNext(pItem))
     {
-        if ((Item*)*ppConfig == pItem)
+        if ((Item*)gConfigFiles[uConfig] == pItem)
         {
             char acName[0x400];
             _snprintf(acName, sizeof(acName) - 1, "data\\%s.hud", pItem->GetName());
@@ -396,7 +396,7 @@ bool HUD::Manager::Write()
             {
                 return false;
             }
-            ++ppConfig;
+            ++uConfig;
         }
         if (file.IsOpen() && pItem->WriteEnabled())
         {

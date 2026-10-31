@@ -568,7 +568,7 @@ void SunFlare::_Render() const
         return;
     }
     const PblVector3& vAxis = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
-    if (_vDirection.x * vAxis.x + _vDirection.y * vAxis.y + _vDirection.z * vAxis.z > 0.0f)
+    if (DotProduct(_vDirection, vAxis) > 0.0f)
     {
         return;
     }

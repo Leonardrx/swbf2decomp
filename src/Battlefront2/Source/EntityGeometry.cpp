@@ -353,9 +353,9 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
 void EntityGeometry::SetupLightingState(unsigned int& uFlags)
 {
     float fRadius = GetCollisionRadius();
+    const PblVector3& vCenter = GetCollisionCenter();
     PblSphere sphere;
-    sphere.SetCenter(GetCollisionCenter());
-    sphere.SetRadius(fRadius);
+    sphere.Set(vCenter.x, vCenter.y, vCenter.z, fRadius);
     RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, (uFlags & 0x80) != 0, false, false));
     uFlags |= 0x80000000;
 }

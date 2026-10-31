@@ -272,9 +272,9 @@ void SkyDome::Read(PblConfig& config)
                 case 0x3D7E6258u:
                 {
                     RedColor color;
-                    color.b = atmosphere.GetUint8Arg(2);
-                    color.g = atmosphere.GetUint8Arg(1);
                     color.r = atmosphere.GetUint8Arg(0);
+                    color.g = atmosphere.GetUint8Arg(1);
+                    color.b = atmosphere.GetUint8Arg(2);
                     color.a = atmosphere.GetNumArgs() > 3 ? atmosphere.GetUint8Arg(3) : 0x20;
                     RedRenderer::SetFilterColor(color, iColor++);
                     break;

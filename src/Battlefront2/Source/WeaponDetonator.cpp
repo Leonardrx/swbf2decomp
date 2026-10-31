@@ -201,18 +201,17 @@ bool WeaponDetonator::HasItemsDispensed() const
         return false;
     }
     const int iIndex = pCharacter - Character::sCharacters;
-    for (WeaponDispenserClass* pClass = (WeaponDispenserClass*)mStart; pClass;)
+    for (WeaponDispenserClass* pClass = (WeaponDispenserClass*)mStart; pClass;
+         pClass = (WeaponDispenserClass*)pClass->mNextCharge)
     {
         if (pClass->mTrackItemCount[iIndex] > 0)
         {
             return true;
         }
-        WeaponDispenserClass* pNext = (WeaponDispenserClass*)pClass->mNextCharge;
-        if (pNext == pClass || pNext == (WeaponDispenserClass*)mStart)
+        if (pClass == pClass->mNextCharge || pClass->mNextCharge == mStart)
         {
             break;
         }
-        pClass = pNext;
     }
     return false;
 }

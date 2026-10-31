@@ -57,9 +57,16 @@ void MessageDisplay::AddKillMessage(const Character* pVictim, const Character* p
     }
     else
     {
-        unsigned int uFormat = pVictim->mTeamNumber == iTeam ? 0xc57ae533u : 0xacc1eef7u;
-        PblUnicode::usnprintf(message, 255, RedLocalizeDB::Find(uFormat, false),
-                              pVictim->mName, pKiller->mName);
+        if (pVictim->mTeamNumber == iTeam)
+        {
+            PblUnicode::usnprintf(message, 255, RedLocalizeDB::Find(0xc57ae533u, false),
+                                  pVictim->mName, pKiller->mName);
+        }
+        else
+        {
+            PblUnicode::usnprintf(message, 255, RedLocalizeDB::Find(0xacc1eef7u, false),
+                                  pVictim->mName, pKiller->mName);
+        }
     }
     if (CanProcessChatMessage())
     {

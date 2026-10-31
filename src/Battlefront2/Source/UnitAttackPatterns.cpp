@@ -607,7 +607,7 @@ void AttackPatterns::DoSerpentine()
         const Controllable* pMe = GetMe();
         const PblVector3& vTarget = GetAttackHelper()->GetLastSeenTargetPos();
         const PblVector3& vPos = pMe->GetMatrix().GetTranslation();
-        float fDistSq = (vPos.x - vTarget.x) * (vPos.x - vTarget.x) + (vPos.z - vTarget.z) * (vPos.z - vTarget.z);
+        float fDistSq = SquaredLengthXZ(vPos - vTarget);
 
         bool bChangeAhead = false;
         if (GameLoop::GetMissionTime() > mSerpTimer)
@@ -693,7 +693,7 @@ void AttackPatterns::DoFlank()
 
             PblVector3 vSideDir = CrossProduct(vDir, PblVector3(0.0f, 1.0f, 0.0f));
             float fSide = 1.0f;
-            if (vEyeDir.z * vDir.x - vDir.z * vEyeDir.x > 0.0f)
+            if (CrossProduct(vEyeDir, vDir).y > 0.0f)
             {
                 fSide = -1.0f;
             }
@@ -899,9 +899,7 @@ void AttackPatterns::SetGlanceDest()
 bool AttackPatterns::IsGlanceMakingProgress()
 {
     const PblVector3& vPos = GetMe()->GetMatrix().GetTranslation();
-    float dz = mGlancePos.z - vPos.z;
-    float dx = mGlancePos.x - vPos.x;
-    float fXZSq = dx * dx + dz * dz;
+    float fXZSq = SquaredLengthXZ(mGlancePos - vPos);
     if (mClosestXZSq > fXZSq)
     {
         mClosestXZSq = fXZSq;

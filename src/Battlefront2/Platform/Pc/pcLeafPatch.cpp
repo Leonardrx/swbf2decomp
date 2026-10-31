@@ -15,9 +15,11 @@
 
 // FUNCTION: SWBF2 0x0041a740
 LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
-    : Renderable(2), m_fDistanceFarShader(pClass->mNearFadeDist),
-      m_pPrimitive(0), m_pPrimitiveFar(0), m_pClass(pClass), m_pVertices(0)
+    : Renderable(2), m_fDistanceFarShader(pClass->mNearFadeDist), m_pClass(pClass)
 {
+    m_pPrimitive = 0;
+    m_pPrimitiveFar = 0;
+    m_pVertices = 0;
     if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
     {
         m_pShader = pcRedShader::Create(0xe68b9c52, 0x2a2, &m_pClass->mTextureHash,
@@ -36,18 +38,14 @@ LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
     const int count = m_pClass->mNumParticles;
     m_pIBReverse = pcRedIndexBuffer::Create(6 * count, true, true);
     unsigned short* indices = m_pIBReverse->Lock(6 * count, m_startIndexReverse);
-    short iReverse = (short)(count - 1);
-    unsigned short vReverse = (unsigned short)(iReverse * 4 + 2);
-    for (; iReverse >= 0; --iReverse)
+    for (short iReverse = (short)(count - 1); iReverse >= 0; --iReverse)
     {
-        indices[0] = vReverse - 2;
-        indices[1] = vReverse - 1;
-        indices[2] = vReverse;
-        indices[3] = vReverse - 2;
-        indices[4] = vReverse;
-        indices[5] = vReverse + 1;
-        indices += 6;
-        vReverse -= 4;
+        *indices++ = iReverse * 4;
+        *indices++ = iReverse * 4 + 1;
+        *indices++ = iReverse * 4 + 2;
+        *indices++ = iReverse * 4;
+        *indices++ = iReverse * 4 + 2;
+        *indices++ = iReverse * 4 + 3;
     }
     m_pIBReverse->Unlock();
     m_pIBForward = pcRedIndexBuffer::Create(6 * count, true, true);
@@ -55,13 +53,12 @@ LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
     for (short i = 0; i < count; ++i)
     {
         const unsigned short v = (unsigned short)(i * 4 + 2);
-        indices[0] = v - 2;
-        indices[1] = v - 1;
-        indices[2] = v;
-        indices[3] = v - 2;
-        indices[4] = v;
-        indices[5] = v + 1;
-        indices += 6;
+        *indices++ = v - 2;
+        *indices++ = v - 1;
+        *indices++ = v;
+        *indices++ = v - 2;
+        *indices++ = v;
+        *indices++ = v + 1;
     }
     m_pIBForward->Unlock();
     m_pVB = 0;
@@ -228,12 +225,11 @@ void LeafPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColor
 void LeafPatchRenderable::Update()
 {
     const RedCamera* pCamera = RedRenderer::GetCamera();
-    const float* vForward = pCamera->_Matrix.m[2];
+    const PblVector3& vForward = pCamera->_Matrix[2];
 
     for (int i = 0; i < m_pClass->mNumParticles; ++i)
     {
-        const PblVector3& vPos = m_pClass->mParticle[i].mPos;
-        float fKey = -(vPos.x * vForward[0] + vPos.y * vForward[1] + vPos.z * vForward[2]);
+        float fKey = -DotProduct(vForward, m_pClass->mParticle[i].mPos);
         mHeap->Push(i, fKey);
     }
 

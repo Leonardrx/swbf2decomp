@@ -89,9 +89,7 @@ EntityCarrier::EntityCarrier(EntityCarrierClass* pClass, const EntityDesc& desc)
 {
     memset(mCargoArray, 0, sizeof(mCargoArray));
     mCargoCount = pClass->mCargoCount;
-    static_cast<VehicleEngine*>(this)->TurnOn(
-        mClass ? static_cast<VehicleEngineClass*>(mClass) : 0,
-        mMatrix.GetTranslation(), mVelocity, 1.0f);
+    VehicleEngine::TurnOn(GetClass(), mMatrix.GetTranslation(), mVelocity, 1.0f);
 }
 
 // SYNTHETIC: SWBF2 0x00497957

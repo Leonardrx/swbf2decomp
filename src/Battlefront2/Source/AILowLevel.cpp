@@ -432,12 +432,12 @@ void AILowLevel::ProcessBarrageWpn(const Weapon* pWpn, bool* pFire)
             int iMax = pWpn->mClass->GetBarrageMax();
             int iTotal = (int)(AIUtil::GetRandomFloat(0.0f, (float)(iMax - iMin))
                                * AIDifficulty::GetBarrageCountMultiplier(mOwner) + (float)iMin);
-            mBarrageState = STATE_WAITING;
             if (iTotal < 2)
             {
                 iTotal = 2;
             }
             mBarrageTotal = iTotal;
+            mBarrageState = STATE_WAITING;
         }
 
         if (mBarrageState == STATE_WAITING)
@@ -679,8 +679,9 @@ void AILowLevel::SetTarget(const GameObject* pTarget)
     {
         if (pTarget)
         {
+            UnitController* pOwner = mOwner;
             int iTargetTeam = GetTeam(pTarget);
-            int iMyTeam = GetTeam(mOwner->mOwner->GetGameObject());
+            int iMyTeam = GetTeam(pOwner->mOwner->GetGameObject());
             int iAffiliation = Team::sTeams[iMyTeam]->GetAffiliation(iTargetTeam);
             const WeaponClass* pClass = pWpn->mClass;
             if (!(pClass->mTargetSides & (1 << (iAffiliation + 1)))

@@ -515,7 +515,7 @@ int ScriptCB_GetCareerMedals(lua_State*)
 
     int iPage = (int)fPage;
     int iFirst = iPage ? 5 : 0;
-    int iEnd = (iPage != 0) * 4 + 5;
+    int iEnd = iPage ? 9 : 5;
     for (int i = iFirst; i < iEnd; ++i)
     {
         lua_newtable(LuaHelper::mState);

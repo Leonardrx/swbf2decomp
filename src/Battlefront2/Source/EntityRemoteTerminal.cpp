@@ -647,7 +647,7 @@ void EntityRemoteTerminalClass::SetProperty(unsigned int uProperty, const char* 
             PblVector3 vHalf = (box._vMax - box._vMin) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
-            primitive.SetAACylinder((vHalf.z + vHalf.x) * 0.5f, vHalf.y * 2.0f);
+            primitive.SetAACylinder((vHalf.x + vHalf.z) * 0.5f, vHalf.y * 2.0f);
             matrix.SetTranslation(vCenter);
             mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, "main_body", matrix, 0));
         }

@@ -69,12 +69,10 @@ PblMatrix NormalMatrix(const PblVector3& vDir, const PblVector3& vNormal, const 
 {
     PblVector3 vUp;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUp), reinterpret_cast<const D3DXVECTOR3*>(&vNormal));
-    PblVector3 vSide = CrossProduct(vUp, vDir);
     PblVector3 vRight;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-    PblVector3 vFront = CrossProduct(vRight, vUp);
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&CrossProduct(vUp, vDir)));
 
-    PblMatrix mResult(vRight, vUp, vFront, vPos);
+    PblMatrix mResult(vRight, vUp, CrossProduct(vRight, vUp), vPos);
     return mResult;
 }
 
@@ -1150,7 +1148,11 @@ bool CommandPost::CanTeamSpawnHere(int iTeam) const
     {
         return mSpawnPath || mClass->mSpawnCount > 0;
     }
-    return Team::sTeams[GetGameObject()->mTeam]->GetAffiliation(iTeam) > 0 ? mAllyPath != 0 : false;
+    if (Team::sTeams[GetGameObject()->mTeam]->GetAffiliation(iTeam) > 0)
+    {
+        return mAllyPath != 0;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0047c640
@@ -1400,14 +1402,13 @@ bool CommandPost::Update(float fDeltaTime)
                 fRate += fWeight;
                 fWeight *= 0.5f;
             }
-            fRate *= fDeltaTime;
             if (mBiasTeam == mHoldTeam)
             {
-                mCaptureTimer += fRate;
+                mCaptureTimer += fRate * fDeltaTime;
             }
             else
             {
-                mCaptureTimer -= fRate;
+                mCaptureTimer -= fRate * fDeltaTime;
                 if (mCaptureTimer <= 0.0f)
                 {
                     mCaptureTimer = -mCaptureTimer;
@@ -1459,7 +1460,7 @@ bool CommandPost::Update(float fDeltaTime)
                         if (pControllable && pControllable->mCharacter)
                         {
                             Character::GetPlayerStats(pControllable->mCharacter)
-                                .AddCommandPostPoints(0, pControllable->mCharacter == pLongestHolder);
+                                .AddCommandPostPoints(0, pLongestHolder == pControllable->mCharacter);
                         }
                     }
                 }
@@ -1573,7 +1574,8 @@ bool CommandPost::Update(float fDeltaTime)
         {
             float fRate = 0.0f;
             float fWeight = 1.0f;
-            for (int i = 0; i < mHoldCount[GetGameObject()->mTeam]; ++i)
+            const int iHoldCount = mHoldCount[GetGameObject()->mTeam];
+            for (int i = 0; i < iHoldCount; ++i)
             {
                 fRate += fWeight;
                 fWeight *= 0.5f;

@@ -62,12 +62,11 @@ DustEffect::DustEffect(DustEffectClass* pClass, const PblMatrix& matrix)
     mMatrix[2] = Normalize(CrossProduct(mMatrix[0], mMatrix[1]));
     mMatrix.m[2][3] = 0.0f;
 
-    mMatrix[3] = matrix[3];
-    mMatrix.m[3][3] = 1.0f;
+    mMatrix.SetTranslation(matrix.GetTranslation());
 
     SetRenderPos(mMatrix.GetTranslation());
     SetRenderRadius(mClass->mBoundingRadius);
-    Activate();
+    AddToScene();
 
     DustEffectClass::sDustEffects.AddLast(&mEffectNode, this);
 }
@@ -180,8 +179,8 @@ bool DustEffectClass::UpdateParticle(DustParticle& particle, float fDeltaTime,
     }
     else
     {
-        float fFadeOut = particle.mLifeTime * FADE_OUT_PERCENT;
         float fRemaining = particle.mLifeTime - particle.mTime;
+        float fFadeOut = particle.mLifeTime * FADE_OUT_PERCENT;
         if (fRemaining < fFadeOut)
         {
             particle.mColor.a *= fRemaining / fFadeOut;

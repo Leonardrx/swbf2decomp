@@ -475,15 +475,14 @@ int UnitAgent::DamagedEventPlayerCentricness(AI::EventInfo* pEvent)
     }
 
     GameObject* pMe = GetMe()->GetGameObject();
-    if (Team::sTeams[GetTeam(pMe)]->GetAffiliation(pInfo->mDamageOwner->mTeamNumber) >= 0)
+    if (Team::sTeams[GetTeam(pMe)]->GetAffiliation(pInfo->mDamageOwner->mTeamNumber) < 0)
     {
-        return 0;
+        GameObject* pAttacker = pInfo->mDamageOwner->GetControllable()->GetGameObject();
+        mCtrl->mThreatManager.AddThreat(pAttacker);
+        mCtrl->ForceSetAttackHelperTarget(pAttacker);
+        return 1;
     }
-
-    GameObject* pAttacker = pInfo->mDamageOwner->GetControllable()->GetGameObject();
-    mCtrl->mThreatManager.AddThreat(pAttacker);
-    mCtrl->ForceSetAttackHelperTarget(pAttacker);
-    return 1;
+    return 0;
 }
 
 // SYNTHETIC: SWBF2 0x0065e4c0
@@ -632,7 +631,8 @@ int UnitAgent::Handle_Vision_CanSeeEnemy(AI::EventInfo* pInfo)
         }
     }
 
-    if (!CombatUtil::EngageInCombat(static_cast<const UnitController*>(GetMe()->mCtrl), pEnemy, false))
+    const UnitController* pCtrl = static_cast<const UnitController*>(GetMe()->mCtrl);
+    if (!CombatUtil::EngageInCombat(pCtrl, pEnemy, false))
     {
         return 0;
     }

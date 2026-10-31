@@ -315,17 +315,15 @@ void SoundDebugDisplay::DisplayVirtualVoices(Snd::VoiceVirtualManager* pManager)
         float fGain;
         pVoice->Snd::Source3D::CalculateGain(fGain);
 
-        if ((mMode == mode_Sounds && pVoice->mCustomFlags == 0) ||
-            (mMode != mode_Sounds && mSampleID != 0 &&
-             (pVoice->mSample == 0 || pVoice->mSample->mHashID != mSampleID)))
+        if ((mMode == mode_Sounds && pVoice->mCustomFlags != 0) ||
+            (mMode != mode_Sounds &&
+             (mSampleID == 0 || (pVoice->mSample != 0 && pVoice->mSample->mHashID == mSampleID))))
         {
-            continue;
+            Printf("0x%08x, %.02f, %.02f, %.02f, 0x%08x, %.02f, %.02f, %.02f",
+                   pVoice->mVoice, pVoice->mNode.mSortValue, pVoice->mDistanceLength, fGain,
+                   pVoice->mPlaybackPosition, pVoice->mMinDistance, pVoice->mMaxDistance,
+                   pVoice->mRollOffFactor);
         }
-
-        Printf("0x%08x, %.02f, %.02f, %.02f, 0x%08x, %.02f, %.02f, %.02f",
-               pVoice->mVoice, pVoice->mNode.mSortValue, pVoice->mDistanceLength, fGain,
-               pVoice->mPlaybackPosition, pVoice->mMinDistance, pVoice->mMaxDistance,
-               pVoice->mRollOffFactor);
     }
 }
 

@@ -1713,7 +1713,7 @@ int GetLobbyQOS(int iPlayer)
 {
     int iUp, iDown;
     int iQuality;
-    int iPingQuality = 5;
+    int iPingQuality;
     if (IsLocalToHost(iPlayer) || iPlayer == 64)
     {
         NetComm::GetBandwidth(64, iUp, iDown);
@@ -1736,26 +1736,28 @@ int GetLobbyQOS(int iPlayer)
         {
             iQuality = fRatio > 0.7f ? 2 : 1;
         }
+        iPingQuality = 5;
     }
     else
     {
         NetComm::GetBandwidth(iPlayer, iUp, iDown);
         iQuality = (iUp >= 10240 && iDown >= 0x8000) ? 5 : 1;
         int iPing = NetComm::GetPing(iPlayer);
-        if (iPing >= 90)
+        if (iPing < 90)
         {
-            if (iPing < 150)
-            {
-                iPingQuality = 4;
-            }
-            else if (iPing < 210)
-            {
-                iPingQuality = 3;
-            }
-            else
-            {
-                iPingQuality = iPing < 270 ? 2 : 1;
-            }
+            iPingQuality = 5;
+        }
+        else if (iPing < 150)
+        {
+            iPingQuality = 4;
+        }
+        else if (iPing < 210)
+        {
+            iPingQuality = 3;
+        }
+        else
+        {
+            iPingQuality = iPing < 270 ? 2 : 1;
         }
     }
     return iPingQuality < iQuality ? iPingQuality : iQuality;
@@ -2979,13 +2981,14 @@ int ScriptCB_GetSessionList(lua_State*)
 int ScriptCB_BeginJoin(lua_State*)
 {
     lua_gettop(LuaHelper::mState);
-    int session;
+    int selected;
     lua_pushstring(LuaHelper::mState, "mpsessionlist_listbox_layout");
     lua_gettable(LuaHelper::mState, LUA_GLOBALSINDEX);
-    LuaHelper::TableReadVal("SelectedIdx", session, false);
+    LuaHelper::TableReadVal("SelectedIdx", selected, false);
     LuaHelper::Pop(1);
     lua_pushstring(LuaHelper::mState, "mpsessionlist_listbox_contents");
     lua_gettable(LuaHelper::mState, LUA_GLOBALSINDEX);
+    int session = selected;
     if (session <= LuaHelper::TableGetN(-1))
     {
         LuaHelper::TableGetByPosition(-1, session);

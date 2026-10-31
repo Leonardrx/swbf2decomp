@@ -296,7 +296,8 @@ bool BootDisplay::Update(float fDeltaTime)
     float fTimeLeft;
     if (iBootPlayer < 0 || !((fTimeLeft = NetGame::GetBootTime() - NetComm::GetTime()) > 0.0f))
     {
-        NetGame::SetBootVoted(NetGame::GetJoystickIndex(pPlayer->mPlayerId), false);
+        int iJoystickIndex = NetGame::GetJoystickIndex(pPlayer->mPlayerId);
+        NetGame::SetBootVoted(iJoystickIndex, false);
         return true;
     }
 
@@ -363,12 +364,11 @@ bool BootDisplay::Update(float fDeltaTime)
     ProcessedInputs* pInputs = NetGame::GetJoystick(iPlayerId);
     if (pInputs)
     {
-
-        if ((pInputs->bits.mBoolInputs >> 10) & 1)
+        if (pInputs->IsAcceptHeroPressed())
         {
             NetGame::ConfirmBootPlayer(iJoystick);
         }
-        else if ((pInputs->bits.mBoolInputs >> 11) & 1)
+        else if (pInputs->IsDeclineHeroPressed())
         {
             NetGame::SetBootVoted(iJoystick, true);
         }

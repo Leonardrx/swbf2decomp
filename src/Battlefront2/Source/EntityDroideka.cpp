@@ -290,21 +290,9 @@ EntityDroidekaClass::EntityDroidekaClass(unsigned int uHash)
     mCollisionScale[2] = 0.0f;
     mCollisionInflict = 1.0f;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponClass[i] = 0;
-    }
-
+    memset(mWeaponClass, 0, sizeof(mWeaponClass));
     sWeaponSection = 0;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponAmmo[i].uiAmmo = 0;
-        mWeaponAmmo[i].uiHeat = 0;
-        mWeaponAmmo[i].bFlagAmmoInfinite = 0;
-        mWeaponAmmo[i].bFlagShareHeat = 0;
-        mWeaponAmmo[i].bFlagShareAmmo = 0;
-    }
+    memset(mWeaponAmmo, 0, sizeof(mWeaponAmmo));
     for (int i = 0; i < 4; ++i)
     {
         mWeaponAmmo[i].bFlagAmmoInfinite = 1;
@@ -908,8 +896,7 @@ bool EntityDroideka::Jump()
     mClass->mSoundJump.Play((const PblVector3*)&rMatrix.m[3][0], &rVelocity, true, true);
 
     mVelocity.y += mClass->mBallJumpVerticalSpeed;
-    float fForward = mVelocity.y * mMatrix.m[2][1] + mVelocity.x * mMatrix.m[2][0] +
-                     mVelocity.z * mMatrix.m[2][2];
+    float fForward = DotProduct(mVelocity, mMatrix.GetZAxis());
     if (fForward > 0.0f)
     {
         float fBoost = (mClass->mBallJumpForwardSpeedFactor - 1.0f) * fForward;

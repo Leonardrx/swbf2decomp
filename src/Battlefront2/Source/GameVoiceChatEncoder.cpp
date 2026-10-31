@@ -69,20 +69,23 @@ bool GameVoiceChat::Encoder::Open(unsigned int captureDeviceIndex, float fMaxPac
     mEncoderPackets = mCapturePackets + 2;
     mAudioPacket = (VoiceChat::AudioPacket*)(mEncoderPackets + 1);
 
-    for (unsigned int i = 0; i < 2; ++i)
+    unsigned int i = 0;
+    do
     {
         ::new (&mCapturePackets[i]) Snd::StreamPacket();
         mCapturePackets[i].mBuffer = pCursor;
         pCursor += uiAlignedFrame;
-    }
+        ++i;
+    } while (i < 2);
 
     ::new (mEncoderPackets) Snd::StreamPacket();
     mEncoderPackets->mBuffer = mEncoderBuffer;
 
-    mAudioPacket->mDiscontinuity = false;
-    mAudioPacket->mData = 0;
-    mAudioPacket->mSize = 0;
-    mAudioPacket->mAppData = 0;
+    VoiceChat::AudioPacket* pAudioPacket = mAudioPacket;
+    pAudioPacket->mDiscontinuity = false;
+    pAudioPacket->mData = 0;
+    pAudioPacket->mSize = 0;
+    pAudioPacket->mAppData = 0;
 
     Snd::StreamFormat cFormat(Snd::SampleInfo::format_PCM16, 8000, 1);
 

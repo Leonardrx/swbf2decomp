@@ -388,12 +388,8 @@ EntityHover::EntityHover(EntityHoverClass* pClass, const EntityDesc& desc)
     mMatrix.SetTranslation(mMatrix.GetTranslation() + vLift);
     AddToScene();
 
-    mVelocity.x = 0.0f;
-    mVelocity.y = 0.0f;
-    mVelocity.z = 0.0f;
-    mOmega.x = 0.0f;
-    mOmega.y = 0.0f;
-    mOmega.z = 0.0f;
+    mVelocity.SetAll(0.0f);
+    mOmega.SetAll(0.0f);
     mGroundRatio = 1.0f;
     mBankPitchAngle = 0.0f;
     mBankRollAngle = 0.0f;
@@ -505,9 +501,7 @@ EntityHover::EntityHover(EntityHoverClass* pClass, const EntityDesc& desc)
     {
         mColliderBody[i].mOverlap = 0.0f;
         mColliderBody[i].mOldOverlap = 0.0f;
-        mColliderBody[i].mNormal.x = 0.0f;
-        mColliderBody[i].mNormal.y = 0.0f;
-        mColliderBody[i].mNormal.z = 0.0f;
+        mColliderBody[i].mNormal.SetAll(0.0f);
     }
     mJumpMode = false;
     mEjectTimer = 0.0f;
@@ -639,11 +633,12 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     mPitchMin = pBase->mPitchMin;
     mPitchMax = pBase->mPitchMax;
     mThrustPitchAngle = pBase->mThrustPitchAngle;
-    mStrafeRollAngle = pBase->mStrafeRollAngle;
 
     sCurrentSection = -1;
     sWeaponSection = 0;
     sWheelSection = 0;
+
+    mStrafeRollAngle = pBase->mStrafeRollAngle;
 
     mBankAngle = pBase->mBankAngle;
     mBankFilter = pBase->mBankFilter;
@@ -1418,10 +1413,9 @@ EntityHover::~EntityHover()
     }
     for (int i = 0; i < 6; ++i)
     {
-        FLEffectObject* pEmitter = mWakeEmitters[i];
-        if (pEmitter)
+        if (mWakeEmitters[i])
         {
-            pEmitter->DeactivateEffect();
+            mWakeEmitters[i]->DeactivateEffect();
         }
     }
 }
@@ -2993,9 +2987,8 @@ void EntityHover::ApplyCollisionImpact(float fApproach, const PblVector3& vNorma
         return;
     }
 
-    const float fNormalX = vNormal.x;
-    float fUp = mMatrix.m[1][1] * vNormal.y + fNormalX * mMatrix.m[1][0] + mMatrix.m[1][2] * vNormal.z;
-    float fFront = mMatrix.m[2][1] * vNormal.y + fNormalX * mMatrix.m[2][0] + mMatrix.m[2][2] * vNormal.z;
+    float fUp = DotProduct(mMatrix.GetYAxis(), vNormal);
+    float fFront = DotProduct(mMatrix.GetZAxis(), vNormal);
     if (!(0.0f > fApproach))
     {
         return;

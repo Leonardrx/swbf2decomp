@@ -796,10 +796,7 @@ void FLEffectObject::_UpdateWorldMatrix()
         {
             if (m_pmLocalOffsetMatrix)
             {
-                const PblVector3 vPos(m_pmLocalOffsetMatrix->m[3][0] + m_pvAttachedToVector->x,
-                                      m_pvAttachedToVector->y + m_pmLocalOffsetMatrix->m[3][1],
-                                      m_pvAttachedToVector->z + m_pmLocalOffsetMatrix->m[3][2]);
-                m_mWorldMatrix[3] = vPos;
+                m_mWorldMatrix[3] = m_pmLocalOffsetMatrix->GetTranslation() + *m_pvAttachedToVector;
             }
             else
             {

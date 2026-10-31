@@ -380,9 +380,9 @@ bool RequestPath(UnitController* pUnit, const PblVector3& vStart, const PblVecto
 // FUNCTION: SWBF2 0x00614bb0
 PathRequest* GetNextPathRequest()
 {
+    PblList<PathRequest>::Itor it(*sRequests);
     for (unsigned char uPriority = 0; uPriority < 5; ++uPriority)
     {
-        PblList<PathRequest>::Itor it(*sRequests);
         while (PathRequest* pReq = it)
         {
             ++it;
@@ -396,6 +396,7 @@ PathRequest* GetNextPathRequest()
                 PathRequest::sMemoryPool.Free(pReq);
             }
         }
+        it = PblList<PathRequest>::Itor(*sRequests);
     }
     return 0;
 }

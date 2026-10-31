@@ -364,6 +364,8 @@ void UnitCTFOffenseAgent::EnterState()
                         return;
                     }
                 }
+                SetNextState(7);
+                return;
             }
             SetNextState(7);
         }

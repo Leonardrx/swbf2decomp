@@ -62,14 +62,17 @@ AttachedEffects::AttachedEffects(const AttachedEffectsClass* pClass, const Entit
         m_pEntityGeometry = const_cast<EntityGeometry*>(pGeometry);
         if (!bDynamic)
         {
-            unsigned int i = 0;
-            while (i < m_pClass->m_uiNumAttached &&
-                   (m_pClass->m_aAttachClassData[i].bIsOdf ||
-                    m_pClass->m_aAttachClassData[i].uiNumParams < 1))
+            bool bHasTimedEffect = false;
+            for (unsigned int i = 0; i < m_pClass->m_uiNumAttached; ++i)
             {
-                ++i;
+                if (!m_pClass->m_aAttachClassData[i].bIsOdf &&
+                    m_pClass->m_aAttachClassData[i].uiNumParams >= 1)
+                {
+                    bHasTimedEffect = true;
+                    break;
+                }
             }
-            if (i == m_pClass->m_uiNumAttached)
+            if (!bHasTimedEffect)
             {
                 return;
             }
@@ -230,15 +233,13 @@ bool AttachedEffectsClass::SetProperty(unsigned int uiProperty, const char* pszV
 // FUNCTION: SWBF2 0x00446f70
 bool AttachedEffects::Update(float fDeltaTime)
 {
-    const EntityGeometry* pGeometry = m_pEntityGeometry;
-    if (!pGeometry)
+    if (!m_pEntityGeometry && !(const GameObject*)m_pGameObject)
     {
-        if (!(const GameObject*)m_pGameObject)
-        {
-            return false;
-        }
-        pGeometry = reinterpret_cast<const EntityGeometry*>((const GameObject*)m_pGameObject);
+        return false;
     }
+    const EntityGeometry* pGeometry =
+        m_pEntityGeometry ? m_pEntityGeometry
+                          : reinterpret_cast<const EntityGeometry*>((const GameObject*)m_pGameObject);
 
     for (unsigned int i = 0; i < m_pClass->m_uiNumAttached; ++i)
     {

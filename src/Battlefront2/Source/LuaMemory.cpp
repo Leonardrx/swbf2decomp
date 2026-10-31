@@ -61,10 +61,12 @@ void LuaMemory::CreatePools(bool bMission)
     RedAllocFromHeap(iOldHeap, 4, 0);
 
     MemPoolInfo* pInfo = bMission ? gGamePoolInfo : gShellPoolInfo;
-    MemPoolInfo* pDest = gPoolInfo;
     MemoryPool** ppPool = gPools;
-    for (int iLeft = 48; iLeft != 0; --iLeft, ++pInfo, ++pDest, ++ppPool)
+    int iLeft = 48;
+    int iIndex = 0;
+    do
     {
+        MemPoolInfo* pDest = &gPoolInfo[iIndex];
         *pDest = *pInfo;
         if (pDest->mCount != 0)
         {
@@ -78,7 +80,10 @@ void LuaMemory::CreatePools(bool bMission)
         {
             *ppPool = 0;
         }
-    }
+        ++pInfo;
+        ++iIndex;
+        ++ppPool;
+    } while (--iLeft != 0);
 
     RedSetCurrentHeap(iOldHeap);
 }

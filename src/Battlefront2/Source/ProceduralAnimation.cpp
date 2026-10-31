@@ -39,18 +39,17 @@ void PAAnimationGroup::ClientGeometryCreated(CollisionObject* pHost, CollisionOb
             sPAAnims[i].mClientGeometry = pClient;
         }
     }
-    for (int i = 0; i < PAAnimationGroup::mNumHierarchies; ++i)
+    for (int h = 0; h < mNumHierarchies; ++h)
     {
-        PAHierarchy& hierarchy = *PAAnimationGroup::mHierarchies[i];
-        if (hierarchy.mRoot.mHostGeometry == pHost)
+        if (mHierarchies[h]->mRoot.mHostGeometry == pHost)
         {
-            hierarchy.mRoot.mClientGeometry = pClient;
+            mHierarchies[h]->mRoot.mClientGeometry = pClient;
         }
-        for (int j = 0; j < hierarchy.mNumObjs; ++j)
+        for (int n = 0; n < mHierarchies[h]->mNumObjs; ++n)
         {
-            if (hierarchy.mObjs[j].mHostGeometry == pHost)
+            if (mHierarchies[h]->mObjs[n].mHostGeometry == pHost)
             {
-                hierarchy.mObjs[j].mClientGeometry = pClient;
+                mHierarchies[h]->mObjs[n].mClientGeometry = pClient;
             }
         }
     }
@@ -213,10 +212,11 @@ void __cdecl PAAnimationGroup::ReadHierarchy(PblFileChunk& chunk)
         const int iNumObjs = iNodeCount - 1;
         pHierarchy->mNumObjs = iNumObjs;
         PAAnimationGroup::mHierarchies[PAAnimationGroup::mNumHierarchies++] = pHierarchy;
-        PAHierarchyNode* pNodes = new PAHierarchyNode[iNumObjs];
-        if (pNodes)
+        PAHierarchyNode* pAlloc = new PAHierarchyNode[iNumObjs];
+        PAHierarchyNode* pNodes;
+        if (pAlloc)
         {
-            PAHierarchyNode* pNode = pNodes;
+            PAHierarchyNode* pNode = pAlloc;
             for (int n = iNumObjs - 1; n >= 0; --n)
             {
                 pNode->mObjHash = 0;
@@ -226,6 +226,11 @@ void __cdecl PAAnimationGroup::ReadHierarchy(PblFileChunk& chunk)
                 memcpy(&pNode->mLocalMatrix, &gMatrixIdentity, sizeof(pNode->mLocalMatrix));
                 ++pNode;
             }
+            pNodes = pAlloc;
+        }
+        else
+        {
+            pNodes = 0;
         }
         pHierarchy->mObjs = pNodes;
         char acName[128];

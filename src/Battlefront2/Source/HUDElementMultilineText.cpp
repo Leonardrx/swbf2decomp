@@ -305,12 +305,12 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
             EnableNextLine(uNext);
             break;
         }
+        bool bAtTop = false;
         if (fElapsed == 0.0f)
         {
             break;
         }
 
-        bool bAtTop = false;
         const float fTopY = mLines[uEldest].GetPosition().y;
         float fScroll = mScrollSpeed * fElapsed;
         if (!(fScroll < 1.0f))
@@ -340,9 +340,7 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
     }
 
     case state_EnablingLine:
-    {
-        Line& line = mLines[uNext];
-        switch (line.mEnableState)
+        switch (mLines[uNext].mEnableState)
         {
         case enableState_Enabled:
             --mLinesPending;
@@ -351,11 +349,10 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
             break;
         case enableState_Disabling:
         case enableState_Disabled:
-            line.HUD::Element::Enable(true);
+            mLines[uNext].HUD::Element::Enable(true);
             break;
         }
         break;
-    }
     }
 
     HUD::ElementGroup::Update(fElapsed);

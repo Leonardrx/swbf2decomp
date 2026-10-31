@@ -331,8 +331,7 @@ void HUD::Matrix::SetRotation(float fX, float fY, float fZ)
 
     const PblVector3 vPosition = mMatrix->GetTranslation();
     *mMatrix = matrix;
-    *(PblVector3*)&mMatrix->m[3][0] = vPosition;
-    mMatrix->m[3][3] = 1.0f;
+    mMatrix->SetTranslation(vPosition);
 
     mRotation.x = fX;
     mRotation.y = fY;

@@ -586,7 +586,8 @@ bool OrdnanceBullet::Collide(CollisionObject* pObject, const PblVector3& vPos, c
         {
             return true;
         }
-        static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBody, uDamageFlags);
+        Damageable* pDamageable = static_cast<Damageable*>(pVictim);
+        pDamageable->ApplyDamage(GetDamage(), vDir, vPos, iBody, uDamageFlags);
     }
 
     if (!NetGame::IsEnabled() || NetGame::IsClient() ||
@@ -629,11 +630,11 @@ bool OrdnanceBullet::Collide(CollisionObject* pObject, const PblVector3& vPos, c
         case COLL_LEAFPATCH:
             if (mOffscreenTime < 0.5f)
             {
-                PblVector3 vFlat = vNormal;
-                vFlat.y = 0.0f;
-                PblVector3 vWind;
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vWind), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
-                vWind = PblVector3(vWind.x * 2.0f, vWind.y * 2.0f, vWind.z * 2.0f);
+                PblVector3 vWind = vNormal;
+                vWind.y = 0.0f;
+                PblVector3 vUnit;
+                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUnit), reinterpret_cast<const D3DXVECTOR3*>(&vWind));
+                vWind = PblVector3(vUnit.x * 2.0f, vUnit.y * 2.0f, vUnit.z * 2.0f);
                 for (int i = 3; i; --i)
                 {
                     FallingLeafParticle* pLeaf = LeafParticleManager::GetFreeLeaf();

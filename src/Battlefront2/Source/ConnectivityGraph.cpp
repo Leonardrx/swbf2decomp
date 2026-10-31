@@ -533,10 +533,8 @@ const ConnectivityArc* ConnectivityGraph::FindClosestArc(const PblVector3& v, un
     {
         if ((uFlags & mArcs[i].mAllowTypes) && !(mArcs[i].mFlags & 1))
         {
-            const PblVector3& vC = mArcs[i].mBoundingCenter;
             const float fReach = mArcs[i].mBoundingRadius + fBest;
-            if (!((vC.x - v.x) * (vC.x - v.x) + (vC.y - v.y) * (vC.y - v.y) + (vC.z - v.z) * (vC.z - v.z)
-                > fReach * fReach))
+            if (!(SquaredLength(mArcs[i].mBoundingCenter - v) > fReach * fReach))
             {
                 const float fDist = mArcs[i].GetDistFrom(v);
                 if (fBest > fDist)

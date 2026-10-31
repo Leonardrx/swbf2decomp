@@ -28,6 +28,9 @@ void PropLayer::Clear()
 // FUNCTION: SWBF2 0x0062baf0
 void PropLayer::Read(PblFileChunk& chunk)
 {
+    float fSum = 0.0f;
+    float fScale = 1.0f;
+
     mObjectsPerCell = 1;
     mNumModels = 0;
     mSpreadFactor = 1;
@@ -76,7 +79,6 @@ void PropLayer::Read(PblFileChunk& chunk)
     }
 
     float fTotal = 0.0f;
-    float fScale = 1.0f;
     for (int i = 0; i < mNumModels; i++)
     {
         fTotal += mModels[i]->mFrequency;
@@ -86,7 +88,6 @@ void PropLayer::Read(PblFileChunk& chunk)
         fScale = 1.0f / fTotal;
     }
 
-    float fSum = 0.0f;
     for (int i = 0; i < mNumModels; i++)
     {
         fSum += mModels[i]->mFrequency * fScale;

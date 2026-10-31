@@ -426,9 +426,9 @@ void Init()
     InsertStatsLeaderboardBuckets(&sStatsLeaderboard.mBuckets, &ppResult,
                sStatsLeaderboard.mBuckets.mFirst, &pHead, &pHead);
 
-    memset(sStatsMatchData, 0, 0x40);
     sStatsLeaderboard.mBucketMask = 7;
     sStatsLeaderboard.mBucketCount = 8;
+    memset(sStatsMatchData, 0, 0x40);
 }
 }
 

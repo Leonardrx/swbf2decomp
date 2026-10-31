@@ -43,13 +43,11 @@ void LoadDisplay::PlatformRenderTexture(unsigned int uiTextureHash, float x0, fl
 
     float left, top, right, bottom;
     RedRenderer::pcGetViewportExtents(left, top, right, bottom);
-    float width = right - left;
-    float height = bottom - top;
 
-    float sx0 = width * x0 + left;
-    float sy0 = height * y0 + top;
-    float sx1 = width * x1 + left;
-    float sy1 = height * y1 + top;
+    float sx0 = (right - left) * x0 + left;
+    float sy0 = (bottom - top) * y0 + top;
+    float sx1 = (right - left) * x1 + left;
+    float sy1 = (bottom - top) * y1 + top;
     float tu0 = u0 * uScale + uOffset;
     float tv0 = v0 * vScale + vOffset;
     float tu1 = u1 * uScale + uOffset;

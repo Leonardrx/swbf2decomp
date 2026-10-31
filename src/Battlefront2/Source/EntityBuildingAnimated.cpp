@@ -113,11 +113,14 @@ void EntityBuildingAnimatedClass::SetProperty(unsigned int uProperty, const char
         break;
 
     case 0x5fac58b5: /* "DeathAnimation" */
-        if (mAnimObj)
+    {
+        RedAnimation* pAnimObj = mAnimObj;
+        if (pAnimObj)
         {
-            mAnimations[1] = (ZephyrAnim*)(mAnimObj->_pZephyrAnimBank ? mAnimObj->_pZephyrAnimBank->Find(PblTEMPHash(pszValue)) : 0);
+            mAnimations[1] = (ZephyrAnim*)(pAnimObj->_pZephyrAnimBank ? pAnimObj->_pZephyrAnimBank->Find(PblTEMPHash(pszValue)) : 0);
         }
         break;
+    }
 
     case 0x3e4e9ba0: /* "EnableDeathExplosions" */
     {
@@ -128,26 +131,19 @@ void EntityBuildingAnimatedClass::SetProperty(unsigned int uProperty, const char
     }
 
     case 0xf138015c: /* "DeathEffect" */
-    {
-        int i;
-        for (i = 0; i < 5; i++)
+        for (int i = 0; i < 5; i++)
         {
             if (!mDeathEffectHash[i])
             {
+                char acEffect[32];
+                char acNode[32];
+                sscanf(pszValue, "%s %s", acEffect, acNode);
+                mDeathEffectHash[i] = PblHash(acEffect);
+                mDeathEffectNodeHash[i] = PblTEMPHash(acNode);
                 break;
             }
         }
-        if (i >= 5)
-        {
-            return;
-        }
-        char acEffect[32];
-        char acNode[32];
-        sscanf(pszValue, "%s %s", acEffect, acNode);
-        mDeathEffectHash[i] = PblHash(acEffect);
-        mDeathEffectNodeHash[i] = PblTEMPHash(acNode);
         break;
-    }
 
     default:
         EntityBuildingClass::SetProperty(uProperty, pszValue);

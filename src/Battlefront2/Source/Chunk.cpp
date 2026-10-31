@@ -281,9 +281,9 @@ void Chunk::SetData(ChunkDescriptor& desc)
     if (mPhysicsType == PHYSICS_COCKPIT)
     {
         const PblMatrix& m = mCollisionMatrix;
-        float fX = m.m[0][1] * mVelocity.y + m.m[0][0] * mVelocity.x + m.m[0][2] * mVelocity.z;
-        float fY = m.m[1][1] * mVelocity.y + m.m[1][0] * mVelocity.x + m.m[1][2] * mVelocity.z;
-        float fZ = m.m[2][1] * mVelocity.y + m.m[2][0] * mVelocity.x + m.m[2][2] * mVelocity.z;
+        float fX = DotProduct(mVelocity, m.GetXAxis());
+        float fY = DotProduct(mVelocity, m.GetYAxis());
+        float fZ = DotProduct(mVelocity, m.GetZAxis());
         if (fX > fY)
         {
             mForwardAxis = (fX > fZ) ? 0 : 2;
@@ -1010,11 +1010,10 @@ void ChunkCluster::Render(unsigned char ucViewport, float fDist, unsigned int ui
         RedRenderer::SetStencilShadowLength(fLength);
 
         const PblMatrix& mView = pCamera->GetMatrix();
-        float fDX = mView.m[3][0] - mView.m[2][0] * fNear - _Sphere.x;
-        float fDY = mView.m[3][1] - mView.m[2][1] * fNear - _Sphere.y;
-        float fDZ = mView.m[3][2] - mView.m[2][2] * fNear - _Sphere.z;
+        const PblVector3& vCenter = _Sphere;
+        float fDist2 = SquaredLength(mView.GetTranslation() - mView.GetZAxis() * fNear - vCenter);
         float fReach = _Sphere.w + fLength + fWidth * 1.33f;
-        RedRenderer::SetStencilShadowZFail(fReach * fReach > fDX * fDX + fDY * fDY + fDZ * fDZ);
+        RedRenderer::SetStencilShadowZFail(fReach * fReach > fDist2);
     }
 
     for (int i = 0; i < 10; i++)

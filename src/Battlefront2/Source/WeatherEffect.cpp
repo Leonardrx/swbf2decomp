@@ -267,47 +267,15 @@ void FogCloudEffect::ReadConfig(PblConfig& config)
         {
             RedColor color;
             float f = data.GetFloatArg(0);
-            if (f < 0.0f)
-            {
-                f = 0.0f;
-            }
-            else if (f > 255.0f)
-            {
-                f = 255.0f;
-            }
-            color.r = (unsigned char)(int)f;
+            color.r = (unsigned char)(int)(f < 0.0f ? 0.0f : (f > 255.0f ? 255.0f : f));
             f = data.GetFloatArg(1);
-            if (f < 0.0f)
-            {
-                f = 0.0f;
-            }
-            else if (f > 255.0f)
-            {
-                f = 255.0f;
-            }
-            color.g = (unsigned char)(int)f;
+            color.g = (unsigned char)(int)(f < 0.0f ? 0.0f : (f > 255.0f ? 255.0f : f));
             f = data.GetFloatArg(2);
-            if (f < 0.0f)
-            {
-                f = 0.0f;
-            }
-            else if (f > 255.0f)
-            {
-                f = 255.0f;
-            }
-            color.b = (unsigned char)(int)f;
+            color.b = (unsigned char)(int)(f < 0.0f ? 0.0f : (f > 255.0f ? 255.0f : f));
             if (data.GetNumArgs() > 3)
             {
                 f = data.GetFloatArg(3);
-                if (f < 0.0f)
-                {
-                    f = 0.0f;
-                }
-                else if (f > 255.0f)
-                {
-                    f = 255.0f;
-                }
-                color.a = (unsigned char)(int)f;
+                color.a = (unsigned char)(int)(f < 0.0f ? 0.0f : (f > 255.0f ? 255.0f : f));
             }
             else
             {

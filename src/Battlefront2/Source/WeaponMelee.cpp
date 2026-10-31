@@ -68,25 +68,23 @@ void _RenderLightSabre(const PblVector3& vPosition, const PblVector3& vDirection
 
     RedRenderer::GetCamera();
     const float fExtent = (fLength + fWidth) * 2.0f;
-    RedParticleRenderer::SubmitBounds(
-        PblVector3(vPosition.x - fExtent, vPosition.y - fExtent, vPosition.z - fExtent),
-        PblVector3(vPosition.x + fExtent, vPosition.y + fExtent, vPosition.z + fExtent));
+    const PblVector3 vExtent(fExtent, fExtent, fExtent);
+    RedParticleRenderer::SubmitBounds(vPosition - vExtent, vExtent + vPosition);
     RedParticleRenderer::SubmitTexture(uiTexture, BLEND_ADDITIVE, uiFlags);
 
     RedParticleRenderer::TexCoords texCoords = {0, 0, 255, 255};
-    RedParticleRenderer::SubmitParticle(PIT_LASER_START, vPosition + vDirection * fLength, RedColor::WHITE,
+    RedParticleRenderer::SubmitParticle(PIT_LASER_START, fLength * vDirection + vPosition, RedColor::WHITE,
                                         fWidth * 0.8f, 0.0f, texCoords, gVectorUnitX, gVectorUnitY);
-    RedParticleRenderer::SubmitParticle(PIT_LASER_END, vPosition - vDirection * (fLength * 0.04f), RedColor::WHITE,
+    RedParticleRenderer::SubmitParticle(PIT_LASER_END, vPosition - fLength * 0.04f * vDirection, RedColor::WHITE,
                                         fWidth, 0.0f, texCoords, gVectorUnitX, gVectorUnitY);
 
     if (uiGlowTexture)
     {
         fWidth = (PblRandom::GetGlobalFloat() + 1.5f) * fWidth;
         RedParticleRenderer::SubmitTexture(uiGlowTexture, BLEND_ADDITIVE, uiFlags);
-        RedColor glow = {255, 255, 255, 0x33};
-        RedParticleRenderer::SubmitParticle(PIT_LASER_START, vPosition + vDirection * fLength, glow,
+        RedParticleRenderer::SubmitParticle(PIT_LASER_START, vPosition + fLength * vDirection, RedColor(255, 255, 255, 0x33),
                                             fWidth * 0.8f, 0.0f, texCoords, gVectorUnitX, gVectorUnitY);
-        RedParticleRenderer::SubmitParticle(PIT_LASER_END, vPosition, glow,
+        RedParticleRenderer::SubmitParticle(PIT_LASER_END, vPosition, RedColor(255, 255, 255, 0x33),
                                             fWidth, 0.0f, texCoords, gVectorUnitX, gVectorUnitY);
     }
 }
@@ -440,18 +438,24 @@ float WeaponMelee::GetLightSaberLengthFactor(unsigned int uiBlade) const
     }
     unsigned int uiMask = 1u << uiBlade;
     bool bOn = (m_uiLightsaberOnMask & uiMask) != 0;
-    bool bWasOn = (m_uiLightsaberWasOnMask & uiMask) != 0;
+    bool bWasOn = (uiMask & m_uiLightsaberWasOnMask) != 0;
     if (bOn == bWasOn)
     {
         return bOn * fOn;
     }
     if (bOn)
     {
-        return m_fComboStateTimer < 0.1f ?
-               m_fComboStateTimer / 0.1f * fOn : fOn;
+        if (m_fComboStateTimer < 0.1f)
+        {
+            return m_fComboStateTimer / 0.1f * fOn;
+        }
+        return fOn;
     }
-    return m_fComboStateTimer < 0.1f ?
-           fOn - m_fComboStateTimer / 0.1f * fOn : 0.0f;
+    if (m_fComboStateTimer < 0.1f)
+    {
+        return fOn - m_fComboStateTimer / 0.1f * fOn;
+    }
+    return 0.0f;
 }
 
 // FUNCTION: SWBF2 0x0068a410

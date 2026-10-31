@@ -241,10 +241,7 @@ bool CollisionModel::CheckForCollision_SSSC(CollisionObject* pCollider, Collisio
 
             if (!pOther->bIsMesh)
             {
-                float dx = pMatrix->m[3][0] - pOtherMatrix->m[3][0];
-                float dy = pMatrix->m[3][1] - pOtherMatrix->m[3][1];
-                float dz = pMatrix->m[3][2] - pOtherMatrix->m[3][2];
-                float fDist2 = dx * dx + dy * dy + dz * dz;
+                float fDist2 = SquaredLength(pMatrix->GetTranslation() - pOtherMatrix->GetTranslation());
                 float fReach = ((CollisionBodyPrimitive*)pOther)->GetRadius() +
                                ((CollisionBodyPrimitive*)pBody)->GetRadius();
                 if (fDist2 > fReach * fReach)

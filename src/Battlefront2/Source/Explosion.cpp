@@ -321,19 +321,14 @@ void ExplosionClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (!mChunkDescriptor.mPrimitive || CollisionBodyPrimitive::Find(PblHash(acName)))
         {
             const PblBox box = mChunkDescriptor.mModel->_mModel->_TotalBoundingBox;
-            float fCenterX = (box._vMin.x + box._vMax.x) * 0.5f;
-            float fCenterY = (box._vMin.y + box._vMax.y) * 0.5f;
-            float fCenterZ = (box._vMin.z + box._vMax.z) * 0.5f;
+            PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
             float fHalfX = (float)fabs((double)(box._vMax.x - box._vMin.x)) * 0.5f;
             float fHalfY = (float)fabs((double)(box._vMax.y - box._vMin.y)) * 0.5f;
             float fHalfZ = (float)fabs((double)(box._vMax.z - box._vMin.z)) * 0.5f;
             primitive.SetSphere(PblMath::Sqrt(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
-            matrix.m[3][0] = fCenterX;
-            matrix.m[3][1] = fCenterY;
-            matrix.m[3][2] = fCenterZ;
-            matrix.m[3][3] = 1.0f;
+            matrix.SetTranslation(vCenter);
             mChunkDescriptor.mPrimitive = new CollisionBodyPrimitive(primitive, "", matrix, 0);
         }
         sCurrentSmoke = 0;

@@ -219,9 +219,9 @@ bool MineHelper::FindMinePos(const MinefieldHint* pHint, PblVector3* pPos) const
         if (!bFound)
         {
             const PblVector3& vMine = *apMinePositions[i];
-            const float fZ = vPos.z - vMine.z;
             const float fX = vPos.x - vMine.x;
-            if (fZ * fZ + fX * fX < 5.0625f)
+            const float fZ = vPos.z - vMine.z;
+            if (fX * fX + fZ * fZ < 5.0625f)
             {
                 bFound = true;
             }

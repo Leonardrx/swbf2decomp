@@ -1949,10 +1949,9 @@ int AddAIGoal(lua_State* L)
         return 0;
     }
 
-    AI::AIGoalType eType = AI::AIGOAL_NONE;
-    AI::GoalTarget target;
-    target.mType = AI::GTT_NONE;
+    AI::GoalTarget target(AI::GTT_NONE);
     const char* pcGoal = LuaHelper::GetString(2);
+    AI::AIGoalType eType = AI::AIGOAL_NONE;
 
     if (lua_type(LuaHelper::mState, 4) == LUA_TLIGHTUSERDATA || lua_isstring(LuaHelper::mState, 4))
     {

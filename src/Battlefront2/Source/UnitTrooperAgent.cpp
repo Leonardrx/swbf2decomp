@@ -147,7 +147,7 @@ void UnitTrooperAgent::EnterState()
             SetNextState(STATE_Goto);
             SquadCommands::SquadCommandOrder order(
                 SquadCommands::SC_FOLLOW, mCtrl->mOwner->mCharacter,
-                PblHandle<GameObject>(mCtrl->mOwner->GetGameObject()));
+                mCtrl->mOwner->GetGameObject());
             SquadCommands::AIShoutOrder(order, 0.0f);
         }
         break;
@@ -349,30 +349,28 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
             SetNextState(100);
             break;
         }
-        if (AIUtil::IsNearPost(mCtrl->mOwner, mPost, mCPOffset) || GetLowLevel().IsAtDest())
+        auto pOwner = mCtrl->mOwner;
+        if (AIUtil::IsNearPost(pOwner, mPost, mCPOffset) || GetLowLevel().IsAtDest())
         {
             SetNextState(STATE_Patrol);
             break;
         }
 
-        if (AIUtil::IsVehicle(static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject()))
+        if (AIUtil::IsVehicle(mCtrl->mOwner->GetGameObject()))
         {
             AILowLevel& lowLevel = GetLowLevel();
             const PblVector3& pos = mCtrl->mOwner->GetMatrix().GetTranslation();
-            const PblVector3& vDest = lowLevel.GetGlobalDest();
-            float dx = pos.x - vDest.x;
-            float dy = pos.y - vDest.y;
-            float dz = pos.z - vDest.z;
+            PblVector3 vDelta = pos - lowLevel.GetGlobalDest();
             if (mCtrl->mOwner->GetCurWpn())
             {
                 float fRange = CombatUtil::GetWeaponOptimalRange(mCtrl->mOwner);
-                if (fRange * fRange > dx * dx + dy * dy + dz * dz)
+                if (fRange * fRange > SquaredLength(vDelta))
                 {
                     AILowLevel& pathLowLevel = GetLowLevel();
                     const PblVector3& from = mCtrl->mOwner->GetMatrix().GetTranslation();
                     if (!PathFinder::TestTrivialStraightLineHit(
                             from, pathLowLevel.GetGlobalDest(),
-                            static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject()))
+                            mCtrl->mOwner->GetGameObject()))
                     {
                         GetLowLevel().Navigator_Wait(5.0f);
                     }
@@ -380,7 +378,8 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
             }
         }
 
-        if (AIUtil::HasCPMoved(mPost, mCtrl->mOwner, mCPPos, mCPTime, mSrcPos))
+        auto pMover = mCtrl->mOwner;
+        if (AIUtil::HasCPMoved(mPost, pMover, mCPPos, mCPTime, mSrcPos))
         {
             SetNextState(STATE_Goto);
         }
@@ -403,13 +402,13 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
             SetNextState(STATE_Goto);
             break;
         }
-        float fDist = (AIUtil::GetCollisionRadius(static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject())
+        float fDist = (AIUtil::GetCollisionRadius(mCtrl->mOwner->GetGameObject())
                        + AIUtil::GetCollisionRadius(static_cast<GameObject*>(mConvoyParent)))
                       * 2.5f;
-        const PblVector3& vOffset = ReserveManager::ReserveOffset(
-            static_cast<GameObject*>(mConvoyParent), static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject(),
-            FT_CONVOY);
-        PblVector3 vFollow(vOffset.x * fDist, vOffset.y * fDist, vOffset.z * fDist * 0.3f);
+        PblVector3 vFollow = ReserveManager::ReserveOffset(
+            static_cast<GameObject*>(mConvoyParent), mCtrl->mOwner->GetGameObject(),
+            FT_CONVOY) * fDist;
+        vFollow.z *= 0.3f;
         GetLowLevel().SetNavigator_FollowTarget(static_cast<GameObject*>(mConvoyParent), vFollow);
         break;
     }

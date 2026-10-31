@@ -472,9 +472,9 @@ static void SpaceAssault_RandomFlyerKill(const Team* pTeam)
     }
     Controllable* pCtrl = pKiller->GetControllable();
     Character* pCharacter = pCtrl->mCharacter;
-    const WeaponClass* pWeaponClass = pCtrl->GetCurWpn()->mClass;
+    const Weapon* pWeapon = pCtrl->GetCurWpn();
     DamageOwner owner(pCharacter, pKiller, pKiller->GetTeam(),
-                      pKiller->mEntityClass, pWeaponClass, 1.0f);
+                      pKiller->mEntityClass, pWeapon->mClass, 1.0f);
     pVictim->InstantDeath(owner, true);
 }
 }
