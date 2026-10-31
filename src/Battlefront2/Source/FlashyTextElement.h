@@ -49,7 +49,8 @@ public:
 
     void PlatformConstructor();
 
-    void SetBackgroundSize(char cOffsetX, char cOffsetY, char cExpandX, char cExpandY);
+    void SetBackgroundSize(unsigned char cOffsetX, unsigned char cOffsetY, unsigned char cExpandX,
+                           unsigned char cExpandY);
     void SetBackground(unsigned int uHashLeft, unsigned int uHashMid, unsigned int uHashRight);
     void StartFlashiness();
 

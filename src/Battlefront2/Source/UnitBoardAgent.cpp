@@ -45,7 +45,7 @@ GameObject* GetAlivePtr(PblHandle<GameObject> const& hObj, bool bIncludeBuilding
 namespace
 {
 
-unsigned int GetHandleId(const GameObject* pObj)
+inline unsigned int GetHandleId(const GameObject* pObj)
 {
     return pObj->mHandleId;
 }

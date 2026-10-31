@@ -196,8 +196,8 @@ public:
 
     // FUNCTION: SWBF2 0x00527f30
     int GetPrimaryPort() const { return mPrimaryPort; }
-    bool GetReadAll() const { return mReadAllControllers != 0; }
-    bool GetAllowBindMultiple() const { return mAllowBindMultiple != 0; }
+    bool GetReadAll() const { return mReadAllControllers; }
+    bool GetAllowBindMultiple() const { return mAllowBindMultiple; }
 
     int GetSecondaryPort() const { return mSecondaryPort; }
     void SetAllowBindMultiple(bool b) { mAllowBindMultiple = b; }

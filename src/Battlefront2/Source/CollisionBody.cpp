@@ -332,11 +332,6 @@ float CollisionBodyPrimitive::GetHeight() const
     return mPrimitive.mHeight;
 }
 
-void CollisionBodyPrimitive::ClearAll()
-{
-    _HashTable.Clear();
-}
-
 // FUNCTION: SWBF2 0x0045d830
 CollisionBodyMesh::CollisionBodyMesh(const CollisionMesh* pMesh, const char* pcName, const PblMatrix& matrix,
                                      unsigned int uiParentHashName)

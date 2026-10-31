@@ -55,8 +55,7 @@ public:
     // SYNTHETIC: SWBF2 0x00619b30
     // PlayableEntitySounds::`scalar deleting destructor'
 
-    // FUNCTION: SWBF2 0x00619b80
-    virtual ~PlayableEntitySounds() {}
+    virtual ~PlayableEntitySounds();
 
     // FUNCTION: SWBF2 0x0049e2f0
     virtual const PlayableEntitySoundsClass* GetPlayableEntitySoundsClass() const { return mPESClass; }

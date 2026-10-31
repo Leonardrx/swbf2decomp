@@ -98,19 +98,6 @@ bool pvs::BaseDisplayable<T>::PortalActive() const
 }
 
 template <class T>
-void pvs::BaseDisplayable<T>::SetPortalActive(bool bActive)
-{
-    if (bActive)
-    {
-        flags_ |= 2;
-    }
-    else
-    {
-        flags_ &= ~2u;
-    }
-}
-
-template <class T>
 bool pvs::BaseDisplayable<T>::PortalClip() const
 {
     return (flags_ >> 2) & 1;

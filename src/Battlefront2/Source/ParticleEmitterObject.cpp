@@ -410,20 +410,7 @@ void ParticleEmitterObject::ScaleSet(float fScale)
 {
     if (mEmitter)
     {
-        for (ParticleEmitter* p = mEmitter; p; p = p->mNext)
-        {
-            p->mSize = fScale;
-        }
-    }
-}
-
-// FUNCTION: SWBF2 0x0060ba00
-void ParticleEmitter::SetSpawnerSeed(unsigned int uSeed)
-{
-    mSpawnerSeed = uSeed;
-    if (mNext)
-    {
-        mNext->SetSpawnerSeed(uSeed + 5);
+        mEmitter->ScaleSet(fScale);
     }
 }
 

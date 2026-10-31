@@ -170,12 +170,6 @@ DamageDesc OrdnanceClass::GetDamage() const
     return mDamage;
 }
 
-// FUNCTION: SWBF2 0x005f7350
-int CollisionManager::GetLastRayHitBodyId()
-{
-    return sInstance ? sInstance->mLastRayHitBodyId : -1;
-}
-
 // FUNCTION: SWBF2 0x005f7370
 Ordnance::Ordnance(OrdnanceClass* pClass, const OrdnanceDesc& desc)
     : FoleyFXCollider(pClass),

@@ -33,7 +33,7 @@ MuzzleFlashRenderer::~MuzzleFlashRenderer()
 // SYNTHETIC: SWBF2 0x005aa670
 // MuzzleFlashRenderer::`scalar deleting destructor'
 
-void MuzzleFlashRenderer::RenderFlash(MuzzleFlashData const& data, RedColor const& color) const
+inline void MuzzleFlashRenderer::RenderFlash(MuzzleFlashData const& data, RedColor const& color) const
 {
     const PblVector3 vPos = data.m_pAimer->mFirePos;
     const PblVector3 vMin(vPos.x - 50.0f, vPos.y - 50.0f, vPos.z - 50.0f);

@@ -841,37 +841,6 @@ void Combo::State::SetSound(const char* pName, float fTime)
     m_uiSoundTime = iTime;
 }
 
-// FUNCTION: SWBF2 0x00471010
-void Combo::State::SetInputLock(unsigned int uiInputLock, float fDuration)
-{
-    m_uiInputLock = uiInputLock;
-    int iDuration = (int)(fDuration * TIME_SCALE_INV);
-    if (iDuration < 0)
-    {
-        iDuration = 0;
-    }
-    else if (iDuration > INPUTLOCK_DURATION_MAX)
-    {
-        iDuration = INPUTLOCK_DURATION_MAX;
-    }
-    m_uiInputLockDuration = iDuration;
-}
-
-// FUNCTION: SWBF2 0x00471060
-void Combo::State::SetEnergyRestoreRate(float fRate, bool b)
-{
-    int iRate = (int)(fRate * ENERGY_RATE_SCALE_INV);
-    if (iRate < ENERGY_RATE_MIN)
-    {
-        iRate = ENERGY_RATE_MIN;
-    }
-    else if (iRate > ENERGY_RATE_MAX)
-    {
-        iRate = ENERGY_RATE_MAX;
-    }
-    m_iEnergyRestoreRate = iRate;
-    m_bEnergyRestoreRateOverride = !b;
-}
 
 
 

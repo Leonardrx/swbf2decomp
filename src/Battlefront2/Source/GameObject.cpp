@@ -1197,21 +1197,6 @@ GameObjectClass::VehicleType GameObjectClass::FindVehicleType(const char* pszNam
     }
 }
 
-// FUNCTION: SWBF2 0x00534fe0
-DamageRegionSound::DamageRegionSound(unsigned int uRegionID, const GameSound& sound, PblListSingle& list)
-    : mRegionID(uRegionID)
-{
-    mSound = sound;
-    if (uRegionID)
-    {
-        list.AddLast(&mNode);
-    }
-    else
-    {
-        list.AddFirst(&mNode);
-    }
-}
-
 namespace EventManager
 {
 

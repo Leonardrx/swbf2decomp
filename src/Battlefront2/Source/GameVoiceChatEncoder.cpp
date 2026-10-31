@@ -283,7 +283,7 @@ bool IsBanned();
 }
 
 // FUNCTION: SWBF2 0x0053da10
-unsigned char GameVoiceChat::Encoder::IsEnabled()
+bool GameVoiceChat::Encoder::IsEnabled()
 {
     return mPlaying
         && mSource.GetPlayState()
@@ -291,7 +291,7 @@ unsigned char GameVoiceChat::Encoder::IsEnabled()
 }
 
 // FUNCTION: SWBF2 0x0053daf0
-unsigned char VoiceChat::Encoder::IsEnabled()
+bool VoiceChat::Encoder::IsEnabled()
 {
     return static_cast<GameVoiceChat::Encoder*>(this)->IsEnabled();
 }

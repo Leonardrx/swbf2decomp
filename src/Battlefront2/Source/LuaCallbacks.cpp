@@ -1858,16 +1858,6 @@ void DrawAllParticleAt::Render(int)
     mCount = 0;
 }
 
-DrawAllBeamBetween::DrawAllBeamBetween() : Renderable(6), mCount(0)
-{
-    Activate(-1);
-}
-
-DrawAllParticleAt::DrawAllParticleAt() : Renderable(6), mCount(0)
-{
-    Activate(0);
-}
-
 // FUNCTION: SWBF2 0x005802c0
 bool DrawAllParticleAt::Add(const PblVector3& vPos, const char* pcTexture, float fWidth, RedColor color,
                             float fRotation)

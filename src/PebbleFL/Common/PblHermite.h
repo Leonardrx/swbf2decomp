@@ -33,7 +33,7 @@ public:
     }
     PblVector3 getSlope(float fT) const
     {
-        return _c + (_b * 2.0f + _a * fT * 3.0f) * fT;
+        return (fT * _a * 3.0f + _b * 2.0f) * fT + _c;
     }
 
     PblVector3 _a;

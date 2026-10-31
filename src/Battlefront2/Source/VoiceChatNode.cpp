@@ -350,7 +350,7 @@ void VoiceChat::Node::SetID(unsigned char uChannel)
         mEncoder->Play();
         mDecoder->Play();
 
-        ((VoiceChat::Transport*)VoiceChat::Node::sTransport)->SetLocalNode(uChannel, true, mDecoder->IsEnabled(), mEncoder->IsEnabled() != 0);
+        ((VoiceChat::Transport*)VoiceChat::Node::sTransport)->SetLocalNode(uChannel, true, mDecoder->IsEnabled(), mEncoder->IsEnabled());
         ++sRegisteredNodeCount;
 
         _pObject = this;
@@ -534,7 +534,7 @@ void VoiceChat::Node::Decode(float fDeltaTime)
 
     const bool bWasReceiving = VoiceChat::Node::sTransport->IsConnectedReceive(mNodeID);
     const bool bDecoderEnabled = mDecoder->IsEnabled();
-    VoiceChat::Node::sTransport->SetLocalNode(mNodeID, true, bDecoderEnabled, ((VoiceChat::Encoder*)mEncoder)->IsEnabled() != 0);
+    VoiceChat::Node::sTransport->SetLocalNode(mNodeID, true, bDecoderEnabled, ((VoiceChat::Encoder*)mEncoder)->IsEnabled());
     if (bDecoderEnabled != bWasReceiving)
     {
         AudioPacket packet;

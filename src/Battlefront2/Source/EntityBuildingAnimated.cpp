@@ -20,6 +20,7 @@
 #include "RedEngineFL/Graphics/RedDirectionalLight.h"
 #include "RedEngineFL/Graphics/RedModel.h"
 #include "Zephyr/Source/ZephyrAnim.h"
+#include "Zephyr/Source/ZephyrAnimBank.h"
 #include "RedEngineFL/Util/RedAnimation.h"
 #include "Zephyr/Source/ZephyrPoseStatic.h"
 
@@ -114,7 +115,7 @@ void EntityBuildingAnimatedClass::SetProperty(unsigned int uProperty, const char
     case 0x5fac58b5: /* "DeathAnimation" */
         if (mAnimObj)
         {
-            mAnimations[1] = (ZephyrAnim*)mAnimObj->FindAnimation(pszValue);
+            mAnimations[1] = (ZephyrAnim*)(mAnimObj->_pZephyrAnimBank ? mAnimObj->_pZephyrAnimBank->Find(PblTEMPHash(pszValue)) : 0);
         }
         break;
 

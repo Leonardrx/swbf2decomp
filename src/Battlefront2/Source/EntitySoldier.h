@@ -20,7 +20,7 @@ public:
 
     static void Init();
 
-    const RedPose* GetPose() const { return bHasAnimatedPose ? &mAnimatedPose : &mPose; }
+    const RedPose* GetPose() const;
     void SetupBasePose(const ZephyrSkeletonShared* pSkeleton);
 
     static MemoryPool sMemoryPool;

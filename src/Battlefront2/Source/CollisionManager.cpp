@@ -1352,7 +1352,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
                                       data.mCenter.z + data.mRadius);
             if (mTreeGrid)
             {
-                mTreeGrid->CallbackOnSphere(data.mCenter, data.mRadius, CollectDataCallback, &data);
+                TreeGridCache::CallbackOnSphere(mTreeGrid, data.mCenter, data.mRadius, CollectDataCallback, &data);
             }
             else
             {

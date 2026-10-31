@@ -27,7 +27,7 @@ public:
     bool Open(unsigned int captureDeviceIndex, float minBufferSizeMs, unsigned int minBuffers);
     void Close();
     void Stop();
-    unsigned char IsEnabled();
+    bool IsEnabled();
     unsigned int GetMaxOutputPacketSizeBytes() const;
     float GetMaxOutputPacketSizeMs() const;
     void SetGain(float fGain);

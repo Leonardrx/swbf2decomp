@@ -37,6 +37,7 @@ namespace
 DefendHelper::DefendHelper(UnitAgent* pOwner)
     : HelperFsm(STATE_START, STATE_START),
       mOwner(pOwner),
+      mTarget(AI::GTT_NONE),
       mSnipeHelper(pOwner),
       mRepairHelper(pOwner),
       mPatrolPathHelper(pOwner),
@@ -46,7 +47,6 @@ DefendHelper::DefendHelper(UnitAgent* pOwner)
       mFortificationTime(0.0f),
       mFortificationHint(0)
 {
-    mTarget.mType = AI::GTT_NONE;
 }
 
 

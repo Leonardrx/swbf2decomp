@@ -63,8 +63,22 @@ public:
     virtual void SetLength(float fLength);
     virtual void SetHeadTailPosition(const PblVector3& vHead, const PblVector3& vTail);
     virtual void SetPositionOmni(const PblVector3& vPos);
-    virtual void SetInitialWidth(float fWidth);
-    virtual void SetInitialWidth(float fWidthX, float fWidthZ);
+
+    // FUNCTION: SWBF2 0x004be070
+    virtual void SetInitialWidth(float fWidth)
+    {
+        _fHeadSizeX = _fHeadSizeZ = fWidth * 0.5f;
+        _Flare._fSize = fWidth;
+    }
+
+    // FUNCTION: SWBF2 0x004be0a0
+    virtual void SetInitialWidth(float fWidthX, float fWidthZ)
+    {
+        _fHeadSizeX = fWidthX * 0.5f;
+        _fHeadSizeZ = fWidthZ * 0.5f;
+        _Flare._fSize = _fHeadSizeX + _fHeadSizeZ;
+    }
+
     virtual void SetFinalWidth(float fWidth);
     virtual void SetFinalWidth(float fWidthX, float fWidthZ);
     virtual void SetFadeLength(float fLength);
@@ -86,8 +100,9 @@ public:
     void SetFlareIntensity(float fIntensity)
     {
         _fFlareIntensity = fIntensity;
+        unsigned char ucAlpha = (unsigned char)(int)(_color.a * _fFlareIntensity);
         RedColor flareColor = _color;
-        flareColor.a = (unsigned char)(int)(_color.a * _fFlareIntensity);
+        flareColor.a = ucAlpha;
         _Flare.SetColor(flareColor);
     }
 

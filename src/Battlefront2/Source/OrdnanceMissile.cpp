@@ -46,13 +46,16 @@ inline void Controllable::SetEnemyLockedOnMeState(float fState, OrdnanceMissile*
 {
     mEnemyLockedOnMeState = fState;
     mEnemyLockedOnMeTimestamp = GameLoop::GetMissionTime();
-    if (mEnemyLockedOnMeMissile == pMissile)
+    if (mEnemyLockedOnMeMissile != pMissile)
     {
-        mEnemyLockedOnMeDistance = fDistance;
+        if (!mEnemyLockedOnMeMissile || mEnemyLockedOnMeDistance > fDistance)
+        {
+            mEnemyLockedOnMeMissile = pMissile;
+            mEnemyLockedOnMeDistance = fDistance;
+        }
     }
-    else if (!mEnemyLockedOnMeMissile || mEnemyLockedOnMeDistance > fDistance)
+    else
     {
-        mEnemyLockedOnMeMissile = pMissile;
         mEnemyLockedOnMeDistance = fDistance;
     }
 }

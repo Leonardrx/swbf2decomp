@@ -57,6 +57,8 @@ public:
     virtual bool AABBIntersect(const PblVector3& vMin, const PblVector3& vMax) const = 0;
     virtual const PblMatrix& GetProjectionMatrix() const;
 
+    bool IsStatic() const { return (m_uiFlags & LIGHT_FLAG_STATIC) != 0; }
+
     bool IsSpecularCaster() const { return (m_uiFlags & LIGHT_FLAG_SPECULARCASTER) != 0; }
 
     bool IsShadowCaster() const { return (m_uiFlags & LIGHT_FLAG_SHADOWCASTER) != 0; }

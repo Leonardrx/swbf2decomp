@@ -152,20 +152,6 @@ void FLEffectObject::UpdatedWorldMatrix()
 
 
 
-// FUNCTION: SWBF2 0x004be070
-void LightBeam::SetInitialWidth(float fWidth)
-{
-    _fHeadSizeX = _fHeadSizeZ = fWidth * 0.5f;
-    _Flare._fSize = fWidth;
-}
-
-// FUNCTION: SWBF2 0x004be0a0
-void LightBeam::SetInitialWidth(float fWidthX, float fWidthZ)
-{
-    _fHeadSizeX = fWidthX * 0.5f;
-    _fHeadSizeZ = fWidthZ * 0.5f;
-    _Flare._fSize = _fHeadSizeX + _fHeadSizeZ;
-}
 
 
 

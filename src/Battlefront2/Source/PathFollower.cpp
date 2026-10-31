@@ -56,34 +56,34 @@ namespace
 
     const int kMaxPathNodes = 32;
 
-    const PblMatrix& EntityGetMatrix(Entity* pEntity)
+    inline const PblMatrix& EntityGetMatrix(Entity* pEntity)
     {
         return static_cast<CollisionObject&>(static_cast<GameObject&>(*pEntity)).GetMatrix();
     }
 
-    const PblVector3& EntityGetVelocity(Entity* pEntity)
+    inline const PblVector3& EntityGetVelocity(Entity* pEntity)
     {
         return static_cast<GameObject*>(pEntity)->GetVelocity();
     }
 
-    float EntityFlyerGetRoll(Entity* pFlyer) { return static_cast<EntityFlyer*>(pFlyer)->mGetSpeedSpeed; }
+    inline float EntityFlyerGetRoll(Entity* pFlyer) { return static_cast<EntityFlyer*>(pFlyer)->mGetSpeedSpeed; }
 
-    PblVector3& EntitySoldierAiGetLastCollisionNormal(Entity* p) { return static_cast<EntitySoldier*>(p)->mAILastCollisionNormal; }
-    char EntitySoldierAiGetLastCollisionDirection(Entity* p)
+    inline PblVector3& EntitySoldierAiGetLastCollisionNormal(Entity* p) { return static_cast<EntitySoldier*>(p)->mAILastCollisionNormal; }
+    inline char EntitySoldierAiGetLastCollisionDirection(Entity* p)
     {
         return static_cast<EntitySoldier*>(p)->mAILastCollisionDirection;
     }
-    void EntitySoldierAiSetLastCollisionDirection(Entity* p, char cDir)
+    inline void EntitySoldierAiSetLastCollisionDirection(Entity* p, char cDir)
     {
         static_cast<EntitySoldier*>(p)->mAILastCollisionDirection = cDir;
     }
 
-    PblVector3& EntityDroidekaAiGetLastCollisionNormal(Entity* p) { return static_cast<EntityDroideka*>(p)->mAILastCollisionNormal; }
-    char EntityDroidekaAiGetLastCollisionDirection(Entity* p)
+    inline PblVector3& EntityDroidekaAiGetLastCollisionNormal(Entity* p) { return static_cast<EntityDroideka*>(p)->mAILastCollisionNormal; }
+    inline char EntityDroidekaAiGetLastCollisionDirection(Entity* p)
     {
         return static_cast<EntityDroideka*>(p)->mAILastCollisionDirection;
     }
-    void EntityDroidekaAiSetLastCollisionDirection(Entity* p, char cDir)
+    inline void EntityDroidekaAiSetLastCollisionDirection(Entity* p, char cDir)
     {
         static_cast<EntityDroideka*>(p)->mAILastCollisionDirection = cDir;
     }

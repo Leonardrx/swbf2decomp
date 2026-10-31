@@ -277,7 +277,7 @@ public:
         bool IsDamageWidthFromEdge() const { return m_bDamageWidthFromEdge != 0; }
         float GetDamageLength() const { return m_uiDamageLength * 0.01f; }
         float GetDamageWidth() const { return m_uiDamageWidth * 0.01f; }
-        float GetDamage() const { return static_cast<float>(m_uiDamage); }
+        float GetDamage() const { return m_uiDamage * 1.0f; }
         bool IsPush() const { return m_uiSpecialType == 0; }
         float GetPushStrength() const { return m_uiSpecial * 0.1f; }
         unsigned int GetNumDamageSamples() const { return m_uiNumDamageSamples; }
@@ -501,9 +501,37 @@ public:
             m_bVelocityXFromAnim = bFromAnim;
         }
 
-        void SetInputLock(unsigned int uiInputLock, float fDuration);
+        // FUNCTION: SWBF2 0x00471010
+        void SetInputLock(unsigned int uiInputLock, float fDuration)
+        {
+            m_uiInputLock = uiInputLock;
+            int iDuration = (int)(fDuration * TIME_SCALE_INV);
+            if (iDuration < 0)
+            {
+                iDuration = 0;
+            }
+            else if (iDuration > INPUTLOCK_DURATION_MAX)
+            {
+                iDuration = INPUTLOCK_DURATION_MAX;
+            }
+            m_uiInputLockDuration = iDuration;
+        }
 
-        void SetEnergyRestoreRate(float fRate, bool b);
+        // FUNCTION: SWBF2 0x00471060
+        void SetEnergyRestoreRate(float fRate, bool b)
+        {
+            int iRate = (int)(fRate * ENERGY_RATE_SCALE_INV);
+            if (iRate < ENERGY_RATE_MIN)
+            {
+                iRate = ENERGY_RATE_MIN;
+            }
+            else if (iRate > ENERGY_RATE_MAX)
+            {
+                iRate = ENERGY_RATE_MAX;
+            }
+            m_iEnergyRestoreRate = iRate;
+            m_bEnergyRestoreRateOverride = !b;
+        }
 
         // FUNCTION: SWBF2 0x004710c0
         void SetThrustFactor(float fFactor)

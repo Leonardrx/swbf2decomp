@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 
+#include "CameraManager.h"
 #include "HUDItem.h"
 
 class RedScreenGroupElement;
@@ -57,15 +58,29 @@ public:
     {
         for (unsigned int i = 0; i < mNumSupportedSplitModes; ++i)
         {
-            if (mSupportedSplitModes[i] == 1)
+            switch (mSupportedSplitModes[i])
             {
+            case 0:
+                break;
+            case 1:
                 return true;
             }
         }
         return mNumSupportedSplitModes == 0;
     }
 
-    bool ViewportsSupported() const;
+    bool ViewportsSupported() const
+    {
+        for (unsigned int i = 0; i < mNumSupportedViewPorts; ++i)
+        {
+            if (mSupportedViewPorts[i] == CameraManager::Instance()->GetNumCameras())
+            {
+                return true;
+            }
+        }
+        return mNumSupportedViewPorts == 0;
+    }
+
     bool Widescreen() const { return !mWidescreenSet || mWidescreen; }
 
     // VTABLE: SWBF2 0x007a3284
@@ -73,7 +88,10 @@ public:
     class Factory : public HUD::Item::Factory
     {
     public:
-        Factory();
+        Factory() : HUD::Item::Factory(0xD4E0C797u)
+        {
+            mName = "FileInfo";
+        }
 
         // SYNTHETIC: SWBF2 0x00565000
         // HUD::Manager::ConfigFile::Factory::`scalar deleting destructor'

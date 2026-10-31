@@ -49,12 +49,6 @@ void AdjustScreenGroupAspect(RedScreenGroupElement* pGroup)
 
 #pragma warning(disable : 4316)
 
-HUD::Manager::ConfigFile::Factory::Factory()
-    : HUD::Item::Factory(0xD4E0C797u)
-{
-    mName = "FileInfo";
-}
-
 // FUNCTION: SWBF2 0x00564990
 HUD::Item* HUD::TransformNumberColor::Factory::CreateItem(const char* const pName, ItemCallback pCallback,
                                                           void* const pUserData)
@@ -534,15 +528,3 @@ unsigned int HUD::Objective::GetTextHashID() const
 
 // GLOBAL: SWBF2 0x01e56fc0
 HUD::Manager::ConfigFile* HUD::gConfigFiles[256];
-
-bool HUD::Manager::ConfigFile::ViewportsSupported() const
-{
-    for (unsigned int i = 0; i < mNumSupportedViewPorts; ++i)
-    {
-        if (mSupportedViewPorts[i] == CameraManager::Instance()->GetNumCameras())
-        {
-            return true;
-        }
-    }
-    return mNumSupportedViewPorts == 0;
-}

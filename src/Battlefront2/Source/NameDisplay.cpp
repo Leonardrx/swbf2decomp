@@ -65,10 +65,6 @@ Character* CameraManager::GetDeathCameraKiller(int iCam)
 // GLOBAL: SWBF2 0x01fa2494
 NameDisplayThread* sNameDisplayThread[1];
 
-NameDisplayThread::NameDisplayThread()
-{
-}
-
 
 
 // FUNCTION: SWBF2 0x005aa770

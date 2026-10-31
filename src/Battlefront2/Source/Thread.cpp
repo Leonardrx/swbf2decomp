@@ -280,9 +280,3 @@ void Thread::LeaveClient()
     sTurnThreadList = &sHostTurnThreadList;
     gThreadIsEven = sHostThreadIsEven;
 }
-
-// FUNCTION: SWBF2 0x00429200
-bool Thread::IsThreadActive()
-{
-    return mThreadListNode._pList != 0;
-}

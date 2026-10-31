@@ -57,7 +57,8 @@ public:
 
     static TreeGrid* GetTreeGrid();
 
-    static int GetLastRayHitBodyId();
+    // FUNCTION: SWBF2 0x005f7350
+    static int GetLastRayHitBodyId() { return sInstance ? sInstance->mLastRayHitBodyId : -1; }
 
     static void BeginList(PblList<CollisionObject>::Itor& itor);
     static void ListObjects(PblList<CollisionObject>::Itor& itor, CollisionObject** const pObjects,

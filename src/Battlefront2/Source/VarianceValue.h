@@ -9,11 +9,11 @@ public:
     // FUNCTION: SWBF2 0x00609c40
     float GetValue(PblRandom& rand) const
     {
-        if (mVariance == 0.0f)
+        if (mVariance != 0.0f)
         {
-            return mValue;
+            return rand.GetFloat() * mVariance + mValue;
         }
-        return rand.GetFloat() * mVariance + mValue;
+        return mValue;
     }
 
     void Setup(float fValue)

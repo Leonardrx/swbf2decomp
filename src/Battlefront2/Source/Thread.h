@@ -49,8 +49,8 @@ public:
 
     PblOrderedList()
     {
-        _head._pNext = &_head;
         _head._pPrev = &_head;
+        _head._pNext = &_head;
         _iCount = 0;
     }
 
@@ -77,7 +77,7 @@ public:
 };
 
 template <class TYPE, class KEY>
-void PblOrderedList<TYPE, KEY>::Add(Node* pNode, TYPE* pObject, KEY iOrder)
+inline void PblOrderedList<TYPE, KEY>::Add(Node* pNode, TYPE* pObject, KEY iOrder)
 {
     Node* pAt = _head._pNext;
     ++_iCount;
@@ -120,7 +120,8 @@ public:
     virtual bool Update(float fDeltaTime) = 0;
     virtual void ActivateThread(int iOrder, ThreadType eThreadType);
     virtual void DeactivateThread();
-    virtual bool IsThreadActive();
+    // FUNCTION: SWBF2 0x00429200
+    virtual bool IsThreadActive() { return mThreadListNode._pList != 0; }
 
     typedef PblOrderedList<Thread, int>::Node ThreadListNode;
     typedef PblOrderedList<Thread, int> ThreadList;

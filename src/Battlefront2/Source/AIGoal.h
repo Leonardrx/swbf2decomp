@@ -9,6 +9,9 @@
 #include "PebbleFL/Common/PblList.h"
 #include "PebbleFL/Common/PblVector.h"
 #include "RedEngineFL/Memory/RedMemoryPool.h"
+#include "Character.h"
+#include "Controllable.h"
+#include "GameObject.h"
 
 class Character;
 class CommandPost;
@@ -47,6 +50,9 @@ struct GoalTarget
     GoalTarget()
     {
     }
+    explicit GoalTarget(GoalTargetType eType) : mType(eType)
+    {
+    }
 
     GoalTarget(const PblVector3& vPos);
     GoalTarget(const GameObject* pObject);
@@ -58,7 +64,22 @@ struct GoalTarget
 
     bool GetLocation(PblVector3& vPos);
 
-    const GameObject* GetGameObject();
+    // FUNCTION: SWBF2 0x00439c90
+    const GameObject* GetGameObject()
+    {
+        if (mType == GTT_GAMEOBJECT)
+        {
+            return mGameObj;
+        }
+        if (mType == GTT_CHARACTER)
+        {
+            if (mChr->GetControllable())
+            {
+                return mChr->GetControllable()->GetGameObject();
+            }
+        }
+        return 0;
+    }
 };
 
 // VTABLE: SWBF2 0x00796b6c

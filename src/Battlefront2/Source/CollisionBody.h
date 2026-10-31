@@ -102,7 +102,7 @@ public:
     float GetRadius() const;
     PblMatrix GetMomentOfInertia() const;
 
-    static void ClearAll();
+    static void ClearAll() { _HashTable.Clear(); }
 
     // FUNCTION: SWBF2 0x004920c0
     static CollisionBodyPrimitive* Find(unsigned int uHash)

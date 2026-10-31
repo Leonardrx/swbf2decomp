@@ -121,9 +121,9 @@ public:
 
     void SetColorOnly(RedColor color)
     {
-        m_color.b = color.b;
-        m_color.g = color.g;
         m_color.r = color.r;
+        m_color.g = color.g;
+        m_color.b = color.b;
     }
 
     void SetMatrixPosRotScale(float fX, float fY, float fRotation, float fScaleX,

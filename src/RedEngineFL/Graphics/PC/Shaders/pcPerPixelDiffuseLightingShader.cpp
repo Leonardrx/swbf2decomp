@@ -309,7 +309,7 @@ void pcPerPixelDiffuseLightingShader::Render_Prog1(const RenderItem* pItem, unsi
             {
                 continue;
             }
-            if ((pLight->m_uiFlags & RedLight::LIGHT_FLAG_STATIC) && bVertexLit)
+            if (pLight->IsStatic() && bVertexLit)
             {
                 continue;
             }
@@ -354,7 +354,7 @@ void pcPerPixelDiffuseLightingShader::Render_Prog1(const RenderItem* pItem, unsi
             {
                 continue;
             }
-            if ((pLight->m_uiFlags & RedLight::LIGHT_FLAG_STATIC) && bVertexLit)
+            if (pLight->IsStatic() && bVertexLit)
             {
                 continue;
             }
@@ -407,7 +407,7 @@ void pcPerPixelDiffuseLightingShader::Render_Prog1(const RenderItem* pItem, unsi
     for (int i = 0; i < pLighting->numSpotLights; i++)
     {
         const RedSpotLight* pLight = pLighting->pSpotLights[i];
-        if ((pLight->m_uiFlags & RedLight::LIGHT_FLAG_STATIC) && bVertexLit)
+        if (pLight->IsStatic() && bVertexLit)
         {
             continue;
         }

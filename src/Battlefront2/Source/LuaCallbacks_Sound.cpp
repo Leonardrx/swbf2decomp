@@ -86,21 +86,6 @@ namespace GameSoundEngine
     extern bool sHwEffectsSupported;
 }
 
-// FUNCTION: SWBF2 0x0059b470
-void Snd::StreamBase::Play(bool bRestart)
-{
-    SourceBus::Play(this);
-
-    SourceTransport::mFlags = (unsigned short)((SourceTransport::mFlags
-        & ~(unsigned int)(flags_updateStop | flags_updatePause)) | (unsigned int)flags_updatePlay);
-    if ((SourceTransport::mFlags & flags_updatePlaybackPosition) == 0 && bRestart)
-    {
-        mPlaybackPosition = 0;
-        SourceTransport::mFlags = (unsigned short)(SourceTransport::mFlags
-            | (unsigned int)flags_updatePlaybackPosition);
-    }
-}
-
 // GLOBAL: SWBF2 0x007e8390
 // sSoundCallbacks
 

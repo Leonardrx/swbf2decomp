@@ -1436,7 +1436,7 @@ inline void WalkerLegPair::operator delete(void* pBlock)
     sMemoryPool.Free(pBlock);
 }
 
-void WalkerLegPair::SetInterpolate(bool bInterpolate)
+inline void WalkerLegPair::SetInterpolate(bool bInterpolate)
 {
     mBlend->SetInterpolate(bInterpolate);
 }

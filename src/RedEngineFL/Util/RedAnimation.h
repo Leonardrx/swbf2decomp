@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PebbleFL/Common/PblHashTable.h"
+#include "Zephyr/Source/ZephyrAnimBank.h"
 #include "Zephyr/Source/ZephyrAnimBankReader.h"
 #include "Zephyr/Source/ZephyrSkinReader.h"
 
@@ -22,14 +23,22 @@ public:
     // SYNTHETIC: SWBF2 0x006dd6b0
     // RedAnimation::`scalar deleting destructor'
 
-    static void ClearAll();
+    static void ClearAll() { _HashTable.Clear(); }
 
     // FUNCTION: SWBF2 0x00443970
     static RedAnimation* Find(unsigned int uiHash) { return _HashTable.Find(uiHash); }
 
     static PblHashTable<RedAnimation, 1024> _HashTable;
 
-    const ZephyrAnim* FindAnimation(const char* pszName) const;
+    // FUNCTION: SWBF2 0x00443990
+    const ZephyrAnim* FindAnimation(const char* pszName) const
+    {
+        if (_pZephyrAnimBank)
+        {
+            return _pZephyrAnimBank->Find(PblTEMPHash(pszName));
+        }
+        return 0;
+    }
 
     void _ReadEvents(PblMemChunk& kChunk);
     void _ReadZaa(PblMemChunk& kChunk);

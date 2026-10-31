@@ -66,9 +66,10 @@ namespace
 
     inline void UpdateCollisionSphere(EntityHover* pHover)
     {
+        const PblMatrix& matrix = pHover->mMatrix;
         PblVector3 center;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&center), reinterpret_cast<const D3DXVECTOR3*>(&pHover->mModel->_mModel->_BoundingSphere.GetCenter()),
-                               reinterpret_cast<const D3DXMATRIX*>(&pHover->mMatrix));
+                               reinterpret_cast<const D3DXMATRIX*>(&matrix));
         pHover->SetCollisionCenter(center);
         pHover->RecalculateAABB();
     }

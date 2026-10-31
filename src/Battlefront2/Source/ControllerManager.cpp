@@ -49,6 +49,12 @@ int sClientFrameCount;
 float sClientPeriodicUpdateTime;
 }
 
+namespace ControllerManager
+{
+    // GLOBAL: SWBF2 0x0078e770
+    extern const int UPDATES_PER_SECOND = 2;
+}
+
 // GLOBAL: SWBF2 0x01f9c290
 PblList<PlayerController>* sHostPlayerCtrls;
 // GLOBAL: SWBF2 0x01f9c284

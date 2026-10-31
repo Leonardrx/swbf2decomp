@@ -29,7 +29,7 @@ public:
 
     static void PrintDebugInfo(const RedModel* pModel, const PblVector3& vPos);
 
-    static void Reset();
+    static void Reset() { _HashTable.Clear(); }
 
     // FUNCTION: SWBF2 0x004439c0
     static const GameModel* Find(unsigned int uHash)

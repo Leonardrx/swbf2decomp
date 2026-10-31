@@ -19,11 +19,6 @@ extern bool sLoadLowDetailModels;
 // GLOBAL: SWBF2 0x01ec1230
 PblHashTable<GameModel, 1024> GameModel::_HashTable;
 
-void GameModel::Reset()
-{
-    _HashTable.Clear();
-}
-
 // FUNCTION: SWBF2 0x00533da0
 GameModel::GameModel()
 {

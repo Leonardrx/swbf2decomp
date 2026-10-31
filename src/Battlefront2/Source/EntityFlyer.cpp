@@ -431,6 +431,16 @@ int EntityFlyer::GetWeaponCount() const
     return mClass->mWeaponCount;
 }
 
+// FUNCTION: SWBF2 0x004a9db0
+inline Trackable* CameraManager::GetChaseCameraTarget(int iCam)
+{
+    if (mCurGameCamera[iCam] == mDeathCamera[iCam])
+    {
+        return mDeathCamera[iCam]->mOwner;
+    }
+    return mChaseCamera[iCam]->mOwner;
+}
+
 // FUNCTION: SWBF2 0x004ab840
 void EntityFlyer::SetTowCableWalker(GameObject* pWalker)
 {
@@ -508,16 +518,6 @@ bool EntityFlyer::PostCollision::Update(float fDeltaTime)
 
 
 
-
-// FUNCTION: SWBF2 0x004a9db0
-Trackable* CameraManager::GetChaseCameraTarget(int iCam)
-{
-    if (mCurGameCamera[iCam] == mDeathCamera[iCam])
-    {
-        return mDeathCamera[iCam]->mOwner;
-    }
-    return mChaseCamera[iCam]->mOwner;
-}
 
 // FUNCTION: SWBF2 0x004b6f60
 EntityFlyerClass::EntityFlyerClass(EntityFlyerClass* pSrc, unsigned int uHash)

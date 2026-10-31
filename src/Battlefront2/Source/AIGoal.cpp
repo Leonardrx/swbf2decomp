@@ -65,23 +65,6 @@ bool AI::GoalTarget::GetLocation(PblVector3& vPos)
     return false;
 }
 
-// FUNCTION: SWBF2 0x00439c90
-const GameObject* AI::GoalTarget::GetGameObject()
-{
-    if (mType == GTT_GAMEOBJECT)
-    {
-        return mGameObj;
-    }
-    if (mType == GTT_CHARACTER)
-    {
-        if (mChr->GetControllable())
-        {
-            return mChr->GetControllable()->GetGameObject();
-        }
-    }
-    return 0;
-}
-
 // SYNTHETIC: SWBF2 0x00439af0
 // AI::AIGoal::`scalar deleting destructor'
 

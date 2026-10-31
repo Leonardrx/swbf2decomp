@@ -194,7 +194,7 @@ GuiManager* SpawnDisplay::m_pGuiManager;
 namespace
 {
 
-const Damageable* GetDamageable(const GameObject* pObject)
+inline const Damageable* GetDamageable(const GameObject* pObject)
 {
     return static_cast<const Damageable*>(pObject);
 }
@@ -218,7 +218,7 @@ const Damageable* GetDamageable(const GameObject* pObject)
 namespace
 {
 
-RedTextElement* AsText(RedInterfaceElement* pElement)
+inline RedTextElement* AsText(RedInterfaceElement* pElement)
 {
     if (pElement->IsFlashyText())
     {

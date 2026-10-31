@@ -19,8 +19,7 @@ public:
     {
     public:
 
-        // FUNCTION: SWBF2 0x006156a0
-        NodeProperties() : mWaitMin(0.0f), mWaitMax(0.0f) {}
+        NodeProperties();
 
         static bool ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
                                       RedPath::PathObject object,

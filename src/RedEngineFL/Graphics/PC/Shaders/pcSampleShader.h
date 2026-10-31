@@ -74,10 +74,7 @@ public:
     }
     void SetScale(float fScale)
     {
-        m_scale.r = fScale;
-        m_scale.g = fScale;
-        m_scale.b = fScale;
-        m_scale.a = fScale;
+        m_scale = RedColorValue(fScale, fScale, fScale, fScale);
     }
 
     RedTexture* m_inputTexture;

@@ -110,7 +110,7 @@ bool PauseMenu::sEnablePause = true;
 namespace
 {
 
-void EnableDisplays(int iViewport, bool bEnable)
+inline void EnableDisplays(int iViewport, bool bEnable)
 {
     StatusDisplay::EnableViewport(iViewport, bEnable);
     ReticuleDisplay::EnableViewport(iViewport, bEnable);

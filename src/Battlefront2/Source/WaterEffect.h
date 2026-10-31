@@ -14,11 +14,7 @@ public:
 
     struct WaterEffectData
     {
-        WaterEffectData()
-        {
-            effect.mObject = 0;
-            effect.mSavedHandleId = 0;
-        }
+        WaterEffectData() {}
 
         PblVector3 worldPos;
         PblHandle<ParticleEmitterObject> effect;

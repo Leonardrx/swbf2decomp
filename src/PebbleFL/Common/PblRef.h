@@ -41,7 +41,7 @@ public:
 
     bool IsAlive() const
     {
-        return mAliveFlag != 0;
+        return mAliveFlag;
     }
 
     unsigned short mValidFlag : 1;

@@ -109,7 +109,8 @@ const char UnitDestroyAgent::rttiNameUnitDestroyAgent[] = "UnitDestroyAgent";
 
 // FUNCTION: SWBF2 0x00666080
 UnitDestroyAgent::UnitDestroyAgent(UnitController* pCtrl, const AI::GoalTarget& target)
-    : UnitAgent(pCtrl)
+    : UnitAgent(pCtrl),
+      mTarget(AI::GTT_NONE)
 {
     mTarget = target;
     mCurState = 1;

@@ -37,11 +37,6 @@ bool RedModel::pc_shareBuffers = true;
 // GLOBAL: SWBF2 0x007deee8
 static float sfShadowDistance = 30.0f;
 
-void RedModel::ClearAll()
-{
-    _HashTable.Clear();
-}
-
 // FUNCTION: SWBF2 0x006c3d60
 RedModel::RedModel()
 {

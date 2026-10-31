@@ -195,7 +195,7 @@ namespace
         pChr->mVehicleBlockTime = fTime;
     }
 
-    AcklayData* GetAcklayData(const Entity* pEntity)
+    inline AcklayData* GetAcklayData(const Entity* pEntity)
     {
         return static_cast<const EntitySoldier*>(pEntity)->mAcklayData;
     }

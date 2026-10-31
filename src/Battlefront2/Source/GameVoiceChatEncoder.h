@@ -32,7 +32,7 @@ public:
     void Flush();
     void Stop();
     bool IsPlaying();
-    unsigned char IsEnabled();
+    bool IsEnabled();
     void SetGain(float fGain);
     unsigned int GetMaxOutputPacketSizeBytes() const;
     float GetMaxOutputPacketSizeMs() const;

@@ -791,6 +791,12 @@ static bool sCollisionRadius2Valid;
 static const float GRAVITY_FORCE = 18.0f;
 static const float IN_AIR_DRAG_FORCE = 0.012f;
 
+// FUNCTION: SWBF2 0x004de800
+const RedPose* AcklayData::GetPose() const
+{
+    return bHasAnimatedPose ? &mAnimatedPose : &mPose;
+}
+
 // FUNCTION: SWBF2 0x004de850
 EntitySoldier::EntitySoldier(EntitySoldierClass* pClass, const EntityDesc& desc)
     : GameObject(pClass, desc, COLL_SOFT, &pClass->mLodData)

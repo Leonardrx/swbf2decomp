@@ -118,7 +118,10 @@ void Init();
 class DrawAllBeamBetween : public Renderable
 {
 public:
-    DrawAllBeamBetween();
+    DrawAllBeamBetween() : Renderable(6), mCount(0)
+    {
+        Activate(-1);
+    }
     struct Desc
     {
         PblVector3 mPos1;
@@ -149,7 +152,10 @@ public:
 class DrawAllParticleAt : public Renderable
 {
 public:
-    DrawAllParticleAt();
+    DrawAllParticleAt() : Renderable(6), mCount(0)
+    {
+        Activate(0);
+    }
     struct Desc
     {
         PblVector3 mPos;

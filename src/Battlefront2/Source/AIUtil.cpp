@@ -139,8 +139,7 @@ namespace
 
 namespace ControllerManager
 {
-    // GLOBAL: SWBF2 0x0078e770
-    extern const int UPDATES_PER_SECOND = 2;
+    extern const int UPDATES_PER_SECOND;
 }
 
 // GLOBAL: SWBF2 0x01e2fdb2
@@ -742,7 +741,7 @@ void AIUtil::CalculateHeadingControls(const Controllable* pMe, float fScale,
     sCalculateTurnControls(pMe, fScale, vAim, fTurnRate, pfTurn, fPitchRate, pfPitch, bFromEye);
 }
 
-static const float FOV_ANGLE = 2.70526028f;
+static float FOV_ANGLE = 2.70526028f;
 
 // GLOBAL: SWBF2 0x01e2fdb0
 bool gAllSoldiers;

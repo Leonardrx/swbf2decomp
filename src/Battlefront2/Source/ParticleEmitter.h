@@ -89,22 +89,40 @@ public:
 
     void Render(float fTime);
     void RenderAsEmitter(float fTime);
-    void SetSpawnerSeed(unsigned int uSeed);
+    // FUNCTION: SWBF2 0x0060ba00
+    void SetSpawnerSeed(unsigned int uSeed)
+    {
+        mSpawnerSeed = uSeed;
+        if (mNext)
+        {
+            mNext->SetSpawnerSeed(uSeed + 5);
+        }
+    }
 
     void SetColor(const RedColorValue& color);
 
     void ScaleMultiply(float fScale)
     {
-        for (ParticleEmitter* p = this; p; p = p->mNext)
+        mSize = fScale * mSize;
+        if (mNext)
         {
-            p->mSize *= fScale;
+            mNext->ScaleMultiply(fScale);
         }
     }
     void SetInheritVelocityFactor(float fFactor)
     {
-        for (ParticleEmitter* p = this; p; p = p->mNext)
+        mInheritVelocityFactor = fFactor;
+        if (mNext)
         {
-            p->mInheritVelocityFactor = fFactor;
+            mNext->SetInheritVelocityFactor(fFactor);
+        }
+    }
+    void ScaleSet(float fScale)
+    {
+        mSize = fScale;
+        if (mNext)
+        {
+            mNext->ScaleSet(fScale);
         }
     }
 

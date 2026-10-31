@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "StringDB.h"
+#include "RedEngineFL/Memory/engineAlloc.h"
 
 namespace StringDB
 {
@@ -26,7 +27,7 @@ void Init()
 
     mPoolSize = 0x8000;
 
-    mPool = (char*)operator new(0x8000);
+    mPool = new char[0x8000];
     memset(mPool, 0, 0x8000);
     mNext = mPool;
 }

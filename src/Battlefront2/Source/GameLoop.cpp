@@ -625,17 +625,12 @@ namespace GameLoop
     extern float sClientDeltaTime;
 }
 
-void EntityEx::InitFind()
-{
-    mIdMap.Clear();
-}
-
-void TreeGridStack::SetupMemoryPool(unsigned int uCount, unsigned int uSize, unsigned int uGrow)
+inline void TreeGridStack::SetupMemoryPool(unsigned int uCount, unsigned int uSize, unsigned int uGrow)
 {
     sMemoryPool.Setup(uCount, uSize, uGrow);
 }
 
-void SoldierAnimatorClass::PostLoad()
+inline void SoldierAnimatorClass::PostLoad()
 {
     if (sInstance)
     {

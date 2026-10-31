@@ -358,7 +358,17 @@ public:
     virtual bool PortalClip() const;
     virtual void SetPortalClip(bool);
     virtual bool PortalActive() const;
-    virtual void SetPortalActive(bool);
+    virtual void SetPortalActive(bool bActive)
+    {
+        if (bActive)
+        {
+            flags_ |= 2;
+        }
+        else
+        {
+            flags_ &= ~2u;
+        }
+    }
     virtual bool Dynamic() const;
     virtual void SetDynamic(bool);
     virtual pvs::Sector * GetSector();

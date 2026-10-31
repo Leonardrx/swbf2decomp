@@ -183,7 +183,20 @@ class DamageRegionSound
 {
 public:
 
-    DamageRegionSound(unsigned int uRegionID, const GameSound& sound, PblListSingle& list);
+    // FUNCTION: SWBF2 0x00534fe0
+    DamageRegionSound(unsigned int uRegionID, const GameSound& sound, PblListSingle& list)
+        : mRegionID(uRegionID)
+    {
+        mSound = sound;
+        if (uRegionID)
+        {
+            list.AddLast(&mNode);
+        }
+        else
+        {
+            list.AddFirst(&mNode);
+        }
+    }
 
     GameSound mSound;
     unsigned int mRegionID;

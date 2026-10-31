@@ -270,7 +270,7 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
          it != s_VisibleDirectionalLightList.End(); ++it)
     {
         RedDirectionalLight* pLight = static_cast<RedDirectionalLight*>((RedLight*)it);
-        if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC) &&
+        if (bStatic && pLight->IsStatic() &&
             !(pLight->m_uiFlags & LIGHT_FLAG_SPECULARCASTER))
         {
             break;
@@ -365,7 +365,7 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
              it != s_VisibleOmniLightList.End(); ++it)
         {
             RedOmniLight* pLight = static_cast<RedOmniLight*>((RedLight*)it);
-            if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC))
+            if (bStatic && pLight->IsStatic())
             {
                 break;
             }
@@ -475,7 +475,7 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
              it != s_VisibleSpotLightList.End(); ++it)
         {
             RedSpotLight* pLight = static_cast<RedSpotLight*>((RedLight*)it);
-            if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC))
+            if (bStatic && pLight->IsStatic())
             {
                 break;
             }
@@ -679,7 +679,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
          it != s_VisibleDirectionalLightList.End(); ++it)
     {
         RedDirectionalLight* pLight = static_cast<RedDirectionalLight*>((RedLight*)it);
-        if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC) &&
+        if (bStatic && pLight->IsStatic() &&
             !(pLight->m_uiFlags & LIGHT_FLAG_SPECULARCASTER))
         {
             break;
@@ -774,7 +774,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
              it != s_VisibleOmniLightList.End(); ++it)
         {
             RedOmniLight* pLight = static_cast<RedOmniLight*>((RedLight*)it);
-            if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC))
+            if (bStatic && pLight->IsStatic())
             {
                 break;
             }
@@ -872,7 +872,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
              it != s_VisibleSpotLightList.End(); ++it)
         {
             RedSpotLight* pLight = static_cast<RedSpotLight*>((RedLight*)it);
-            if (bStatic && (pLight->m_uiFlags & LIGHT_FLAG_STATIC))
+            if (bStatic && pLight->IsStatic())
             {
                 break;
             }
@@ -1394,7 +1394,7 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
         switch (pLight->m_eType)
         {
         case TYPE_DIRECTIONAL:
-            if ((pLight->m_uiFlags & LIGHT_FLAG_STATIC) && !pLight->IsSpecularCaster())
+            if (pLight->IsStatic() && !pLight->IsSpecularCaster())
             {
                 s_VisibleDirectionalLightList.AddLast(&pLight->m_VisibleNode, pLight);
             }
@@ -1404,7 +1404,7 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
             }
             break;
         case TYPE_POINT:
-            if (pLight->m_uiFlags & LIGHT_FLAG_STATIC)
+            if (pLight->IsStatic())
             {
                 s_VisibleOmniLightList.AddLast(&pLight->m_VisibleNode, pLight);
             }
@@ -1414,7 +1414,7 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
             }
             break;
         case TYPE_SPOT:
-            if (pLight->m_uiFlags & LIGHT_FLAG_STATIC)
+            if (pLight->IsStatic())
             {
                 s_VisibleSpotLightList.AddLast(&pLight->m_VisibleNode, pLight);
             }

@@ -207,13 +207,13 @@ void VehicleSpawn::gCalcBeginLandPos(const EntityFlyerClass& flyerClass, PblMatr
     pMatrix->SetTranslation(vPos);
 }
 
-static bool IsCurrentlySelfPiloted(const Controllable* pControllable)
+static inline bool IsCurrentlySelfPiloted(const Controllable* pControllable)
 {
     return pControllable->mPilotType == PILOT_SELF ||
            (pControllable->mPilotType == PILOT_VEHICLESELF && pControllable->mPilot == pControllable);
 }
 
-static const Controllable* GetPilot(const Controllable* pControllable)
+static inline const Controllable* GetPilot(const Controllable* pControllable)
 {
     return IsCurrentlySelfPiloted(pControllable) ? 0 : pControllable->mPilot;
 }

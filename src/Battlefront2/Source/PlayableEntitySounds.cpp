@@ -6,6 +6,11 @@ PlayableEntitySounds::PlayableEntitySounds(PlayableEntitySoundsClass* pClass)
 {
 }
 
+// FUNCTION: SWBF2 0x00619b80
+PlayableEntitySounds::~PlayableEntitySounds()
+{
+}
+
 // FUNCTION: SWBF2 0x00619b90
 PlayableEntitySoundsClass::PlayableEntitySoundsClass()
 {

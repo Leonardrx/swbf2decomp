@@ -26,7 +26,8 @@ public:
         ++mPeak;
         if (!IsFull())
         {
-            mElements[mLength++] = item;
+            mElements[mLength] = item;
+            ++mLength;
         }
     }
 

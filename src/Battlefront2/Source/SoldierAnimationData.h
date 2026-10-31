@@ -34,7 +34,7 @@ public:
         float GetBlendTime() const { return uiBlendTime * BLEND_TIME_SCALE_INV; }
         void SetBlendTime(float fTime)
         {
-            float f = fTime * BLEND_TIME_SCALE;
+            float f = BLEND_TIME_SCALE * fTime;
             if (f < 0.0f)
             {
                 f = 0.0f;
@@ -69,7 +69,7 @@ public:
 
     void SetBlendInTime(float fTime)
     {
-        float f = fTime * BLEND_TIME_SCALE;
+        float f = BLEND_TIME_SCALE * fTime;
         if (f < 0.0f)
         {
             f = 0.0f;
@@ -82,7 +82,7 @@ public:
     }
     void SetBlendOutTime(float fTime)
     {
-        float f = fTime * BLEND_TIME_SCALE;
+        float f = BLEND_TIME_SCALE * fTime;
         if (f < 0.0f)
         {
             f = 0.0f;

@@ -29,6 +29,7 @@ UnitDefendAgent::UnitDefendAgent(UnitController* pCtrl, const AI::GoalTarget& ta
     : UnitAgent(pCtrl),
       mDefendHelper(this),
       mCombatHelper(this),
+      mTarget(AI::GTT_NONE),
       mMaintainVisualContact(true)
 {
     mTarget = target;

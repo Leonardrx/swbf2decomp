@@ -24,7 +24,7 @@ public:
 
     static const RedModel* Find(unsigned int uiName);
 
-    static void ClearAll();
+    static void ClearAll() { _HashTable.Clear(); }
 
     RedModel();
     virtual ~RedModel();

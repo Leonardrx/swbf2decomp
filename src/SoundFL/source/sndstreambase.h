@@ -48,7 +48,20 @@ public:
     InfoItor GetInfoItor() const { return InfoItor(mInfoList); }
 
     bool IsOpen() const { return !mInfoList.IsEmpty(); }
-    void Play(bool bRestart);
+    // FUNCTION: SWBF2 0x0059b470
+    void Play(bool bRestart)
+    {
+        SourceBus::Play(this);
+
+        SourceTransport::mFlags = (unsigned short)((SourceTransport::mFlags
+            & ~(unsigned int)(flags_updateStop | flags_updatePause)) | (unsigned int)flags_updatePlay);
+        if ((SourceTransport::mFlags & flags_updatePlaybackPosition) == 0 && bRestart)
+        {
+            mPlaybackPosition = 0;
+            SourceTransport::mFlags = (unsigned short)(SourceTransport::mFlags
+                | (unsigned int)flags_updatePlaybackPosition);
+        }
+    }
 
     // FUNCTION: SWBF2 0x00538770
     void Stop()

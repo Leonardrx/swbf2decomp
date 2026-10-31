@@ -12,11 +12,6 @@
 // GLOBAL: SWBF2 0x0099e808
 PblHashTable<RedAnimation, 1024> RedAnimation::_HashTable;
 
-void RedAnimation::ClearAll()
-{
-    _HashTable.Clear();
-}
-
 // FUNCTION: SWBF2 0x006dd620
 RedAnimation::RedAnimation()
     : _uiNameHash(0)
@@ -30,16 +25,6 @@ RedAnimation::RedAnimation()
 // FUNCTION: SWBF2 0x006dd6a0
 RedAnimation::~RedAnimation()
 {
-}
-
-// FUNCTION: SWBF2 0x00443990
-const ZephyrAnim* RedAnimation::FindAnimation(const char* pszName) const
-{
-    if (_pZephyrAnimBank)
-    {
-        return _pZephyrAnimBank->Find(PblTEMPHash(pszName));
-    }
-    return 0;
 }
 
 // FUNCTION: SWBF2 0x006dd660

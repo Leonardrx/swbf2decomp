@@ -134,6 +134,8 @@ namespace StatsManager
 extern int m_state;
 }
 
+extern unsigned int sDefaultFont;
+
 namespace Lua_Callbacks
 {
 
@@ -2218,7 +2220,7 @@ int ScriptCB_AddIFText(lua_State* L)
         const char* pcName = luaL_checklstring(LuaHelper::mState, 1, 0);
         RedTextElement* pText = new RedTextElement(pcName);
         pText->Enable(true);
-        pText->SetFont(RedFont::GAMEFONT_SMALL);
+        pText->SetFont(::sDefaultFont);
         Util_AddToHierarchy(pText, pcName);
     }
     return 0;

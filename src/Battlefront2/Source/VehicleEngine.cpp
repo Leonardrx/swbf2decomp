@@ -44,7 +44,7 @@ PblListSingle VehicleEngineClass::Boost::sGlobalList;
 Snd::FreeList VehicleEngineClass::Boost::smFreeList((sizeof(Boost) + 15) & ~15u, 16, true, 8);
 
 // FUNCTION: SWBF2 0x0066cac0
-void VehicleEngineClass::Boost::operator delete(void* p)
+inline void VehicleEngineClass::Boost::operator delete(void* p)
 {
     smFreeList.Free(p);
 }

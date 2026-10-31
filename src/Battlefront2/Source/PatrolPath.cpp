@@ -14,6 +14,12 @@ AI::PatrolPath::PatrolPath()
     sList.Add((PblList<PatrolPath>::Node*)&mNode, this);
 }
 
+// FUNCTION: SWBF2 0x006156a0
+AI::PatrolPath::NodeProperties::NodeProperties()
+    : mWaitMin(0.0f), mWaitMax(0.0f)
+{
+}
+
 // FUNCTION: SWBF2 0x006156b0
 bool AI::PatrolPath::NodeProperties::ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
                                                        RedPath::PathObject object,

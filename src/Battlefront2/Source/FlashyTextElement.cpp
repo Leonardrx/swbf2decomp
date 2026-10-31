@@ -77,7 +77,8 @@ void FlashyTextElement::CommonConstructor()
 }
 
 // FUNCTION: SWBF2 0x005260a0
-void FlashyTextElement::SetBackgroundSize(char cOffsetX, char cOffsetY, char cExpandX, char cExpandY)
+void FlashyTextElement::SetBackgroundSize(unsigned char cOffsetX, unsigned char cOffsetY, unsigned char cExpandX,
+                                          unsigned char cExpandY)
 {
     mBGOffsetX = cOffsetX - 12;
     mBGOffsetY = cOffsetY;

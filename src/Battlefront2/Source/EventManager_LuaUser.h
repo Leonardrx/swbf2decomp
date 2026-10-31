@@ -16,8 +16,8 @@ struct LuaObject
 
     LuaObject(lua_State* L, int iIndex)
     {
-        lua_pushvalue(L, iIndex);
-        mRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        lua_pushvalue(LuaHelper::mState, iIndex);
+        mRef = luaL_ref(LuaHelper::mState, LUA_REGISTRYINDEX);
     }
 
     LuaObject(const LuaObject& other)

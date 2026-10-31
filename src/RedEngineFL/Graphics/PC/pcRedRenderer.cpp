@@ -64,13 +64,14 @@ public:
 
     pcRedVertexShaderConstantRegister* GetRegisterArray(int iFirst, int iCount)
     {
+        const int iLast = iFirst + iCount - 1;
         if (m_iMinConstantSet > iFirst)
         {
             m_iMinConstantSet = iFirst;
         }
-        if (m_iMaxConstantSet < iFirst + iCount - 1)
+        if (m_iMaxConstantSet < iLast)
         {
-            m_iMaxConstantSet = iFirst + iCount - 1;
+            m_iMaxConstantSet = iLast;
         }
         return m_Registers;
     }
@@ -5306,13 +5307,14 @@ inline float LightFlag1_(const RedLight* pLight) { return (float)(int)((pLight->
 
 static inline unsigned int ToD3DColor_(const RedColorValue& c)
 {
-    return ((unsigned int)(unsigned char)(int)(c.a * 255.0f) << 24) |
-           ((unsigned int)(unsigned char)(int)(c.r * 255.0f) << 16) |
-           ((unsigned int)(unsigned char)(int)(c.g * 255.0f) << 8) |
-           (unsigned int)(unsigned char)(int)(c.b * 255.0f);
+    const unsigned char b = (unsigned char)(int)(c.b * 255.0f);
+    const unsigned char g = (unsigned char)(int)(c.g * 255.0f);
+    const unsigned char r = (unsigned char)(int)(c.r * 255.0f);
+    const unsigned char a = (unsigned char)(int)(c.a * 255.0f);
+    return ((unsigned int)a << 24) | ((unsigned int)r << 16) | ((unsigned int)g << 8) | (unsigned int)b;
 }
 
-static float Saturate_(float f)
+static inline float Saturate_(float f)
 {
     if (f < 0.0f)
     {
@@ -5325,7 +5327,7 @@ static float Saturate_(float f)
     return f;
 }
 
-static void SetScaledLight_(unsigned int uiIndex, const D3DLIGHT9& rSource, float fScale,
+static inline void SetScaledLight_(unsigned int uiIndex, const D3DLIGHT9& rSource, float fScale,
                             bool bSaturate)
 {
     D3DLIGHT9 light = rSource;

@@ -15,8 +15,9 @@ public:
 
     PblAngle& operator-=(const PblAngle& a)
     {
+        float fCos = mSin * a.mSin + mCos * a.mCos;
         float fSin = mSin * a.mCos - mCos * a.mSin;
-        mCos = mSin * a.mSin + mCos * a.mCos;
+        mCos = fCos;
         mSin = fSin;
         return *this;
     }
@@ -33,15 +34,15 @@ public:
         float fLength2 = mCos * mCos + mSin * mSin;
         float fHalf = (3.0f - fLength2) * 0.5f;
         float fScale = (3.0f - fHalf * fLength2 * fHalf) * (fHalf * 0.5f);
-        mSin = fScale * mSin;
         mCos = fScale * mCos;
+        mSin = fScale * mSin;
     }
 
     PblAngle& operator+=(const PblAngle& a)
     {
-        float fCos = mCos * a.mCos - mSin * a.mSin;
-        mSin = mCos * a.mSin + mSin * a.mCos;
-        mCos = fCos;
+        float fSin = mCos * a.mSin + mSin * a.mCos;
+        mCos = mCos * a.mCos - mSin * a.mSin;
+        mSin = fSin;
         return *this;
     }
 

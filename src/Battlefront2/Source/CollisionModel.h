@@ -37,37 +37,37 @@ public:
     // FUNCTION: SWBF2 0x00462100
     void SetId(int id)
     {
-        if (id <= 31)
+        if (id > 31)
         {
-            mMask[0] |= 1u << id;
+            mMask[1] |= 1u << (id - 32);
         }
         else
         {
-            mMask[1] |= 1u << (id - 32);
+            mMask[0] |= 1u << id;
         }
     }
 
     // FUNCTION: SWBF2 0x00462170
     void ClearId(int id)
     {
-        if (id <= 31)
+        if (id > 31)
         {
-            mMask[0] &= ~(1u << id);
+            mMask[1] &= ~(1u << (id - 32));
         }
         else
         {
-            mMask[1] &= ~(1u << (id - 32));
+            mMask[0] &= ~(1u << id);
         }
     }
 
     // FUNCTION: SWBF2 0x00462130
     bool IsSet(int id) const
     {
-        if (id <= 31)
+        if (id > 31)
         {
-            return (mMask[0] & (1u << id)) != 0;
+            return (mMask[1] & (1u << (id - 32))) != 0;
         }
-        return (mMask[1] & (1u << (id - 32))) != 0;
+        return (mMask[0] & (1u << id)) != 0;
     }
 
     bool IsEmpty() const { return mMask[0] == 0 && mMask[1] == 0; }
