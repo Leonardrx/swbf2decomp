@@ -1183,7 +1183,11 @@ void UpdateDedicatedMsg(float fDeltaTime)
         {
             fY = fRangeY * 2.0f - fY;
         }
-        mDedicatedGroup.SetPosition(PblVector3(fX - fRangeX * 0.5f, fY - fRangeY * 0.5f - 10.0f, 0.0f));
+        PblVector3 vPosition;
+        vPosition.x = fX - fRangeX * 0.5f;
+        vPosition.y = fY - fRangeY * 0.5f - 10.0f;
+        vPosition.z = 0.0f;
+        mDedicatedGroup.SetPosition(vPosition);
 
         unsigned short acName[128];
         unsigned short acCount[128];
@@ -1216,7 +1220,8 @@ void UpdateDedicatedMsg(float fDeltaTime)
         PblUnicode::ustrlcat(acName, acCount, 128);
         mDedicatedTeam2Text.SetText(acName, true);
 
-        mDedicatedGroup.Visible(!PauseMenu::GetPaused(0));
+        // BEHAVIOUR FIX: Steam calls RedGroupElement::Enable here (call at the end of the function), not Visible.
+        mDedicatedGroup.Enable(!PauseMenu::GetPaused(0));
     }
     else
     {

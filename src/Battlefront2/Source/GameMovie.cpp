@@ -261,16 +261,16 @@ void EnableSceneAndInterface(bool bEnable)
         {
             if (g_InGameMovieSpawnDisplayActive[i])
             {
-                Character* pCharacter = Character::GetPtr(i);
+                Character* pCharacter = Character::FindPlayer(i);
                 SpawnDisplay::Instance(0)->Show(pCharacter);
                 g_InGameMovieSpawnDisplayActive[i] = false;
             }
         }
         else
         {
-            pSpawnDisplay = SpawnDisplay::Instance(0);
-            g_InGameMovieSpawnDisplayActive[i] = pSpawnDisplay->mMode == SpawnDisplay::eCHANGECLASS;
-            pSpawnDisplay->Hide(Character::GetPtr(i));
+            SpawnDisplay* pDisplay = SpawnDisplay::Instance(0);
+            g_InGameMovieSpawnDisplayActive[i] = pDisplay->mMode == SpawnDisplay::eCHANGECLASS;
+            pDisplay->Hide(Character::FindPlayer(i));
         }
     }
 }

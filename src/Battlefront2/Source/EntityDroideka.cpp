@@ -3903,11 +3903,10 @@ bool EntityDroideka::Update(float fDeltaTime)
 EntityDroideka::~EntityDroideka()
 {
     int iFirstPerson = -1;
-    if ((!NetGame::IsEnabled() || NetGame::IsClient() ||
-         (NetGame::IsHost() && NetGame::IsOneWorld() && !NetGame::IsDedicated())) &&
-        mPlayerId >= 0 && mTracker && mTracker->IsFirstPersonView())
+    if ((!NetGame::IsEnabled() || NetGame::IsClient()) &&
+        mInitialPlayerId >= 0 && mTracker && mTracker->IsFirstPersonView())
     {
-        iFirstPerson = NetGame::GetJoystickIndex(mPlayerId);
+        iFirstPerson = NetGame::GetJoystickIndex(mInitialPlayerId);
     }
     if (iFirstPerson >= 0)
     {
