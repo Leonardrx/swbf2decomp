@@ -153,7 +153,7 @@ void SunFlareEffect::Init()
     s_intensityTex = new RedTexture(2, 2, D3DFMT_A8R8G8B8, 1, D3DUSAGE_RENDERTARGET,
                                     D3DPOOL_DEFAULT, 0);
     s_pClearShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x203, 0, 0, 0x80000, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "Clear" */, 0x203, 0, 0, 0x80000, RedColor::WHITE, RedColor::BLACK, 32.0f);
 
     if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
     {
@@ -191,9 +191,8 @@ void SunFlareEffect::Init()
     else
     {
         s_samplePoints = pcRedPrimitive::Create(D3DPT_POINTLIST, 0x9282, 8, 256, 0, true);
-        const PblBox box(0.0f, 0.0f, 0.0f, 15.0f, 15.0f, 0.0f);
-        s_samplePoints->m_bbox = box;
-        CompressedPos::SetBoundingBox(box);
+        s_samplePoints->m_bbox = PblBox(0.0f, 0.0f, 0.0f, 15.0f, 15.0f, 0.0f);
+        CompressedPos::SetBoundingBox(PblBox(0.0f, 0.0f, 0.0f, 15.0f, 15.0f, 0.0f));
         CompressedPos* v = (CompressedPos*)s_samplePoints->BeginVertexData();
         if (!v)
         {

@@ -737,6 +737,7 @@ bool PathFinder::FindClosestObstacleIntersection(const PblVector3& rSrc, const P
     float fDY = test.mBoundCenter.y - test.mSrc.y;
     float fDZ = test.mBoundCenter.z - test.mSrc.z;
     test.mBoundRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
+    PblVector3 normal;
 
     *pDistSq = FLT_MAX;
     for (int i = 0; i < data.mLength; i++)
@@ -757,7 +758,6 @@ bool PathFinder::FindClosestObstacleIntersection(const PblVector3& rSrc, const P
         if (pObstacle->Prohibits(eProhibit))
         {
             float fDistSq = *pDistSq;
-            PblVector3 normal;
             if (pObstacle->IntersectionNewer(test, fRadius, &fDistSq, &normal, 0, 0))
             {
                 bHit = true;

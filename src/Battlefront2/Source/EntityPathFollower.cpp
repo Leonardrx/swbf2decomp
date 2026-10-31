@@ -295,22 +295,13 @@ bool EntityPathFollower::HeadTowards(PblVector3& vTarget, float fDistance, Branc
 {
     const GameObject* pIgnore = params.mGameObject;
     PblVector3 vPosition = params.mMatrix.GetTranslation();
-    PblVector3 vDelta = vTarget - vPosition;
-    PblVector3 vDir;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-    PblVector3 vEnd = vDir * fDistance + vPosition;
+    PblVector3 vEnd = Normalize(vTarget - vPosition) * fDistance + vPosition;
     if (!CollisionManager::RayTest(vPosition, vEnd, &pIgnore, 1, 0))
     {
         Reset(params.mPathClass);
         const PblVector3& vForward = params.mMatrix.GetZAxis();
         PblVector3 vBehind = vPosition - vForward * 30.0f;
-        PblVector3 vDelta2 = vTarget - vPosition;
-        PblVector3 vBeyond;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vBeyond), reinterpret_cast<const D3DXVECTOR3*>(&vDelta2));
-        float fBeyond = fDistance + 200.0f;
-        vBeyond.x = vBeyond.x * fBeyond + vPosition.x;
-        vBeyond.y = vBeyond.y * fBeyond + vPosition.y;
-        vBeyond.z = vBeyond.z * fBeyond + vPosition.z;
+        PblVector3 vBeyond = Normalize(vTarget - vPosition) * (fDistance + 200.0f) + vPosition;
         SetPoint(vBehind, 0);
         SetPoint(vPosition, 1);
         SetPoint(vEnd, 2);

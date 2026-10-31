@@ -80,12 +80,7 @@ ActiveRegion* __fastcall Activate(RedRegion* pRegion)
     {
         return pActive;
     }
-    void* pStorage = ActiveRegion::sMemoryPool.Allocate(sizeof(ActiveRegion));
-    if (!pStorage)
-    {
-        return 0;
-    }
-    return ::new (pStorage) ActiveRegion(*pRegion);
+    return ::new (ActiveRegion::sMemoryPool.Allocate(sizeof(ActiveRegion))) ActiveRegion(*pRegion);
 }
 
 // FUNCTION: SWBF2 0x00437bc0

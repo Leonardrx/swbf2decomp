@@ -261,32 +261,32 @@ void TriggerSoundRegion::Update(Team::Side eSide, float fRatio, const PblVector3
     for (PblListSingle::Node* pLink = sList.mHead.mNext; pLink != &sList.mHead;
          pLink = pLink->mNext)
     {
+        const PblVector3 vPos = *pPos;
         TriggerSoundRegion* pRegion =
             (TriggerSoundRegion*)((char*)pLink - offsetof(TriggerSoundRegion, mNode));
-        const PblVector3 vPos = *pPos;
-        if (!pRegion->IsPointInside(vPos))
+        if (pRegion->IsPointInside(vPos))
         {
-            continue;
-        }
-
-        const GameSound* pSound = pRegion->mProperties->GetSound(eSide, fRatio);
-        if (!pSound)
-        {
-            continue;
-        }
-
-        if (pSound->GetPropertiesType() == GameSound::type_soundStream)
-        {
-            const Snd::SoundStream::Properties* pProps =
-                (const Snd::SoundStream::Properties*)pSound->GetProperties();
-            Snd::Stream* pStream = Snd::EngineBase::GetOpenStream(pProps->mStreamID);
-            if (!pStream || pStream->GetPlayState() == Snd::SourceTransport::playState_playing)
+            const GameSound* pSound = pRegion->mProperties->GetSound(eSide, fRatio);
+            if (pSound)
             {
-                continue;
+                const PblVector3* pRegionPos = &pRegion->mMatrix.GetTranslation();
+                bool bPlay = true;
+                if (pSound->GetPropertiesType() == GameSound::type_soundStream)
+                {
+                    const Snd::SoundStream::Properties* pProps =
+                        (const Snd::SoundStream::Properties*)pSound->GetProperties();
+                    Snd::Stream* pStream = Snd::EngineBase::GetOpenStream(pProps->mStreamID);
+                    if (!pStream || pStream->GetPlayState() == Snd::SourceTransport::playState_playing)
+                    {
+                        bPlay = false;
+                    }
+                }
+                if (bPlay)
+                {
+                    pSound->Play(pRegionPos, 0, false, true);
+                }
             }
         }
-
-        pSound->Play(&pRegion->mMatrix.GetTranslation(), 0, false, true);
     }
 }
 

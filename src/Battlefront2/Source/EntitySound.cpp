@@ -301,13 +301,13 @@ void SoundSpaceRegion::DestroyAll()
     for (unsigned int i = 0; i < uCount; ++i)
     {
         PblListSingle::Node* pNode = Snd::Space::smSpaceList.mHead.mNext;
-        if (pNode == &Snd::Space::smSpaceList.mHead)
+        if (Snd::Space::smSpaceList.IsEmpty())
         {
             pNode = 0;
         }
         else
         {
-            for (unsigned int uIndex = i; uIndex; --uIndex)
+            for (unsigned int uStep = 0; uStep < i; ++uStep)
             {
                 pNode = pNode->mNext;
             }

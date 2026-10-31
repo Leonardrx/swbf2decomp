@@ -2432,8 +2432,8 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
     char* pcVersion = 0;
     bool bLocked = false;
     float fPing = 9.999f;
-    int iNumPlayers = 0;
     int iServerType = 0;
+    int iNumPlayers = 0;
     int iMaxPlayers;
     bool bPassword;
     int iSortPos;
@@ -2441,29 +2441,13 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
     bool bFavorite;
 
     findGame->SelectFirst();
-    int iSession;
-    for (iSession = 0; iSession < lastSessionCount; ++iSession)
+    for (int iSession = 0; iSession < lastSessionCount; ++iSession)
     {
-        if (iSession == findGame->GetSelectedSession())
+        if (iSession != findGame->GetSelectedSession())
         {
-            break;
+            findGame->Select(1);
+            continue;
         }
-        findGame->Select(1);
-    }
-
-    if (iSession >= lastSessionCount)
-    {
-        lua_newtable(LuaHelper::mState);
-        lua_pushstring(LuaHelper::mState, "mpsessionlist_serverinfo_contents");
-        lua_insert(LuaHelper::mState, -2);
-        lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
-        lua_newtable(LuaHelper::mState);
-        lua_pushstring(LuaHelper::mState, "mpsessionlist_playerlist_contents");
-        lua_insert(LuaHelper::mState, -2);
-        lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
-    }
-    else
-    {
         findGame->GetInfo(pcName, pcMission, iNumPlayers, iMaxPlayers, bPassword, fPing,
                           iServerType, iSortPos, bLocked, bRightVersion, pcVersion, bFavorite);
 
@@ -2491,7 +2475,8 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
             lua_rawseti(LuaHelper::mState, -2, 1);
 
             lua_newtable(LuaHelper::mState);
-            PblUnicode::ustrlcpy(ausText, RedLocalizeDB::Find(0x145D8471, false), 256);
+            const unsigned short* pusMode = RedLocalizeDB::Find(0x145D8471, false);
+            PblUnicode::ustrlcpy(ausText, pusMode, 256);
             PblUnicode::ustrncnv(ausArg, " ", 256);
             PblUnicode::ustrlcat(ausText, ausArg, 256);
             const char* pcModeName = "modename.name.con";
@@ -2526,7 +2511,8 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
                     }
                 }
             }
-            PblUnicode::ustrlcat(ausText, RedLocalizeDB::Find(PblHash(pcModeName), false), 256);
+            const unsigned short* pusModeName = RedLocalizeDB::Find(PblHash(pcModeName), false);
+            PblUnicode::ustrlcat(ausText, pusModeName, 256);
             LuaHelper::TableWriteVal("text", ausText);
             lua_rawseti(LuaHelper::mState, -2, 2);
 
@@ -2547,12 +2533,26 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
             lua_rawseti(LuaHelper::mState, -2, 4);
 
             lua_newtable(LuaHelper::mState);
-            LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(rules.mAutoTeams ? 0x71A886D8 : 0x76A9F05A, false));
+            if (rules.mAutoTeams)
+            {
+                LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(0x71A886D8, false));
+            }
+            else
+            {
+                LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(0x76A9F05A, false));
+            }
             lua_rawseti(LuaHelper::mState, -2, 5);
 
             lua_newtable(LuaHelper::mState);
             pusFormat = RedLocalizeDB::Find(0x99C3E5C6, false);
-            PblUnicode::usnprintf(ausText, 256, pusFormat, rules.mTeamDamage ? pusOn : pusOff);
+            if (rules.mTeamDamage)
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOn);
+            }
+            else
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOff);
+            }
             LuaHelper::TableWriteVal("text", ausText);
             lua_rawseti(LuaHelper::mState, -2, 6);
 
@@ -2575,12 +2575,26 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
 
             lua_newtable(LuaHelper::mState);
             pusFormat = RedLocalizeDB::Find(0x9F493F0F, false);
-            PblUnicode::usnprintf(ausText, 256, pusFormat, rules.mShowPlayerNames ? pusOn : pusOff);
+            if (rules.mShowPlayerNames)
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOn);
+            }
+            else
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOff);
+            }
             LuaHelper::TableWriteVal("text", ausText);
             lua_rawseti(LuaHelper::mState, -2, 8);
 
             lua_newtable(LuaHelper::mState);
-            LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(rules.mHeroes ? 0x46AEBA83 : 0x8777BA60, false));
+            if (rules.mHeroes)
+            {
+                LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(0x46AEBA83, false));
+            }
+            else
+            {
+                LuaHelper::TableWriteVal("text", RedLocalizeDB::Find(0x8777BA60, false));
+            }
             lua_rawseti(LuaHelper::mState, -2, 9);
 
             lua_newtable(LuaHelper::mState);
@@ -2593,7 +2607,14 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
 
             lua_newtable(LuaHelper::mState);
             pusFormat = RedLocalizeDB::Find(0xE4C8D8B5, false);
-            PblUnicode::usnprintf(ausText, 256, pusFormat, bLocked ? pusOn : pusOff);
+            if (bLocked)
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOn);
+            }
+            else
+            {
+                PblUnicode::usnprintf(ausText, 256, pusFormat, pusOff);
+            }
             LuaHelper::TableWriteVal("text", ausText);
             lua_rawseti(LuaHelper::mState, -2, 11);
 
@@ -2630,7 +2651,18 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
         lua_pushstring(LuaHelper::mState, "mpsessionlist_playerlist_contents");
         lua_insert(LuaHelper::mState, -2);
         lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
+        LuaHelper::CallTableProcWThis("ifs_mp_sessionlist", "RepaintExtraInfo");
+        return 0;
     }
+
+    lua_newtable(LuaHelper::mState);
+    lua_pushstring(LuaHelper::mState, "mpsessionlist_serverinfo_contents");
+    lua_insert(LuaHelper::mState, -2);
+    lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
+    lua_newtable(LuaHelper::mState);
+    lua_pushstring(LuaHelper::mState, "mpsessionlist_playerlist_contents");
+    lua_insert(LuaHelper::mState, -2);
+    lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
     LuaHelper::CallTableProcWThis("ifs_mp_sessionlist", "RepaintExtraInfo");
     return 0;
 }

@@ -168,30 +168,29 @@ void DustEffectRenderData::AddParticle(const PblVector3& vPos, float fSize, cons
     }
     else
     {
-        DustVertex*& v = (DustVertex*&)m_pVertices;
-        v->pos = pos;
-        v->color = color;
-        v->u = 1.0f;
-        v->v = 0.0f;
-        ++v;
+        ((DustVertex*)m_pVertices)->pos = pos;
+        ((DustVertex*)m_pVertices)->color = color;
+        ((DustVertex*)m_pVertices)->u = 1.0f;
+        ((DustVertex*)m_pVertices)->v = 0.0f;
+        m_pVertices = (DustVertex*)m_pVertices + 1;
 
-        v->pos = pos + right;
-        v->color = color;
-        v->u = 1.0f;
-        v->v = 1.0f;
-        ++v;
+        ((DustVertex*)m_pVertices)->pos = pos + right;
+        ((DustVertex*)m_pVertices)->color = color;
+        ((DustVertex*)m_pVertices)->u = 1.0f;
+        ((DustVertex*)m_pVertices)->v = 1.0f;
+        m_pVertices = (DustVertex*)m_pVertices + 1;
 
-        v->pos = (pos + up) + right;
-        v->color = color;
-        v->u = 0.0f;
-        v->v = 1.0f;
-        ++v;
+        ((DustVertex*)m_pVertices)->pos = (pos + up) + right;
+        ((DustVertex*)m_pVertices)->color = color;
+        ((DustVertex*)m_pVertices)->u = 0.0f;
+        ((DustVertex*)m_pVertices)->v = 1.0f;
+        m_pVertices = (DustVertex*)m_pVertices + 1;
 
-        v->pos = pos + up;
-        v->color = color;
-        v->u = 0.0f;
-        v->v = 0.0f;
-        ++v;
+        ((DustVertex*)m_pVertices)->pos = pos + up;
+        ((DustVertex*)m_pVertices)->color = color;
+        ((DustVertex*)m_pVertices)->u = 0.0f;
+        ((DustVertex*)m_pVertices)->v = 0.0f;
+        m_pVertices = (DustVertex*)m_pVertices + 1;
     }
 }
 

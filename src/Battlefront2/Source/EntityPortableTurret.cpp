@@ -214,7 +214,7 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
     if (pOther->GetCollisionType() != COLL_SOFT && pOther->GetCollisionType() != COLL_RIGID)
     {
         const PblVector3& vNormal = pResult->mSeparationNormal;
-        float fDot = DotProduct(mVelocity, vNormal);
+        float fDot = vNormal.x * mVelocity.x + mVelocity.y * vNormal.y + mVelocity.z * vNormal.z;
         if (fDot < 0.0f)
         {
             if (pOther->GetCollisionType() == COLL_WATER)
@@ -238,8 +238,8 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
                 float fRebound = mClass->mRebound;
                 float fFriction = mClass->mFriction * fDot * (fRebound + 1.0f);
                 mVelocity -= vNormal * fDot;
-                float fScale = -(fFriction / sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                                   mVelocity.z * mVelocity.z));
+                float fScale = -(fFriction / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                                                           mVelocity.z * mVelocity.z));
                 if (!(1.0f > fScale))
                 {
                     fScale = 1.0f;

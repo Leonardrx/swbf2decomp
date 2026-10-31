@@ -233,13 +233,11 @@ bool FlagItem::IsInLandingZone() const
     TriggerRegionManager* pManager = TriggerRegionManager::sInstance;
     if (pManager->mLandingRegionsExist)
     {
-        const CollisionObject& collision = static_cast<const CollisionObject&>(
-            *reinterpret_cast<const GameObject*>(this));
         for (int i = 0; i < 32; ++i)
         {
             TriggerRegionManager::TriggerRegionData* pData = pManager->GetTriggerRegionData(i);
             if (pData && pData->mType == TriggerRegionManager::TRIGGER_LANDING &&
-                pData->mRegion->IsPointInside(*(const PblVector3*)collision.GetMatrix().m[3]))
+                pData->mRegion->IsPointInside(GetMatrix().GetTranslation()))
             {
                 return true;
             }

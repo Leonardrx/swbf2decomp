@@ -861,7 +861,7 @@ void VoiceChat::Node::SendAudioPacketPeerRelay(const AudioPacket* const packet, 
         const bool last = index == numNodes - 1;
         const bool receive = incoming ? VoiceChat::Node::sReadHeader.GetReceiveNode((*VoiceChat::Node::sTransport), node)
                                       : VoiceChat::Node::sTransport->GetSendPossible(first, node);
-        bool handle = last;
+        bool handle;
         if (receive)
         {
             if (selected == 0xff)
@@ -873,13 +873,18 @@ void VoiceChat::Node::SendAudioPacketPeerRelay(const AudioPacket* const packet, 
                 }
                 selected = node;
                 grouped = 0;
+                handle = last;
             }
             else
             {
                 handle = true;
             }
         }
-        if (handle && selected != 0xff)
+        else
+        {
+            handle = last && selected != 0xff;
+        }
+        if (handle)
         {
             VoiceChat::Node::sWriteHeader.SetReceiveNode((*VoiceChat::Node::sTransport), node, receive);
             if (++grouped == maxRelayNodes || last)

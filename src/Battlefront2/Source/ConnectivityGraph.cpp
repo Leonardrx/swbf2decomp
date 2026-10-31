@@ -182,9 +182,8 @@ bool ConnectivityArc::IsPointInside(const PblVector3& v) const
 float ConnectivityArc::GetDistFrom(const PblVector3& v) const
 {
     const PblVector3 vA = n1->GetCenter();
-    const PblVector3 vAB(n2->x - vA.x, n2->y - vA.y, n2->z - vA.z);
-    const float fT = ((v.x - vA.x) * vAB.x + (v.y - vA.y) * vAB.y + (v.z - vA.z) * vAB.z)
-                     / (vAB.x * vAB.x + vAB.y * vAB.y + vAB.z * vAB.z);
+    const PblVector3 vAB = n2->GetCenter() - n1->GetCenter();
+    const float fT = DotProduct(v - vA, vAB) / DotProduct(vAB, vAB);
     if (fT >= 0.0f && fT <= 1.0f)
     {
         const float fRadius = (1.0f - fT) * n1->w + n2->w * fT;
@@ -745,17 +744,17 @@ const ConnectivityNode* ConnectivityGraph::GetRandomAccessibleNode(const UnitCon
     {
         return 0;
     }
+    const PblVector3& vPos = pCtrl->mOwner->GetMatrix().GetTranslation();
     float fBest = FLT_MAX;
     const ConnectivityNode* pNearest = 0;
-    const PblVector3& vPos = pCtrl->mOwner->GetMatrix().GetTranslation();
     for (int i = 0; i < mMaxNodes; ++i)
     {
-        const ConnectivityNode* pNode = &mNodes[i];
-        if (eType & pNode->mAllowTypes)
+        if (mNodes[i].mAllowTypes & eType)
         {
-            float fDist = PblMath::Sqrt((vPos.x - pNode->x) * (vPos.x - pNode->x)
-                                + (vPos.z - pNode->z) * (vPos.z - pNode->z))
-                          - pNode->w;
+            const ConnectivityNode& node = mNodes[i];
+            float fDist = PblMath::Sqrt((vPos.x - node.x) * (vPos.x - node.x)
+                                + (vPos.z - node.z) * (vPos.z - node.z))
+                          - node.w;
             if (fDist < 0.0f)
             {
                 fDist = 0.0f;
@@ -763,7 +762,7 @@ const ConnectivityNode* ConnectivityGraph::GetRandomAccessibleNode(const UnitCon
             if (fBest > fDist)
             {
                 fBest = fDist;
-                pNearest = pNode;
+                pNearest = &node;
             }
         }
     }

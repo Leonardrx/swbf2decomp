@@ -3303,10 +3303,10 @@ int MoveCameraToEntity(lua_State* L)
     if (pEntity)
     {
         PblMatrix matrix = pEntity->GetMatrix();
-        matrix.m[0][3] = 0.0f;
-        matrix.m[2][3] = 0.0f;
         *(PblVector3*)&matrix.m[0][0] = PblVector3(-matrix.m[0][0], -matrix.m[0][1], -matrix.m[0][2]);
         *(PblVector3*)&matrix.m[2][0] = PblVector3(-matrix.m[2][0], -matrix.m[2][1], -matrix.m[2][2]);
+        matrix.m[0][3] = 0.0f;
+        matrix.m[2][3] = 0.0f;
         CameraManager::sInstance->mCurGameCamera[0]->SetMatrix(matrix);
     }
     return 0;
@@ -3593,7 +3593,8 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vUnit));
             float fRadius = PblRandom::GetSim().GetFloat() * pRegion->mSize.w;
-            vPosition = pRegion->mMatrix.GetTranslation() + vDir * fRadius;
+            vPosition = vDir * fRadius;
+            vPosition += pRegion->mMatrix.GetTranslation();
             break;
         }
         case PblRegion::type_box:

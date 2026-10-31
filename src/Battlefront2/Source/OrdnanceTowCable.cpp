@@ -706,8 +706,7 @@ void TowCableRenderObject::AddAttachPoint(int iBodyID, const PblVector3& vOffset
     point.mSlopeOut = vSlope;
     point.mFinalSlope = vSlope;
     point.mFinalSlope.y = 0.0f;
-    float fLength = PblMath::Sqrt(point.mFinalSlope.x * point.mFinalSlope.x + point.mFinalSlope.y * point.mFinalSlope.y +
-                          point.mFinalSlope.z * point.mFinalSlope.z);
+    float fLength = Length(point.mFinalSlope);
     if (fLength > 0.0f)
     {
         float fScale = 10.0f / fLength;

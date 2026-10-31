@@ -148,38 +148,40 @@ int UnitWaitSecondaryAgent::EventHandler(AI::EventInfo* pInfo)
         return AI::EVT_NotHandled;
 
     case AI::EVT_Grenade:
-        if (mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
+        if (!mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
-            TakeoffNow();
-            return AI::EVT_NotHandled;
+            return UnitAgent::EventHandler(pInfo);
         }
-        break;
+        TakeoffNow();
+        return AI::EVT_NotHandled;
 
     case AI::EVT_Damaged:
-        if (mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
+        if (!mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
-            TakeoffNow();
-            PlayDamageEventVO(pInfo);
-            return AI::EVT_NotHandled;
+            return UnitAgent::EventHandler(pInfo);
         }
-        break;
+        TakeoffNow();
+        PlayDamageEventVO(pInfo);
+        return AI::EVT_NotHandled;
 
     case AI::EVT_Vision_CanSeeEnemy:
-        if (mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
+        if (!mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
-            return AI::EVT_NotHandled;
+            return UnitAgent::EventHandler(pInfo);
         }
-        break;
+        return AI::EVT_NotHandled;
 
     case AI::EVT_Audible_CanHearEnemy:
-        if (mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
+        if (!mCtrl->mOwner->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
-            TakeoffNow();
-            return AI::EVT_Handled;
+            return UnitAgent::EventHandler(pInfo);
         }
-        break;
+        TakeoffNow();
+        return AI::EVT_Handled;
+
+    default:
+        return UnitAgent::EventHandler(pInfo);
     }
-    return UnitAgent::EventHandler(pInfo);
 }
 
 // FUNCTION: SWBF2 0x0066bbb0

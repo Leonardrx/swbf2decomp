@@ -244,21 +244,21 @@ void EntityMine::ClientKill()
                 GetPosition(), owner, false, COLL_UNKNOWN);
         }
     }
-    else if (IsAlive())
-    {
-        if (static_cast<EntityMineClass*>(mClass)->mExplosionTrigger)
-        {
-            DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
-            static_cast<EntityMineClass*>(mClass)->mExplosionTrigger->CreateExplosion(
-                GetPosition(), owner, false, COLL_UNKNOWN);
-        }
-    }
-    else
+    else if (!IsAlive())
     {
         if (static_cast<EntityMineClass*>(mClass)->mExplosionDeath)
         {
             DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
             static_cast<EntityMineClass*>(mClass)->mExplosionDeath->CreateExplosion(
+                GetPosition(), owner, false, COLL_UNKNOWN);
+        }
+    }
+    else
+    {
+        if (static_cast<EntityMineClass*>(mClass)->mExplosionTrigger)
+        {
+            DamageOwner owner(mOwner, reinterpret_cast<GameObject*>(this), mTeam, mClass, 0, 1.0f);
+            static_cast<EntityMineClass*>(mClass)->mExplosionTrigger->CreateExplosion(
                 GetPosition(), owner, false, COLL_UNKNOWN);
         }
     }
@@ -470,14 +470,14 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
     }
 
     const bool bResult = CollisionObject::CollisionCallback(pResult, pOther, pRestrictor);
-    EntityMineClass* pClass = static_cast<EntityMineClass*>(mClass);
     const CollisionObjectType eType = pOther->GetCollisionType();
     if (eType == COLL_WATER)
     {
         if (!mHitSurface)
         {
             mHitSurface = 1;
-            pClass->mCollisionWaterSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            static_cast<EntityMineClass*>(mClass)->mCollisionWaterSound.Play(
+                (const PblVector3*)mMatrix.m[3], 0, false, true);
         }
         mVelocity = PblVector3(0.0f, -0.2f, 0.0f);
         return false;
@@ -487,26 +487,26 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
         if (!mHitSurface)
         {
             mHitSurface = 1;
-            pClass->mCollisionFoliageSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            static_cast<EntityMineClass*>(mClass)->mCollisionFoliageSound.Play(
+                (const PblVector3*)mMatrix.m[3], 0, false, true);
         }
         return false;
     }
 
-    if (mLifeTimer > pClass->mLifeSpan - 0.5f && mOwner && pOther->GetGameObject() &&
+    if (mLifeTimer > static_cast<EntityMineClass*>(mClass)->mLifeSpan - 0.5f && mOwner && pOther->GetGameObject() &&
         pOther->GetGameObject()->GetControllable() &&
         pOther->GetGameObject()->GetControllable()->mCharacter == mOwner)
     {
         return bResult;
     }
 
-    if ((!pOther->GetGameObject() || pOther->GetGameObject()->mHealthType >= HEALTH_TYPE_VEHICLE) &&
+    if ((!pOther->GetGameObject() || (HealthType)pOther->GetGameObject()->mHealthType >= HEALTH_TYPE_VEHICLE) &&
         StickInfo::sMemoryPool.mUsed < StickInfo::sMemoryPool.mCount)
     {
         CollisionModel* pModel = pOther->mCollisionModel;
         PblVector3 vNormal = pResult->mSeparationNormal;
-        PblVector3 vDown(-vNormal.x, -vNormal.y, -vNormal.z);
-        PblVector3 vStart(mMatrix.m[3][0] + vNormal.x * 0.5f, mMatrix.m[3][1] + vNormal.y * 0.5f,
-                          mMatrix.m[3][2] + vNormal.z * 0.5f);
+        PblVector3 vDown = -vNormal;
+        PblVector3 vStart = mMatrix.GetTranslation() + vNormal * 0.5f;
         pOther->RayHit(vStart, vDown, 1.0f, &vNormal, 0, true, 0.0f);
         PblMatrix mStick = NormalMatrix(mMatrix.GetZAxis(), vNormal,
                                       mMatrix.GetTranslation());
@@ -517,15 +517,14 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
         if (pModel)
         {
             PblMatrix mBody = pModel->GetWorldMatrix(pResult->mReceiverId, pOther->GetMatrix(), pOther->GetPose());
-            const PblMatrix mInverse = mBody.GetInverseFast();
-            mStick *= mInverse;
+            mStick *= mBody.GetInverseFast();
             mStickInfo->mCollBodyID = pResult->mReceiverId;
         }
         else
         {
             mStickInfo->mCollBodyID = -1;
         }
-        mStickInfo->mLocalPosition = PblVector3(mStick.m[3][0], mStick.m[3][1], mStick.m[3][2]);
+        mStickInfo->mLocalPosition = mStick.GetTranslation();
         mStickInfo->mLocalRotation = PblQuaternion(mStick);
 
         mParent = pOther;
@@ -536,7 +535,8 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
             mHitSurface = 1;
             FoleyFXCollider::CollisionCallback(pOther->GetCollisionType(), pOther, &GetPosition());
             PlayImpactEffects((const PblVector3*)mMatrix.m[3], &mVelocity);
-            pClass->mCollisionSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            static_cast<EntityMineClass*>(mClass)->mCollisionSound.Play(
+                (const PblVector3*)mMatrix.m[3], 0, false, true);
         }
         mStationary = true;
         ItemTimerDisplay::RemoveItemTimer(this);
@@ -548,17 +548,15 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
     const float fDot = mVelocity.x * vNormal.x + vNormal.y * mVelocity.y + vNormal.z * mVelocity.z;
     if (fDot < 0.0f)
     {
-        const float fRebound = pClass->mRebound;
-        const float fFriction = pClass->mFriction * fDot * (fRebound + 1.0f);
+        const float fRebound = static_cast<EntityMineClass*>(mClass)->mRebound;
+        const float fFriction = static_cast<EntityMineClass*>(mClass)->mFriction * fDot * (fRebound + 1.0f);
         mVelocity -= vNormal * fDot;
         float fScale = -(fFriction / Length(mVelocity));
         if (!(1.0f > fScale))
         {
             fScale = 1.0f;
         }
-        mVelocity.x -= fScale * mVelocity.x;
-        mVelocity.y -= mVelocity.y * fScale;
-        mVelocity.z -= mVelocity.z * fScale;
+        mVelocity -= mVelocity * fScale;
         const float fBounce = fRebound * fDot;
         mVelocity -= vNormal * fBounce;
         if (!mHitSurface)
@@ -566,7 +564,8 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
             mHitSurface = 1;
             FoleyFXCollider::CollisionCallback(pOther->GetCollisionType(), pOther, &GetPosition());
             PlayImpactEffects((const PblVector3*)mMatrix.m[3], &mVelocity);
-            pClass->mCollisionSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            static_cast<EntityMineClass*>(mClass)->mCollisionSound.Play(
+                (const PblVector3*)mMatrix.m[3], 0, false, true);
         }
     }
     return bResult;

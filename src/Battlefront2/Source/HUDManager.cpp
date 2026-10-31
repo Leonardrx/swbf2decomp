@@ -431,29 +431,30 @@ void HUD::Manager::Load(PblFileChunk& chunk)
 
     unsigned int uNumViews = CameraManager::Instance()->m_iNumCam;
     HUD::Element::SetupViewportDimensions(uNumViews, false);
-    for (unsigned int i = 0; i < uNumViews; ++i)
+    unsigned int uGroup = 1;
+    for (unsigned int i = 0; i < uNumViews; ++i, ++uGroup)
     {
-        if (!HUD::gScreenGroup[i + 1].GetGroup())
+        if (!HUD::gScreenGroup[uGroup].GetGroup())
         {
-            HUD::gScreenGroup[i + 1].SetZOrder(50);
-            HUD::gScreenGroup[i + 1].m_fScreenRelativeX = 0.0f;
-            HUD::gScreenGroup[i + 1].m_fScreenRelativeY = 0.0f;
-            HUD::gScreenGroup[i + 1].Enable(true);
-            HUD::gScreenGroup[i + 1].SetUseSafezone(false);
-            HUD::gScreenGroup[i + 1].m_bUsePerspectiveHack = true;
-            AdjustScreenGroupAspect(&HUD::gScreenGroup[i + 1]);
-            FLRenderer::AddInterfaceElement(i, &HUD::gScreenGroup[i + 1], RedInterfaceScreen::LEFT,
+            HUD::gScreenGroup[uGroup].SetZOrder(50);
+            HUD::gScreenGroup[uGroup].m_fScreenRelativeX = 0.0f;
+            HUD::gScreenGroup[uGroup].m_fScreenRelativeY = 0.0f;
+            HUD::gScreenGroup[uGroup].Enable(true);
+            HUD::gScreenGroup[uGroup].SetUseSafezone(false);
+            HUD::gScreenGroup[uGroup].m_bUsePerspectiveHack = true;
+            AdjustScreenGroupAspect(&HUD::gScreenGroup[uGroup]);
+            FLRenderer::AddInterfaceElement(i, &HUD::gScreenGroup[uGroup], RedInterfaceScreen::LEFT,
                                             RedInterfaceScreen::TOP, false);
         }
-        if (!HUD::gScreenGroupEdit[i + 1].GetGroup())
+        if (!HUD::gScreenGroupEdit[uGroup].GetGroup())
         {
-            HUD::gScreenGroupEdit[i + 1].SetZOrder(50);
-            HUD::gScreenGroupEdit[i + 1].m_fScreenRelativeX = 0.0f;
-            HUD::gScreenGroupEdit[i + 1].m_fScreenRelativeY = 0.0f;
-            HUD::gScreenGroupEdit[i + 1].Enable(HUD::gScreenGroupEditEnabled);
-            HUD::gScreenGroupEdit[i + 1].SetUseSafezone(false);
-            HUD::gScreenGroupEdit[i + 1].m_bUsePerspectiveHack = true;
-            FLRenderer::AddInterfaceElement(i, &HUD::gScreenGroupEdit[i + 1], RedInterfaceScreen::LEFT,
+            HUD::gScreenGroupEdit[uGroup].SetZOrder(50);
+            HUD::gScreenGroupEdit[uGroup].m_fScreenRelativeX = 0.0f;
+            HUD::gScreenGroupEdit[uGroup].m_fScreenRelativeY = 0.0f;
+            HUD::gScreenGroupEdit[uGroup].Enable(HUD::gScreenGroupEditEnabled);
+            HUD::gScreenGroupEdit[uGroup].SetUseSafezone(false);
+            HUD::gScreenGroupEdit[uGroup].m_bUsePerspectiveHack = true;
+            FLRenderer::AddInterfaceElement(i, &HUD::gScreenGroupEdit[uGroup], RedInterfaceScreen::LEFT,
                                             RedInterfaceScreen::TOP, false);
         }
     }

@@ -483,27 +483,32 @@ bool EntityItem::CollisionCallback(const CollisionResult* pResult, CollisionObje
     if (pOther->GetCollisionType() != COLL_SOFT && pOther->GetCollisionType() != COLL_RIGID)
     {
         const PblVector3& vNormal = pResult->mSeparationNormal;
-        float fDot = vNormal.x * mVelocity.x + mVelocity.y * vNormal.y + mVelocity.z * vNormal.z;
+        float fDot = DotProduct(mVelocity, vNormal);
         if (fDot < 0.0f)
         {
-            (pOther->GetCollisionType() == COLL_WATER ? mClass->mCollisionWaterSound
-                                                      : mClass->mCollisionSound)
-                .Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            if (pOther->GetCollisionType() == COLL_WATER)
+            {
+                mClass->mCollisionWaterSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            }
+            else
+            {
+                mClass->mCollisionSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            }
             if (fDot > -1.0f)
             {
                 mMatrix = NormalMatrix(mMatrix.GetZAxis(), vNormal,
                                      mMatrix.GetTranslation());
                 mVelocity = gVectorZero;
                 mStationary = true;
-                CollisionManager::DeactivateItem(EntityGeometry::GetCollisionObject());
+                CollisionManager::DeactivateItem(this);
             }
             else
             {
                 float fRebound = mClass->mRebound;
                 float fFriction = mClass->mFriction * fDot * (fRebound + 1.0f);
                 mVelocity -= vNormal * fDot;
-                float fScale = -(fFriction / sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                                   mVelocity.z * mVelocity.z));
+                float fScale = -(fFriction / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                                                           mVelocity.z * mVelocity.z));
                 if (!(1.0f > fScale))
                 {
                     fScale = 1.0f;

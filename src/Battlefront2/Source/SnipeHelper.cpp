@@ -45,7 +45,7 @@ namespace TeamManager
                                   AI::AIAffil eAffil);
 }
 
-static const float FOV_ANGLE = 2.70526028f;
+static float FOV_ANGLE = 2.70526028f;
 
 namespace
 {

@@ -125,9 +125,7 @@ EntityWalkerClass::EntityWalkerClass(unsigned int uHash)
     mLODClass = 1;
     mHoldForPlayer = true;
 
-    mAnimObj[0] = 0;
-    mAnimObj[1] = 0;
-    mAnimObj[2] = 0;
+    memset(mAnimObj, 0, sizeof(mAnimObj));
     mNumAnimObjs = 0;
 
     sCurrentSection = -1;
@@ -1732,12 +1730,8 @@ EntityWalker::EntityWalker(EntityWalkerClass* pClass, const EntityDesc& desc)
     mAnimObj = mClass->mAnimObj[0];
     AddToScene();
 
-    mVelocity.x = 0.0f;
-    mVelocity.y = 0.0f;
-    mVelocity.z = 0.0f;
-    mVelocityNoGrav.x = 0.0f;
-    mVelocityNoGrav.y = 0.0f;
-    mVelocityNoGrav.z = 0.0f;
+    mVelocity.SetAll(0.0f);
+    mVelocityNoGrav.SetAll(0.0f);
     memset(mAimer, 0, sizeof(mAimer));
     memset(mWeapon, 0, sizeof(mWeapon));
 
@@ -1758,22 +1752,21 @@ EntityWalker::EntityWalker(EntityWalkerClass* pClass, const EntityDesc& desc)
         weaponDesc.m_pEnergyBar = 0;
         weaponDesc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
         weaponDesc.mReload = &mControlReload;
-        const WeaponAmmoDesc& ammo = mClass->mWeaponAmmo[i];
-        if (ammo.bFlagShareAmmo)
+        if (mClass->mWeaponAmmo[i].bFlagShareAmmo)
         {
-            weaponDesc.m_pAmmoCounter = mWeapon[ammo.uiAmmo]->m_pAmmoCounter;
+            weaponDesc.m_pAmmoCounter = mWeapon[mClass->mWeaponAmmo[i].uiAmmo]->m_pAmmoCounter;
         }
-        else if (ammo.bFlagAmmoInfinite)
+        else if (mClass->mWeaponAmmo[i].bFlagAmmoInfinite)
         {
             weaponDesc.mNumClips = 0x7fffffff;
         }
         else
         {
-            weaponDesc.mNumClips = ammo.uiAmmo;
+            weaponDesc.mNumClips = mClass->mWeaponAmmo[i].uiAmmo;
         }
-        if (ammo.bFlagShareHeat)
+        if (mClass->mWeaponAmmo[i].bFlagShareHeat)
         {
-            weaponDesc.m_pEnergyBar = mWeapon[ammo.uiHeat]->m_pEnergyBar;
+            weaponDesc.m_pEnergyBar = mWeapon[mClass->mWeaponAmmo[i].uiHeat]->m_pEnergyBar;
         }
         mWeapon[i] = mClass->mWeaponClass[i]->Build(weaponDesc);
     }
@@ -1836,15 +1829,13 @@ EntityWalker::EntityWalker(EntityWalkerClass* pClass, const EntityDesc& desc)
         mMinFootHeight[i] = FLT_MAX;
     }
     mWaterDamageTimer = mClass->mWaterDamageInterval;
-    mPrevAimerPos.x = -66.6f;
-    mPrevAimerPos.y = 66.6f;
-    mPrevAimerPos.z = -66.6f;
+    mPrevAimerPos = PblVector3(-66.6f, 66.6f, -66.6f);
     mIsStopped = false;
     m_bIsGrounded = false;
     m_bIsJumping = false;
+    mBodyPitch = 0.0f;
     m_uiAttackControls = 0;
     m_uiAttackAnim = 0;
-    mBodyPitch = 0.0f;
     mBodyRoll = 0.0f;
     mStopTime = -100.0f;
     m_fGroundedTimer = 0.0f;
@@ -2170,34 +2161,34 @@ const PblVector3& EntityWalker::GetTowCableCollisionOffset(int iBodyID)
 // FUNCTION: SWBF2 0x0050ad20
 int EntityWalkerClass::IsTowCableCollisionValid(int iBodyId, int iLastBodyId, int iPrevBodyId)
 {
+    unsigned char ucLegSize = mNumTowCableCollisions >> 2;
     int iNum = mNumTowCableCollisions;
-    int iLegSize = (unsigned char)(mNumTowCableCollisions >> 2);
     int iValid[12];
     for (int i = 0; i < iNum; i++)
     {
         iValid[i] = 1;
     }
 
-    for (int iLeg = 0; iLeg + iLegSize - 1 < iNum; iLeg += iLegSize)
+    for (int iLeg = 0; iLeg + ucLegSize - 1 < iNum; iLeg += ucLegSize)
     {
         bool bFound = false;
-        for (int j = 0; j < iLegSize; j++)
+        for (int j = 0; j < ucLegSize; j++)
         {
             bFound |= mTowCableCollisionBodyID[iLeg + j] == iPrevBodyId;
         }
         if (bFound)
         {
-            for (int j = 0; j < iLegSize; j++)
+            for (int j = 0; j < ucLegSize; j++)
             {
                 iValid[iLeg + j] = -1;
             }
         }
     }
 
-    for (int iLeg = 0; iLeg + iLegSize - 1 < iNum; iLeg += iLegSize)
+    for (int iLeg = 0; iLeg + ucLegSize - 1 < iNum; iLeg += ucLegSize)
     {
         bool bFound = false;
-        for (int j = 0; j < iLegSize; j++)
+        for (int j = 0; j < ucLegSize; j++)
         {
             bFound |= mTowCableCollisionBodyID[iLeg + j] == iLastBodyId;
         }
@@ -2206,20 +2197,19 @@ int EntityWalkerClass::IsTowCableCollisionValid(int iBodyId, int iLastBodyId, in
             continue;
         }
 
-        for (int j = 0; j < iLegSize; j++)
+        for (int j = 0; j < ucLegSize; j++)
         {
             iValid[iLeg + j] = 0;
         }
 
-        int iMark;
-        int iBefore = iLeg - iLegSize;
-        if (iBefore < 0)
+        int iMark = iLeg - ucLegSize;
+        if (iMark < 0)
         {
-            iBefore += mNumTowCableCollisions;
+            iMark += mNumTowCableCollisions;
         }
-        if (iValid[iBefore] == -1)
+        if (iValid[iMark] == -1)
         {
-            iMark = iBefore - iLegSize;
+            iMark -= ucLegSize;
             if (iMark < 0)
             {
                 iMark += mNumTowCableCollisions;
@@ -2227,22 +2217,22 @@ int EntityWalkerClass::IsTowCableCollisionValid(int iBodyId, int iLastBodyId, in
         }
         else
         {
-            int iAfter = iLeg + iLegSize;
-            if (iAfter >= mNumTowCableCollisions)
+            iMark = iLeg + ucLegSize;
+            if (iMark >= mNumTowCableCollisions)
             {
-                iAfter -= mNumTowCableCollisions;
+                iMark -= mNumTowCableCollisions;
             }
-            if (iValid[iAfter] != -1)
+            if (iValid[iMark] != -1)
             {
                 continue;
             }
-            iMark = iAfter + iLegSize;
+            iMark += ucLegSize;
             if (iMark >= mNumTowCableCollisions)
             {
                 iMark -= mNumTowCableCollisions;
             }
         }
-        for (int j = 0; j < iLegSize; j++)
+        for (int j = 0; j < ucLegSize; j++)
         {
             iValid[iMark + j] = -1;
         }

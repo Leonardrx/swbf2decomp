@@ -68,20 +68,19 @@ void ScopeBlurEffect::Render(int value)
     }
 
     RedColor color = RedColor::WHITE;
-    float fU, fV;
+    float fU;
+    float left, top, bottom, right;
+    float fV;
     RedViewport viewport;
-    float left, top, right, bottom;
-    pcRedPrimitive* pPrimitive;
-    float* pVerts;
 
     if ((RedRenderer::pcGetDeviceCaps().DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES) &&
         RedRenderer::pcGetRenderOptions().distortion)
     {
         pcCopyBackBuffer();
 
-        pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x202, 20, 4, 0, false);
-        pVerts = (float*)pPrimitive->BeginVertexData();
-        if (!pVerts)
+        pcRedPrimitive* pFilterPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x202, 20, 4, 0, false);
+        float* pFilterVerts = (float*)pFilterPrimitive->BeginVertexData();
+        if (!pFilterVerts)
         {
             return;
         }
@@ -94,23 +93,23 @@ void ScopeBlurEffect::Render(int value)
         fV = (float)m_pBlurTexture->m_uiHeight /
              (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiHeight;
 
-        float fX = fU * 2.0f - 1.0f;
         float fY = 1.0f - fV * 2.0f;
-        pVerts[0] = -1.0f;  pVerts[1] = 1.0f;   pVerts[2] = 0.0f;
-        pVerts[3] = 0.0f;   pVerts[4] = 0.0f;
-        pVerts[5] = -1.0f;  pVerts[6] = fY;     pVerts[7] = 0.0f;
-        pVerts[8] = 0.0f;   pVerts[9] = 1.0f;
-        pVerts[10] = fX;    pVerts[11] = 1.0f;  pVerts[12] = 0.0f;
-        pVerts[13] = 1.0f;  pVerts[14] = 0.0f;
-        pVerts[15] = fX;    pVerts[16] = fY;    pVerts[17] = 0.0f;
-        pVerts[18] = 1.0f;  pVerts[19] = 1.0f;
-        pPrimitive->EndVertexData();
+        float fX = fU * 2.0f - 1.0f;
+        pFilterVerts[0] = -1.0f;  pFilterVerts[1] = 1.0f;   pFilterVerts[2] = 0.0f;
+        pFilterVerts[3] = 0.0f;   pFilterVerts[4] = 0.0f;
+        pFilterVerts[5] = -1.0f;  pFilterVerts[6] = fY;     pFilterVerts[7] = 0.0f;
+        pFilterVerts[8] = 0.0f;   pFilterVerts[9] = 1.0f;
+        pFilterVerts[10] = fX;    pFilterVerts[11] = 1.0f;  pFilterVerts[12] = 0.0f;
+        pFilterVerts[13] = 1.0f;  pFilterVerts[14] = 0.0f;
+        pFilterVerts[15] = fX;    pFilterVerts[16] = fY;    pFilterVerts[17] = 0.0f;
+        pFilterVerts[18] = 1.0f;  pFilterVerts[19] = 1.0f;
+        pFilterPrimitive->EndVertexData();
 
         m_pFilterShader->SetTextures(m_pBlurTexture, RedRenderer::pcGetBuffer(PC_BUFFER_TEMP));
         m_pFilterShader->SetSamples(9, BoxFilter);
-        RedRenderer::pcRenderPrimitive(pPrimitive, m_pFilterShader, gMatrixIdentity,
+        RedRenderer::pcRenderPrimitive(pFilterPrimitive, m_pFilterShader, gMatrixIdentity,
                                        RedColor::WHITE, 0x200, 0, 0, 0);
-        pPrimitive->Release();
+        pFilterPrimitive->Release();
 
         m_pClearShader->m_pTex = RedRenderer::pcGetBuffer(PC_BUFFER_TEMP);
         color.a = (unsigned char)m_alpha[uiViewport];
@@ -126,8 +125,8 @@ void ScopeBlurEffect::Render(int value)
 
     m_pClearShader->m_pAlphaMaskTex = RedTexture::Find(0xF745F270);
 
-    pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x403, 32, 4, 0, false);
-    pVerts = (float*)pPrimitive->BeginVertexData();
+    pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x403, 32, 4, 0, false);
+    float* pVerts = (float*)pPrimitive->BeginVertexData();
     if (!pVerts)
     {
         return;

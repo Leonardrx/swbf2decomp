@@ -38,7 +38,7 @@ unsigned char VoiceChat::Transport::Method::CalculateOptimalRelayNodes(unsigned 
         --ucRelay;
     }
 
-    return ucRelay ? ucRelay : (unsigned char)1;
+    return ucRelay ? ucRelay : 1;
 }
 
 // FUNCTION: SWBF2 0x006749b0

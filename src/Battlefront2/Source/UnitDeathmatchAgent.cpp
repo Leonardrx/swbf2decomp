@@ -142,11 +142,12 @@ void UnitDeathmatchAgent::EnterState()
         PblVector3 vDest = pEnemy->GetControllable()->GetGameObject()->GetPosition();
         if (GetMe()->GetGameObject()->GetGameObjectClass()->mAIType == ConnectivityGraph::CGT_FLAG_HUGE)
         {
-            const PblVector3& vMyPos = GetMe()->GetMatrix().GetTranslation();
+            Controllable* pMe = GetMe();
+            const PblVector3& vMyPos = pMe->GetMatrix().GetTranslation();
             const PblVector3 vDelta = vDest - vMyPos;
             PblVector3 vDir;
             D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDelta);
-            float fRadius = GetMe()->GetGameObject()->GetCollisionObject()->GetCollisionRadius();
+            float fRadius = pMe->GetGameObject()->GetCollisionRadius();
             vDest -= vDir * fRadius;
         }
         else

@@ -20,18 +20,18 @@ void GodrayManager::PlatformInit()
         m_pShader->Release();
     }
 
-    unsigned int uiFormat;
     if (RedRenderer::pcGetGeometryMode())
     {
-        uiFormat = 0x9282;
+        m_pShader = pcRedShader::Create(
+            0x8a8743bf /* "Particle" */, 0x9282,
+            &m_uiTextureHash, 1, 0x10044, RedColor::WHITE, RedColor::BLACK, 32.0f);
     }
     else
     {
-        uiFormat = 0x282;
+        m_pShader = pcRedShader::Create(
+            0x8a8743bf /* "Particle" */, 0x282,
+            &m_uiTextureHash, 1, 0x10044, RedColor::WHITE, RedColor::BLACK, 32.0f);
     }
-    m_pShader = pcRedShader::Create(
-        0x8a8743bf /* "Particle" */, uiFormat,
-        &m_uiTextureHash, 1, 0x10044, RedColor::WHITE, RedColor::BLACK, 32.0f);
 }
 
 // FUNCTION: SWBF2 0x00415d70

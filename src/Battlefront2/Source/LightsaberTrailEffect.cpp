@@ -211,7 +211,7 @@ void LightsaberTrail::_AddSample(float fTime, const PblVector3& vPos, const PblV
         else
         {
             const float fLen = sqrtf(fC * 2.0f + 2.0f);
-            const float fF = ((2.0f - fLen) * fDtInv * 4.0f) / ((1.0f - fC) * fLen);
+            const float fF = (2.0f - fLen) * (fDtInv * 4.0f) / ((1.0f - fC) * fLen);
             m_avOmg[m_uiSampleNext] = vDir * (fF * fC) - m_avDir[iSamplePrev] * fF;
             vDDirDt = vDir * fF - m_avDir[iSamplePrev] * (fF * fC);
         }

@@ -322,11 +322,8 @@ bool LightningBoltEffectObject::UpdateBolt(float fDeltaTime)
 
     if (!_bActive)
     {
-        const PblVector3& vStart = m_mWorldMatrix.GetTranslation();
-        PblVector3 vDelta(vStart.x - mTargetPos.x, vStart.y - mTargetPos.y, vStart.z - mTargetPos.z);
-        PblVector3 vCenter(mTargetPos.x + vDelta.x * 0.5f, mTargetPos.y + vDelta.y * 0.5f,
-                           mTargetPos.z + vDelta.z * 0.5f);
-        SetRenderPos(vCenter);
+        PblVector3 vDelta = m_mWorldMatrix.GetTranslation() - mTargetPos;
+        SetRenderPos(mTargetPos + vDelta * 0.5f);
         SetRenderRadius(PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f);
         Activate();
     }

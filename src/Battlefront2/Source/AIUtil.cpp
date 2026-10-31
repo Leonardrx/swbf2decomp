@@ -808,17 +808,16 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToDest));
 
             PblVector3 vFwd = pMe->GetMatrix().GetZAxis();
-            PblVector3 vNormal;
+            PblVector3 vFwdXZ;
             if (0.0001f > vFwd.x * vFwd.x + vFwd.z * vFwd.z)
             {
-                vNormal = PblVector3(1.0f, 0.0f, 0.0f);
+                vFwdXZ = PblVector3(1.0f, 0.0f, 0.0f);
             }
             else
             {
                 vFwd.y = 0.0f;
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vFwd));
+                vFwdXZ = Normalize(vFwd);
             }
-            const PblVector3 vFwdXZ = vNormal;
             const float fForward = vDir.x * vFwdXZ.x + vFwdXZ.y * vDir.y + vFwdXZ.z * vDir.z;
             const float fSide = -(vFwdXZ.z * vDir.x - vDir.z * vFwdXZ.x);
 
@@ -2022,11 +2021,7 @@ PblVector3 AIUtil::GetRandomAccessiblePoint(const UnitController* pCtrl)
     const PblVector3 vPos = pCtrl->mOwner->GetMatrix().GetTranslation();
     PblVector3 vStart = vPos;
     PathFinder::GetClosestValidPoint(vStart, vStart, pObj);
-    PblVector3 vDest = PblRandom::GetGlobalVector3();
-    const float fOffsetX = vDest.x * 100.0f;
-    const float fOffsetZ = vDest.z * 100.0f;
-    vDest.x = vStart.x + fOffsetX;
-    vDest.z = vStart.z + fOffsetZ;
+    PblVector3 vDest = vStart + PblRandom::GetGlobalVector3() * 100.0f;
     vDest.y = vPos.y;
     PathFinder::PushValidPoint(vStart, vDest, pObj);
     return vDest;

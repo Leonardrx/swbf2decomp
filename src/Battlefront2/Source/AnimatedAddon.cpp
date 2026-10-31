@@ -56,8 +56,12 @@ void AnimatedAddon::PostReadSetup()
         mZephyrPoseDyn.Open(mZephyrSkeleton);
         mZephyrSkeleton.Open(*mAnimation->GetZephyrSkeletonShared());
         mPose.ConvertFromZephyrPose(mZephyrSkeleton);
+        mModel->GetRedModel(0)->SetupPose(mPose);
     }
-    mModel->GetRedModel(0)->SetupPose(mPose);
+    else
+    {
+        mModel->GetRedModel(0)->SetupPose(mPose);
+    }
 }
 
 // FUNCTION: SWBF2 0x00443ca0

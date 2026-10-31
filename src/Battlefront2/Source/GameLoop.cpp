@@ -948,15 +948,44 @@ int Init()
         NetGame::EnterClient();
     }
 
-    CaptureDisplay::InitAll();
-    BootDisplay::InitAll();
+    unsigned int i;
+
+    CaptureDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        CaptureDisplay::sInstance[i]->Bind(i);
+    }
+    BootDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        BootDisplay::sInstance[i]->Bind(i);
+    }
     ChatMessageDisplay::Instance()->Init();
-    SpectatorDisplay::InitAll();
+    SpectatorDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        SpectatorDisplay::sInstance[i]->Bind(i);
+    }
     ToolTipsDisplay::sInstance->Init();
-    ReticuleDisplay::BindAll();
-    HeroMessageDisplay::InitAll();
-    ScopeDisplay::InitAll();
-    StatusDisplay::InitAll();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        ReticuleDisplay::sInstance[i]->Bind(i);
+    }
+    HeroMessageDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        HeroMessageDisplay::sInstance[i]->Bind(i);
+    }
+    ScopeDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        ScopeDisplay::sInstance[i]->Bind(i);
+    }
+    StatusDisplay::sInstance[0]->Init();
+    for (i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
+    {
+        StatusDisplay::sInstance[i]->Bind(i);
+    }
     EndDisplay::Instance()->Init();
     NameDisplay::Init();
     ItemTimerDisplay::Init();
@@ -1256,22 +1285,14 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
         {
             if (!mWaitMessageGroup.IsEnabled())
             {
-                const PblHash hWait("common.waitforhost");
+                const unsigned int uiWaitHash = PblHash("common.waitforhost");
                 mWaitTextElement.SetFont(RedFont::GAMEFONT_SMALL);
-                mWaitTextElement.SetText(RedLocalizeDB::Find(hWait, false), true);
+                mWaitTextElement.SetText(RedLocalizeDB::Find(uiWaitHash, false), true);
             }
             mWaitMessageGroup.Enable(true);
         }
 
-        float fAlpha = (1.0f - (float)fabs((double)((mWaitTimer - (float)(int)mWaitTimer) * 2.0f - 1.0f))) * 255.0f;
-        if (fAlpha < 0.0f)
-        {
-            fAlpha = 0.0f;
-        }
-        else if (fAlpha > 255.0f)
-        {
-            fAlpha = 255.0f;
-        }
+        const float fAlpha = Clamp((1.0f - (float)fabs((double)((mWaitTimer - (float)(int)mWaitTimer) * 2.0f - 1.0f))) * 255.0f, 0.0f, 255.0f);
         mWaitTimer += fDeltaTime;
         mWaitTextElement.m_color.a = (unsigned char)(int)fAlpha;
     }
@@ -1351,9 +1372,8 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
             }
             else
             {
-
-                const float fThreshold = netFrameLock ? netSecondsPerTurn * 0.85f : netSecondsPerTurn * 0.95f;
                 int iTurns = 0;
+                const float fThreshold = netFrameLock ? netSecondsPerTurn * 0.85f : netSecondsPerTurn * 0.95f;
                 while (clientInputAcc >= fThreshold && iTurns < 64)
                 {
                     clientInputAcc -= netSecondsPerTurn;
@@ -1598,13 +1618,17 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
                     {
                         const Team* pTeam = Team::sTeams[iTeam];
                         const bool bPlayerTeam = AIUtil::IsPlayerTeam(iTeam);
+                        const int iReinforcements = pTeam->mMaxReinforcements < 0x7fffffff ? pTeam->mCurReinforcements : -1;
+                        const char cResult = (Team::sWinningTeams & (1 << iTeam)) ? 'W' : 'L';
+                        const int iMembers = pTeam->mMemberCount;
+                        const char* pcSide = sSideNamePrefixes[pTeam->mSide];
                         fprintf(pFile, "\t%c=%s\t%du@%d%c\t%3dr\t%2dp",
-                                (Team::sWinningTeams & (1 << iTeam)) ? 'W' : 'L',
-                                sSideNamePrefixes[pTeam->mSide],
-                                pTeam->mMemberCount,
+                                cResult,
+                                pcSide,
+                                iMembers,
                                 AIDifficulty::GetIntSkill((const UnitController*)bPlayerTeam, false),
                                 bPlayerTeam ? 'P' : ' ',
-                                pTeam->mMaxReinforcements < 0x7fffffff ? pTeam->mCurReinforcements : -1,
+                                iReinforcements,
                                 pTeam->mPoints);
                     }
                     fprintf(pFile, "\n");

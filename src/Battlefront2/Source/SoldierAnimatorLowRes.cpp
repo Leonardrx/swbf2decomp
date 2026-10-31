@@ -596,7 +596,7 @@ SoldierAnimatorLowRes* SoldierAnimatorLowResClass::GetAnimatorLocal(const Entity
             return m_aHighResPose[i].m_pAnimator;
         }
 
-        SoldierAnimatorLowRes_HighResPool* pAnimator = NULL;
+        SoldierAnimatorLowRes_HighResPool* pAnimator;
         if (soldier.mSoldierAnimatorLowRes)
         {
             pAnimator = static_cast<SoldierAnimatorLowRes_HighResPool*>(
@@ -606,6 +606,10 @@ SoldierAnimatorLowRes* SoldierAnimatorLowResClass::GetAnimatorLocal(const Entity
                 pAnimator->SetAnim(eMap, uiAnimIndex);
                 return pAnimator;
             }
+        }
+        else
+        {
+            pAnimator = NULL;
         }
 
         int iOldest = 0;
@@ -909,9 +913,8 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
 
         float fInvSpeed = 1.0f / sqrtf(fSpeedSq);
         PblVector3 vFront(fRight * fInvSpeed, 0.0f, fFront * fInvSpeed);
-        PblVector3 vRight(vFront.z, 0.0f, -vFront.x);
 
-        kMatrix = PblMatrix(vRight, gVectorUnitY, vFront, gVectorZero);
+        kMatrix = PblMatrix(PblVector3(vFront.z, 0.0f, -vFront.x), gVectorUnitY, vFront, gVectorZero);
         return true;
     }
 
@@ -927,29 +930,22 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
 
         float fSpeed = 0.0f;
         PblVector3 vAxis;
+        const PblVector3 vSpin(fFront, 0.0f, -fRight);
         float fSpeedSq = fRight * fRight + fFront * fFront;
         if (fSpeedSq > 0.0001f)
         {
             fSpeed = sqrtf(fSpeedSq);
             float fInvSpeed = 1.0f / fSpeed;
-            vAxis.x = fFront * fInvSpeed;
-            vAxis.y = 0.0f * fInvSpeed;
-            vAxis.z = -fRight * fInvSpeed;
+            vAxis.x = vSpin.x * fInvSpeed;
+            vAxis.y = vSpin.y * fInvSpeed;
+            vAxis.z = vSpin.z * fInvSpeed;
         }
         else
         {
             vAxis = gVectorUnitX;
         }
 
-        float fSpin = fSpeed * 2.0f;
-        if (fSpin < 2.0f)
-        {
-            fSpin = 2.0f;
-        }
-        else if (fSpin > 6.0f)
-        {
-            fSpin = 6.0f;
-        }
+        float fSpin = Clamp(fSpeed * 2.0f, 2.0f, 6.0f);
 
         D3DXMatrixRotationAxis(reinterpret_cast<D3DXMATRIX*>(&kMatrix), reinterpret_cast<const D3DXVECTOR3*>(&vAxis), soldier.mStateTimer * fSpin);
         kMatrix.m[3][0] = 0.0f;
@@ -973,10 +969,9 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
 
         const PblVector3& vVelocity = soldier.GetVelocity();
         const PblMatrix& kSoldier = soldier.GetMatrix();
-        float fYaw = atan2f(vVelocity.x * kSoldier.m[0][0] + vVelocity.y * kSoldier.m[0][1] +
-                                vVelocity.z * kSoldier.m[0][2],
-                            vVelocity.x * kSoldier.m[2][0] + vVelocity.y * kSoldier.m[2][1] +
-                                vVelocity.z * kSoldier.m[2][2]);
+        const float fRight = DotProduct(vVelocity, kSoldier.GetXAxis());
+        const float fFront = DotProduct(vVelocity, kSoldier.GetZAxis());
+        const float fYaw = atan2f(fRight, fFront);
 
         kMatrix.SetRotateX(soldier.mStateTimer * 8.0f + 1.0f);
         PblVector3 vCenter;

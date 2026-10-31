@@ -131,6 +131,7 @@ void Event<Timer, char>::Callback::Trigger(Timer& item, char& param)
 }
 }
 
+// FUNCTION: SWBF2 0x00657b70
 void Timer::Clear()
 {
     sMap.Clear();

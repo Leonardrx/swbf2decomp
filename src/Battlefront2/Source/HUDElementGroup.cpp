@@ -462,15 +462,11 @@ void HUD::ElementGroupBase::EventScale(const HUD::Event& event, void* const pDat
         ElementGroupBase* pGroup = (ElementGroupBase*)pData;
         const PblVector3 vScale = *event.GetData().vector3;
         PblMatrix mMatrix = pGroup->mElement->GetMatrix();
-        PblVector3 vAxis;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[0]));
-        *reinterpret_cast<PblVector3*>(mMatrix.m[0]) = vAxis * vScale.x;
+        mMatrix[0] = Normalize(mMatrix[0]) * vScale.x;
         mMatrix.m[0][3] = 0.0f;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[1]));
-        *reinterpret_cast<PblVector3*>(mMatrix.m[1]) = vAxis * vScale.y;
+        mMatrix[1] = Normalize(mMatrix[1]) * vScale.y;
         mMatrix.m[1][3] = 0.0f;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[2]));
-        *reinterpret_cast<PblVector3*>(mMatrix.m[2]) = vAxis * vScale.z;
+        mMatrix[2] = Normalize(mMatrix[2]) * vScale.z;
         mMatrix.m[2][3] = 0.0f;
         pGroup->mElement->SetMatrix(mMatrix);
     }

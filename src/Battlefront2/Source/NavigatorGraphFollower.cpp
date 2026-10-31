@@ -103,79 +103,81 @@ const PblVector3& NavigatorGraphFollower::GetGlobalDest() const
 // FUNCTION: SWBF2 0x005ad3e0
 void NavigatorGraphFollower::EnterState()
 {
-    if (mCurState != STATE_PATHING)
+    switch (mCurState)
     {
-        return;
-    }
-
-    PblVector3 vFrom = mOwner->mOwner->mOwner->GetMatrix().GetTranslation();
-    PblVector3 vTo = mGlobalDest;
-    const GameObject* pObj = mOwner->mOwner->mOwner->GetGameObject();
-
-    delete mPathFollower;
-    mPathFollower = new PathFollower(mOwner->mOwner, vFrom, vFrom, (const Obstacle**)mIgnore,
-                                     mIgnoreCnt, false);
-
-    if (mGraphFollower)
+    case STATE_PATHING:
     {
-        delete mGraphFollower;
-    }
-    mGraphFollower = new ConnectivityGraphFollower(mOwner->mOwner);
-    if (!mGraphFollower)
-    {
-        return;
-    }
+        PblVector3 vFrom = mOwner->mOwner->mOwner->GetMatrix().GetTranslation();
+        PblVector3 vTo = mGlobalDest;
+        const GameObject* pObj = mOwner->mOwner->mOwner->GetGameObject();
 
-    mGraphFollower->SetDestination(
-        ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1), vFrom, vTo,
-        (ConnectivityGraph::ProhibitFlag)AIUtil::GetAIType(pObj));
+        delete mPathFollower;
+        mPathFollower = new PathFollower(mOwner->mOwner, vFrom, vFrom, (const Obstacle**)mIgnore,
+                                         mIgnoreCnt, false);
 
-    if (!PathFinder::IsPointValid(mGraphFollower->GetCurrentDestination(),
-                                  AIUtil::GetCollisionRadius(pObj), AIUtil::GetAIType(pObj), 0,
-                                  (const Obstacle**)mIgnore, mIgnoreCnt))
-    {
-        mGraphFollower->GetNewValidRandomPoint(AIUtil::GetCollisionRadius(pObj));
-    }
-
-    const PblVector3& vDest = mGraphFollower->GetCurrentDestination();
-    PathFinder::GetClosestValidPoint(vFrom, vFrom, AIUtil::GetCollisionRadius(pObj),
-                                     AIUtil::GetAIType(pObj), (const Obstacle**)mIgnore, mIgnoreCnt);
-
-    unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();
-    if (uArcFlags)
-    {
-        unsigned int uFlags = 0;
-        if (uArcFlags & 2)
+        if (mGraphFollower)
         {
-            uFlags = AIPathNode::AIPN_JUMP;
+            delete mGraphFollower;
         }
-        if (uArcFlags & 4)
+        mGraphFollower = new ConnectivityGraphFollower(mOwner->mOwner);
+        if (mGraphFollower)
         {
-            uFlags |= AIPathNode::AIPN_JETJUMP;
-        }
+            mGraphFollower->SetDestination(
+                ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1), vFrom,
+                vTo, (ConnectivityGraph::ProhibitFlag)AIUtil::GetAIType(pObj));
 
-        AIPath* pPath = new AIPath();
-        if (pPath)
-        {
-            pPath->Prepend(vDest, 0);
-            PblVector3 vDelta = vDest - vFrom;
-            PblVector3 vDir;
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-            PblVector3 vJump = vDir * 0.1f + vFrom;
-            pPath->Prepend(vJump, uFlags);
-            pPath->Prepend(vFrom, 0);
+            if (!PathFinder::IsPointValid(mGraphFollower->GetCurrentDestination(),
+                                          AIUtil::GetCollisionRadius(pObj), AIUtil::GetAIType(pObj),
+                                          0, (const Obstacle**)mIgnore, mIgnoreCnt))
+            {
+                mGraphFollower->GetNewValidRandomPoint(AIUtil::GetCollisionRadius(pObj));
+            }
 
-            AI::EventInfo_PathResult info(pPath);
-            mOwner->mOwner->SendEvent(&info);
-            pPath->Release();
+            const PblVector3& vDest = mGraphFollower->GetCurrentDestination();
+            PathFinder::GetClosestValidPoint(vFrom, vFrom, AIUtil::GetCollisionRadius(pObj),
+                                             AIUtil::GetAIType(pObj), (const Obstacle**)mIgnore,
+                                             mIgnoreCnt);
+
+            unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();
+            if (uArcFlags)
+            {
+                unsigned int uFlags = 0;
+                if (uArcFlags & 2)
+                {
+                    uFlags = AIPathNode::AIPN_JUMP;
+                }
+                if (uArcFlags & 4)
+                {
+                    uFlags |= AIPathNode::AIPN_JETJUMP;
+                }
+
+                AIPath* pPath = new AIPath();
+                if (pPath)
+                {
+                    pPath->Prepend(vDest, 0);
+                    PblVector3 vDelta = vDest - vFrom;
+                    PblVector3 vDir;
+                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir),
+                                      reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+                    PblVector3 vJump = vDir * 0.1f + vFrom;
+                    pPath->Prepend(vJump, uFlags);
+                    pPath->Prepend(vFrom, 0);
+
+                    AI::EventInfo_PathResult info(pPath);
+                    mOwner->mOwner->SendEvent(&info);
+                    pPath->Release();
+                }
+            }
+            else
+            {
+                UnitController* pController = mOwner->mOwner;
+                PathManager::RequestPath(pController, vFrom, vDest, AIUtil::GetCollisionRadius(pObj),
+                                         AIUtil::GetAIType(pObj), 1, 0, (const Obstacle**)mIgnore,
+                                         mIgnoreCnt);
+            }
         }
+        break;
     }
-    else
-    {
-        UnitController* pController = mOwner->mOwner;
-        PathManager::RequestPath(pController, vFrom, vDest, AIUtil::GetCollisionRadius(pObj),
-                                 AIUtil::GetAIType(pObj), 1, 0, (const Obstacle**)mIgnore,
-                                 mIgnoreCnt);
     }
 }
 

@@ -241,8 +241,7 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
     GameObject* pVehicle = static_cast<GameObject*>(tracker.mVehicle);
     if (!BoundaryManager::sInstance->IsOutOfBounds(pVehicle->GetMatrix().GetTranslation()))
     {
-        const CommandPost* pPost = mCommandPost.mPost;
-        if (!pPost || !static_cast<GameObject*>(pPost->mObject) || GetTeam(static_cast<GameObject*>(tracker.mVehicle)) != 0)
+        if (!mCommandPost || GetTeam(static_cast<GameObject*>(tracker.mVehicle)) != 0)
         {
             tracker.mEmptyTimer = 0.0f;
             return;
@@ -259,10 +258,9 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
         }
     }
 
-    float fExpireTime = mExpireTimeField;
-    const CommandPost* pPost = mCommandPost.mPost;
-    if (pPost && static_cast<GameObject*>(pPost->mObject) && pPost->mObject->IsAlive() &&
-        pPost->IsInsideControlRegion(static_cast<GameObject*>(tracker.mVehicle)))
+    float fExpireTime;
+    if (mCommandPost && mCommandPost->mObject->IsAlive() &&
+        mCommandPost->IsInsideControlRegion(static_cast<GameObject*>(tracker.mVehicle)))
     {
         if (mSpawnClass[mVehicleTeam] != mSpawnClass[mSpawnTeam])
         {
@@ -277,6 +275,10 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
             }
             return;
         }
+    }
+    else
+    {
+        fExpireTime = mExpireTimeField;
     }
 
     mCycleTimer -= fDeltaTime;
@@ -303,8 +305,8 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
         const PblSphere& otherSphere = pControllable->GetGameObject()->GetCollisionObject()->GetCollisionSphere();
         const float dx = otherSphere.GetCenter().x - sphere.GetCenter().x;
         const float dy = otherSphere.GetCenter().y - sphere.GetCenter().y;
-        const float dz = otherSphere.GetCenter().z - sphere.GetCenter().z;
         const float fReach = otherSphere.GetRadius() + sphere.GetRadius() + 10.0f;
+        const float dz = otherSphere.GetCenter().z - sphere.GetCenter().z;
         if (fReach * fReach >= dy * dy + dx * dx + dz * dz)
         {
             ++iNearby;
@@ -320,7 +322,7 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
     {
         GameObject* pDecaying = static_cast<GameObject*>(tracker.mVehicle);
         const DamageDesc damage(DamageOwner(0, 0, 0, 0, 0, 1.0f), pDecaying->mMaxHealth / mDecayTime);
-        static_cast<Damageable*>(static_cast<GameObject*>(tracker.mVehicle))->ApplyDamage(damage, (unsigned int)-1);
+        static_cast<Damageable*>(pDecaying)->ApplyDamage(damage, (unsigned int)-1);
     }
 }
 
@@ -397,9 +399,7 @@ void VehicleSpawn::UpdateSpawn(float fDeltaTime)
     {
         const float fDist = fHit * 2.0f;
         desc.mMatrix.m[3][3] = 1.0f;
-        vTranslation.x = vDir.x * fDist + vStart.x;
-        vTranslation.y = vDir.y * fDist + vStart.y;
-        vTranslation.z = vDir.z * fDist + vStart.z;
+        vTranslation = vDir * fDist + vStart;
     }
 
     if (mFlyerClass[mSpawnTeam])
@@ -443,9 +443,7 @@ void VehicleSpawn::UpdateSpawn(float fDeltaTime)
             const PblBox& rCargo = pObject->GetModel()->_mModel->_TotalBoundingBox;
             const float fHeight = rCargo._vMax.y - rCargo._vMin.y;
             desc.mMatrix.m[3][3] = 1.0f;
-            vTranslation.x += 0.0f;
-            vTranslation.y += fHeight;
-            vTranslation.z += 0.0f;
+            vTranslation = vTranslation + PblVector3(0.0f, fHeight, 0.0f);
             Entity* pCarrier = mFlyerClass[mSpawnTeam]->Build(desc);
             mCarrier = pCarrier->GetGameObject();
             mCarrier->SetTeam(mSpawnTeam);

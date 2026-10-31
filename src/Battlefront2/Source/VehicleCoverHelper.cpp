@@ -95,14 +95,14 @@ void VehicleCoverHelper::EnterState()
     {
 
         mHint->Reserve(GetMe()->GetGameObject());
-        PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
+        PblVector3 vMe = mOwner->GetMe()->GetMatrix().GetTranslation();
         const PblVector3& vHint = mHint->GetCollisionCenter();
-        PblVector3 vDir(vHint.x - vMe.x, vHint.y - vMe.y, vHint.z - vMe.z);
+        PblVector3 vDir = vHint - vMe;
         float fDist = PblMath::Sqrt(vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z);
         PblVector3 vNorm;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
         fDist += 4.0f;
-        PblVector3 vDest(vNorm.x * fDist + vMe.x, vNorm.y * fDist + vMe.y, vNorm.z * fDist + vMe.z);
+        PblVector3 vDest = vNorm * fDist + vMe;
         GetLowLevel(GetCtrl()).SetNavigator_Goto(vDest, NULL, false, false);
         GetLowLevel(GetCtrl()).SetHeight(HEIGHT_WALK);
         GetLowLevel(GetCtrl()).mAllowHoverStrafe = true;
@@ -136,14 +136,11 @@ void VehicleCoverHelper::EnterState()
 
         mTimer = (float)AIUtil::GetRandomInt(4, 7) + GameLoop::GetMissionTime();
         const PblVector3& vZ = mHint->GetZAxis();
-        PblVector3 vSide(vZ.y * gVectorUnitY.z - vZ.z * gVectorUnitY.y,
-                         vZ.z * gVectorUnitY.x - vZ.x * gVectorUnitY.z,
-                         vZ.x * gVectorUnitY.y - vZ.y * gVectorUnitY.x);
+        PblVector3 vSide = CrossProduct(vZ, gVectorUnitY);
         int iSide = mHint->GetRandomSidestep() == BaseHint::STEP_LEFT ? -1 : 1;
         float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius();
         float fDist = AIUtil::GetRandomFloat(fRadius * 2.0f, fRadius * 3.0f) * (float)iSide;
-        const PblVector3& vHint = mHint->GetCollisionCenter();
-        PblVector3 vDest(vHint.x + vSide.x * fDist, vHint.y + vSide.y * fDist, vHint.z + vSide.z * fDist);
+        PblVector3 vDest = mHint->GetCollisionCenter() + vSide * fDist;
         GetLowLevel(GetCtrl()).SetNavigator_Goto(vDest, NULL, false, false);
         GetLowLevel(GetCtrl()).mAllowHoverStrafe = true;
         GetLowLevel(GetCtrl()).SetHeight(HEIGHT_WALK);
@@ -367,23 +364,26 @@ const VehicleCoverHint* VehicleCoverHelper::SelectHint(int iCount, const BaseHin
     const GameObject* pMe = GetMe()->GetGameObject();
     float fBest = FLT_MAX;
     const VehicleCoverHint* pBest = NULL;
-    const BaseHint** ppLast = &ppHints[iCount - 1];
-    while (iCount > 0)
+    if (iCount > 0)
     {
-        --iCount;
-        int i = AIUtil::GetRandomInt(0, iCount);
-        const VehicleCoverHint* pHint = static_cast<const VehicleCoverHint*>(ppHints[i]);
-        if (AIUtil::IsHintAvailable(pMe, pHint))
+        const BaseHint** ppLast = &ppHints[iCount - 1];
+        do
         {
-            float fScore = IsHintSuitable(pHint);
-            if (fScore < fBest)
+            --iCount;
+            int i = AIUtil::GetRandomInt(0, iCount);
+            const VehicleCoverHint* pHint = static_cast<const VehicleCoverHint*>(ppHints[i]);
+            if (AIUtil::IsHintAvailable(pMe, pHint))
             {
-                fBest = fScore;
-                pBest = pHint;
+                float fScore = IsHintSuitable(pHint);
+                if (fScore < fBest)
+                {
+                    fBest = fScore;
+                    pBest = pHint;
+                }
             }
-        }
-        ppHints[i] = *ppLast;
-        --ppLast;
+            ppHints[i] = *ppLast;
+            --ppLast;
+        } while (iCount > 0);
     }
     return pBest;
 }

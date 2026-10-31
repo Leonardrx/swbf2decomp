@@ -205,12 +205,13 @@ bool CaptureDisplay::Update(float fDeltaTime)
         ToolTipType eTip = (iPostTeam == pChr->mTeamNumber) ? TTT_ApproachSelfCP : TTT_ApproachEnemyCP;
         if (iPostTeam == 0)
         {
+            int iBiasTeam = pPost->mBiasTeam;
             int iOtherTeam = 0;
             if (pPost->mHoldTeam < 0)
             {
                 for (iOtherTeam = 1; iOtherTeam < 8; ++iOtherTeam)
                 {
-                    if (iOtherTeam != pPost->mBiasTeam && pPost->mHoldCount[iOtherTeam] > 0)
+                    if (iOtherTeam != iBiasTeam && pPost->mHoldCount[iOtherTeam] > 0)
                     {
                         break;
                     }

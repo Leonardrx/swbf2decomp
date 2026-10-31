@@ -333,9 +333,10 @@ bool AttackPatterns::GetInRange()
     float fDistSq = vDiff.z * vDiff.z + vDiff.x * vDiff.x;
     if (GetNear() * GetNear() > fDistSq)
     {
-        vDest.x = vDir.x * 15.0f + vPos.x;
-        vDest.y = vDir.y * 15.0f + vPos.y;
-        vDest.z = vDir.z * 15.0f + vPos.z;
+        PblVector3 vStep = vDir * 15.0f;
+        vDest.x = vStep.x + vPos.x;
+        vDest.y = vStep.y + vPos.y;
+        vDest.z = vStep.z + vPos.z;
     }
     else
     {
@@ -869,15 +870,14 @@ void AttackPatterns::SetGlanceDest()
     {
         PblVector3 vTarget = GetAttackHelper()->GetLastSeenTargetPos();
         PblVector3 vDir = AIUtil::GetSafeNormalXZ(vTarget - vPos);
-        float fDot = vDir.x * vFwd.x + vFwd.y * vDir.y + vFwd.z * vDir.z;
+        float fDot = vFwd.x * vDir.x + vFwd.y * vDir.y + vFwd.z * vDir.z;
         PblVector3 vSide = AIUtil::GetSafeNormalXZ(vFwd - vDir * fDot);
 
         float fMyRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius();
         float fDist = GetCollisionObject(pTarget)->GetCollisionRadius() + fMyRadius + 2.0f;
         mGlancePos = vSide * fDist + vTarget;
 
-        float fOn = fSpeed * 0.5f;
-        mGlancePos += AIUtil::GetSafeNormalXZ(mGlancePos - vPos) * fOn;
+        mGlancePos += fSpeed * 0.5f * AIUtil::GetSafeNormalXZ(mGlancePos - vPos);
     }
     else
     {
@@ -888,8 +888,8 @@ void AttackPatterns::SetGlanceDest()
     mOwner->GetLowLevel().SetNavigator_Slide(mGlancePos, NULL);
 
     const PblVector3& vMe = GetMe()->GetMatrix().GetTranslation();
-    float dz = mGlancePos.z - vMe.z;
     float dx = mGlancePos.x - vMe.x;
+    float dz = mGlancePos.z - vMe.z;
     mClosestXZSq = dz * dz + dx * dx;
     mClosestTime = GameLoop::GetMissionTime();
     mIsPathing = false;
@@ -1221,9 +1221,7 @@ void AttackPatterns::InitJetJumpCharge()
     vDiff.z = vTarget.z - vMe.z;
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDiff));
-    mOwner->GetLowLevel().SetJetJump(PblVector3((vDir.x + 0.0f) * 0.70710677f,
-                                                (vDir.y + 1.0f) * 0.70710677f,
-                                                (vDir.z + 0.0f) * 0.70710677f));
+    mOwner->GetLowLevel().SetJetJump((vDir + PblVector3(0.0f, 1.0f, 0.0f)) * 0.70710677f);
     mOwner->GetLowLevel().SetNavigator_Slide(pTarget, -3.0f, false, NULL);
 }
 

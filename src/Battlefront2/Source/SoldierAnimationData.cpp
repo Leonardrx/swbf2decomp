@@ -206,13 +206,14 @@ void SoldierAnimationData::ReadConfig(PblConfig& config, const char* pcName)
                 bool bByTime = false;
                 if (data.GetNumArgs() >= 2 && data.IsStringArg(1))
                 {
-                    switch (PblHash(data.GetStringArg(1)))
+                    unsigned int uiSyncHash = PblHash(data.GetStringArg(1));
+                    if (uiSyncHash == 0x4dcb9735)
                     {
-                    case 0x4dcb9735:
                         bByTime = true;
-                        break;
-                    case 0xfc82911d:
-                        break;
+                    }
+                    else if (uiSyncHash == 0xfc82911d)
+                    {
+                        bByTime = false;
                     }
                 }
                 m_uiSyncType = AddSyncType(pcSync, bByTime);
@@ -767,43 +768,43 @@ void SoldierAnimationData::Read(PblFileChunk& chunk)
     while (!config.IsDone())
     {
         PblConfig::Data data = config.ReadNextData();
-        if (data.GetId() == 0xe145ee5d && config.IsScopeNext())
+        if (data.GetId() != 0xe145ee5d || !config.IsScopeNext())
         {
-            if (data.IsStringArg(0))
+            continue;
+        }
+        if (!data.IsStringArg(0))
+        {
+            config.ReadNextScope();
+            continue;
+        }
+
+        const char* pcName = data.GetStringArg(0);
+        const char* pcScope = strrchr(pcName, '_');
+        unsigned int uiHash = PblHash(pcName);
+        if (pcScope && _stricmp(pcScope, GetScopeExtension(LOWER)) &&
+            _stricmp(pcScope, GetScopeExtension(UPPER)))
+        {
+            pcScope = 0;
+        }
+
+        PblConfig scope(config.ReadNextScope(), true);
+
+        SoldierAnimationData* pData =
+            Find(pcScope ? uiHash : (unsigned int)PblHash(uiHash, GetScopeExtension(UPPER)));
+        if (pData)
+        {
+            if (!pData->m_bReadFromConfig)
             {
-                const char* pcName = data.GetStringArg(0);
-                const char* pcScope = strrchr(pcName, '_');
-                unsigned int uiHash = PblHash(pcName);
-                if (pcScope && _stricmp(pcScope, GetScopeExtension(LOWER)) &&
-                    _stricmp(pcScope, GetScopeExtension(UPPER)))
-                {
-                    pcScope = 0;
-                }
-
-                PblConfig scope(config.ReadNextScope(), true);
-
-                SoldierAnimationData* pData =
-                    Find(pcScope ? uiHash : (unsigned int)PblHash(uiHash, GetScopeExtension(UPPER)));
-                if (pData)
-                {
-                    if (!pData->m_bReadFromConfig)
-                    {
-                        pData->ReadConfig(scope, pcName);
-                    }
-
-                    if (!pcScope)
-                    {
-                        SoldierAnimationData* pLower = Find(PblHash(uiHash, GetScopeExtension(LOWER)));
-                        if (pLower && !pLower->m_bReadFromConfig)
-                        {
-                            pLower->ConvertScope(*pData);
-                        }
-                    }
-                }
+                pData->ReadConfig(scope, pcName);
             }
-            else
+
+            if (!pcScope)
             {
-                config.ReadNextScope();
+                SoldierAnimationData* pLower = Find(PblHash(uiHash, GetScopeExtension(LOWER)));
+                if (pLower && !pLower->m_bReadFromConfig)
+                {
+                    pLower->ConvertScope(*pData);
+                }
             }
         }
     }

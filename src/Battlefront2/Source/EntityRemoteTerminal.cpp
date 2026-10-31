@@ -192,8 +192,8 @@ void EntityRemoteTerminal::Render(unsigned char ucViewport, float fDist, unsigne
         return;
     }
     mWorld = *GetRenderMatrix() * mWorld;
-    mModel->Render(ucViewport, fDist, &mWorld, GetRenderPose(), color,
-                   (uiFlags & ~0x10000) | 0x10000100, 0);
+    uiFlags = (uiFlags & ~0x10000) | 0x10000100;
+    mModel->Render(ucViewport, fDist, &mWorld, GetRenderPose(), color, uiFlags, 0);
 }
 
 

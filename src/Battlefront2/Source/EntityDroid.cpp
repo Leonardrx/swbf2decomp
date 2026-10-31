@@ -724,9 +724,7 @@ EntityDroid::EntityDroid(EntityDroidClass* pClass, const EntityDesc& desc)
     mEyePoint = pClass->mCameraSettings.CalcEyePoint(mMatrix);
     AddToScene();
 
-    mVelocity.z = 0.0f;
-    mVelocity.y = 0.0f;
-    mVelocity.x = 0.0f;
+    mVelocity.SetAll(0.0f);
     mPitchValue = 0.0f;
     mGroundRatio = 1.0f;
     memset(mAimer, 0, sizeof(mAimer));
@@ -740,14 +738,9 @@ EntityDroid::EntityDroid(EntityDroidClass* pClass, const EntityDesc& desc)
 
         mAimer[i] = new Aimer(&pClass->mAimerClass[i], this, &mMatrix, 0, 0);
 
-        WeaponDesc weaponDesc;
-        weaponDesc.mOwner = this;
-        weaponDesc.mAimer = mAimer[i];
+        WeaponDesc weaponDesc = { this, mAimer[i] };
         weaponDesc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
         weaponDesc.mReload = &mControlReload;
-        weaponDesc.mNumClips = 0;
-        weaponDesc.m_pAmmoCounter = 0;
-        weaponDesc.m_pEnergyBar = 0;
 
         const WeaponAmmoDesc& ammo = mClass->mWeaponAmmo[i];
         if (ammo.bFlagShareAmmo)

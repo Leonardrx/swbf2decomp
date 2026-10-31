@@ -169,17 +169,22 @@ void UpdatePotentiallyVisible(UnitController* pController)
     }
 
     int iPriority = heap.GetMaxSize();
-    int iNumObjects;
+    bool bTargetPlayer = false;
     if ((pMeObj->IsRtti(EntityWalker::rttiHashEntityWalker) ||
          pMeObj->IsRtti(EntityHover::rttiHashEntityHover)) &&
         pMeObj->GetControllable()->GetPilot() &&
         pMeObj->GetControllable()->GetPilot()->GetPlayerId() >= 0 &&
         pPlayerTarget &&
         AIUtil::IsValidEnemy(pMeObj, pPlayerTarget) &&
-        pMe->GetEntity()->GetEntityClass()->IsRtti(MountedTurretClass::rttiHashMountedTurretClass) &&
-        CombatUtil::CanTurretFaceDisturbance(
-            pMe, static_cast<const MountedTurretClass*>(pMe->GetEntity()->GetEntityClass()), pMeObj,
-            pPlayerTarget->GetMatrix().GetTranslation()))
+        pMe->GetEntity()->GetEntityClass()->IsRtti(MountedTurretClass::rttiHashMountedTurretClass))
+    {
+        const MountedTurretClass* pTurretClass =
+            static_cast<const MountedTurretClass*>(pMe->GetEntity()->GetEntityClass());
+        bTargetPlayer = CombatUtil::CanTurretFaceDisturbance(pMe, pTurretClass, pMeObj,
+                                                             pPlayerTarget->GetMatrix().GetTranslation());
+    }
+    int iNumObjects;
+    if (bTargetPlayer)
     {
         iNumObjects = 1;
         sPVRect[0] = pPlayerTarget;
@@ -216,10 +221,18 @@ void UpdatePotentiallyVisible(UnitController* pController)
         AttackPatterns::State eState;
         float fTime;
         bool bFallback = false;
-        bool bResponse = CombatUtil::SelectCombatResponse(pMe, pObj, &eState, &fTime, &bFallback, false, false);
-        if (!bResponse && !bFallback)
+        bool bResponse;
+        if (CombatUtil::SelectCombatResponse(pMe, pObj, &eState, &fTime, &bFallback, false, false))
         {
-            continue;
+            bResponse = true;
+        }
+        else
+        {
+            bResponse = false;
+            if (!bFallback)
+            {
+                continue;
+            }
         }
 
         int iVisPriority = GetVisualPriority(pMe, pObj);
@@ -233,18 +246,17 @@ void UpdatePotentiallyVisible(UnitController* pController)
         }
         int iKey = 120000 - iVisPriority;
         PblHandle<GameObject> hObj(pObj);
-        if (heap.GetCount() == iPriority)
+        if (heap.GetCount() != iPriority)
         {
-
+            heap.Push(hObj, iKey);
+        }
+        else
+        {
             int iLowest = heap.FindLowest();
             if (iKey > heap.Value(iLowest))
             {
                 heap.ReplaceLowest(hObj, iKey, iLowest);
             }
-        }
-        else
-        {
-            heap.Push(hObj, iKey);
         }
     }
 

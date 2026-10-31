@@ -208,9 +208,8 @@ void LensFlareEffect::PlatformInit()
     else
     {
         s_samplePoints = pcRedPrimitive::Create(D3DPT_POINTLIST, 0x1002, 8, 256, 0, true);
-        const PblBox box(0.0f, 0.0f, 0.0f, 17.0f, 17.0f, 0.0f);
-        s_samplePoints->m_bbox = box;
-        CompressedPos::SetBoundingBox(box);
+        s_samplePoints->m_bbox = PblBox(0.0f, 0.0f, 0.0f, 17.0f, 17.0f, 0.0f);
+        CompressedPos::SetBoundingBox(PblBox(0.0f, 0.0f, 0.0f, 17.0f, 17.0f, 0.0f));
         short* v = (short*)s_samplePoints->BeginVertexData();
         if (!v)
         {

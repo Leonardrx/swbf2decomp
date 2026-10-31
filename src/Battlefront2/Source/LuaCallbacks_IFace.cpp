@@ -664,7 +664,11 @@ bool Util_CreateGroupInHierarchy(const char* pcName)
         else
         {
             RedInterfaceElement* pParent = RedInterfaceElement::Find(acParent);
-            if (!pParent || !pParent->IsGroup())
+            if (!pParent)
+            {
+                return false;
+            }
+            if (!pParent->IsGroup())
             {
                 return false;
             }

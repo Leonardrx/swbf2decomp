@@ -247,15 +247,11 @@ bool HUD::ElementBarBitmap::GetProperty(const unsigned int uHashID, void* const 
     case kScaleTexture: *(bool*)pValue = mScaleTex; return true;
     case kScaleSize: *(bool*)pValue = mScaleSize; return true;
     }
-    if (ElementBitmapBase::GetProperty(uHashID, pValue))
+    if (!ElementBitmapBase::GetProperty(uHashID, pValue) && !ElementBar::GetProperty(uHashID, pValue))
     {
-        return true;
+        return false;
     }
-    if (ElementBar::GetProperty(uHashID, pValue))
-    {
-        return true;
-    }
-    return false;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0054ae90

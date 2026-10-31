@@ -304,10 +304,8 @@ namespace GameVoiceChat
 // FUNCTION: SWBF2 0x0053c040
 bool Open(float fSeconds, bool bSoundWorking)
 {
-
     sVoiceChatHeap = GameMemory::ApplicationHeap;
     int iOldHeap = RedSetCurrentHeap(GameMemory::ApplicationHeap);
-    bool bResult = false;
 
     if (GameVoiceChat::gTransport.Open(0x32, 1))
     {
@@ -332,66 +330,59 @@ bool Open(float fSeconds, bool bSoundWorking)
             cMethod.SetNumRelayNodes(cMethod.CalculateOptimalRelayNodes(0x32));
             GameVoiceChat::gTransport.SetMethod(cMethod, true);
 
-            if (bSoundWorking)
+            if (!bSoundWorking)
             {
-                unsigned int i;
+                RedSetCurrentHeap(iOldHeap);
+                return true;
+            }
 
-                for (i = 0; i < uiNodes; ++i)
-                {
-                    if (!bAllOpen)
-                    {
-                        break;
-                    }
-                    bAllOpen &= ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C);
-                }
+            unsigned int i;
 
+            for (i = 0; i < uiNodes; ++i)
+            {
                 if (!bAllOpen)
                 {
-
-                    for (i = 0; i < uiNodes; ++i)
-                    {
-                        if (((VoiceChat::Node*)GameVoiceChat::gNodes[i])->IsOpen())
-                        {
-                            ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Close();
-                        }
-                    }
-
-                    for (i = 0; i < uiNodes; ++i)
-                    {
-                        ((GameVoiceChat::Encoder*)sVoiceChatEncoders[i])->~Encoder();
-
-                        ((GameVoiceChat::Decoder*)sVoiceChatDecoders[i])->~Decoder();
-
-                        sVoiceChatEncoders[i] = 0;
-                        sVoiceChatDecoders[i] = 0;
-                        GameVoiceChat::gNodes[i] = 0;
-                    }
-
-                    VoiceChat::Node::CloseStatic();
-                    GameVoiceChat::gTransport.Close();
+                    break;
                 }
-                else
-                {
-                    for (i = 0; i < uiNodes; ++i)
-                    {
-                        ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetSendMask(GameVoiceChat::Transport::mask_TeamFriend, true, false);
-                        ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetReceiveMask(GameVoiceChat::Transport::mask_Everyone, true, false);
-                    }
-                    bResult = true;
-                }
+                bAllOpen &= ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C);
             }
-            else
+
+            if (bAllOpen)
             {
-                bResult = true;
+                for (i = 0; i < uiNodes; ++i)
+                {
+                    ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetSendMask(GameVoiceChat::Transport::mask_TeamFriend, true, false);
+                    ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetReceiveMask(GameVoiceChat::Transport::mask_Everyone, true, false);
+                }
+                RedSetCurrentHeap(iOldHeap);
+                return true;
             }
+
+            for (i = 0; i < uiNodes; ++i)
+            {
+                if (((VoiceChat::Node*)GameVoiceChat::gNodes[i])->IsOpen())
+                {
+                    ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Close();
+                }
+            }
+
+            for (i = 0; i < uiNodes; ++i)
+            {
+                ((GameVoiceChat::Encoder*)sVoiceChatEncoders[i])->~Encoder();
+
+                ((GameVoiceChat::Decoder*)sVoiceChatDecoders[i])->~Decoder();
+
+                sVoiceChatEncoders[i] = 0;
+                sVoiceChatDecoders[i] = 0;
+                GameVoiceChat::gNodes[i] = 0;
+            }
+
+            VoiceChat::Node::CloseStatic();
         }
-        else
-        {
-            GameVoiceChat::gTransport.Close();
-        }
+        GameVoiceChat::gTransport.Close();
     }
     RedSetCurrentHeap(iOldHeap);
-    return bResult;
+    return false;
 }
 }
 
@@ -684,7 +675,6 @@ void Music::UpdateAll(float fDeltaTime)
 // FUNCTION: SWBF2 0x00538d00
 void GameSoundEngine::Update(float fDeltaTime)
 {
-    (void)fDeltaTime;
     if (NetGame::IsEnabled() && NetGame::IsDedicated())
     {
         return;
@@ -694,19 +684,20 @@ void GameSoundEngine::Update(float fDeltaTime)
         return;
     }
 
+    // The sound engine runs on its own clock: the frame's delta time is replaced by the time since the last sound update.
     const unsigned __int64 uiNow = PblTime::GetTickCount();
     const int iTicks = (int)((unsigned int)(uiNow - sLastSoundTick) & 0x7fffffff);
-    const float fElapsed = (float)iTicks * FrameUpdate::fOneOverTicksPerSecond;
+    fDeltaTime = (float)iTicks * FrameUpdate::fOneOverTicksPerSecond;
     sLastSoundTick = uiNow;
 
-    sAccumulatedSoundTime += fElapsed;
+    sAccumulatedSoundTime += fDeltaTime;
     if (!(sAccumulatedSoundTime > 0.02f))
     {
         return;
     }
     sAccumulatedSoundTime = 0.0f;
 
-    Snd::Engine::Update(fElapsed);
+    Snd::Engine::Update(fDeltaTime);
 
     if (g_InGameMoviePlayerState)
     {
@@ -717,15 +708,15 @@ void GameSoundEngine::Update(float fDeltaTime)
         return;
     }
 
-    Music::UpdateAll(fElapsed);
-    Lua_Callbacks::UpdateDelayedSounds(fElapsed);
+    Music::UpdateAll(fDeltaTime);
+    Lua_Callbacks::UpdateDelayedSounds(fDeltaTime);
 
     if (Lua_Callbacks::sGameMusicRetrigger)
     {
         float& fCountdown = *(float*)&Lua_Callbacks::sGameMusicCurDelayTime;
         if (fCountdown > 0.0f)
         {
-            fCountdown -= fElapsed;
+            fCountdown -= fDeltaTime;
         }
         else if (Lua_Callbacks::sGameMusic)
         {

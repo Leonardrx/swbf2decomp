@@ -141,7 +141,7 @@ void HUD::Editor::Enable(bool bEnable)
     }
 }
 
-const RedModel* RedModel::GetFirst()
+inline const RedModel* RedModel::GetFirst()
 {
     return PblHashTable<RedModel, 1024>::Itor(&_HashTable);
 }
@@ -190,7 +190,7 @@ const RedModel* RedModel::GetPrev(const RedModel* const pModel)
     return pPrev;
 }
 
-const RedTexture* RedTexture::GetFirst()
+inline const RedTexture* RedTexture::GetFirst()
 {
     return PblHashTable<RedTexture, 4096>::Itor(&s_textureHashTable);
 }
@@ -538,7 +538,6 @@ void HUD::Editor::Update(RawControllerInputs* const pInputs, float fDelta)
 
         case Property::type_Vector2:
         case Property::type_Vector3:
-        case Property::type_Vector4:
         {
             float* pVector = (float*)mValue.vector4Value;
             if (GetControlValue(pInputs, control_LLeft, false))
@@ -594,11 +593,60 @@ void HUD::Editor::Update(RawControllerInputs* const pInputs, float fDelta)
                                    mProperty->GetMaxVectorValue(Property::axis_Z));
                 bChanged = true;
             }
-            if (mProperty->GetType() == Property::type_Vector3)
-            {
-                break;
-            }
+            break;
+        }
 
+        case Property::type_Vector4:
+        {
+            float* pVector = (float*)mValue.vector4Value;
+            if (GetControlValue(pInputs, control_LLeft, false))
+            {
+                pVector[0] = Clamp(pVector[0] - mProperty->GetStepVectorValue(Property::axis_X) *
+                                                    GetFloatStep(control_LLeft),
+                                   mProperty->GetMinVectorValue(Property::axis_X),
+                                   mProperty->GetMaxVectorValue(Property::axis_X));
+                bChanged = true;
+            }
+            if (GetControlValue(pInputs, control_LRight, false))
+            {
+                pVector[0] = Clamp(mProperty->GetStepVectorValue(Property::axis_X) *
+                                       GetFloatStep(control_LRight) + pVector[0],
+                                   mProperty->GetMinVectorValue(Property::axis_X),
+                                   mProperty->GetMaxVectorValue(Property::axis_X));
+                bChanged = true;
+            }
+            if (GetControlValue(pInputs, control_LDown, false))
+            {
+                pVector[1] = Clamp(mProperty->GetStepVectorValue(Property::axis_Y) *
+                                       GetFloatStep(control_LDown) + pVector[1],
+                                   mProperty->GetMinVectorValue(Property::axis_Y),
+                                   mProperty->GetMaxVectorValue(Property::axis_Y));
+                bChanged = true;
+            }
+            if (GetControlValue(pInputs, control_LUp, false))
+            {
+                pVector[1] = Clamp(pVector[1] - mProperty->GetStepVectorValue(Property::axis_Y) *
+                                                    GetFloatStep(control_LUp),
+                                   mProperty->GetMinVectorValue(Property::axis_Y),
+                                   mProperty->GetMaxVectorValue(Property::axis_Y));
+                bChanged = true;
+            }
+            if (GetControlValue(pInputs, control_RLeft, false))
+            {
+                pVector[2] = Clamp(pVector[2] - mProperty->GetStepVectorValue(Property::axis_Z) *
+                                                    GetFloatStep(control_RLeft),
+                                   mProperty->GetMinVectorValue(Property::axis_Z),
+                                   mProperty->GetMaxVectorValue(Property::axis_Z));
+                bChanged = true;
+            }
+            if (GetControlValue(pInputs, control_RRight, false))
+            {
+                pVector[2] = Clamp(mProperty->GetStepVectorValue(Property::axis_Z) *
+                                       GetFloatStep(control_RRight) + pVector[2],
+                                   mProperty->GetMinVectorValue(Property::axis_Z),
+                                   mProperty->GetMaxVectorValue(Property::axis_Z));
+                bChanged = true;
+            }
             if (GetControlValue(pInputs, control_RDown, false))
             {
                 pVector[3] = Clamp(mProperty->GetStepVectorValue(Property::axis_W) *
@@ -699,8 +747,10 @@ void HUD::Editor::Update(RawControllerInputs* const pInputs, float fDelta)
             fLeft = 0.0f;
             fBottom -= fTop;
             fTop = 0.0f;
-            fRight *= HUD::Element::GetViewportHeight() / RedRenderer::GetScreenAspectRatio() /
-                      HUD::Element::GetViewportWidth();
+            const float fScale = HUD::Element::GetViewportHeight() /
+                                 RedRenderer::GetScreenAspectRatio() /
+                                 HUD::Element::GetViewportWidth();
+            fRight *= fScale;
 
             mSafeZone.Begin();
             mSafeZone.MovePen(fLeft, fTop);
@@ -1014,8 +1064,8 @@ void HUD::Editor::DisplayProperties()
         {
             if (uIndex >= uFirst && PropertyString(pProperty, acBuffer))
             {
-                RedTextElement* pText = pMenu++;
                 uCount++;
+                RedTextElement* pText = pMenu++;
                 pText->SetText(acBuffer, true);
                 pText->m_color.a = (mProperty == pProperty) ? 0xff : 0x7f;
                 pText->Enable(true);

@@ -127,7 +127,7 @@ void PatrolHelper::EnterState()
     {
         PblVector3 vPos = AIUtil::GetCommandPostPos(pPost);
         PblVector3 vOffset = AIUtil::GetCommandPostOffset(pPost);
-        PblVector3 vDest(vOffset.x + vPos.x, vPos.y + vOffset.y, vPos.z + vOffset.z);
+        PblVector3 vDest = vPos + vOffset;
         LowLevel(GetCtrl()).SetNavigator_Goto(vDest, NULL, false, false);
         break;
     }
@@ -147,7 +147,7 @@ void PatrolHelper::EnterState()
         PblVector3 vDir = PblRandom::_Sim.GetVector3();
         vDir.y = 0.0f;
         float fDist = AIUtil::GetRandomFloat(8.0f, 14.0f);
-        vPos = PblVector3(vDir.x * fDist + vPos.x, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
+        vPos += vDir * fDist;
         LowLevel(GetCtrl()).SetNavigator_Slide(vPos, NULL);
         break;
     }
@@ -163,8 +163,7 @@ void PatrolHelper::EnterState()
         mOverrideDefaultFacePos = true;
         const PblVector3& vForward = mHint->GetZAxis();
         PblVector3 vLook(vForward.x * 10.0f, vForward.y * 10.0f, vForward.z * 10.0f);
-        const PblVector3& vDest = LowLevel(GetCtrl()).GetGlobalDest();
-        mDefaultFacePos = PblVector3(vDest.x + vLook.x, vDest.y + vLook.y, vDest.z + vLook.z);
+        mDefaultFacePos = LowLevel(GetCtrl()).GetGlobalDest() + vLook;
         mHeight = mHint->GetRandomPrimaryStance();
         break;
     }

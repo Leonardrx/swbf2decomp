@@ -54,17 +54,20 @@ void BlurEffect::PlatformReadConfigData(PblConfig::Data& data)
     {
         return;
     }
-    if (uiId == 0x7E6C7187u)
+    if (uiId != 0x7E6C7187u)
+    {
+        if (uiId == 0x055CEA38u)
+        {
+            (void)data.GetFloatArg(0);
+        }
+        else if (uiId == 0x7E1194B8u)
+        {
+            m_constantBlend = data.GetFloatArg(0);
+        }
+    }
+    else
     {
         m_downSizeFactor = data.GetFloatArg(0);
-    }
-    else if (uiId == 0x055CEA38u)
-    {
-        (void)data.GetFloatArg(0);
-    }
-    else if (uiId == 0x7E1194B8u)
-    {
-        m_constantBlend = data.GetFloatArg(0);
     }
 }
 

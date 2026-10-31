@@ -205,8 +205,7 @@ void AILowLevel::ResetControls()
     mAIJetJumpDir = PblVector3(0.0f, 0.0f, 0.0f);
     mDoIdle = SoldierAnimType::IDLE;
     mMinControlSpeed = 0.0f;
-    mTarget.mObject = 0;
-    mTarget.mSavedHandleId = 0;
+    mTarget = 0;
     mIsAlert = false;
     mFastTurn = false;
     mNextWeaponIndex = -1;

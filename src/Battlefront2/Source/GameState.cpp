@@ -909,7 +909,6 @@ void GameState::CreateBaseEntityClasses()
 // FUNCTION: SWBF2 0x0053af10
 void GameState::PreStateInit(bool bMission)
 {
-
     GameMemory::BuildHeaps(!bMission);
     RedSetCurrentHeap(GameMemory::ApplicationHeap);
     OneTimeInit();
@@ -958,10 +957,13 @@ void GameState::PreStateInit(bool bMission)
         bool bOpened = LuaHelper::OpenScript(GameLoop::mMissionScript);
         if (!bOpened)
         {
-            char acName[256];
-            memset(acName, 0, sizeof(acName) - 1);
+            char acName[256] = { 0 };
             _snprintf(acName, sizeof(acName), "MISSION\\%s.lvl", GameLoop::mMissionScript);
-            if (!LoadUtil::ReadDataFile(acName, 0, 0, 0, 0))
+            if (LoadUtil::ReadDataFile(acName, 0, 0, 0, 0))
+            {
+                bOpened = LuaHelper::OpenScript(GameLoop::mMissionScript);
+            }
+            else
             {
                 RedWarning::SetLogData(RedWarning::RED_SEVERITY_FATAL, "Source\\GameState.cpp",
                                        1291, "Oct 19 2017", "14:22:39");
@@ -969,7 +971,6 @@ void GameState::PreStateInit(bool bMission)
                 RedWarning::DialogBoxMessage("Could not open %s", acName);
                 _exit(0);
             }
-            bOpened = LuaHelper::OpenScript(GameLoop::mMissionScript);
         }
 
         WORLD_EXTENTS = 0x400;
@@ -977,7 +978,7 @@ void GameState::PreStateInit(bool bMission)
         if (bOpened)
         {
             Lua_Callbacks::InitMission();
-            LuaHelper::CallGlobalProc("ScriptPreInit");
+            LuaHelper::CallProc("ScriptPreInit");
         }
     }
 
@@ -1045,11 +1046,9 @@ void GameState::PreStateInit(bool bMission)
 
     if (bMission)
     {
-
-        float fExtent = (float)WORLD_EXTENTS;
-        float aMax[3] = { fExtent, 0.0f, fExtent };
-        float aMin[3] = { -fExtent, 0.0f, -fExtent };
-        CollisionManager::Create(*(const PblVector3*)aMin, *(const PblVector3*)aMax);
+        PblVector3 vMax((float)WORLD_EXTENTS, 0.0f, (float)WORLD_EXTENTS);
+        PblVector3 vMin((float)-WORLD_EXTENTS, 0.0f, (float)-WORLD_EXTENTS);
+        CollisionManager::Create(vMin, vMax);
 
         ChunkClusterManager::Create();
         TriggerRegionManager::Create();
@@ -1116,7 +1115,14 @@ void GameState::PreStateInit(bool bMission)
     GameSound::InitDeferred();
     NetGame::EnterClient();
     NetGame::LeaveClient();
-    RedRenderer::SetFogEnable(bMission);
+    if (bMission)
+    {
+        RedRenderer::SetFogEnable(true);
+    }
+    else
+    {
+        RedRenderer::SetFogEnable(false);
+    }
 }
 
 // FUNCTION: SWBF2 0x005391b0

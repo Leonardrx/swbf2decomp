@@ -369,7 +369,7 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
     }
 
     float fDamage = damage.mBaseValue * fMultiplier * damage.mDamageOwner.mDamageMultiplier;
-    if (Team::sTeams[static_cast<const GameObject*>(this)->GetTeam()]->mAffiliation[damage.mDamageOwner.mTeam] > 0)
+    if (Team::sTeams[static_cast<const GameObject*>(this)->GetTeam()]->GetAffiliation(damage.mDamageOwner.mTeam) > 0)
     {
         Character* pAttacker = damage.mDamageOwner.mCharacter;
         if (pAttacker && pAttacker->mPlayerId < 0 && pObject->GetControllable() &&
@@ -469,10 +469,11 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
                         {
                             fAmount = 1.0f;
                         }
-                        RedColor color(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f));
                         float fTime = fAmount * 0.15f + 0.15f;
-                        ScreenFilterEffect::Instance()->TimedFilter(iViewport, fTime, 0.0f, fTime, color,
-                                                                    0xDE020766);
+                        ScreenFilterEffect::Instance()->TimedFilter(
+                            iViewport, fTime, 0.0f, fTime,
+                            RedColor(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f)),
+                            0xDE020766);
                     }
                 }
             }
@@ -494,14 +495,13 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
         GetGameObject()->GetGameObjectClass()->GetVehicleType() != 9 &&
         GetGameObject()->GetTeam() != damage.mDamageOwner.mTeam)
     {
-        Character* pAttacker = damage.mDamageOwner.mCharacter;
-        if (GetGameObject() == pAttacker->GetDamagedVehicle())
+        if (GetGameObject() == damage.mDamageOwner.mCharacter->GetDamagedVehicle())
         {
-            pAttacker->AddTotalVehicleDamage(fTotalLost);
+            damage.mDamageOwner.mCharacter->AddTotalVehicleDamage(fTotalLost);
         }
         else
         {
-            pAttacker->SetDamagedVehicle(GetGameObject());
+            damage.mDamageOwner.mCharacter->SetDamagedVehicle(GetGameObject());
         }
     }
 

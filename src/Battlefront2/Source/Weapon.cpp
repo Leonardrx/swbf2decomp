@@ -1718,6 +1718,19 @@ bool Weapon::Update(float fDeltaTime)
     {
         switch (mState)
         {
+        case OVERHEAT:
+            if (UpdateIdle(fDeltaTime))
+            {
+                if (mSelectedFlag && mTrigger->IsPressed() && mOwner && mOwner->mPlayerId >= 0)
+                {
+                    mSoundPropsFire = mClass->mFireEmptySound;
+                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
+                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
+                }
+                return true;
+            }
+            break;
+
         case IDLE:
             if (mSelectedFlag && CheckFire() && SoldierCanOperate())
             {
@@ -1833,19 +1846,6 @@ bool Weapon::Update(float fDeltaTime)
             }
             if (bExit)
             {
-                return true;
-            }
-            break;
-
-        case OVERHEAT:
-            if (UpdateIdle(fDeltaTime))
-            {
-                if (mSelectedFlag && mTrigger->IsPressed() && mOwner && mOwner->mPlayerId >= 0)
-                {
-                    mSoundPropsFire = mClass->mFireEmptySound;
-                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
-                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
-                }
                 return true;
             }
             break;

@@ -274,14 +274,15 @@ int ScriptCB_SetProfileNotDirty(lua_State* L)
 {
     LuaHelper::GetTop();
     int iIndex = LuaHelper::GetInt(1) - 1;
-    if (iIndex >= 0 && iIndex < 1)
+    if (iIndex < 0 || iIndex >= 1)
     {
-        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(iIndex - 1);
-        if (pProfile)
-        {
-            pProfile->UpdateProfCRC();
-            pProfile->mIsDirty = false;
-        }
+        return 0;
+    }
+    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(iIndex - 1);
+    if (pProfile)
+    {
+        pProfile->UpdateProfCRC();
+        pProfile->mIsDirty = false;
     }
     return 0;
 }

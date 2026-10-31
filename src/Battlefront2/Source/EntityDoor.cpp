@@ -21,7 +21,7 @@ extern bool netFrameLock;
 // FUNCTION: SWBF2 0x00498460
 void EntityDoor::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
-    if (!mAnimatedClass->m_bDynamicLighting)
+    if (!static_cast<const EntityPropClass*>(mEntityClass)->m_bDynamicLighting)
     {
         uiFlags |= 0x80u;
     }
@@ -57,18 +57,16 @@ void EntityDoor::Render(unsigned char ucViewport, float fDist, unsigned int uiFl
         mPose.ConvertFromZephyrPose(mZephyrSkeleton);
     }
 
-    const GameModel* pModel = GetModel();
-    const RedColor kWhite(255, 255, 255, 255);
-    pModel->Render(ucViewport, fDist, &mMatrix, &mPose, kWhite,
-                   uiFlags | 0x01000000u, 0);
+    GetModel()->Render(ucViewport, fDist, &mMatrix, &mPose, RedColor(255, 255, 255, 255),
+                       uiFlags | 0x01000000u, 0);
     if (!(uiFlags & 0x00200000u))
     {
         PblMatrix reflection;
         if (FLRenderer::IsReflected(GetCollisionCenter(), GetCollisionRadius(), reflection, false))
         {
             reflection = mMatrix * reflection;
-            pModel->Render(ucViewport, fDist, &reflection, &mPose, RedColor::WHITE,
-                           (uiFlags & 0xeffefeffu) | 0x10000100u, 0);
+            GetModel()->Render(ucViewport, fDist, &reflection, &mPose, RedColor::WHITE,
+                               (uiFlags & 0xeffefeffu) | 0x10000100u, 0);
         }
     }
 

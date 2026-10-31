@@ -129,24 +129,14 @@ void DroidekaElement::RenderUsingContext(const PblMatrix& mContext, const RedCol
     }
 
     PblMatrix mScreen = mContext;
-    mScreen.m[1][0] = mContext.m[1][0] * -1.0f;
-    mScreen.m[1][1] = mContext.m[1][1] * -1.0f;
-    mScreen.m[1][2] = mContext.m[1][2] * -1.0f;
+    mScreen[1] = mScreen[1] * -1.0f;
     mScreen.m[1][3] = 0.0f;
 
     float fScale = 0.75f / RedRenderer::GetScreenAspectRatio() * mDepth;
     mScreen.m[3][3] = 1.0f;
     mScreen[3] = mScreen[3] * fScale;
 
-    PblMatrix mWorld;
-    PblQuaternion qUnit;
-    D3DXMatrixRotationQuaternion((D3DXMATRIX*)&mWorld,
-                                 D3DXQuaternionNormalize((D3DXQUATERNION*)&qUnit,
-                                                         (const D3DXQUATERNION*)&mRotation));
-    mWorld.m[3][0] = mTranslation.x;
-    mWorld.m[3][1] = mTranslation.y;
-    mWorld.m[3][2] = mTranslation.z;
-    mWorld.m[3][3] = 1.0f;
+    PblMatrix mWorld(mRotation, mTranslation);
 
     PblMatrix mScaling;
     D3DXMatrixMultiply((D3DXMATRIX*)&mWorld, (const D3DXMATRIX*)&mWorld,

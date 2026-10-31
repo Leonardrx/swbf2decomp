@@ -220,16 +220,19 @@ HUD::EventClass* HUD::EventClass::GetFirst()
 // FUNCTION: SWBF2 0x0055df30
 HUD::EventClass* HUD::EventClass::GetLast()
 {
-    if (sList.mHead.mNext == &sList.mHead)
+    if (sList.mHead.mNext != &sList.mHead)
     {
-        return 0;
+        PblListSingle::Node* last = 0;
+        for (PblListSingle::Node* node = sList.GetFirst(); node != sList.GetTerminator(); node = node->GetNext())
+        {
+            last = node;
+        }
+        if (last != &sList.mHead)
+        {
+            return reinterpret_cast<EventClass*>(reinterpret_cast<char*>(last) - offsetof(EventClass, mNode));
+        }
     }
-    PblListSingle::Node* last = 0;
-    for (PblListSingle::Node* node = sList.GetFirst(); node != sList.GetTerminator(); node = node->GetNext())
-    {
-        last = node;
-    }
-    return reinterpret_cast<EventClass*>(reinterpret_cast<char*>(last) - offsetof(EventClass, mNode));
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0055df60

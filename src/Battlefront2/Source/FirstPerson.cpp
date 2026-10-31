@@ -301,8 +301,11 @@ void FirstPersonRenderable::UpdateSoldierAimer(const PblMatrix& mMatrix)
     PblMatrix mBone = *pBone;
     mModelMatrix = (mOffset * mBone) * mRotation;
 
+    mModelMatrix[0] = PblVector3(mModelMatrix.m[0][0], mModelMatrix.m[0][1], mModelMatrix.m[0][2]);
     mModelMatrix.m[0][3] = 0.0f;
+    mModelMatrix[1] = PblVector3(mModelMatrix.m[1][0], mModelMatrix.m[1][1], mModelMatrix.m[1][2]);
     mModelMatrix.m[1][3] = 0.0f;
+    mModelMatrix[2] = PblVector3(mModelMatrix.m[2][0], mModelMatrix.m[2][1], mModelMatrix.m[2][2]);
     mModelMatrix.m[2][3] = 0.0f;
     mWeaponMatrix = mModelMatrix;
 }
@@ -568,11 +571,11 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
     WEAPONCLASS eWeaponClass = _GetWeaponClassFromWeapon(pWeapon);
 
     const PblVector3& vVelocity = pOwner->GetGameObject()->GetVelocity();
+    SOLDIERANIMATION eAnim = mSoldierState;
     bool bLoop = false;
     mAnimPlaySpeed = 1.0f;
     float fBlend = 1.0f;
     float fSpeedSq = vVelocity.x * vVelocity.x + vVelocity.z * vVelocity.z;
-    SOLDIERANIMATION eAnim = mSoldierState;
 
     if ((eAnim == SHOOT1 || eAnim == SHOOT2) &&
         !mZephyrPoseDynamic.m_bAnimFinished && !pWeapon->GetFiredFlag())
@@ -685,9 +688,16 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
 
     if (fSpeedSq >= 1.0f && pCamera->mCurrCamPt <= -1 &&
         mEntitySoldierState != SoldierState::JET_HOVER &&
-        mEntitySoldierState != SoldierState::JET_JUMP && bTransition)
+        mEntitySoldierState != SoldierState::JET_JUMP && bTransition == true)
     {
-        pCamera->ViewBob(mEntitySoldierState == SoldierState::PRONE ? 0.5f : 1.0f);
+        if (mEntitySoldierState == SoldierState::PRONE)
+        {
+            pCamera->ViewBob(0.5f);
+        }
+        else
+        {
+            pCamera->ViewBob(1.0f);
+        }
     }
 
     if (fSpeedSq >= 0.1f && mEntitySoldierState == SoldierState::PRONE)

@@ -562,7 +562,14 @@ void SpaceAssault::InitBitmaps(int iViewport)
     for (int i = 0; i < mNumCriticalSystems; ++i)
     {
         RedBitmapElement& marker = vp.elemCriticalSystem[i];
-        marker.Enable(mCriticalSystems[i].bShowMarker);
+        if (mCriticalSystems[i].bShowMarker)
+        {
+            marker.Enable(true);
+        }
+        else
+        {
+            marker.Enable(false);
+        }
         marker.SetZOrder(48);
     }
 }

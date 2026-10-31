@@ -280,9 +280,10 @@ bool Ordnance::Collide(CollisionObject* pObject, const PblVector3& vPos,
 
     if (mClass->mExplosionImpact)
     {
+        GameObject* pHitObject = pObject->GetGameObject();
         PblVector3 vExplosionPos = mPosition + vNormal * 0.2f;
         mClass->mExplosionImpact->CreateExplosion(vExplosionPos, mDamageOwner, false,
-                                                  (CollisionObjectType)pObject->GetObjectData(0));
+                                                  pHitObject ? pHitObject->GetCollisionType() : eType);
     }
 
     if (mClass->mImpactExplosionEffect)
@@ -553,6 +554,13 @@ void OrdnanceClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
     switch (uProperty)
     {
+    case 0x8316F444:
+        mNextCharge = Derive(mId);
+        if (mNextCharge)
+        {
+            sscanf(pszValue, "%f", &mNextCharge->mStrengthLimit);
+        }
+        break;
     case 0x7C7C544B:
         sscanf(pszValue, "%f", &mLifeSpan);
         break;
@@ -676,13 +684,6 @@ void OrdnanceClass::SetProperty(unsigned int uProperty, const char* pszValue)
         else
         {
             mTrailEffect = 0;
-        }
-        break;
-    case 0x8316F444:
-        mNextCharge = Derive(mId);
-        if (mNextCharge)
-        {
-            sscanf(pszValue, "%f", &mNextCharge->mStrengthLimit);
         }
         break;
     case 0x955F71E9:

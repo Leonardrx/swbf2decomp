@@ -579,7 +579,7 @@ bool Character::Update(float fDeltaTime)
 
     if (mPost)
     {
-        GetPostObject(mPost);
+        mPost->GetGameObject();
     }
 
     if (!mSpawnReady || !mPost)
@@ -619,28 +619,27 @@ bool Character::Update(float fDeltaTime)
     for (int i = 0; i < pTeam->mMemberCount; ++i)
     {
         Character* pMember = pTeam->GetMemberPtr(i);
-        if (!pMember)
+        if (pMember)
         {
-            continue;
-        }
-        if (pMember->mUnit)
-        {
-            if (pMember->mPlayerId >= 0)
+            if (pMember->mUnit)
             {
-                ++iPlayersAlive;
-            }
-            else
-            {
-                ++iAIAlive;
-                if (!pFirstAI)
+                if (pMember->mPlayerId >= 0)
                 {
-                    pFirstAI = pMember;
+                    ++iPlayersAlive;
+                }
+                else
+                {
+                    ++iAIAlive;
+                    if (!pFirstAI)
+                    {
+                        pFirstAI = pMember;
+                    }
                 }
             }
-        }
-        else if (pMember->mPlayerId >= 0)
-        {
-            ++iPlayersDead;
+            else if (pMember->mPlayerId >= 0)
+            {
+                ++iPlayersDead;
+            }
         }
     }
 
@@ -737,7 +736,7 @@ bool Character::Update(float fDeltaTime)
     }
 
     mTakeoverFirstTime = false;
-    Spawn(mPost->GetMatrixOnSpawnPath(mTeamNumber != GetTeam(GetPostObject(mPost))));
+    Spawn(mPost->GetMatrixOnSpawnPath(mTeamNumber != GetTeam(mPost->GetGameObject())));
     return true;
 }
 

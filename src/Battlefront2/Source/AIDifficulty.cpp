@@ -527,9 +527,7 @@ static void SpaceAssault_RandomCritSysDamage(const Team* pTeam)
 
     if (pTarget->mCurShield > 0.0f)
     {
-        float fCap = fBestDamage * 5.0f;
-        fCap = (fCap > 15000.0f) ? 15000.0f : fCap;
-        fBestDamage = (pTarget->mCurShield > fCap) ? fCap : pTarget->mCurShield;
+        fBestDamage = Min(Min(15000.0f, fBestDamage * 5.0f), pTarget->mCurShield);
     }
     owner.mWeapon = pBestWeapon;
     DamageDesc damage(owner, fBestDamage);

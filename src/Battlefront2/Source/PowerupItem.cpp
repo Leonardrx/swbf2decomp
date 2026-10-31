@@ -320,7 +320,7 @@ bool PowerupItem::CollisionCallback(const CollisionResult* pResult, CollisionObj
                 if (pObject->GetEntityType() != ENT_SOLDIER ||
                     !static_cast<EntitySoldier*>(pObject)->mMarkedForDeath)
                 {
-                    pClass->mPowerupSound.Play(&vPos, 0, false, true);
+                    static_cast<const PowerupItemClass*>(mClass)->mPowerupSound.Play(&vPos, 0, false, true);
                 }
                 InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), false);
                 mIsAlive = false;

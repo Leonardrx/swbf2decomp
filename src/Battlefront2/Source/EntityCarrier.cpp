@@ -520,10 +520,7 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
             CollisionObject* pHit;
             if (CollisionManager::RayHit(vCamera, vDir, fPullback, pHit, 0, &pIgnore, 1, 0x90, false) >= 1.0f)
             {
-                rMatrix.m[3][0] = vDir.x * fPullback + vCamera.x;
-                rMatrix.m[3][1] = vDir.y * fPullback + vCamera.y;
-                rMatrix.m[3][2] = vDir.z * fPullback + vCamera.z;
-                rMatrix.m[3][3] = 1.0f;
+                rMatrix.SetTranslation(vDir * fPullback + vCamera);
             }
         }
         return;
@@ -556,22 +553,21 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
             PblVector3 vPos = mBody.GetTranslation();
             const PblVector3& vWalker = mTowCableWalker->GetCollisionObject()->GetPosition();
             PblVector3 vToCamera = vPos - vWalker;
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vToCamera));
-            const float fSide = vPos.x * mTarget.m[0][0] + vPos.y * mTarget.m[0][1] + vPos.z * mTarget.m[0][2];
-            mClass->mCameraSettings.mCameraTrackOffset.y = 0.5f;
-            mClass->mCameraSettings.mCameraTrackOffset.z = 8.0f;
+            vToCamera = Normalize(vToCamera);
+            const float fSide = vToCamera.x * mTarget.m[0][0] + vToCamera.y * mTarget.m[0][1] + vToCamera.z * mTarget.m[0][2];
+            PblVector3& vOffset = mClass->mCameraSettings.mCameraTrackOffset;
+            vOffset.y = 0.5f;
+            vOffset.z = 8.0f;
             if (fSide > 0.0f)
             {
-                mClass->mCameraSettings.mCameraTrackOffset.x = 2.0f;
+                vOffset.x = 2.0f;
             }
             else
             {
-                mClass->mCameraSettings.mCameraTrackOffset.x = -2.0f;
+                vOffset.x = -2.0f;
             }
             const float fRadius = GetCollisionRadius();
-            mClass->mCameraSettings.mCameraTrackOffset.x *= fRadius;
-            mClass->mCameraSettings.mCameraTrackOffset.y = fRadius * mClass->mCameraSettings.mCameraTrackOffset.y;
-            mClass->mCameraSettings.mCameraTrackOffset.z = fRadius * mClass->mCameraSettings.mCameraTrackOffset.z;
+            mClass->mCameraSettings.mCameraTrackOffset *= fRadius;
             mClass->mCameraSettings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody, mEyeDir, 1.0f, 1.0f, this);
             mClass->mCameraSettings.mCameraTrackOffset = vSavedOffset;
             mTrickCameraInterpDir = 0.0f;
@@ -640,21 +636,9 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
             }
 
             const PblVector3 vAhead(0.0f, 0.0f, 5.0f);
-            PblVector3 vAim;
-            if (mTrickCameraInterpDir > 0.0f)
-            {
-                PblVector3 vPoint;
-                D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vAhead), reinterpret_cast<const D3DXMATRIX*>(&mBody));
-                PblVector3 vToPoint(vPoint.x - rMatrix.m[3][0], vPoint.y - rMatrix.m[3][1],
-                                    vPoint.z - rMatrix.m[3][2]);
-                PblVector3 vNormal;
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vToPoint));
-                vAim = vNormal;
-            }
-            else
-            {
-                vAim = mEyeDir;
-            }
+            const PblVector3 vAim = mTrickCameraInterpDir > 0.0f
+                                        ? Normalize(mBody.ApplyTransform(vAhead) - rMatrix.GetTranslation())
+                                        : mEyeDir;
 
             if (mGetSpeedSpeed > 0.0001f)
             {
@@ -669,10 +653,8 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
             }
 
             const float fInterp = mTrickCameraInterpDir;
-            const PblVector3 vBlendAim(vAim.x * fInterp + mEyeDir.x * (1.0f - fInterp),
-                                       vAim.y * fInterp + mEyeDir.y * (1.0f - fInterp),
-                                       vAim.z * fInterp + mEyeDir.z * (1.0f - fInterp));
-            settings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody, vBlendAim, 1.0f, 1.0f, this);
+            settings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody,
+                                            vAim * fInterp + mEyeDir * (1.0f - fInterp), 1.0f, 1.0f, this);
 
             const float fDecay = fDeltaTime * 0.9f;
             mTrickCameraInterpDir -= fDecay;
@@ -697,15 +679,7 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         int iJoystick = GetJoystickIndex();
         if (iJoystick >= 0 && fSpeed > fBlurStart)
         {
-            float fBlend = (fSpeed - fBlurStart) / (fBlurEnd - fBlurStart);
-            if (fBlend < 0.0f)
-            {
-                fBlend = 0.0f;
-            }
-            else if (fBlend > 1.0f)
-            {
-                fBlend = 1.0f;
-            }
+            const float fBlend = Clamp((fSpeed - fBlurStart) / (fBlurEnd - fBlurStart), 0.0f, 1.0f);
             if (mClass->mBlurEffect * fBlend > 0.0f)
             {
                 MotionBlurEffect::Start(0, mClass->mBlurEffect * fBlend, iJoystick);

@@ -113,6 +113,9 @@ bool FoleyFXCollider::CollisionCallback(CollisionObjectType eType,
         return true;
     }
 
+    case COLL_SPECIAL:
+        return false;
+
     default:
         return false;
     }

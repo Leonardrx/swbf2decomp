@@ -331,7 +331,8 @@ bool QOSDisplayThread::DisplayIcon(float fDeltaTime, int iUpdates, int iLag)
 {
     QosEnable = false;
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
-    if (pProfile && pProfile->mOnlineOptions.mOnlineIcon && clientUpdateCount > 48
+    const bool bOnlineIcon = pProfile ? pProfile->mOnlineOptions.mOnlineIcon != 0 : false;
+    if (bOnlineIcon && clientUpdateCount > 48
         && !GameLoop::IsGameOver()
         && (iUpdates < QosValue[0][0] || iLag > QosValue[0][1]))
     {

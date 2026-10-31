@@ -456,11 +456,11 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     rMatrix[1] = matrix[1];
     rMatrix.m[1][3] = 0.0f;
 
-    const PblVector3 vBack = -rMatrix[2];
-    rMatrix[0] = Normalize(CrossProduct(vBack, rMatrix[1]));
+    const PblVector3 vBack = -mMatrix[2];
+    rMatrix[0] = Normalize(CrossProduct(vBack, mMatrix[1]));
     rMatrix.m[0][3] = 0.0f;
 
-    rMatrix[2] = Normalize(CrossProduct(rMatrix[0], rMatrix[1]));
+    rMatrix[2] = Normalize(CrossProduct(rMatrix[0], mMatrix[1]));
     rMatrix.m[2][3] = 0.0f;
 
     rMatrix.SetTranslation(matrix.GetTranslation());
@@ -477,10 +477,13 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     mLod = 0.0f;
     mNumFallingLeaves = 0;
     const float fShade = PblRandom::_Global.GetFloat() * 0.2f;
-
-    mColor = RedColorValue(PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f,
-                           PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f,
-                           PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f, 1.0f);
+    const float fBlue = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
+    const float fGreen = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
+    const float fRed = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
+    mColor.a = 1.0f;
+    mColor.r = fRed;
+    mColor.g = fGreen;
+    mColor.b = fBlue;
 
     if (mClass->mType != 3 && mClass->mMaxFallingLeaves > 0)
     {

@@ -147,13 +147,9 @@ void ParticleSpawner::SetupLocalParticle(Particle& particle, PblRandom& rand, in
     PblVector3 vOffset;
     SetupSpread(vOffset, mOffset, rand);
     const float fPositionScale = mPositionDirectionScale.GetValue(rand);
-    particle.mPosition.x = vOffset.x + fPositionScale * vDir.x;
-    particle.mPosition.y = vOffset.y + vDir.y * fPositionScale;
-    particle.mPosition.z = vOffset.z + vDir.z * fPositionScale;
+    particle.mPosition = vOffset + vDir * fPositionScale;
     const float fVelocityScale = mVelocityDirectionScale.GetValue(rand);
-    particle.mVelocity.x = fVelocityScale * vDir.x;
-    particle.mVelocity.y = vDir.y * fVelocityScale;
-    particle.mVelocity.z = vDir.z * fVelocityScale;
+    particle.mVelocity = vDir * fVelocityScale;
     particle.mSize[0] = mSize[0].GetValue(rand);
     particle.mColor[0].r = mRed[0].GetValue(rand);
     particle.mColor[0].g = mGreen[0].GetValue(rand);

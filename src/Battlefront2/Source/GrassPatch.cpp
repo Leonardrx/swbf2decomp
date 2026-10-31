@@ -82,7 +82,7 @@ GrassPatch::GrassPatch(GrassPatchClass* pClass, const PblMatrix& matrix)
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mBoundingOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
     SetRenderPos(vCenter);
     SetRenderRadius(mClass->mBoundingRadius);
-    Activate();
+    AddToScene();
 
     GrassPatchClass::sObjects.AddLast(&mObjectNode, this);
 }

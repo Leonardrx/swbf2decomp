@@ -156,7 +156,7 @@ void HeatShimmerEffect::PlatformRender(unsigned int) const
     PblVector3 vForward(cameraMatrix.m[2][0], 0.0f, cameraMatrix.m[2][2]);
     PblVector3 vNormalized;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormalized), reinterpret_cast<const D3DXVECTOR3*>(&vForward));
-    const PblVector3 vPos = cameraMatrix.GetTranslation() + (-vNormalized) * (fFar - 10.0f);
+    const PblVector3 vPos = (-vNormalized) * (fFar - 10.0f) + cameraMatrix.GetTranslation();
     PblMatrix world(gMatrixIdentity);
     world.SetRotateY(-fAngle);
     world.m[3][0] = vPos.x;
@@ -166,17 +166,17 @@ void HeatShimmerEffect::PlatformRender(unsigned int) const
 
     RedTextureTransform transform;
     float fScroll = s_shimmerTimeStamp.GetElapsed() * s_scrollSpeed;
-    transform.m_bTransform = 1;
     transform.m_Transform[0][0] = s_tileU;
     transform.m_Transform[0][1] = 0.0f;
     transform.m_Transform[1][0] = 0.0f;
+    transform.m_bTransform = 1;
     transform.m_Transform[1][1] = s_tileV;
     transform.m_Transform[2][0] = s_tileU * 0.0f;
     transform.m_Transform[2][1] = (fScroll - (float)(int)fScroll) * s_tileV;
     s_pShimmerShader->SetBumpMap(s_bumpMapHash, &transform);
     s_pShimmerShader->SetRefractionMap(RedRenderer::pcGetBuffer(PC_BUFFER_SKY));
     s_pShimmerShader->SetDistortionScale(s_distortionScale / pCamera->_fZoom);
-    RedColor color = RedColor::WHITE;
+    RedColor color(RedColor::WHITE, 0xff);
     RedRenderer::pcRenderPrimitive(s_pPrimitive,
                                    s_pShimmerShader,
                                    world,

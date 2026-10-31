@@ -9223,7 +9223,7 @@ void EntitySoldier::ApplyPush(const PblVector3& vPush, float fArg, bool bArg)
 
     if (bArg)
     {
-        mVelocity = PblVector3(vPush.x * fArg, vPush.y * fArg, vPush.z * fArg);
+        mVelocity = vPush * fArg;
     }
     else
     {
@@ -9233,7 +9233,7 @@ void EntitySoldier::ApplyPush(const PblVector3& vPush, float fArg, bool bArg)
             fDot *= 0.5f;
             mVelocity -= vPush * fDot;
         }
-        mVelocity = mVelocity + vPush * fArg;
+        mVelocity += vPush * fArg;
     }
 
     SoldierState::SoldierState eState = mState;
@@ -9349,9 +9349,13 @@ void EntitySoldier::ApplyRadiusDamage(const PblVector3& vPos, float fInnerRadius
                                       const DamageDesc& damage)
 {
     Controllable* pVehicle = mCharacter ? mCharacter->mVehicle : 0;
-    if (pVehicle && pVehicle->GetGameObject()->GetCollisionObject()->GetCollisionType() != COLL_STATIC)
+    if (pVehicle)
     {
-        return;
+        const GameObject* pVehicleObject = pVehicle->GetGameObject();
+        if (pVehicleObject->GetCollisionObject()->GetCollisionType() != COLL_STATIC)
+        {
+            return;
+        }
     }
 
     GameObject::ApplyRadiusDamage(vPos, fInnerRadius, fOuterRadius, damage);
@@ -9874,10 +9878,9 @@ bool EntitySoldier::EnterControllable(Controllable* pControllable)
     {
         for (int iChannel = 0; iChannel < 2; ++iChannel)
         {
-            int iIndex = mWeaponIndex[iChannel];
-            if (iIndex >= 0 && mWeapon[iIndex])
+            if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]])
             {
-                mWeapon[iIndex]->Deselect(mActiveChannel, false);
+                mWeapon[mWeaponIndex[iChannel]]->Deselect(mActiveChannel, false);
             }
             mWeaponIndex[iChannel] = -1;
         }
@@ -9905,12 +9908,11 @@ bool EntitySoldier::EnterControllable(Controllable* pControllable)
         }
         mActiveChannel = 0;
         mActiveIndex = mWeaponIndex[mActiveChannel];
-        for (const char* pIndex = mWeaponIndex; pIndex - mWeaponIndex < 2; ++pIndex)
+        for (int iChannel = 0; iChannel < 2; ++iChannel)
         {
-            int iIndex = *pIndex;
-            if (iIndex >= 0 && mWeapon[iIndex])
+            if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]])
             {
-                mWeapon[iIndex]->Select(pIndex - mWeaponIndex, false);
+                mWeapon[mWeaponIndex[iChannel]]->Select(iChannel, false);
             }
         }
         SetAlert(false);

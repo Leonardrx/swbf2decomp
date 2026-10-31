@@ -1050,60 +1050,73 @@ EntityLightClass::EntityLightClass(EntityLightClass* pParent, unsigned int uHash
 // FUNCTION: SWBF2 0x004ce010
 void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    int iValue;
-
     switch (uProperty)
     {
     case 0x09E7F535u:
-        if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
-        {
-            _uiFlags |= ENTITY_LIGHT_FLAG_SHADOWCASTER;
-        }
-        else
-        {
-            _uiFlags &= ~ENTITY_LIGHT_FLAG_SHADOWCASTER;
-        }
-        break;
+    {
+        int iValue;
+            if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
+            {
+                _uiFlags |= ENTITY_LIGHT_FLAG_SHADOWCASTER;
+            }
+            else
+            {
+                _uiFlags &= ~ENTITY_LIGHT_FLAG_SHADOWCASTER;
+            }
+            break;
+    }
     case 0x044C2100u:
-        if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
-        {
-            _uiFlags |= ENTITY_LIGHT_FLAG_BIDIRECTIONAL;
-        }
-        else
-        {
-            _uiFlags &= ~ENTITY_LIGHT_FLAG_BIDIRECTIONAL;
-        }
-        break;
+    {
+        int iValue;
+            if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
+            {
+                _uiFlags |= ENTITY_LIGHT_FLAG_BIDIRECTIONAL;
+            }
+            else
+            {
+                _uiFlags &= ~ENTITY_LIGHT_FLAG_BIDIRECTIONAL;
+            }
+            break;
+    }
     case 0xF946B484u:
-        if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
-        {
-            _uiFlags |= ENTITY_LIGHT_FLAG_SPECULARCASTER;
-        }
-        else
-        {
-            _uiFlags &= ~ENTITY_LIGHT_FLAG_SPECULARCASTER;
-        }
-        break;
+    {
+        int iValue;
+            if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
+            {
+                _uiFlags |= ENTITY_LIGHT_FLAG_SPECULARCASTER;
+            }
+            else
+            {
+                _uiFlags &= ~ENTITY_LIGHT_FLAG_SPECULARCASTER;
+            }
+            break;
+    }
     case 0xD290C23Bu:
-        if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
-        {
-            _uiFlags |= ENTITY_LIGHT_FLAG_STATIC;
-        }
-        else
-        {
-            _uiFlags &= ~ENTITY_LIGHT_FLAG_STATIC;
-        }
-        break;
+    {
+        int iValue;
+            if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
+            {
+                _uiFlags |= ENTITY_LIGHT_FLAG_STATIC;
+            }
+            else
+            {
+                _uiFlags &= ~ENTITY_LIGHT_FLAG_STATIC;
+            }
+            break;
+    }
     case 0x7E276E3Du:
-        if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
-        {
-            _uiFlags |= ENTITY_LIGHT_FLAG_SYNCHRONIZE;
-        }
-        else
-        {
-            _uiFlags &= ~ENTITY_LIGHT_FLAG_SYNCHRONIZE;
-        }
-        break;
+    {
+        int iValue;
+            if (sscanf(pszValue, "%d", &iValue) == 1 && iValue)
+            {
+                _uiFlags |= ENTITY_LIGHT_FLAG_SYNCHRONIZE;
+            }
+            else
+            {
+                _uiFlags &= ~ENTITY_LIGHT_FLAG_SYNCHRONIZE;
+            }
+            break;
+    }
     case 0x5127F14Du:
         if (PblHash(pszValue) != 0x2305F67Du)
         {
@@ -1202,7 +1215,7 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
         }
         else if (iCount == 1)
         {
-            _fBeamInitialWidthZ = _fBeamInitialWidthX = static_cast<float>(fabs(static_cast<double>(_fBeamInitialWidthX)));
+            _fBeamInitialWidthX = _fBeamInitialWidthZ = static_cast<float>(fabs(static_cast<double>(_fBeamInitialWidthX)));
         }
         break;
     }
@@ -1276,9 +1289,6 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
             _fBeamFadeLength = 1.0f;
         }
         break;
-    case 0x1612C34Cu:
-        sscanf(pszValue, "%f", &_fBeamDrawDistance);
-        break;
     case 0x633ED9D4u:
         sscanf(pszValue, "%f", &_fFlareIntensity);
         if (_fFlareIntensity < 0.0f)
@@ -1344,6 +1354,9 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
         break;
     case 0xC2C1813Au:
         sscanf(pszValue, "%f", &_fOmniRadius);
+        break;
+    case 0x1612C34Cu:
+        sscanf(pszValue, "%f", &_fBeamDrawDistance);
         break;
     case 0xC967096Bu:
         sscanf(pszValue, "%f", &_fSpotInnerConeAngle);

@@ -439,28 +439,12 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
             {
                 mSalvoCount = 0;
                 float fTimer = (pClass->mCoolDownTime - mWarmCoolTimer) * mStateLimit / pClass->mCoolDownTime;
-                if (fTimer < 0.0f)
-                {
-                    fTimer = 0.0f;
-                }
-                else if (fTimer > mStateLimit)
-                {
-                    fTimer = mStateLimit;
-                }
-                mStateTimer = fTimer;
+                mStateTimer = fTimer < 0.0f ? 0.0f : (fTimer > mStateLimit ? mStateLimit : fTimer);
             }
             else
             {
                 float fTimer = (pClass->mWarmUpTime - mWarmCoolTimer) * mStateLimit / pClass->mWarmUpTime;
-                if (fTimer < 0.0f)
-                {
-                    fTimer = 0.0f;
-                }
-                else if (fTimer > mStateLimit)
-                {
-                    fTimer = mStateLimit;
-                }
-                mStateTimer = fTimer;
+                mStateTimer = fTimer < 0.0f ? 0.0f : (fTimer > mStateLimit ? mStateLimit : fTimer);
             }
             break;
         }
@@ -494,7 +478,7 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
         }
         else
         {
-            while (mSalvoDelay <= 0.0f)
+            while (mSalvoCount > 0 && mSalvoDelay <= 0.0f)
             {
                 pClass = static_cast<const WeaponCannonClass*>(mClass);
                 bool bFirstShot = mSalvoCount == pClass->mSalvoCount;
@@ -539,10 +523,6 @@ bool WeaponCannon::UpdateFire(float fDeltaTime)
                 }
                 --mSalvoCount;
                 mSalvoDelay += AIUtil::GetRandomFloat(pClass->mSalvoDelayMin, pClass->mSalvoDelayMax);
-                if (mSalvoCount <= 0)
-                {
-                    break;
-                }
             }
 
             float fStep = mSalvoDelay > fRemaining ? fRemaining : mSalvoDelay;
@@ -668,14 +648,18 @@ bool WeaponCannon::FireDone() const
         return false;
     }
 
+    bool bDone = true;
     if (mWarmUp)
     {
-        const float fCoolDownTime = pClass->mCoolDownTime;
         pThis->mWarmUp = false;
+        const float fCoolDownTime = pClass->mCoolDownTime;
         pThis->mWarmCoolTimer = fCoolDownTime;
-        return !(fCoolDownTime > 0.0f);
+        if (fCoolDownTime > 0.0f)
+        {
+            bDone = false;
+        }
     }
-    return true;
+    return bDone;
 }
 
 // FUNCTION: SWBF2 0x0067f2a0

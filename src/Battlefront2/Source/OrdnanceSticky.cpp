@@ -311,9 +311,7 @@ bool OrdnanceSticky::Update(float fDeltaTime)
 
     if (fDeltaTime != 0.0f)
     {
-        const float fInv = 1.0f / fDeltaTime;
-        const PblVector3 vDelta = mPosition - mOldPosition;
-        mVelocity = PblVector3(vDelta.x * fInv, fInv * vDelta.y, vDelta.z * fInv);
+        mVelocity = (mPosition - mOldPosition) / fDeltaTime;
     }
     return Ordnance::Update(fDeltaTime);
 }

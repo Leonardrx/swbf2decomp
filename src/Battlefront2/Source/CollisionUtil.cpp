@@ -184,7 +184,7 @@ bool IsPointInsideAxisAlignedCylinder(const PblVector3& vOffset, float fRadius, 
     {
         return false;
     }
-    return fRadius * fRadius > SquaredLengthXZ(vOffset);
+    return SquaredLengthXZ(vOffset) < fRadius * fRadius;
 }
 }
 

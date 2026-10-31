@@ -539,12 +539,12 @@ int UnitAgent::HandleDamagedEvent(AI::EventInfo* pEvent)
             if (GetMaxSpeed(pMe) == 0.0f && !AIUtil::gStayInTurrets && !CombatUtil::CanFaceDisturbance(pMe, vAttackerPos))
             {
                 GetLowLevel().SetExitVehicle(0);
-                pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0),
-                                              PblHandle<GameObject>());
+                pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
             }
         }
+        Controllable* pOwnerControllable = pInfo->mDamageOwner->GetControllable();
         UnitController* pCtrl = mCtrl;
-        pCtrl->mThreatManager.AddThreat(pInfo->mDamageOwner->GetControllable()->GetGameObject());
+        pCtrl->mThreatManager.AddThreat(pOwnerControllable->GetGameObject());
         return 1;
     }
 

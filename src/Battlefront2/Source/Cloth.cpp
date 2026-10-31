@@ -233,9 +233,12 @@ void ClothData::_Read(PblFileChunk& chunk)
                 child.ReadString(acParent, sizeof(acParent));
                 m_pCollisionVolumes[i].parent = PblTEMPHash(acParent);
                 m_pCollisionVolumes[i].type = (ClothCollisionType)child._pFile->Read32();
-                m_pCollisionVolumes[i].width = child._pFile->ReadFloat();
-                m_pCollisionVolumes[i].height = child._pFile->ReadFloat();
-                m_pCollisionVolumes[i].depth = child._pFile->ReadFloat();
+                const float fWidth = child._pFile->ReadFloat();
+                m_pCollisionVolumes[i].width = fWidth;
+                const float fHeight = child._pFile->ReadFloat();
+                m_pCollisionVolumes[i].height = fHeight;
+                const float fDepth = child._pFile->ReadFloat();
+                m_pCollisionVolumes[i].depth = fDepth;
                 float x = child._pFile->ReadFloat();
                 float y = child._pFile->ReadFloat();
                 float z = child._pFile->ReadFloat();
@@ -1101,10 +1104,9 @@ void EntityCloth::Verlet(float fDeltaTime)
     for (unsigned int i = mData->m_uiNumFixedPoints; i < mData->m_uiNumParticles; ++i)
     {
         PblVector3& vPos = m_pPos[i];
-        PblVector3& vOld = m_pOldPos[i];
-        const PblVector3& vAccel = m_pAcceleration[i];
         const PblVector3 vTemp = vPos;
-        vPos += (vPos - vOld) + vAccel * fDt2;
+        PblVector3& vOld = m_pOldPos[i];
+        vPos += (vPos - vOld) + m_pAcceleration[i] * fDt2;
         vOld = vTemp;
     }
 }

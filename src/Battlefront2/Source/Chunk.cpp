@@ -120,14 +120,8 @@ void Chunk::ClearAll()
     mMaxTerrainCollisions = 0;
     mNumTerrainCollisions = 0;
     mTerrainImpactEffect = 0;
-    for (int i = 0; i < 3; i++)
-    {
-        mTrailEffect[i] = 0;
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mSmokeEffect[i] = 0;
-    }
+    memset(mTrailEffect, 0, sizeof(mTrailEffect));
+    memset(mSmokeEffect, 0, sizeof(mSmokeEffect));
     mPhysicsType = PHYSICS_SIMPLE_RIGID;
 
     for (int i = 0; i < 3; i++)
@@ -139,7 +133,8 @@ void Chunk::ClearAll()
             {
                 pEffect->StopAndFinish();
             }
-            mTrailEmitters[i] = NULL;
+            mTrailEmitters[i].mSavedHandleId = 0;
+            mTrailEmitters[i].mObject = NULL;
         }
         if (mSmokeEmitters[i].mObject)
         {
@@ -148,7 +143,8 @@ void Chunk::ClearAll()
             {
                 pEffect->StopAndFinish();
             }
-            mSmokeEmitters[i] = NULL;
+            mSmokeEmitters[i].mSavedHandleId = 0;
+            mSmokeEmitters[i].mObject = NULL;
         }
     }
     mTotalUpdateDt = 0.0f;

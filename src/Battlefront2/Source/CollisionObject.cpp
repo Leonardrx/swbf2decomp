@@ -94,98 +94,97 @@ bool CollisionObject::CheckForCollision(CollisionObject* pOther, Restrictor* pRe
 {
     bool bCollided = false;
 
-    if (!mCollisionModel || !pOther->mCollisionModel)
+    if (mCollisionModel && pOther->mCollisionModel)
     {
-        return bCollided;
-    }
-    if (mParent == pOther || this == pOther->mParent)
-    {
-        return false;
-    }
-
-    CollisionObjectType eThisType = (CollisionObjectType)GetObjectData(0);
-    CollisionObjectType eOrigOtherType = (CollisionObjectType)pOther->GetObjectData(0);
-    CollisionObjectType eOtherType = eOrigOtherType;
-
-    if (mCollisionModel->mIsFlyerFlag)
-    {
-        const EntityFlyer* pFlyer = (const EntityFlyer*)GetGameObject();
-        if (pFlyer && pFlyer->GetClass()->IsGuidedMissile())
+        if (mParent == pOther || this == pOther->mParent)
         {
-            eThisType = COLL_ORDNANCE;
-            eOtherType = COLL_STATIC;
+            return false;
+        }
+
+        CollisionObjectType eThisType = (CollisionObjectType)GetObjectData(0);
+        CollisionObjectType eOrigOtherType = (CollisionObjectType)pOther->GetObjectData(0);
+        CollisionObjectType eOtherType = eOrigOtherType;
+
+        if (mCollisionModel->mIsFlyerFlag)
+        {
+            const EntityFlyer* pFlyer = (const EntityFlyer*)GetGameObject();
+            if (pFlyer && pFlyer->GetClass()->IsGuidedMissile())
+            {
+                eThisType = COLL_ORDNANCE;
+                eOtherType = COLL_STATIC;
+            }
+            else if (pOther->mCollisionModel->mIsFlyerFlag)
+            {
+                eThisType = COLL_STATIC;
+                eOtherType = COLL_STATIC;
+            }
+            else if (eOrigOtherType == COLL_SOFT)
+            {
+                eThisType = COLL_STATIC;
+            }
+            else if (pOther->mCollisionModel->mUseVehicleCollisionAgainstFlyers)
+            {
+                eThisType = COLL_RIGID;
+            }
         }
         else if (pOther->mCollisionModel->mIsFlyerFlag)
         {
-            eThisType = COLL_STATIC;
-            eOtherType = COLL_STATIC;
-        }
-        else if (eOrigOtherType == COLL_SOFT)
-        {
-            eThisType = COLL_STATIC;
-        }
-        else if (pOther->mCollisionModel->mUseVehicleCollisionAgainstFlyers)
-        {
-            eThisType = COLL_RIGID;
-        }
-    }
-    else if (pOther->mCollisionModel->mIsFlyerFlag)
-    {
-        if (mCollisionModel->mUseVehicleCollisionAgainstFlyers)
-        {
-            eOtherType = COLL_RIGID;
-        }
-        else
-        {
-            eOtherType = (eThisType == COLL_SOFT) ? COLL_STATIC : eOrigOtherType;
-        }
-    }
-
-    if (!mCollisionModel->PrepareCollision(this, pOther->mCollisionModel, pOther,
-                                           mCollisionModel->GetCollisionMask(eOtherType),
-                                           pOther->mCollisionModel->GetCollisionMask(eThisType)))
-    {
-        return false;
-    }
-
-    sCollidingWithMesh = false;
-    sCollideTrisWithAllPrimitives = CollideTrisWithAllPrimitives();
-
-    for (;;)
-    {
-        bool bHit;
-        if (GetCollisionType() == COLL_SOFT && !mCollisionModel->mIsFlyerFlag)
-        {
-            bHit = mCollisionModel->CheckForCollision_SSSC(this, pOther, pRestrictor, pOptInfo);
-        }
-        else
-        {
-            bHit = mCollisionModel->CheckForCollision(this, pOther, pRestrictor, pOptInfo);
-        }
-        if (!bHit)
-        {
-            break;
-        }
-
-        bCollided = true;
-        CollisionResult& result = CollisionModel::sCollisionResult;
-        CollisionModel::RegisterCollision(result.mColliderId, result.mReceiverId);
-        if (!sCollidingWithMesh)
-        {
-            CollisionCallback(&result, pOther, pRestrictor);
-        }
-
-        unsigned char uId = result.mColliderId;
-        result.mColliderId = result.mReceiverId;
-        result.mReceiverId = uId;
-        result.mSeparationNormal = -result.mSeparationNormal;
-        pOther->CollisionCallback(&result, this, pRestrictor);
-
-        if (pOptInfo && mCollisionModel)
-        {
-            for (int i = 0; i < mCollisionModel->GetNumBodies(); ++i)
+            if (mCollisionModel->mUseVehicleCollisionAgainstFlyers)
             {
-                pOptInfo->refreshMatrices[i] = true;
+                eOtherType = COLL_RIGID;
+            }
+            else
+            {
+                eOtherType = (eThisType == COLL_SOFT) ? COLL_STATIC : eOrigOtherType;
+            }
+        }
+
+        if (!mCollisionModel->PrepareCollision(this, pOther->mCollisionModel, pOther,
+                                               mCollisionModel->GetCollisionMask(eOtherType),
+                                               pOther->mCollisionModel->GetCollisionMask(eThisType)))
+        {
+            return false;
+        }
+
+        sCollidingWithMesh = false;
+        sCollideTrisWithAllPrimitives = CollideTrisWithAllPrimitives();
+
+        for (;;)
+        {
+            bool bHit;
+            if (GetCollisionType() == COLL_SOFT && !mCollisionModel->mIsFlyerFlag)
+            {
+                bHit = mCollisionModel->CheckForCollision_SSSC(this, pOther, pRestrictor, pOptInfo);
+            }
+            else
+            {
+                bHit = mCollisionModel->CheckForCollision(this, pOther, pRestrictor, pOptInfo);
+            }
+            if (!bHit)
+            {
+                break;
+            }
+
+            bCollided = true;
+            CollisionResult& result = CollisionModel::sCollisionResult;
+            CollisionModel::RegisterCollision(result.mColliderId, result.mReceiverId);
+            if (!sCollidingWithMesh)
+            {
+                CollisionCallback(&result, pOther, pRestrictor);
+            }
+
+            unsigned char uId = result.mColliderId;
+            result.mColliderId = result.mReceiverId;
+            result.mReceiverId = uId;
+            result.mSeparationNormal = -result.mSeparationNormal;
+            pOther->CollisionCallback(&result, this, pRestrictor);
+
+            if (pOptInfo && mCollisionModel)
+            {
+                for (int i = 0; i < mCollisionModel->GetNumBodies(); ++i)
+                {
+                    pOptInfo->refreshMatrices[i] = true;
+                }
             }
         }
     }

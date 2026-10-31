@@ -1143,45 +1143,38 @@ int ScriptCB_EnterMission(lua_State*)
 // FUNCTION: SWBF2 0x0057f0a0
 int ScriptCB_LaunchDemo(lua_State*)
 {
-    if (GameState::GetState() != SHELL_STATE)
+    if (GameState::GetState() == SHELL_STATE)
     {
-        return 0;
-    }
-
-    const char* pcMap;
-    int iTop = lua_gettop(LuaHelper::mState);
-    if (iTop == 0)
-    {
-        pcMap = "end1a";
-    }
-    else
-    {
-        if (iTop != 1 || !lua_isstring(LuaHelper::mState, 1))
+        const char* pcMap = 0;
+        int iTop = lua_gettop(LuaHelper::mState);
+        if (iTop == 0)
         {
-            return 0;
+            pcMap = "end1a";
         }
-        pcMap = luaL_checklstring(LuaHelper::mState, 1, 0);
-        if (!pcMap)
+        else if (iTop == 1 && lua_isstring(LuaHelper::mState, 1))
         {
-            return 0;
+            pcMap = luaL_checklstring(LuaHelper::mState, 1, 0);
+        }
+
+        if (pcMap)
+        {
+            GameLoop::SetNumCameras(1);
+            if (sAttractMap[0])
+            {
+                printf_wrapper("Attract mode launching %s\n", sAttractMap);
+                GameLoop::SetNextMission(sAttractMap);
+            }
+            else
+            {
+                printf_wrapper("Attract mode launching %s\n", pcMap);
+                GameLoop::SetNextMission(pcMap);
+            }
+            gDemoMode = true;
+            gAttractMode = true;
+            GuiManager::Instance()->ChangeToScreen("", false, false);
+            GameState::SetState(MISSION_STATE);
         }
     }
-
-    GameLoop::SetNumCameras(1);
-    if (sAttractMap[0])
-    {
-        printf_wrapper("Attract mode launching %s\n", sAttractMap);
-        pcMap = sAttractMap;
-    }
-    else
-    {
-        printf_wrapper("Attract mode launching %s\n", pcMap);
-    }
-    GameLoop::SetNextMission(pcMap);
-    gDemoMode = true;
-    gAttractMode = true;
-    GuiManager::Instance()->ChangeToScreen("", false, false);
-    GameState::SetState(MISSION_STATE);
     return 0;
 }
 
@@ -1685,8 +1678,8 @@ int ScriptCB_MetagameSetBonus(lua_State*)
 int ScriptCB_MetagameSetSide(lua_State*)
 {
     const char* pcSide = LuaHelper::GetString(2);
-    unsigned int uiIndex = (unsigned int)luaL_checknumber(LuaHelper::mState, 1);
-    GameLoop::SetMetagameSide(uiIndex, Team::TranslateTeamName(pcSide));
+    __int64 iIndex = (__int64)luaL_checknumber(LuaHelper::mState, 1);
+    GameLoop::SetMetagameSide((int)iIndex, Team::TranslateTeamName(pcSide));
     return 0;
 }
 

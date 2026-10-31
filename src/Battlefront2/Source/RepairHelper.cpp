@@ -281,11 +281,11 @@ bool RepairHelper::SetAidWpn(bool* pbChanged)
     for (int i = 0; i < GetMe()->GetWeaponCount(); ++i)
     {
         const WeaponClass* pClass = GetMe()->GetWeaponPtr(i)->mClass;
-        float fAdd;
+        int bGivesAid;
         if (pClass->IsRtti(WeaponRepairClass::rttiHashWeaponRepairClass))
         {
             const WeaponRepairClass* pRepair = static_cast<const WeaponRepairClass*>(pClass);
-            fAdd = mAidType.ammo ? pRepair->mAddAmmo[mAidType.type] : pRepair->mAddHealth[mAidType.type];
+            bGivesAid = mAidType.ammo ? pRepair->mAddAmmo[mAidType.type] > 0.0f : pRepair->mAddHealth[mAidType.type] > 0.0f;
         }
         else if (pClass->IsRtti(WeaponDispenserClass::rttiHashWeaponDispenserClass))
         {
@@ -295,14 +295,13 @@ bool RepairHelper::SetAidWpn(bool* pbChanged)
                 continue;
             }
             PowerupItemClass* pPowerup = static_cast<PowerupItemClass*>(pDispense);
-            fAdd = mAidType.ammo ? pPowerup->mAddAmmo[mAidType.type] : pPowerup->mAddHealth[mAidType.type];
+            bGivesAid = mAidType.ammo ? pPowerup->mAddAmmo[mAidType.type] > 0.0f : pPowerup->mAddHealth[mAidType.type] > 0.0f;
         }
         else
         {
             continue;
         }
 
-        const bool bGivesAid = fAdd > 0.0f;
         if (bGivesAid)
         {
             if (GetMe()->GetWeaponIndex(GetMe()->GetWpnChannel()) != i)
@@ -310,9 +309,11 @@ bool RepairHelper::SetAidWpn(bool* pbChanged)
                 UnitController* pUnit = UnitControllerPtr(GetMe()->mCtrl);
                 pUnit->mLowLevel.SetNextWeapon(i);
                 *pbChanged = true;
-                return true;
             }
-            *pbChanged = false;
+            else
+            {
+                *pbChanged = false;
+            }
             return true;
         }
     }
@@ -512,9 +513,9 @@ void RepairHelper::FindPowerupsNearby(const GameObject* pObj, unsigned int* pHea
 void RepairHelper::FindAllAidNeeds(const GameObject* pObj, unsigned int health, unsigned int ammo,
                                    bool bUnused, bool* pbNeedHealth, bool* pbNeedAmmo)
 {
+    HealthType type = GetHealthType(pObj);
     unsigned int nearHealth = 0;
     unsigned int nearAmmo = 0;
-    HealthType type = GetHealthType(pObj);
     FindPowerupsNearby(pObj, &nearHealth, &nearAmmo);
 
     *pbNeedHealth = ((health >> type) & (~nearHealth >> type) & (pObj->mMaxHealth > GetCurHealth(pObj))) & 1;

@@ -78,19 +78,13 @@ void AttackPatterns::DoFlyDirect()
         {
             const PblVector3& vVelocity =
                 static_cast<const EntityGeometry*>(GetAttackHelper()->GetTarget()->GetEntity())->GetVelocity();
-            vDest.x = vVelocity.x + vTarget.x;
-            vDest.y = vVelocity.y + vTarget.y;
-            vDest.z = vVelocity.z + vTarget.z;
+            vDest = vVelocity + vTarget;
             vDest.y = Min(vDest.y, AIUtil::gMaxFlyHeight);
         }
         else
         {
-            float fAhead = pClass->mMaxFlyerSpeed * 5.0f;
-            vDest.x = vFront.x * fAhead + vPos.x;
-            vDest.y = vFront.y * fAhead + vPos.y;
-            vDest.z = vFront.z * fAhead + vPos.z;
-            float fMid = (AIUtil::gMinFlyHeight + AIUtil::gMaxFlyHeight) * 0.5f;
-            vDest.y = Min(vDest.y, fMid);
+            vDest = vFront * (pClass->mMaxFlyerSpeed * 5.0f) + vPos;
+            vDest.y = Min(vDest.y, (AIUtil::gMinFlyHeight + AIUtil::gMaxFlyHeight) * 0.5f);
         }
         mOwner->GetLowLevel().SetNavigator_GotoDirect(vDest, false, false);
     }

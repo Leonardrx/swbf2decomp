@@ -1033,9 +1033,7 @@ void EntityFlyerClass::SetProperty(unsigned int uProperty, const char* pszValue)
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            mThrustEffectAttachOffset[sCurThrustEffect].x = x;
-            mThrustEffectAttachOffset[sCurThrustEffect].y = y;
-            mThrustEffectAttachOffset[sCurThrustEffect].z = z;
+            mThrustEffectAttachOffset[sCurThrustEffect] = PblVector3(x, y, z);
         }
         break;
     case 0xf174a3f8:
@@ -1083,9 +1081,7 @@ void EntityFlyerClass::SetProperty(unsigned int uProperty, const char* pszValue)
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            mContrailEffectAttachOffset[sCurContrailEffect].x = x;
-            mContrailEffectAttachOffset[sCurContrailEffect].y = y;
-            mContrailEffectAttachOffset[sCurContrailEffect].z = z;
+            mContrailEffectAttachOffset[sCurContrailEffect] = PblVector3(x, y, z);
         }
         break;
     case 0x86caf00e:

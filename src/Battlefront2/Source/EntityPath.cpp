@@ -311,8 +311,8 @@ const PblVector3* EntityPath::GetPointPosition(int i) const
 void EntityPath::CalculatePointPosition(int i, char cDirection, PblVector3& vPosition) const
 {
     PblVector3 vDirection;
-    const PblVector3& vVariance = mNodeProps[i].GetVariance();
-    if (vVariance.x == 0.0f && vVariance.y == 0.0f && vVariance.z == 0.0f)
+    const NodeProperties& node = mNodeProps[i];
+    if (node.GetVariance().x == 0.0f && node.GetVariance().y == 0.0f && node.GetVariance().z == 0.0f)
     {
         vDirection.SetAll(0.0f);
     }
@@ -443,9 +443,10 @@ bool EntityPath::Add(unsigned int uClassID, char cDirection, PblListDouble::Node
     if (mCount < mMaxCount)
     {
         ++mCount;
+        bool bAdded = true;
         if (mNumClassIDs)
         {
-            bool bAdded = false;
+            bAdded = false;
             for (unsigned int i = 0; i < mNumClassIDs; ++i)
             {
                 if (mClasses[i].GetID() == uClassID)
@@ -454,18 +455,17 @@ bool EntityPath::Add(unsigned int uClassID, char cDirection, PblListDouble::Node
                     break;
                 }
             }
-            if (!bAdded)
-            {
-                --mCount;
-                return false;
-            }
         }
-        if (pNode)
+        if (bAdded)
         {
-            mEntityList.AddLast(pNode);
+            if (pNode)
+            {
+                mEntityList.AddLast(pNode);
+            }
+            mDirectionEntity = cDirection;
+            return true;
         }
-        mDirectionEntity = cDirection;
-        return true;
+        --mCount;
     }
     return false;
 }

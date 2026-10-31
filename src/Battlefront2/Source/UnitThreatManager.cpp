@@ -98,12 +98,8 @@ unsigned char Threat::GetPriority(float fTime, Controllable* pMe) const
     else
     {
         const PblVector3& vHisFwd = mThreatObject->GetMatrix().GetZAxis();
-        float fFacing = vDir.x * vHisFwd.x + vDir.y * vHisFwd.y + vDir.z * vHisFwd.z;
-        float fMin = AIDifficulty::GetPlayerThreatAngle() * 2.0f - 1.0f;
-        if (fMin < 0.0f)
-        {
-            fMin = 0.0f;
-        }
+        float fFacing = DotProduct(vHisFwd, vDir);
+        float fMin = Max(0.0f, AIDifficulty::GetPlayerThreatAngle() * 2.0f - 1.0f);
         const float fScale = Clamp((fFacing - 0.6f) / 0.4f, fMin, 1.0f);
         iVisual = (int)((float)iVisual * fScale);
     }
@@ -112,8 +108,8 @@ unsigned char Threat::GetPriority(float fTime, Controllable* pMe) const
     {
         for (PblList<FlagItem>::Itor it(*FlagItem::sList); (FlagItem*)it; ++it)
         {
-            if (reinterpret_cast<EntityItem*>((FlagItem*)it)->mOwner ==
-                mThreatObject->mControllableList.GetFirst()->_pObject->mCharacter)
+            const Character* pOwner = reinterpret_cast<EntityItem*>((FlagItem*)it)->mOwner;
+            if (pOwner == mThreatObject->mControllableList.GetFirst()->_pObject->mCharacter)
             {
                 iVisual = 100;
                 break;

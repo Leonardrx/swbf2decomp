@@ -448,8 +448,8 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
 
     int nWidth = rc.right - rc.left;
     int nHeight = rc.bottom - rc.top;
-    int X = (rcDesktop.left - nWidth + rcDesktop.right) / 2;
-    int Y = (rcDesktop.top - nHeight + rcDesktop.bottom) / 2;
+    int X = (rcDesktop.right - nWidth + rcDesktop.left) / 2;
+    int Y = (rcDesktop.bottom - nHeight + rcDesktop.top) / 2;
 
     char szTitle[264];
     strcpy(szTitle, "Star Wars Battlefront II");
@@ -493,20 +493,32 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
         }
 
         bool bMessage = PeekMessageA(&msg, 0, 0, 0, PM_REMOVE) != 0;
-        if (bMessage)
+        if (bActive)
         {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
+            if (bMessage)
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
+            else if (!GameState::Update())
+            {
+                SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
+            }
         }
         else
         {
-            if (!bActive)
+            if (bMessage)
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
+            else
             {
                 Sleep(10);
-            }
-            if (!GameState::Update())
-            {
-                SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
+                if (!GameState::Update())
+                {
+                    SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
+                }
             }
         }
     }

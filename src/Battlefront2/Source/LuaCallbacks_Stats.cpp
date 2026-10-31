@@ -1164,8 +1164,8 @@ int ScriptCB_GetAwardStats(lua_State* L)
     DoPeriodicLuaGC(false);
     lua_newtable(LuaHelper::mState);
 
-    int iFirst = (iSide != 0) * 4 + 2;
-    int iEnd = (iSide != 0) * 4 + 6;
+    int iFirst = (iSide != 0) ? 6 : 2;
+    int iEnd = (iSide != 0) ? 10 : 6;
     for (int i = iFirst; i < iEnd; ++i)
     {
         lua_newtable(LuaHelper::mState);

@@ -417,23 +417,30 @@ void HUD::ElementText::EventNumber(const HUD::Event& event, void* const pData)
         text[0] = 0;
         for (const char* pc = pText->mNumberToTime; *pc; ++pc)
         {
-            const char c = *pc;
             if (uFormatLength != 0 && uFormatLength < 30)
             {
-                int iValue;
-                if (c == 'd')
+                if (*pc == 'd')
                 {
-                    iValue = (int)fDays;
+                    format[uFormatLength] = 'd';
+                    format[uFormatLength + 1] = 0;
+                    _snprintf(buffer, 255, format, (int)fDays);
+                    strlcat(text, buffer, 255);
                 }
-                else if (c == 'h')
+                else if (*pc == 'h')
                 {
-                    iValue = (int)fHours;
+                    format[uFormatLength] = 'd';
+                    format[uFormatLength + 1] = 0;
+                    _snprintf(buffer, 255, format, (int)fHours);
+                    strlcat(text, buffer, 255);
                 }
-                else if (c == 'm')
+                else if (*pc == 'm')
                 {
-                    iValue = (int)fMinutes;
+                    format[uFormatLength] = 'd';
+                    format[uFormatLength + 1] = 0;
+                    _snprintf(buffer, 255, format, (int)fMinutes);
+                    strlcat(text, buffer, 255);
                 }
-                else if (c == 's')
+                else if (*pc == 's')
                 {
                     format[uFormatLength] = 'd';
                     format[uFormatLength + 1] = 0;
@@ -447,30 +454,23 @@ void HUD::ElementText::EventNumber(const HUD::Event& event, void* const pData)
                                   (int)fSeconds);
                     }
                     strlcat(text, buffer, 255);
-                    uTextLength = strlen(text);
-                    uFormatLength = 0;
-                    continue;
                 }
                 else
                 {
-                    format[uFormatLength++] = c;
+                    format[uFormatLength++] = *pc;
                     continue;
                 }
-                format[uFormatLength] = 'd';
-                format[uFormatLength + 1] = 0;
-                _snprintf(buffer, 255, format, iValue);
-                strlcat(text, buffer, 255);
                 uTextLength = strlen(text);
                 uFormatLength = 0;
             }
-            else if (c == '%')
+            else if (*pc == '%')
             {
                 text[uTextLength] = 0;
-                format[uFormatLength++] = c;
+                format[uFormatLength++] = *pc;
             }
             else
             {
-                text[uTextLength++] = c;
+                text[uTextLength++] = *pc;
             }
         }
         text[uTextLength] = 0;

@@ -38,10 +38,7 @@ OrdnanceGrapplingHook::OrdnanceGrapplingHook(OrdnanceGrapplingHookClass* pClass,
     if (desc.mFireWeapon->IsRtti(WeaponGrapplingHook::rttiHashWeaponGrapplingHook))
     {
         mFireWeapon = (WeaponGrapplingHook*)desc.mFireWeapon;
-        PblMatrix inverse = mOwner->GetMatrix().GetInverseFast();
-        PblVector3 vOffset;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&mFireWeapon->mAimer->mFirePos), reinterpret_cast<const D3DXMATRIX*>(&inverse));
-        mWeaponOffset = vOffset;
+        mWeaponOffset = mOwner->GetMatrix().GetInverseFast().ApplyTransform(mFireWeapon->mAimer->mFirePos);
     }
     else
     {

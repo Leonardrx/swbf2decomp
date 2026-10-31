@@ -351,8 +351,8 @@ void PlayerProfile::tSoundOpt::ApplySettings()
     if (mMixerMode != 0)
     {
         if (mMixerMode != (unsigned int)Snd::Engine::GetMixConfig() ||
-            (mEffectsEnabled == 1) != (Snd::Engine::smSoftwareEffectsEnabled ||
-                                       Snd::Engine::smHardwareEffectsAvailable))
+            (mEffectsEnabled == 1) !=
+                (bool)((Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0))
         {
             GameSoundEngine::ChangeMixConfig(mMixerMode, mEffectsEnabled != 0);
         }
@@ -718,6 +718,7 @@ void PlayerProfile::tOnlineOpt::ApplySettings()
         iIndex = iPlayer >= 0 ? NetGame::GetLocalIndex(iPlayer) : -1;
     }
 
+    bool bHasID = false;
     if (pNode && iIndex >= 0)
     {
         void* pDecoder = &pNode->GetDecoder();
@@ -749,13 +750,10 @@ void PlayerProfile::tOnlineOpt::ApplySettings()
             ((GameVoiceChat::Node*)pNode)->SetID(0xFF);
         }
 
-        if (pNode->GetID() != 0xFF)
-        {
-            return;
-        }
+        bHasID = pNode->GetID() != 0xFF;
     }
 
-    if (bShellOrNet)
+    if (!bHasID && bShellOrNet)
     {
         mu8VoiceToTVVol = 0;
         mVoiceEnable = 0;

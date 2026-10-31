@@ -2161,12 +2161,15 @@ void Combo::State::_ReadConfig(PblConfig& config, const Combo& combo, const char
 // FUNCTION: SWBF2 0x00474a60
 void Combo::State::_ReadAnimatedMoveScope(PblConfig& config, const char* pszComboName)
 {
-    while (!config.IsDone())
+    for (;;)
     {
-        if (config.IsScopeNext())
+        while (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
         {
             PblConfig scope(config.ReadNextScope(), true);
-            continue;
+        }
+        if (config.IsDone())
+        {
+            break;
         }
 
         PblConfig::Data data = config.ReadNextData();

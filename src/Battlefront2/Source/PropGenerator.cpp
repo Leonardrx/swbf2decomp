@@ -762,7 +762,6 @@ void PropGenerator::SetupClusters()
                 }
 
                 SetRandSeed(iLayer + z * 2 + iIndex);
-                PropLayer& layer = mPropLayers[iLayer];
                 int cz = z * 2;
                 for (int nz = 0; nz < 2; nz++, cz++)
                 {
@@ -774,9 +773,9 @@ void PropGenerator::SetupClusters()
                             continue;
                         }
 
-                        for (int i = 0; i < layer.mObjectsPerCell; i++)
+                        for (int i = 0; i < mPropLayers[iLayer].mObjectsPerCell; i++)
                         {
-                            layer.CreateCollisionObjects(cx, cz, mLayerMapWidth >> 1, 0.0f);
+                            mPropLayers[iLayer].CreateCollisionObjects(cx, cz, mLayerMapWidth >> 1, 0.0f);
                         }
                     }
                 }

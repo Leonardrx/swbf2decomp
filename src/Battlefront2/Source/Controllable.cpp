@@ -823,10 +823,10 @@ void ControllableClass::UpdatePilotAnimation(Controllable* pPilot, const RedPose
         {
             pNode = pPose->Find(mPilotParentNodeHash);
         }
+        PblMatrix mNode;
         PblMatrix mPilot;
         if (mAnimatedPilotNodeFlag)
         {
-            PblMatrix mNode;
             D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mNode), reinterpret_cast<const D3DXMATRIX*>(pNode), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
             pPilot->SetPilotInfo(mNode, vOffset, mPilotAnimation, mIsPilotExposed,
                                  f1, f2, f3, fDeltaTime);
@@ -835,9 +835,8 @@ void ControllableClass::UpdatePilotAnimation(Controllable* pPilot, const RedPose
         {
             if (pNode)
             {
-                PblMatrix mSeat;
-                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mSeat), reinterpret_cast<const D3DXMATRIX*>(&mPilotOffsetMatrix), reinterpret_cast<const D3DXMATRIX*>(pNode));
-                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mPilot), reinterpret_cast<const D3DXMATRIX*>(&mSeat), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mNode), reinterpret_cast<const D3DXMATRIX*>(&mPilotOffsetMatrix), reinterpret_cast<const D3DXMATRIX*>(pNode));
+                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mPilot), reinterpret_cast<const D3DXMATRIX*>(&mNode), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
             }
             else
             {

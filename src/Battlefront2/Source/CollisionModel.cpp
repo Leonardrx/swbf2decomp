@@ -376,21 +376,19 @@ const CollisionResult* CollisionModel::CollideTerrain(CollisionObject* pObject, 
 {
     for (unsigned char i = 0; i < mNumBodies; ++i)
     {
-        if (IsEmpty((*sCollisionMask)[i]))
+        if (!(*sCollisionMask)[i].IsEmpty())
         {
-            continue;
-        }
-
-        PblMatrix world = mBody[i]->GetWorldMatrix(matrix, pPose);
-        if (mBody[i]->CollideTerrain(world, sCollisionResult.mSeparationNormal, sCollisionResult.mOverlap,
-                                     sCollisionResult.mCollisionPosition))
-        {
+            PblMatrix world = mBody[i]->GetWorldMatrix(matrix, pPose);
+            if (mBody[i]->CollideTerrain(world, sCollisionResult.mSeparationNormal, sCollisionResult.mOverlap,
+                                         sCollisionResult.mCollisionPosition))
+            {
+                pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
+                sCollisionResult.mColliderId = i;
+                sCollisionResult.mReceiverId = 0;
+                return &sCollisionResult;
+            }
             pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
-            sCollisionResult.mColliderId = i;
-            sCollisionResult.mReceiverId = 0;
-            return &sCollisionResult;
         }
-        pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
     }
     return NULL;
 }

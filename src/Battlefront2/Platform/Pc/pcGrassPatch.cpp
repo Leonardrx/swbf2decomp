@@ -256,12 +256,14 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
         return;
     }
 
-    PblSphere sphere;
-    sphere.w = m_pClass->mBoundingRadius;
-    sphere.x = matrix.m[3][0];
-    sphere.y = matrix.m[3][1];
-    sphere.z = matrix.m[3][2];
-    RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, false, false, false));
+    {
+        PblSphere sphere;
+        sphere.w = m_pClass->mBoundingRadius;
+        sphere.x = matrix.m[3][0];
+        sphere.y = matrix.m[3][1];
+        sphere.z = matrix.m[3][2];
+        RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, false, false, false));
+    }
 
     const PblMatrix& camMat = RedRenderer::GetCamera()->_Matrix;
     PblVector3 vDelta(matrix.m[3][0] - camMat.m[3][0], matrix.m[3][1] - camMat.m[3][1],
@@ -273,19 +275,21 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
     {
         if (m_pPrimitiveFar && color.a == 0xff)
         {
-            RenderPrimitive(m_pPrimitiveFar, m_pShaderFar, &matrix, &color, uiFlags);
+            RedRenderer::pcRenderPrimitive(m_pPrimitiveFar, m_pShaderFar, matrix, color, uiFlags,
+                                           0, 0, 0);
         }
         else if (m_pPrimitive)
         {
-            RenderPrimitive(m_pPrimitive, m_pShader, &matrix, &color, uiFlags);
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pShader, matrix, color, uiFlags,
+                                           0, 0, 0);
         }
     }
     else if (m_pClass->mTransparentFlag)
     {
         if (m_pPrimitive)
         {
-            RenderPrimitive(m_pPrimitive, m_pShaderTransparent, &matrix, &color,
-                                              uiFlags | 8);
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pShaderTransparent, matrix, color,
+                                           uiFlags | 8, 0, 0, 0);
         }
     }
     else if (fDist >= m_fDistanceFarShader)
@@ -304,14 +308,16 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
 
         if (m_pPrimitiveFar)
         {
-            RenderPrimitive(m_pPrimitiveFar, m_pShaderFar, &mat, &opaque, uiFlags);
+            RedRenderer::pcRenderPrimitive(m_pPrimitiveFar, m_pShaderFar, mat, opaque, uiFlags,
+                                           0, 0, 0);
         }
     }
     else
     {
         if (m_pPrimitive)
         {
-            RenderPrimitive(m_pPrimitive, m_pShader, &matrix, &color, uiFlags);
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pShader, matrix, color, uiFlags,
+                                           0, 0, 0);
         }
     }
 }

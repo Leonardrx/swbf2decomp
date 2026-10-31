@@ -103,11 +103,10 @@ void SoundDebugDisplay::DisplayVoiceChatInfo()
                GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x478))->GetPlayState()),
                GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x78))->GetPlayState()));
 
-        Snd::StreamNode& rRenderer = pDecoder->mAuxRenderer;
         Printf("render : mix %s, aux %s %s %2d:%2d\n",
                pDecoder->mMixer.IsActive() ? "ply" : "stp",
-               GetPlayStateStringShort(rRenderer.GetPlayState()),
-               rRenderer.IsStarving() ? "stv" : "ok ", 0, 0);
+               GetPlayStateStringShort(pDecoder->mAuxRenderer.GetPlayState()),
+               pDecoder->mAuxRenderer.IsStarving() ? "stv" : "ok ", 0, 0);
     }
 }
 

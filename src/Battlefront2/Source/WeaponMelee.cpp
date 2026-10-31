@@ -462,9 +462,9 @@ float WeaponMelee::GetLightSaberLengthFactor(unsigned int uiBlade) const
 void WeaponMelee::RenderLightsaberTrail(unsigned int uiEdge, const PblMatrix* pMatrix, bool bTrailOn,
                                         unsigned int uiFlags)
 {
-    WeaponMelee::TrailData** ppData = &m_pTrailData;
     WeaponMelee::TrailData* pSelected = 0;
-    WeaponMelee::TrailData* pData = *ppData;
+    WeaponMelee::TrailData* pData = m_pTrailData;
+    WeaponMelee::TrailData** ppData = &m_pTrailData;
     while (pData)
     {
         if (pData->m_pTrail->m_uiNumSamples <= 0)
@@ -2944,10 +2944,11 @@ bool WeaponMelee::Update(float fDeltaTime)
         if (pTransition)
         {
             eNextState = (ComboState)pTransition->m_uiTargetState;
+            const float fCost = pTransition->m_uiEnergyCost * 0.1f;
             EnergyBar* pEnergy = mOwner->GetEnergyBar();
             if (pEnergy)
             {
-                pEnergy->SpendEnergy(pTransition->m_uiEnergyCost * 0.1f);
+                pEnergy->SpendEnergy(fCost);
             }
         }
 
@@ -2964,8 +2965,8 @@ bool WeaponMelee::Update(float fDeltaTime)
             else
             {
                 m_eComboStatePrev = eNextState;
-                m_fComboStateDurationPrev = 0.0f;
                 pStatePrev = 0;
+                m_fComboStateDurationPrev = 0.0f;
             }
             WeaponMelee::_ClearInputQueueToTime(m_InputQueue, m_fInputTimer + fMatchTime - fTimer);
             ExitState();

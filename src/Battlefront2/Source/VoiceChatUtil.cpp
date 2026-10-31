@@ -54,10 +54,9 @@ bool VoiceChat::GetBit(const unsigned char* const bitmap, unsigned int bit)
 void VoiceChat::SetBits(unsigned char* const pBitmap, unsigned int bit,
                         unsigned int value, unsigned int count)
 {
-    for (; count != 0; --count)
+    while (count--)
     {
-        VoiceChat::SetBit(pBitmap, bit, (value & 1) != 0);
-        ++bit;
+        VoiceChat::SetBit(pBitmap, bit++, (value & 1) != 0);
         value >>= 1;
     }
 }
