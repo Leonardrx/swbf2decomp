@@ -73,8 +73,9 @@ void NavigatorGraphFollower::ExitState()
 // FUNCTION: SWBF2 0x005ad740
 void NavigatorGraphFollower::UpdateState(float dt)
 {
-    if (mCurState == STATE_PATHING)
+    switch (mCurState)
     {
+    case STATE_PATHING:
         mPathFollower->Update(dt);
         if (mPathFollower->mDone && mPathFollower->mDoneReason == PF_PATHBLOCKED)
         {
@@ -89,6 +90,7 @@ void NavigatorGraphFollower::UpdateState(float dt)
             AI::EventInfo info(AI::EVT_Nav_NavigatorFinished);
             mOwner->mOwner->SendEvent(&info);
         }
+        break;
     }
 }
 
@@ -223,7 +225,11 @@ void NavigatorGraphFollower::ReceivePathResult(AIPath* pPath)
     unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();
     if (uArcFlags)
     {
-        unsigned short uFlags = (uArcFlags & 2) ? AIPathNode::AIPN_JUMP : 0;
+        unsigned int uFlags = 0;
+        if (uArcFlags & 2)
+        {
+            uFlags = AIPathNode::AIPN_JUMP;
+        }
         if (uArcFlags & 4)
         {
             uFlags |= AIPathNode::AIPN_JETJUMP;
@@ -236,7 +242,7 @@ void NavigatorGraphFollower::ReceivePathResult(AIPath* pPath)
             PblVector3 vDelta(vTo.x - vFrom.x, vTo.y - vFrom.y, vTo.z - vFrom.z);
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-            PblVector3 vJump(vDir.x * 0.1f + vFrom.x, vDir.y * 0.1f + vFrom.y, vDir.z * 0.1f + vFrom.z);
+            PblVector3 vJump = vDir * 0.1f + vFrom;
             pLegPath->Prepend(vJump, uFlags);
             pLegPath->Prepend(vFrom, 0);
 
@@ -247,7 +253,8 @@ void NavigatorGraphFollower::ReceivePathResult(AIPath* pPath)
     }
     else
     {
-        PathManager::RequestPath(mOwner->mOwner, vFrom, vTo, AIUtil::GetCollisionRadius(pObj),
+        UnitController* pController = mOwner->mOwner;
+        PathManager::RequestPath(pController, vFrom, vTo, AIUtil::GetCollisionRadius(pObj),
                                  AIUtil::GetAIType(pObj), 1, 0, (const Obstacle**)mIgnore,
                                  mIgnoreCnt);
     }

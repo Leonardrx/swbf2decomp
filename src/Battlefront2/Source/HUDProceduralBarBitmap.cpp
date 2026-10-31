@@ -226,8 +226,8 @@ void HUD::ProceduralBarBitmap::SetRect(float fWidth, float fHeight,
 void HUD::ProceduralBarBitmap::SetRect_(float fWidth, float fHeight)
 {
     float fLeft = 0.0f;
-    float fTop = 0.0f;
     float fRight = 0.0f;
+    float fTop = 0.0f;
     float fBottom = 0.0f;
     const float fCenterX = (left_ + right_) * 0.5f;
     const float fCenterY = (top_ + bottom_) * 0.5f;

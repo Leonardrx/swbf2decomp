@@ -146,10 +146,10 @@ static void ReleaseMutex()
 // FUNCTION: SWBF2 0x006171b0
 void Startup_InitApplicationMemory()
 {
-    s_memoryArena = malloc(0x4000000);
+    char* pArena = (char*)malloc(0x4000000);
+    s_memoryArena = pArena;
 
-    GameMemory::InitApplicationMemory((char*)s_memoryArena,
-                                      (char*)s_memoryArena + 0x4000000);
+    GameMemory::InitApplicationMemory(pArena, pArena + 0x4000000);
 }
 
 // FUNCTION: SWBF2 0x006171d0
@@ -218,7 +218,7 @@ long __stdcall WindowProc(HWND__* hWnd, unsigned int Msg, unsigned int wParam, l
         CloseJournal();
         GameLoop::Cleanup();
 
-        GameState::PostStateCleanup(GameState::GetState() != 0x11E1FC01);
+        GameState::PostStateCleanup(GameState::GetState() != 0x11E1FC01 /* "shell" */);
         GameState::OneTimeCleanup();
         {
 
@@ -249,7 +249,7 @@ long __stdcall WindowProc(HWND__* hWnd, unsigned int Msg, unsigned int wParam, l
         if (!g_bNoRender)
         {
             RedRenderer::SetCursorImage(
-                RedTexture::s_textureHashTable.Find(0xA2BB0616), 0, 0);
+                RedTexture::s_textureHashTable.Find(0xA2BB0616 /* "mousecursor" */), 0, 0);
         }
         return 1;
 
@@ -279,7 +279,7 @@ long __stdcall WindowProc(HWND__* hWnd, unsigned int Msg, unsigned int wParam, l
             {
                 SoundEnable(true);
             }
-            break;
+            return DefWindowProcA(hWnd, WM_SYSCOMMAND, wParam, lParam);
 
         case SC_CLOSE:
             gIsQuitting = true;
@@ -405,13 +405,21 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
         }
     }
 
-    GameState::SetState(GameLoop::mMissionScript[0] ? 0x8FF60339 : 0x11E1FC01);
+    if (GameLoop::mMissionScript[0])
+    {
+        GameState::SetState(0x8FF60339);
+    }
+    else
+    {
+        GameState::SetState(0x11E1FC01);
+    }
 
     if (g_bNoRender || bDedicated)
     {
         strcat(appName, " Dedicated");
     }
 
+    MSG msg;
     WNDCLASSA wc;
     wc.style = CS_BYTEALIGNCLIENT | CS_OWNDC | CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
@@ -440,8 +448,8 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
 
     int nWidth = rc.right - rc.left;
     int nHeight = rc.bottom - rc.top;
-    int X = (rcDesktop.left + rcDesktop.right - nWidth) / 2;
-    int Y = (rcDesktop.top + rcDesktop.bottom - nHeight) / 2;
+    int X = (rcDesktop.left - nWidth + rcDesktop.right) / 2;
+    int Y = (rcDesktop.top - nHeight + rcDesktop.bottom) / 2;
 
     char szTitle[264];
     strcpy(szTitle, "Star Wars Battlefront II");
@@ -451,9 +459,10 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
         strcat(szTitle, autoNetSession);
     }
 
+    HWND hWnd = CreateWindowExA(dwExStyle, appName, "Star Wars Battlefront II", dwStyle,
+                                X, Y, nWidth, nHeight, 0, 0, hInstance, 0);
     hGlobalInstance = hInstance;
-    hGlobalWnd = CreateWindowExA(dwExStyle, appName, "Star Wars Battlefront II", dwStyle,
-                                 X, Y, nWidth, nHeight, 0, 0, hInstance, 0);
+    hGlobalWnd = hWnd;
 
     if (pcPostInstall)
     {
@@ -468,44 +477,34 @@ int __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int)
     }
 
     GetDeviceGammaRamp(GetDC(hGlobalWnd), &s_originalGammaRamp);
-    SetICMMode(GetDC(hGlobalWnd), ICM_ON);
+    SetICMMode(GetDC(hGlobalWnd), ICM_OFF);
 
-    MSG msg;
     bool bActive = true;
     msg.message = 0;
     PeekMessageA(&msg, 0, 0, 0, PM_NOREMOVE);
-    if (msg.message != WM_QUIT)
+    while (msg.message != WM_QUIT)
     {
-        for (;;)
+        bool bAppActive = gAppActive;
+        if (bActive != bAppActive)
         {
-            if (bActive != gAppActive)
-            {
-                bActive = gAppActive;
+            bActive = bAppActive;
 
-                ActivateFrontline(bActive);
-            }
+            ActivateFrontline(bAppActive);
+        }
 
-            if (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
-            {
-                TranslateMessage(&msg);
-                DispatchMessageA(&msg);
-            }
-            else
-            {
-                if (!bActive)
-                {
-                    Sleep(10);
-                }
-                if (!GameState::Update())
-                {
-                    SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
-                }
-            }
-
-            if (msg.message == WM_QUIT)
-            {
-                break;
-            }
+        bool bMessage = PeekMessageA(&msg, 0, 0, 0, PM_REMOVE) != 0;
+        if (!bActive && !bMessage)
+        {
+            Sleep(10);
+        }
+        if (bMessage)
+        {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+        else if (!GameState::Update())
+        {
+            SendMessageA(hGlobalWnd, WM_CLOSE, 0, 0);
         }
     }
 

@@ -113,13 +113,14 @@ static unsigned int GetStreamIndex(Snd::Stream* pStream);
 // FUNCTION: SWBF2 0x0059d0c0
 int ScriptCB_ToggleEffects(lua_State*)
 {
-    bool bEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
-    GameSoundEngine::ChangeMixConfig(Snd::Engine::GetMixConfig(), !bEffects);
+    unsigned char ucEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+    GameSoundEngine::ChangeMixConfig(Snd::Engine::GetMixConfig(), !ucEffects);
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        unsigned char ucEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        opt.mEffectsEnabled = ucEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -135,7 +136,8 @@ int ScriptCB_PreviousOutputMode(lua_State*)
     int iMode = Snd::EngineBase::smSpeakerConfig - 1;
     if (iMode <= 4 && Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_DirectSoundSoftware)
     {
-        GameSoundEngine::ChangeMixConfig(1, Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable);
+        unsigned char ucEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        GameSoundEngine::ChangeMixConfig(1, ucEffects != 0);
     }
     if (iMode == 0)
     {
@@ -156,7 +158,8 @@ int ScriptCB_PreviousOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        unsigned char ucEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        opt.mEffectsEnabled = ucEnabled != 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -178,7 +181,7 @@ int ScriptCB_NextOutputMode(lua_State*)
     {
         if (Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_DirectSoundSoftware)
         {
-            GameSoundEngine::ChangeMixConfig(1, Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable);
+            GameSoundEngine::ChangeMixConfig(1, (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0);
         }
     }
     else if (Snd::Engine::GetMixConfig() == Snd::Engine::mixConfig_Software)
@@ -196,7 +199,7 @@ int ScriptCB_NextOutputMode(lua_State*)
     if (pProfile)
     {
         PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-        opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+        opt.mEffectsEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
         opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
         opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
         pProfile->UpdateProfCRC();
@@ -265,7 +268,7 @@ int ScriptCB_PreviousMixConfig(lua_State*)
         if (pProfile)
         {
             PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-            opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            opt.mEffectsEnabled = (Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable) ? 1 : 0;
             opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
             opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
             pProfile->UpdateProfCRC();
@@ -326,7 +329,8 @@ int ScriptCB_SetMixConfig(lua_State*)
         if (pProfile)
         {
             PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-            opt.mEffectsEnabled = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            const int iEffects = Snd::Engine::smSoftwareEffectsEnabled || Snd::Engine::smHardwareEffectsAvailable;
+            opt.mEffectsEnabled = iEffects != 0;
             opt.mMixerMode = (unsigned char)Snd::Engine::GetMixConfig();
             opt.mPlaybackMode = (unsigned char)Snd::EngineBase::smSpeakerConfig;
             pProfile->UpdateProfCRC();
@@ -343,7 +347,7 @@ int ScriptCB_SetBassManagement(lua_State*)
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
     if (pProfile)
     {
-        pProfile->mSoundOptions.mBassManagement = Snd::Engine::GetBassManagement();
+        pProfile->mSoundOptions.mBassManagement = Snd::Engine::GetBassManagement() != 0;
         pProfile->UpdateProfCRC();
     }
     return 0;
@@ -383,9 +387,9 @@ int ScriptCB_StopAudioStream(lua_State*)
     int iStream = (int)luaL_checknumber(LuaHelper::mState, 1);
     int bClose = lua_gettop(LuaHelper::mState) == 2
         ? (int)luaL_checknumber(LuaHelper::mState, 2) : 1;
-    if (iStream && (unsigned)(iStream - 1) < 6)
+    if (iStream && (unsigned)--iStream < 6)
     {
-        Snd::Stream* pStream = &Snd::EngineBase::smStreams[iStream - 1];
+        Snd::Stream* pStream = &Snd::EngineBase::smStreams[iStream];
         pStream->Stop();
         if (bClose)
         {
@@ -442,19 +446,19 @@ int ScriptCB_PlayAudioStream(lua_State*)
     }
 
     int iReturns;
-    if (iStream)
+    if (!iStream)
     {
-        lua_pushnumber(LuaHelper::mState, (float)iStream);
-        iReturns = 1;
-    }
-    else
-    {
-        iReturns = ScriptCB_OpenAudioStream(LuaHelper::mState);
+        iReturns = ScriptCB_OpenAudioStream(0);
         if (!iReturns)
         {
             return 0;
         }
         iStream = (int)luaL_checknumber(LuaHelper::mState, lua_gettop(LuaHelper::mState));
+    }
+    else
+    {
+        lua_pushnumber(LuaHelper::mState, (float)iStream);
+        iReturns = 1;
     }
 
     Snd::Stream* pStream = &Snd::EngineBase::smStreams[iStream - 1];
@@ -465,13 +469,15 @@ int ScriptCB_PlayAudioStream(lua_State*)
     pStream->Source::mFlags |= 0x12;
     pStream->SetBus(Snd::Bus::FindByHashID(PblHash(pcBus)));
     pStream->SeekSegment(pStream->FindSegment(PblHash(pcSegment)));
-    pStream->Play(true);
+    pStream->SourceBus::Play(pStream);
+    pStream->SourceTransport::Play(true);
     return iReturns;
 }
 
 // FUNCTION: SWBF2 0x0059b7e0
 int ScriptCB_PlayAudioStreamUsingProperties(lua_State*)
 {
+    int iReturns = 0;
     if (!Lua_Callbacks::sSoundEnabled)
     {
         return 0;
@@ -483,24 +489,23 @@ int ScriptCB_PlayAudioStreamUsingProperties(lua_State*)
     {
         return 0;
     }
-    int iReturns = 0;
-    if (lua_gettop(LuaHelper::mState) == 3 && (int)luaL_checknumber(LuaHelper::mState, 3))
+    const bool bOpenStream = lua_gettop(LuaHelper::mState) != 3
+        || (int)luaL_checknumber(LuaHelper::mState, 3) == 0;
+    if (bOpenStream)
     {
-        if (!Snd::StreamBase::Info::Find(pProps->mStreamID))
-        {
-            return 0;
-        }
-    }
-    else
-    {
+        unsigned int uiStreamID = pProps->mStreamID;
         const char* pcFile = luaL_checklstring(LuaHelper::mState, 1, 0);
-        Snd::Stream* pStream = (Snd::Stream*)OpenAudioStream(pcFile, pProps->mStreamID);
+        Snd::Stream* pStream = (Snd::Stream*)OpenAudioStream(pcFile, uiStreamID);
         if (!pStream)
         {
             return 0;
         }
         LuaHelper::PushInt(GetStreamIndex(pStream) + 1);
         iReturns = 1;
+    }
+    else if (!Snd::StreamBase::Info::Find(pProps->mStreamID))
+    {
+        return 0;
     }
     GameSound sound;
     sound.SetID(pcSound, false, false);
@@ -556,14 +561,20 @@ int ScriptCB_PlayAuditionEffect(lua_State*) { return 0; }
 // FUNCTION: SWBF2 0x0059cc70
 int ScriptCB_PlayInGameMusic(lua_State*)
 {
-    GameMusic* pMusic = static_cast<GameMusic*>(Lua_Callbacks::sGameMusic);
-    pMusic->Stop();
-    pMusic->SetID(luaL_checklstring(LuaHelper::mState, 1, 0));
-    pMusic->Play();
-    float fTime = lua_gettop(LuaHelper::mState) < 2
-        ? 15.0f : luaL_checknumber(LuaHelper::mState, 2);
-    memcpy(&Lua_Callbacks::sGameMusicDelayTime, &fTime, sizeof(fTime));
-    Lua_Callbacks::sGameMusicCurDelayTime = Lua_Callbacks::sGameMusicDelayTime;
+    static_cast<GameMusic*>(Lua_Callbacks::sGameMusic)->Stop();
+    static_cast<GameMusic*>(Lua_Callbacks::sGameMusic)->SetID(luaL_checklstring(LuaHelper::mState, 1, 0));
+    static_cast<GameMusic*>(Lua_Callbacks::sGameMusic)->Play();
+    float& fDelayTime = reinterpret_cast<float&>(Lua_Callbacks::sGameMusicDelayTime);
+    float& fCurDelayTime = reinterpret_cast<float&>(Lua_Callbacks::sGameMusicCurDelayTime);
+    if (lua_gettop(LuaHelper::mState) >= 2)
+    {
+        fDelayTime = (float)luaL_checknumber(LuaHelper::mState, 2);
+    }
+    else
+    {
+        fDelayTime = 15.0f;
+    }
+    fCurDelayTime = fDelayTime;
     return 0;
 }
 
@@ -788,7 +799,7 @@ void DelayedSound::Update(float fDeltaTime)
 // FUNCTION: SWBF2 0x0059b7c0
 static unsigned int GetStreamIndex(Snd::Stream* pStream)
 {
-    return (unsigned int)(pStream - Snd::EngineBase::smStreams);
+    return ((unsigned int)pStream - (unsigned int)Snd::EngineBase::smStreams) / sizeof(Snd::Stream);
 }
 
 // FUNCTION: SWBF2 0x0059bb70
@@ -857,12 +868,13 @@ int ScriptCB_OpenAudioStream(lua_State*)
     }
 
     Snd::Stream* pStream = (Snd::Stream*)OpenAudioStream(pcName, uiSegment);
-    if (!pStream)
+    if (pStream)
     {
-        return 0;
+        int iStream = GetStreamIndex(pStream) + 1;
+        lua_pushnumber(LuaHelper::mState, (float)iStream);
+        return 1;
     }
-    lua_pushnumber(LuaHelper::mState, (float)(GetStreamIndex(pStream) + 1));
-    return 1;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0059b5a0
@@ -928,78 +940,78 @@ int ScriptCB_SetSoundEffect(lua_State* L)
 
     switch (uEffect)
     {
-    case 0x80BD2D68u:
+    case 0x80BD2D68u: /* "SpawnDisplayUnitChange" */
         if (SpawnDisplay* pDisplay = SpawnDisplay::Instance(0))
         {
             pDisplay->mUnitChange.SetID(pSound, false, false);
         }
         break;
-    case 0x29F3F228u:
+    case 0x29F3F228u: /* "SpawnDisplayUnitAccept" */
         if (SpawnDisplay* pDisplay = SpawnDisplay::Instance(0))
         {
             pDisplay->mUnitAccept.SetID(pSound, false, false);
         }
         break;
-    case 0x7A1089D1u:
+    case 0x7A1089D1u: /* "SpawnDisplaySpawnPointChange" */
         if (SpawnDisplay* pDisplay = SpawnDisplay::Instance(0))
         {
             pDisplay->mSpawnPointChange.SetID(pSound, false, false);
         }
         break;
-    case 0xAF57B9D5u:
+    case 0xAF57B9D5u: /* "SpawnDisplaySpawnPointAccept" */
         if (SpawnDisplay* pDisplay = SpawnDisplay::Instance(0))
         {
             pDisplay->mSpawnPointAccept.SetID(pSound, false, false);
         }
         break;
-    case 0x7B76A4D5u:
+    case 0x7B76A4D5u: /* "SpawnDisplayBack" */
         if (SpawnDisplay* pDisplay = SpawnDisplay::Instance(0))
         {
             pDisplay->mBack.SetID(pSound, false, false);
         }
         break;
-    case 0x651E07ADu:
+    case 0x651E07ADu: /* "ScopeDisplayAmbient" */
         ScopeDisplay::Instance(0)->mBinocularSound.SetAmbientID(pSound);
         break;
-    case 0x4D9F349Bu:
+    case 0x4D9F349Bu: /* "ScopeDisplayZoomIn" */
         ScopeDisplay::Instance(0)->mBinocularSound.SetZoomInID(pSound);
         break;
-    case 0x414B5348u:
+    case 0x414B5348u: /* "ScopeDisplayZoomOut" */
         ScopeDisplay::Instance(0)->mBinocularSound.SetZoomOutID(pSound);
         break;
-    case 0xD1454E62u:
+    case 0xD1454E62u: /* "WeaponUnableSelect" */
         WeaponClass::sWeaponChangeUnableSound.SetID(pSound, false, false);
         break;
-    case 0xF8258D3Bu:
+    case 0xF8258D3Bu: /* "LockOn" */
         LockOnManager::sTargetLockSound.SetID(pSound, false, false);
         break;
-    case 0x6DB518D0u:
-    case 0x24422C9Fu:
+    case 0x6DB518D0u: /* "BirdScatter" */
+    case 0x24422C9Fu: /* "BirdScatterSound" */
         BirdParticleManager::Instance()->mScatterSound.SetID(pSound, false, false);
         break;
-    case 0x977128B2u:
-    case 0x3CD0D399u:
+    case 0x977128B2u: /* "Bird" */
+    case 0x3CD0D399u: /* "BirdSound" */
         BirdParticleManager::Instance()->mBirdSound.SetID(pSound, false, false);
         break;
     case 0x956177FFu:
         LeafParticleManager::Instance()->mLeafFallSound.SetID(pSound, false, false);
         break;
-    case 0x4F3DFE5Cu:
+    case 0x4F3DFE5Cu: /* "HeroesUnlocked" */
         HeroMessageDisplay::mHeroesUnlocked->SetID(pSound, false, false);
         break;
-    case 0x7D31DC25u:
+    case 0x7D31DC25u: /* "HeroSpawned" */
     {
         const unsigned int uTeam = LuaHelper::GetInt(3);
-        if (uTeam < 8)
+        if (uTeam <= 7)
         {
             HeroMessageDisplay::mHeroSpawned[uTeam]->SetID(pSound, false, false);
         }
         break;
     }
-    case 0x56776EBBu:
+    case 0x56776EBBu: /* "HeroDefeated" */
     {
         const unsigned int uTeam = LuaHelper::GetInt(3);
-        if (uTeam < 8)
+        if (uTeam <= 7)
         {
             HeroMessageDisplay::mHeroDefeated[uTeam]->SetID(pSound, false, false);
         }
@@ -1052,14 +1064,13 @@ int ScriptCB_SetVolumes(lua_State* L)
         PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
         if (pProfile)
         {
-            PlayerProfile::tSoundOpt& opt = pProfile->mSoundOptions;
-            opt.mu8SFXVol = (unsigned char)(int)fSFX;
-            opt.mu8MasterVol = (unsigned char)(int)fMaster;
-            opt.mu8MusicVol = (unsigned char)(int)fMusic;
-            opt.mu8SpeechVol = (unsigned char)(int)fSpeech;
-            opt.mu8BattleSpeechVol = (unsigned char)(int)fBattleSpeech;
+            pProfile->mSoundOptions.mu8MusicVol = (unsigned char)(int)fMusic;
+            pProfile->mSoundOptions.mu8SFXVol = (unsigned char)(int)fSFX;
+            pProfile->mSoundOptions.mu8SpeechVol = (unsigned char)(int)fSpeech;
+            pProfile->mSoundOptions.mu8MasterVol = (unsigned char)(int)fMaster;
+            pProfile->mSoundOptions.mu8BattleSpeechVol = (unsigned char)(int)fBattleSpeech;
             pProfile->UpdateProfCRC();
-            opt.ApplySettings();
+            pProfile->mSoundOptions.ApplySettings();
         }
     }
     return 0;
@@ -1129,7 +1140,7 @@ int ScriptCB_GetBassManagement(lua_State* L)
 // FUNCTION: SWBF2 0x0059d8d0
 void PlayShellMusic(unsigned int uID)
 {
-    if (!Lua_Callbacks::sSoundEnabled || uID == Lua_Callbacks::sShellMusicID)
+    if (!Lua_Callbacks::sSoundEnabled || Lua_Callbacks::sShellMusicID == uID)
     {
         return;
     }
@@ -1199,7 +1210,36 @@ void UpdateDelayedSounds(float fDeltaTime)
 {
     for (unsigned int i = 0; i < 2; ++i)
     {
-        sDelayedSounds[i].Update(fDeltaTime);
+        DelayedSound& delayed = sDelayedSounds[i];
+        if (!delayed.mSound.GetProperties())
+        {
+            continue;
+        }
+
+        delayed.mElapsed = fDeltaTime + delayed.mElapsed;
+        if (delayed.mElapsed < delayed.mDelay)
+        {
+            continue;
+        }
+
+        if (delayed.mSound.GetPropertiesType() == GameSound::type_soundStream && delayed.mGain != -1.0f)
+        {
+            ((Snd::SoundStream::Properties*)delayed.mSound.GetProperties())->SetGain(delayed.mGain);
+        }
+
+        delayed.mControllable.Play(&delayed.mSound, 0, 0, delayed.mQueue);
+
+        Snd::VoiceVirtualBus* pVoice = (Snd::VoiceVirtualBus*)delayed.mControllable.GetVoiceVirtual();
+        if (pVoice && delayed.mGain != -1.0f)
+        {
+            pVoice->SetGain(delayed.mGain);
+        }
+
+        delayed.mGain = -1.0f;
+        delayed.mDelay = 0.0f;
+        delayed.mElapsed = 0.0f;
+        delayed.mQueue = true;
+        delayed.mSound.SetID(0u, false, false);
     }
 }
 
@@ -1264,7 +1304,13 @@ int ScriptCB_ShellPlayDelayedStream(lua_State* L)
             }
         }
 
-        sDelayedSounds[iSlot].Init(PblHash(pcStream), fDelay * 0.25f, fGain, bQueue);
+        const unsigned int uiSoundID = PblHash(pcStream);
+        DelayedSound& delayed = sDelayedSounds[iSlot];
+        delayed.mGain = fGain;
+        delayed.mDelay = fDelay * 0.25f;
+        delayed.mElapsed = 0.0f;
+        delayed.mQueue = bQueue;
+        delayed.mSound.SetID(uiSoundID, false, false);
         UpdateDelayedSounds(0.0f);
     }
     return 0;
@@ -1302,7 +1348,12 @@ void InitDelayedSounds()
 {
     for (unsigned int i = 0; i < 2; ++i)
     {
-        sDelayedSounds[i].Init(0, 0.0f, -1.0f, true);
+        DelayedSound& delayed = sDelayedSounds[i];
+        delayed.mGain = -1.0f;
+        delayed.mDelay = 0.0f;
+        delayed.mElapsed = 0.0f;
+        delayed.mQueue = true;
+        delayed.mSound.SetID(0u, false, false);
     }
 }
 
@@ -1371,7 +1422,8 @@ StreamBase::Segment* StreamBase::FindSegment(unsigned int uiSegmentID) const
         {
             break;
         }
-        Segment* pSegment = (Segment*)bsearch(&uiSegmentID, pInfo->mSegments, pInfo->mNumSegments,
+        unsigned int uiKey = uiSegmentID;
+        Segment* pSegment = (Segment*)bsearch(&uiKey, pInfo->mSegments, pInfo->mNumSegments,
                                               sizeof(Segment), Segment::CompareSearch);
         if (pSegment)
         {
@@ -1404,34 +1456,31 @@ int ScriptCB_AudioStreamAppendSegments(lua_State*)
 {
     const char* pcFile = luaL_checkstring(LuaHelper::mState, 1);
     const char* pcSegment = luaL_checkstring(LuaHelper::mState, 2);
-    unsigned int uiStream = lua_isnil(LuaHelper::mState, 3)
-                                ? 0
-                                : (int)luaL_checknumber(LuaHelper::mState, 3) - 1;
+    unsigned int uiStream = !lua_isnil(LuaHelper::mState, 3)
+                                ? (int)luaL_checknumber(LuaHelper::mState, 3) - 1
+                                : 0;
     unsigned int uiSegment = 0;
-    if (lua_isnil(LuaHelper::mState, 3))
+    if (!lua_isnil(LuaHelper::mState, 3))
     {
-        return 0;
-    }
-    if (strlen(pcSegment) > 1)
-    {
-        uiSegment = PblHash(pcSegment);
-    }
-    if (uiStream >= 6)
-    {
-        return 0;
-    }
+        if (strlen(pcSegment) > 1)
+        {
+            uiSegment = PblHash(pcSegment);
+        }
+        if (uiStream < 6)
+        {
+            char acFullName[256];
+            strlcpy(acFullName, LoadUtil::GetDataDirectory(), 256);
+            strlcat(acFullName, pcFile, 256);
 
-    char acFullName[256];
-    strlcpy(acFullName, LoadUtil::GetDataDirectory(), 256);
-    strlcat(acFullName, pcFile, 256);
-
-    PblFile file;
-    file.Open(acFullName, true, false, true);
-    PblFileChunk chunk(&file);
-    if (Snd::EngineBase::smStreams[uiStream].AppendSegments(chunk, uiSegment, pcFile, 0, 0))
-    {
-        lua_pushnumber(LuaHelper::mState, (float)(int)(uiStream + 1));
-        return 1;
+            PblFile file;
+            file.Open(acFullName, true, false, true);
+            PblFileChunk chunk(&file);
+            if (Snd::EngineBase::smStreams[uiStream].AppendSegments(chunk, uiSegment, pcFile, 0, 0))
+            {
+                lua_pushnumber(LuaHelper::mState, (float)(int)(uiStream + 1));
+                return 1;
+            }
+        }
     }
     return 0;
 }
@@ -1445,9 +1494,9 @@ int ScriptCB_SetBleedingVoiceOver(lua_State*)
 {
     int iTeam = (int)luaL_checknumber(LuaHelper::mState, 1);
     int iIndex = (int)luaL_checknumber(LuaHelper::mState, 2);
-    VoiceOverManager::sInstance->SetBleedingVoiceOver(iTeam - 1, iIndex - 1,
-                                                      luaL_checkstring(LuaHelper::mState, 3),
-                                                      (int)luaL_checknumber(LuaHelper::mState, 4) != 0);
+    int iRepeating = (int)luaL_checknumber(LuaHelper::mState, 4);
+    const char* pcName = luaL_checkstring(LuaHelper::mState, 3);
+    VoiceOverManager::sInstance->SetBleedingVoiceOver(iTeam - 1, iIndex - 1, pcName, iRepeating != 0);
     return 0;
 }
 }
@@ -1488,8 +1537,8 @@ int ScriptCB_SetAmbientMusic(lua_State*)
     int iCount;
     if (nArgs == 5 && (int)luaL_checknumber(LuaHelper::mState, 5))
     {
-        iCount = (int)(Team::sTeams[iTeam]->mCurReinforcements *
-                       luaL_checknumber(LuaHelper::mState, 2));
+        float fFraction = (float)luaL_checknumber(LuaHelper::mState, 2);
+        iCount = (int)(Team::sTeams[iTeam]->mCurReinforcements * fFraction);
     }
     else
     {
@@ -1519,8 +1568,9 @@ namespace Lua_Callbacks
 // FUNCTION: SWBF2 0x0059c6e0
 int ScriptCB_SetVictoryMusic(lua_State*)
 {
-    EndDisplay::Instance()->SetVictoryMusic((int)luaL_checknumber(LuaHelper::mState, 1) - 1,
-                                           luaL_checkstring(LuaHelper::mState, 2));
+    const char* pcMusic = luaL_checkstring(LuaHelper::mState, 2);
+    unsigned int uiTeam = (int)luaL_checknumber(LuaHelper::mState, 1) - 1;
+    EndDisplay::Instance()->SetVictoryMusic(uiTeam, pcMusic);
     return 0;
 }
 }
@@ -1531,8 +1581,9 @@ namespace Lua_Callbacks
 // FUNCTION: SWBF2 0x0059c730
 int ScriptCB_SetDefeatMusic(lua_State*)
 {
-    EndDisplay::Instance()->SetDefeatMusic((int)luaL_checknumber(LuaHelper::mState, 1) - 1,
-                                          luaL_checkstring(LuaHelper::mState, 2));
+    const char* pcMusic = luaL_checkstring(LuaHelper::mState, 2);
+    unsigned int uiTeam = (int)luaL_checknumber(LuaHelper::mState, 1) - 1;
+    EndDisplay::Instance()->SetDefeatMusic(uiTeam, pcMusic);
     return 0;
 }
 }

@@ -261,7 +261,7 @@ void IdleHelper::UpdateState(float dt)
             {
                 fWander = fSince * 0.5f * fWander;
             }
-            LowLevel(mOwner->mCtrl).mHeading.mDestWander = (float)fabs(fWander);
+            LowLevel(mOwner->mCtrl).mHeading.mDestWander = (float)fabs((double)fWander);
         }
         break;
     }

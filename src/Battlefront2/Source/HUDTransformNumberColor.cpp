@@ -67,10 +67,15 @@ bool HUD::TransformNumberColor::ReadData(PblConfig& config, PblConfig::Data& dat
     {
         NumberColor& mapping = mMapping[mNumMappings++];
         mapping.number = data.GetFloatArg(0);
-        mapping.color.a = 0xff;
-        mapping.color.b = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(3));
-        mapping.color.g = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(2));
-        mapping.color.r = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(1));
+        const float fBlue = ClampColorComponent(data.GetFloatArg(3));
+        const float fGreen = ClampColorComponent(data.GetFloatArg(2));
+        const float fRed = ClampColorComponent(data.GetFloatArg(1));
+        RedColor color;
+        color.a = 0xff;
+        color.b = (unsigned char)(int)fBlue;
+        color.g = (unsigned char)(int)fGreen;
+        color.r = (unsigned char)(int)fRed;
+        mapping.color = color;
     }
     return true;
 }

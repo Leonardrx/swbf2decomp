@@ -7,24 +7,26 @@
 // FUNCTION: SWBF2 0x00448830
 OrdnanceLodData::OrdnanceLodData()
 {
+    mMaxDist = 1000.0f;
+    _LodClass = -1;
+    _LodBitmask = 4;
     _LodCost[0] = -1;
     _LodCost[1] = -1;
     _LodCost[2] = 10;
     _LodCost[3] = 0;
-    _LodBitmask = 4;
-    _LodClass = -1;
     mLowRezFlags = 1;
-    mMaxDist = 1000.0f;
 }
 
 // FUNCTION: SWBF2 0x00448870
 NoLodData::NoLodData()
 {
+    _LodClass = -1;
+    _LodBitmask = 0;
     _LodCost[0] = -1;
     _LodCost[1] = -1;
     _LodCost[2] = -1;
     _LodCost[3] = -1;
-    _LodClass = -1;
+    mLowRezFlags = 0;
 }
 
 // FUNCTION: SWBF2 0x004486f0
@@ -68,10 +70,12 @@ ModelLodData::ModelLodData(int, const RedModel* pLod0, const RedModel* pLod1, co
                            const RedModel* pLod3)
 {
     _LodClass = 1;
+    _LodBitmask = 0;
     _LodCost[0] = 0;
     _LodCost[1] = 0;
     _LodCost[2] = 0;
     _LodCost[3] = 0;
+    mLowRezFlags = 0;
     if (pLod0)
     {
         _LodCost[0] = pLod0->_uiNumStripVtx;
@@ -114,36 +118,38 @@ ModelLodData::ModelLodData(int, const RedModel* pLod0, const RedModel* pLod1, co
 // FUNCTION: SWBF2 0x00448630
 SmallEffectLodData::SmallEffectLodData()
 {
+    _LodClass = 3;
+    _LodBitmask = 1;
     _LodCost[0] = 1;
     _LodCost[1] = 1;
     _LodCost[2] = 1;
     _LodCost[3] = 0;
-    _LodBitmask = 1;
-    _LodClass = 3;
+    mLowRezFlags = 0;
     mMaxDist = 50.0f;
 }
 
 // FUNCTION: SWBF2 0x00448670
 MediumEffectLodData::MediumEffectLodData()
 {
+    _LodClass = 3;
+    _LodBitmask = 1;
     _LodCost[0] = 1;
     _LodCost[1] = 1;
     _LodCost[2] = 1;
     _LodCost[3] = 0;
-    _LodBitmask = 1;
-    _LodClass = 3;
+    mLowRezFlags = 0;
     mMaxDist = 150.0f;
 }
 
 // FUNCTION: SWBF2 0x004486b0
 LargeEffectLodData::LargeEffectLodData()
 {
+    _LodClass = 3;
+    _LodBitmask = 1;
     _LodCost[0] = 1;
     _LodCost[1] = 1;
     _LodCost[2] = 1;
     _LodCost[3] = 0;
-    _LodBitmask = 1;
-    _LodClass = 3;
     mLowRezFlags = 1;
     mMaxDist = 500.0f;
 }

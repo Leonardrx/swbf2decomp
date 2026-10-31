@@ -1074,7 +1074,7 @@ void RawControllerInputs::ChatInputProcess()
         if (--chatCursorCurTime < 0)
         {
             chatCursorCurTime = 10;
-            chatCursorOn = !chatCursorOn;
+            chatCursorOn = 1 - chatCursorOn;
         }
 
         if (chatCursorOn)
@@ -1094,10 +1094,12 @@ void RawControllerInputs::ChatInputProcess()
         StandardInputProcess();
         TeamOrderInputProcess();
 
-        memcpy(m_LastKeyState, m_CurrKeyState, 144);
-        for (int i = 0; i < 144; i++)
+        bool* pCurrKey = m_CurrKeyState;
+        memcpy(m_LastKeyState, pCurrKey, 144);
+        const int* pBindID = RedKeyTo_BindID;
+        for (int n = 0; n < 144; n++)
         {
-            m_CurrKeyState[i] = _redKeyboard->IsKeyDown((unsigned char)RedKeyTo_BindID[i]);
+            *pCurrKey++ = _redKeyboard->IsKeyDown((unsigned char)*pBindID++);
         }
 
         if (PauseMenu::GetPaused(0))
@@ -1153,20 +1155,14 @@ void RawControllerInputs::TeamOrderInputProcess()
 // FUNCTION: SWBF2 0x004159e0
 void RawControllerInputs::ChatKeyProcess(unsigned char ucIndex)
 {
-    const unsigned char ucKey = (unsigned char)RedKeyTo_BindID[ucIndex];
-    const bool bDown = m_CurrKeyState[ucIndex] != 0;
-    const bool bWasDown = m_LastKeyState[ucIndex] != 0;
-    unsigned short& usChatMode = m_ChatMode;
-    unsigned short* pusChat = m_ChatWords;
-    unsigned char& ucLength = m_ChatLength;
-
-    if (bDown && !bWasDown)
+    if (m_CurrKeyState[ucIndex] == 1 && m_LastKeyState[ucIndex] == 0)
     {
+        const unsigned char ucKey = (unsigned char)RedKeyTo_BindID[ucIndex];
         if (ucKey == 1)
         {
-            usChatMode = 0;
-            ucLength = 0;
-            memset(pusChat, 0, 0x80);
+            m_ChatMode = 0;
+            m_ChatLength = 0;
+            memset(m_ChatWords, 0, 0x80);
             ChatMessageDisplay::sInstance->Show(false);
             PauseMenu::sEnablePause = false;
             return;
@@ -1178,31 +1174,35 @@ void RawControllerInputs::ChatKeyProcess(unsigned char ucIndex)
         }
         if (ucKey == 14)
         {
-            if (ucLength)
+            if (m_ChatLength)
             {
-                --ucLength;
+                --m_ChatLength;
             }
-            pusChat[ucLength] = 0;
+            m_ChatWords[m_ChatLength] = 0;
         }
-        else if (ucLength < 62)
+        else if (m_ChatLength < 62)
         {
-            pusChat[ucLength] = GetKeyboard()->pcGetAsciiValue(ucKey);
-            if (pusChat[ucLength])
+            m_ChatWords[m_ChatLength] = GetKeyboard()->pcGetAsciiValue(ucKey);
+            if (m_ChatWords[m_ChatLength])
             {
-                ++ucLength;
+                ++m_ChatLength;
             }
         }
     }
-    else if (!bDown && bWasDown && (ucKey == 28 || ucKey == 0x9c))
+    else if (m_CurrKeyState[ucIndex] == 0 && m_LastKeyState[ucIndex] == 1)
     {
-        int iType = usChatMode == 1 ? mask_chat : 1;
-        if (ucLength)
+        const unsigned char ucKey = (unsigned char)RedKeyTo_BindID[ucIndex];
+        if (ucKey == 28 || ucKey == 0x9c)
         {
-            NetGame::AddChatMessageToQue(false, NetGame::GetLocalIndex(0), 0, -1, pusChat, iType);
+            int iType = m_ChatMode == 1 ? mask_chat : 1;
+            if (m_ChatLength > 0)
+            {
+                NetGame::AddChatMessageToQue(false, NetGame::GetLocalIndex(0), 0, -1, m_ChatWords, iType);
+            }
+            m_ChatMode = 0;
+            m_ChatLength = 0;
+            memset(m_ChatWords, 0, 0x80);
+            ChatMessageDisplay::sInstance->Show(false);
         }
-        usChatMode = 0;
-        ucLength = 0;
-        memset(pusChat, 0, 0x80);
-        ChatMessageDisplay::sInstance->Show(false);
     }
 }

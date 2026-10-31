@@ -88,10 +88,7 @@ ObstacleTest::ObstacleTest(const PblVector3& rSrc, const PblVector3& rDest)
     : mSrc(rSrc), mDest(rDest)
 {
     mBoundCenter = ((mSrc + mDest) * 0.5f);
-    float fX = mBoundCenter.x - mSrc.x;
-    float fY = mBoundCenter.y - mSrc.y;
-    float fZ = mBoundCenter.z - mSrc.z;
-    mBoundRadius = sqrtf(fX * fX + fY * fY + fZ * fZ);
+    mBoundRadius = Length(mBoundCenter - mSrc);
 }
 
 // FUNCTION: SWBF2 0x005ab410
@@ -246,17 +243,17 @@ const PblVector3& Navigator::GetGlobalDest() const
     {
         return mPathFollower->mFinalPoint;
     }
-    return GetMatrix().GetTranslation();
+    return mOwner->mOwner->mOwner->GetMatrix().GetTranslation();
 }
 
 // FUNCTION: SWBF2 0x005ab710
 const PblVector3& Navigator::GetLocalDest() const
 {
-    if (mPathFollower)
+    if (!mPathFollower)
     {
-        return mPathFollower->mGotoPoint;
+        return mOwner->mOwner->mOwner->GetMatrix().GetTranslation();
     }
-    return GetMatrix().GetTranslation();
+    return mPathFollower->mGotoPoint;
 }
 
 // FUNCTION: SWBF2 0x005ab730

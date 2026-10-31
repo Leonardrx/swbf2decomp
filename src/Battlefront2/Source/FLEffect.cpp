@@ -602,7 +602,7 @@ void FLEffectObject::AttachEffectToMatrix(const PblMatrix* pMatrix, const PblMat
                                           bool bDynamic)
 {
     m_uiAttachFlags &= ~(ATTACHED_DYNAMIC | ATTACHED_TO_GAMEOBJECT | ATTACHED_TO_VECTOR);
-    m_hobjAttachedToObject = PblHandle<GameObject const>();
+    m_hobjAttachedToObject = 0;
     m_pmAttachedToMatrix = const_cast<PblMatrix*>(pMatrix);
     if (bDynamic)
     {
@@ -614,7 +614,14 @@ void FLEffectObject::AttachEffectToMatrix(const PblMatrix* pMatrix, const PblMat
 // FUNCTION: SWBF2 0x005276e0
 void FLEffectObject::AttachEffectToMatrix(const PblMatrix* pMatrix, bool b)
 {
-    AttachEffectToMatrix(pMatrix, _IdentityMatrix, b);
+    m_uiAttachFlags &= ~(ATTACHED_DYNAMIC | ATTACHED_TO_GAMEOBJECT | ATTACHED_TO_VECTOR);
+    m_hobjAttachedToObject = 0;
+    m_pmAttachedToMatrix = const_cast<PblMatrix*>(pMatrix);
+    if (b)
+    {
+        m_uiAttachFlags |= ATTACHED_DYNAMIC;
+    }
+    _Attach(_IdentityMatrix);
 }
 
 // FUNCTION: SWBF2 0x00527720
@@ -730,10 +737,8 @@ void FLEffectObject::InterpolateWorldMatrix()
         gameObjectInterpolator.GetMatrix(m_hobjAttachedToObject->mNetUniqueId, mInterpolated);
 
         PblMatrix mInverse = mSmoothed.GetInverseFast();
-        D3DXMatrixMultiply((D3DXMATRIX*)&m_mWorldMatrix, (const D3DXMATRIX*)&m_mWorldMatrix,
-                           (const D3DXMATRIX*)&mInverse);
-        D3DXMatrixMultiply((D3DXMATRIX*)&m_mWorldMatrix, (const D3DXMATRIX*)&m_mWorldMatrix,
-                           (const D3DXMATRIX*)&mInterpolated);
+        m_mWorldMatrix = m_mWorldMatrix * mInverse;
+        m_mWorldMatrix = m_mWorldMatrix * mInterpolated;
         UpdatedWorldMatrix();
     }
 }

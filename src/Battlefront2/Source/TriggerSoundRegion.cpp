@@ -40,7 +40,7 @@ const TriggerSoundRegion::Properties* TriggerSoundRegion::Properties::FindByID(u
     while (pNode != &sList.mHead)
     {
         const Properties* pProperties = reinterpret_cast<const Properties*>(reinterpret_cast<const char*>(pNode) - offsetof(Properties, mNode));
-        if (pProperties->GetID() == uID)
+        if (uID == pProperties->GetID())
         {
             return pProperties;
         }
@@ -146,7 +146,7 @@ TriggerSoundRegion::Group* TriggerSoundRegion::Group::FindByID(unsigned int uID)
          pNode = pNode->mNext)
     {
         Group* pGroup = (Group*)((char*)pNode - offsetof(Group, mNode));
-        if (pGroup->GetID() == uID)
+        if (uID == pGroup->GetID())
         {
             return pGroup;
         }
@@ -189,34 +189,35 @@ void TriggerSoundRegion::Properties::Read(PblFileChunk& chunk)
         const unsigned int uHash = data._pFile->Read32();
         data._pFile->Read8();
 
-        if (uHash == 0x5fb91e8c)
+        switch (uHash)
+        {
+        case 0x8d39bde6:
+            mID = data._pFile->Read32();
+            break;
+        case 0x5fb91e8c:
         {
             Group* const pGroup = Group::FindByID(data._pFile->Read32());
             if (!pGroup)
             {
-                continue;
+                break;
             }
-            PblListSingle::Itor it(mList);
-            for (; it.GetNode() != mList.GetTerminator(); ++it)
+            bool bInserted = false;
+            for (PblListSingle::Itor it(mList); it.GetNode() != mList.GetTerminator(); ++it)
             {
                 const Group* pOther = (const Group*)((Snd::ObjectList::Node*)it.GetNode())->mObject;
-                if (pGroup->GetReinforcementCount() > pOther->GetReinforcementCount())
+                if (pOther->GetReinforcementCount() < pGroup->GetReinforcementCount())
                 {
+                    mList.AddBefore((Snd::ObjectList::Node*)it.GetNode(), pGroup);
+                    bInserted = true;
                     break;
                 }
             }
-            if (it.GetNode() == mList.GetTerminator())
+            if (!bInserted)
             {
                 mList.Add(pGroup);
             }
-            else
-            {
-                mList.AddBefore((Snd::ObjectList::Node*)it.GetNode(), pGroup);
-            }
+            break;
         }
-        else if (uHash == 0x8d39bde6)
-        {
-            mID = data._pFile->Read32();
         }
     }
 }
@@ -234,17 +235,22 @@ void TriggerSoundRegion::Properties::Load(PblFileChunk& chunk)
 
         const unsigned int uHash = child._pFile->Read32();
         child._pFile->Read8();
-        if (uHash == 0x031afe7d)
+        switch (uHash)
         {
-            Properties* pProperties = new Properties;
-            child = chunk.ReadNextChild();
-            pProperties->Read(child);
-        }
-        else if (uHash == 0x5fb91e8c)
+        case 0x5fb91e8c:
         {
             Group* pGroup = new Group;
             child = chunk.ReadNextChild();
             pGroup->Read(child);
+            break;
+        }
+        case 0x031afe7d:
+        {
+            Properties* pProperties = new Properties;
+            child = chunk.ReadNextChild();
+            pProperties->Read(child);
+            break;
+        }
         }
     }
 }

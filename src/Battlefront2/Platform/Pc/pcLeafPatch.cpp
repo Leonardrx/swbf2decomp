@@ -118,23 +118,23 @@ bool LeafPatchClass::RenderMaxDist(const PblMatrix& matrix, float& fDist,
                                    const RedColorValue& color) const
 {
     const PblMatrix& cam = RedRenderer::GetCamera()->_Matrix;
-    const float distance = cam.m[2][0] * (cam.m[3][0] - matrix.m[3][0]) +
-                           cam.m[2][1] * (cam.m[3][1] - matrix.m[3][1]) +
-                           cam.m[2][2] * (cam.m[3][2] - matrix.m[3][2]);
     const float limit = RedRenderer::GetCamera()->_fZoom * fMaxDist;
+    const PblVector3& vPos = matrix.GetTranslation();
+    const float distance = cam.m[2][1] * (cam.m[3][1] - vPos.y) +
+                           cam.m[2][0] * (cam.m[3][0] - vPos.x) +
+                           cam.m[2][2] * (cam.m[3][2] - vPos.z);
     if (distance < -mBoundingRadius || distance > limit + mBoundingRadius)
     {
         return false;
     }
     if (mMaxScatterBirds && !(uiFlags & 0x200000))
     {
-        BirdParticleManager::SetPotentialScatterPoint(&matrix.GetTranslation(), mMaxScatterBirds);
+        BirdParticleManager::SetPotentialScatterPoint(&vPos, mMaxScatterBirds);
     }
     PblMatrix scaled = matrix;
-    scaled.m[1][0] *= mHeightScale;
-    scaled.m[1][1] *= mHeightScale;
-    scaled.m[1][2] *= mHeightScale;
     scaled.m[1][3] = 0.0f;
+    PblVector3& vUp = scaled[1];
+    vUp = PblVector3(vUp.x * mHeightScale, vUp.y * mHeightScale, vUp.z * mHeightScale);
     Render(1.0f, scaled, uiFlags, color);
     return true;
 }
@@ -182,31 +182,28 @@ void LeafPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColor
     }
 
     PblSphere sphere;
-    sphere.x = matrix.m[3][0];
-    sphere.y = matrix.m[3][1];
-    sphere.z = matrix.m[3][2];
-    sphere.w = m_pClass->mBoundingRadius;
+    sphere.Set(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2], m_pClass->mBoundingRadius);
     RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, false, false, false));
 
     RedRenderer::GetCamera();
     RedRenderer::GetCamera();
 
-    if (color.a == 0xff)
-    {
-        if (m_pPrimitive)
-        {
-            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pShader,
-                                           matrix, color,
-                                           uiFlags, 0, 0, 0);
-        }
-    }
-    else
+    if (color.a < 0xff)
     {
         if (m_pPrimitiveFar)
         {
             RedRenderer::pcRenderPrimitive(m_pPrimitiveFar,
                                            m_pShaderFar, matrix,
                                            color, uiFlags, 0, 0, 0);
+        }
+    }
+    else
+    {
+        if (m_pPrimitive)
+        {
+            RedRenderer::pcRenderPrimitive(m_pPrimitive, m_pShader,
+                                           matrix, color,
+                                           uiFlags, 0, 0, 0);
         }
     }
 }
@@ -257,21 +254,21 @@ void LeafPatchRenderable::Begin()
     unsigned int uiVertexFormat;
     unsigned int uiVertexStride;
     float fScale;
-    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED)
-    {
-        uiVertexFormat = 0xD2A2;
-        uiVertexStride = 20;
-        fScale = 655.34998f;
-    }
-    else
+    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
     {
         uiVertexFormat = 0x2A2;
         uiVertexStride = 36;
         fScale = 1.0f;
     }
+    else
+    {
+        uiVertexFormat = 0xD2A2;
+        uiVertexStride = 20;
+        fScale = 655.34998f;
+    }
 
-    m_pVB = pcRedVertexBuffer::Create(uiNumVertices, uiVertexStride, false, true);
     unsigned int uiStartVertex = 0;
+    m_pVB = pcRedVertexBuffer::Create(uiNumVertices, uiVertexStride, false, true);
     m_pVertices = m_pVB->Lock(uiNumVertices, uiStartVertex);
 
     if (m_pPrimitive)
@@ -301,9 +298,10 @@ void LeafPatchRenderable::Begin()
     {
 
         float f = (float)(i % 5) * (1.0f - (float)(i & 1) * 2.0f) * 0.3f;
-        PblVector3 vDir(mat.m[0][0] + f * mat.m[2][0], mat.m[0][1] + f * mat.m[2][1],
-                        mat.m[0][2] + f * mat.m[2][2]);
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
+        PblVector3 vOffset(mat.m[2][0] * f, mat.m[2][1] * f, mat.m[2][2] * f);
+        PblVector3 vSum(mat.m[0][0] + vOffset.x, mat.m[0][1] + vOffset.y, mat.m[0][2] + vOffset.z);
+        PblVector3 vDir;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vSum));
         m_avRight[i] = PblVector3(vDir.x * fScale, vDir.y * fScale, vDir.z * fScale);
     }
 }

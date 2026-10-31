@@ -28,33 +28,33 @@ GrassPatchClass::GrassPatchClass(unsigned int uHash)
     : Thread()
     , EntityClass(uHash)
 {
-    mBoundingRadius = 64.0f;
+    mTransparentFlag = false;
     mParticle = 0;
     mNumParticles = 50;
+    mBoundingRadius = 64.0f;
     mSizeMin = 10.0f;
     mSizeMax = 15.0f;
-    mYOffset = 0.0f;
     mAlpha = 0.5f;
-    mMaxDistance = 100.0f;
-    mTextureHash = 0xB26FAC7Du;
+    mRenderData = 0;
+    mTextureHash = 0xB26FAC7Du /* "Grass" */;
     mRadiusFadeMin = -1.0f;
     mRadiusFadeMax = -1.0f;
+    mMaxDistance = 100.0f;
     mDarknessMin = 1.0f;
     mDarknessMax = 1.0f;
     mNumParts = 4;
     mBoxX = -1.0f;
     mBoxZ = -1.0f;
+    mYOffset = 0.0f;
     mFlatHeightMin = 0.2f;
     mFlatHeightMax = 0.2f;
     mFlatSizeMultiplier = 2.0f;
     mFlatFaceFactor = 0.5f;
     mFlatShadowHeight = 0.0f;
-    mMaxSkew = 0.1f;
+    mFlatGrassSwingFlag = false;
     mFlatCount = 6;
     mSkinnyFactor = 0.3f;
-    mFlatGrassSwingFlag = false;
-    mRenderData = 0;
-    mTransparentFlag = false;
+    mMaxSkew = 0.1f;
 
     sClasses.AddLast(&mClassNode, this);
 }
@@ -428,10 +428,9 @@ Entity* GrassPatchClass::Build(const EntityDesc& desc)
 // FUNCTION: SWBF2 0x00542000
 bool GrassPatchClass::Update(float fDeltaTime)
 {
-    const float fSwing = fDeltaTime * 0.8f;
     for (int i = 0; i < mNumParticles; ++i)
     {
-        mParticle[i].mTime += ((float)(i % 5) * 0.2f + 1.0f) * fSwing;
+        mParticle[i].mTime += ((float)(i % 5) * 0.2f + 1.0f) * (fDeltaTime * 0.8f);
         mParticle[i].mOffset = PblMath::Sin(mParticle[i].mTime);
     }
     return true;
@@ -448,14 +447,12 @@ void GrassPatchClass::Render(const PblMatrix& matrix, const GrassPatch*, unsigne
 // FUNCTION: SWBF2 0x00540cd0
 void GrassPatch::Render(unsigned char, float, unsigned int uiFlags)
 {
-    if (RedSceneManager::InTransparentPhase())
-    {
-        ((GrassPatchClass*)mClass)->Render(mMatrix, this, uiFlags);
-    }
-    else
+    if (!RedSceneManager::InTransparentPhase())
     {
         RedSceneManager::AddTransparentObject(this);
+        return;
     }
+    ((GrassPatchClass*)mClass)->Render(mMatrix, this, uiFlags);
 }
 
 // FUNCTION: SWBF2 0x005420f0

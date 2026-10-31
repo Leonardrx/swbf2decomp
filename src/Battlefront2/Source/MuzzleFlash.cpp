@@ -52,8 +52,8 @@ void MuzzleFlashRenderer::RenderFlash(MuzzleFlashData const& data, RedColor cons
 void MuzzleFlashRenderer::RenderStreak(MuzzleFlashData const& data, RedColor const& color) const
 {
     const PblVector3 vPos = data.m_pAimer->mFirePos;
-    const PblVector3 vMin(vPos.x - 50.0f, vPos.y - 50.0f, vPos.z - 50.0f);
     const PblVector3 vMax(vPos.x + 50.0f, vPos.y + 50.0f, vPos.z + 50.0f);
+    const PblVector3 vMin(vPos.x - 50.0f, vPos.y - 50.0f, vPos.z - 50.0f);
     RedParticleRenderer::SubmitBounds(vMin, vMax);
     RedParticleRenderer::TexCoords texCoords;
     texCoords.u0 = 0;
@@ -63,14 +63,10 @@ void MuzzleFlashRenderer::RenderStreak(MuzzleFlashData const& data, RedColor con
     RedParticleRenderer::SubmitParticle(PIT_STREAK_HEAD, vPos, color, 0.15f, 0.0f,
                                         texCoords, gVectorUnitX, gVectorUnitY);
     const float fHalfLength = data.mLength * 0.5f;
-    const PblVector3 vMid(vPos.x + data.mDir.x * fHalfLength,
-                          vPos.y + data.mDir.y * fHalfLength,
-                          vPos.z + data.mDir.z * fHalfLength);
+    const PblVector3 vMid = vPos + data.mDir * fHalfLength;
     RedParticleRenderer::SubmitParticle(PIT_STREAK, vMid, color, data.mWidth, 0.5f,
                                         texCoords, gVectorUnitX, gVectorUnitY);
-    const PblVector3 vEnd(vPos.x + data.mDir.x * data.mLength,
-                          vPos.y + data.mDir.y * data.mLength,
-                          vPos.z + data.mDir.z * data.mLength);
+    const PblVector3 vEnd = vPos + data.mDir * data.mLength;
     RedParticleRenderer::SubmitParticle(PIT_STREAK_TAIL, vEnd, color, data.mWidth, 1.0f,
                                         texCoords, gVectorUnitX, gVectorUnitY);
 }

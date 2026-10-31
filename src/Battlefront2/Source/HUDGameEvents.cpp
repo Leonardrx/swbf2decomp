@@ -102,13 +102,12 @@ void HUD::GameEvents::ShowTeamPoints(int iTeam, bool bShow)
         }
         const int iMyTeam = NetGame::IsEnabled() ? NetGame::GetStartTeam(NetGame::GetLocalIndex(i))
                                                  : pCharacter->mTeamNumber;
-        Team* pMyTeam = Team::sTeams[iMyTeam];
-        Team* pOtherTeam = Team::sTeams[iMyTeam == 1 ? 2 : 1];
-        if (iTeam == pMyTeam->mTeamNumber)
+        const int iOtherTeam = iMyTeam == 1 ? 2 : 1;
+        if (iTeam == Team::sTeams[iMyTeam]->mTeamNumber)
         {
             gPlayerData[i].teamData[0].showPoints = bShow;
         }
-        if (iTeam == pOtherTeam->mTeamNumber)
+        if (iTeam == Team::sTeams[iOtherTeam]->mTeamNumber)
         {
             gPlayerData[i].teamData[1].showPoints = bShow;
         }
@@ -311,10 +310,11 @@ void HUD::GameEvents::Open()
         team.bleedRate = EventClass::Create(EventClass::type_Float, "player%d.team%d.bleedRate", 1, uTeam + 1);
     }
 
-    for (unsigned int uStatistic = 0; uStatistic < 5; ++uStatistic)
+    EventClass** ppStatisticDelta = events.statisticDelta;
+    for (unsigned int uStatistic = 0; uStatistic < 5; ++uStatistic, ++ppStatisticDelta)
     {
         events.statistic[uStatistic] = EventClass::Create(EventClass::type_Int, "player%d.statistic.%s", 1, gStatisticStrings[uStatistic]);
-        events.statisticDelta[uStatistic] = EventClass::Create(EventClass::type_String, "player%d.statistic.%sDelta", 1, gStatisticStrings[uStatistic]);
+        *ppStatisticDelta = EventClass::Create(EventClass::type_String, "player%d.statistic.%sDelta", 1, gStatisticStrings[uStatistic]);
     }
 
     events.statisticsChanged = EventClass::Create(EventClass::type_Bool, "player%d.statistic.changed", 1);
@@ -454,7 +454,7 @@ void HUD::GameEvents::Close()
     delete gInitialize;
     delete gTime;
 
-    for (int iPlayer = 0; iPlayer < 1; ++iPlayer)
+    for (unsigned int iPlayer = 0; iPlayer < 1; ++iPlayer)
     {
         PlayerEvents& events = gPlayerEvents[iPlayer];
 
@@ -652,12 +652,16 @@ void HUD::GameEvents::DisableTeamElements(HUD::GameEvents::PlayerEvents& events,
 {
     for (int i = 0; i < 2; ++i)
     {
-        data.teamData[i].points = -99999;
-        data.teamData[i].reinforcements = -1;
-        data.teamData[i].bleedRate = -1.0f;
-        HUD::Event(events.teams[i].textureDisable, true).Send();
-        HUD::Event(events.teams[i].pointsDisable, true).Send();
-        HUD::Event(events.teams[i].reinforcementsDisable, true).Send();
+        TeamData& team = data.teamData[i];
+        team.points = -99999;
+        team.reinforcements = -1;
+        team.bleedRate = -1.0f;
+        HUD::Event textureDisable(events.teams[i].textureDisable, true);
+        textureDisable.Send();
+        HUD::Event pointsDisable(events.teams[i].pointsDisable, true);
+        pointsDisable.Send();
+        HUD::Event reinforcementsDisable(events.teams[i].reinforcementsDisable, true);
+        reinforcementsDisable.Send();
     }
 }
 
@@ -739,7 +743,8 @@ void HUD::GameEvents::DisablePlayerElements(HUD::GameEvents::PlayerEvents& event
 void HUD::GameEvents::Die(HUD::GameEvents::PlayerEvents& events, HUD::GameEvents::PlayerData& data)
 {
     HUD::GameEvents::DisablePlayerElements(events, data);
-    HUD::Event(events.die, true).Send();
+    HUD::Event event(events.die, true);
+    event.Send();
 }
 
 class EntitySoldierClass;
@@ -1005,9 +1010,8 @@ void HUD::GameEvents::Die(const Controllable* const pControllable)
     {
         return;
     }
-    PlayerEvents& events = gPlayerEvents[iIndex];
-    HUD::GameEvents::Die(events, gPlayerData[iIndex]);
-    HideObjectiveDetailsElements(events, gPlayerData[iIndex]);
+    HUD::GameEvents::Die(gPlayerEvents[iIndex], gPlayerData[iIndex]);
+    HideObjectiveDetailsElements(gPlayerEvents[iIndex], gPlayerData[iIndex]);
 }
 
 class EntityFlyer { public: static PblHash rttiHashEntityFlyer; };
@@ -1049,7 +1053,8 @@ void HUD::GameEvents::UpdateHackWeapon(const GameObject* const pObject, EventCla
     {
         if (!bHacking)
         {
-            HUD::Event(pDisableEvent, true).Send();
+            HUD::Event disableEvent(pDisableEvent, true);
+            disableEvent.Send();
         }
         bActive = bHacking;
     }
@@ -1064,8 +1069,10 @@ void HUD::GameEvents::UpdateHackWeapon(const GameObject* const pObject, EventCla
         unsigned short acText[128];
         PblUnicode::usnprintf(acText, 127, RedLocalizeDB::Find(uFormatID, false),
                               (int)(fTime / fRequired * 100.0f));
-        HUD::Event(pTextEvent, (const wchar_t*)acText).Send();
-        HUD::Event(pTimeEvent, fRequired - fTime).Send();
+        HUD::Event textEvent(pTextEvent, (const wchar_t*)acText);
+        textEvent.Send();
+        HUD::Event timeEvent(pTimeEvent, fRequired - fTime);
+        timeEvent.Send();
     }
 }
 
@@ -1665,29 +1672,35 @@ void HUD::GameEvents::UpdateHealth(const Character* const pCharacter, const Game
     const bool bHero = pObject->GetGameObjectClass()->GetHeroFlag();
     if (data.isHero != bHero)
     {
-        HUD::Event(bHero ? events.healthAsHeroDisable : events.healthDisable, true).Send();
+        HUD::Event heroDisable(bHero ? events.healthAsHeroDisable : events.healthDisable, true);
+        heroDisable.Send();
         data.isHero = bHero;
     }
 
     if (BonusManager::Instance()->IsTeamBonusActive(pCharacter->mTeamNumber, 0xc10b9cdc))
     {
         const int iPlayer = pCharacter->mPlayerId;
-        if (iPlayer >= 0 && iPlayer < 1)
+        if (iPlayer >= 0)
         {
-            HUD::Event(gPlayerEvents[iPlayer].healthRegenPulseRate, fHealth > data.health ? 0.5f : FLT_MAX).Send();
+            if (iPlayer < 1)
+            {
+                HUD::Event pulse(gPlayerEvents[iPlayer].healthRegenPulseRate, fHealth > data.health ? 0.5f : FLT_MAX);
+                pulse.Send();
+            }
         }
     }
 
     if (data.unknownBool00D8)
     {
         data.health = 0.0f;
-        HUD::Event(bHero ? events.healthAsHeroDisable : events.healthDisable, true).Send();
+        HUD::Event disable(bHero ? events.healthAsHeroDisable : events.healthDisable, true);
+        disable.Send();
     }
     else if (fHealth != data.health)
     {
         const float fMaxHealth = pObject->mMaxHealth;
-        float fFraction = 0.0f;
-        float fBonusFraction = 0.0f;
+        float fFraction;
+        float fBonusFraction;
         if (fMaxHealth != 0.0f)
         {
             fFraction = fHealth / fMaxHealth;
@@ -1699,10 +1712,20 @@ void HUD::GameEvents::UpdateHealth(const Character* const pCharacter, const Game
                     fBonusFraction = 1.0f;
                 }
             }
+            else
+            {
+                fBonusFraction = 0.0f;
+            }
+        }
+        else
+        {
+            fFraction = 0.0f;
+            fBonusFraction = 0.0f;
         }
         if (data.health == -1.0f)
         {
-            HUD::Event(events.spawn, true).Send();
+            HUD::Event spawn(events.spawn, true);
+            spawn.Send();
         }
 
         EventClass* pHealth;
@@ -1722,11 +1745,14 @@ void HUD::GameEvents::UpdateHealth(const Character* const pCharacter, const Game
             pHealth = events.health;
             pFraction = events.healthFraction;
         }
-        HUD::Event(pHealth, static_cast<unsigned int>((int)fHealth)).Send();
-        HUD::Event(pFraction, fFraction).Send();
-        HUD::Event(events.bonusHealthFraction, fBonusFraction).Send();
+        HUD::Event health(pHealth, static_cast<unsigned int>((int)fHealth));
+        health.Send();
+        HUD::Event fraction(pFraction, fFraction);
+        fraction.Send();
+        HUD::Event bonusFraction(events.bonusHealthFraction, fBonusFraction);
+        bonusFraction.Send();
         data.health = fHealth;
-        if (fHealth == 0.0f)
+        if (0.0f == fHealth)
         {
             HUD::GameEvents::Die(events, data);
         }
@@ -1742,10 +1768,11 @@ void HUD::GameEvents::UpdateHealth(const Character* const pCharacter, const Game
     {
         bCanChangeClass = static_cast<const EntityDroideka*>(pEntity)->mCanChangeClass;
     }
-    if (ToolTipsDisplay::sInstance && bCanChangeClass)
+    ToolTipsDisplay* pTips = ToolTipsDisplay::sInstance;
+    if (pTips && bCanChangeClass)
     {
-        ToolTipsDisplay::sInstance->ResetTipLatch(0);
-        ToolTipsDisplay::sInstance->ShowTip(TTT_SoldierTargetCP, 0);
+        pTips->ResetTipLatch(0);
+        pTips->ShowTip(TTT_SoldierTargetCP, 0);
     }
 }
 
@@ -1755,7 +1782,15 @@ void HUD::GameEvents::UpdateVehicleHealth(int iIndex, const Character* const pCh
 {
     const Controllable* pVehicle = pCharacter->mVehicle;
     const GameObject* pObject = pVehicle ? pVehicle->GetGameObject() : 0;
-    const bool bInVehicle = pObject != 0;
+    bool bInVehicle;
+    if (pObject)
+    {
+        bInVehicle = true;
+    }
+    else
+    {
+        bInVehicle = false;
+    }
     const bool bChanged = bInVehicle != data.inVehicle;
     if (bChanged)
     {
@@ -1767,11 +1802,13 @@ void HUD::GameEvents::UpdateVehicleHealth(int iIndex, const Character* const pCh
         else
         {
             pDisable = events.healthInVehicleDisable;
-            HUD::Event(events.vehicleHealthDisable, true).Send();
+            HUD::Event vehicleDisable(events.vehicleHealthDisable, true);
+            vehicleDisable.Send();
             data.vehicleHealth = -1.0f;
         }
         data.health = -1.0f;
-        HUD::Event(pDisable, true).Send();
+        HUD::Event disable(pDisable, true);
+        disable.Send();
         data.inVehicle = bInVehicle;
     }
 
@@ -1784,21 +1821,20 @@ void HUD::GameEvents::UpdateVehicleHealth(int iIndex, const Character* const pCh
         }
         if (data.unknownBool00D8)
         {
-            HUD::Event(events.vehicleHealthDisable, true).Send();
+            HUD::Event vehicleDisable(events.vehicleHealthDisable, true);
+            vehicleDisable.Send();
             data.vehicleHealth = -1.0f;
         }
         else if (fHealth != data.vehicleHealth)
         {
             const float fMaxHealth = pObject->mMaxHealth;
-            float fFraction = 0.0f;
-            if (fMaxHealth != 0.0f)
-            {
-                fFraction = fHealth / fMaxHealth;
-            }
-            HUD::Event(events.vehicleHealth, static_cast<unsigned int>((int)fHealth)).Send();
-            HUD::Event(events.vehicleHealthFraction, fFraction).Send();
+            const float fFraction = fMaxHealth != 0.0f ? fHealth / fMaxHealth : 0.0f;
+            HUD::Event health(events.vehicleHealth, static_cast<unsigned int>((int)fHealth));
+            health.Send();
+            HUD::Event fraction(events.vehicleHealthFraction, fFraction);
+            fraction.Send();
             data.vehicleHealth = fHealth;
-            if (fHealth == 0.0f)
+            if (0.0f == fHealth)
             {
                 HUD::GameEvents::Die(events, data);
             }
@@ -1809,7 +1845,8 @@ void HUD::GameEvents::UpdateVehicleHealth(int iIndex, const Character* const pCh
         {
             const unsigned int uModelID = pObject->GetEntityClass()->mHUDModelID;
             const RedModel* pModel = uModelID ? RedModel::_HashTable.Find(uModelID) : 0;
-            HUD::Event(events.vehicleSeatingMesh, pModel).Send();
+            HUD::Event seatingMesh(events.vehicleSeatingMesh, pModel);
+            seatingMesh.Send();
         }
     }
 
@@ -1821,56 +1858,58 @@ void HUD::GameEvents::UpdateVehicleHealth(int iIndex, const Character* const pCh
 void HUD::GameEvents::UpdateJetpack(const GameObject* const pObject, const EntitySoldierClass* const pClass,
                                     PlayerEvents& events, PlayerData& data)
 {
-    const bool hasJetpack = pClass && pClass->CanJetJump() && pClass->JetJumpShowHUD();
-    if (data.hasJetpack != hasJetpack)
+    const bool bJetpack = pClass && pClass->mJetFuelRechargeRate > 0.0f && pClass->JetJumpShowHUD();
+    if (data.hasJetpack != bJetpack)
     {
-        if (hasJetpack)
+        if (bJetpack)
         {
-            HUD::Event jetFuelThreshold(events.jetFuelThreshold, pClass->GetJetFuelMinBorder());
-            jetFuelThreshold.Send();
+            HUD::Event threshold(events.jetFuelThreshold, pClass->GetJetFuelMinBorder());
+            threshold.Send();
         }
         else
         {
-            HUD::Event jetDisableEvent(events.jetDisable, true);
-            jetDisableEvent.Send();
+            HUD::Event disable(events.jetDisable, true);
+            disable.Send();
             data.jetFuel = -1.0f;
         }
-        data.hasJetpack = hasJetpack;
+        data.hasJetpack = bJetpack;
     }
 
-    if (!data.hasJetpack)
+    if (data.hasJetpack)
     {
-        return;
+        const float fJetFuel = static_cast<const EntitySoldier*>(pObject)->mJetFuel;
+        if (fJetFuel != data.jetFuel)
+        {
+            float fWarning = 0.0f;
+            const float fMinBorder = pClass->GetJetFuelMinBorder();
+            if (!(fJetFuel > fMinBorder))
+            {
+                fWarning = 1.0f - fJetFuel / fMinBorder;
+            }
+            HUD::Event warning(events.jetFuelWarning, fWarning);
+            warning.Send();
+            HUD::Event fraction(events.jetFuelFraction, fJetFuel);
+            fraction.Send();
+            data.jetFuel = fJetFuel;
+        }
     }
-    float jetFuel = static_cast<const EntitySoldier*>(pObject)->mJetFuel;
-    if (jetFuel == data.jetFuel)
-    {
-        return;
-    }
-    const float jetFuelWarning = jetFuel > pClass->GetJetFuelMinBorder() ? 0.0f :
-        1.0f - jetFuel / pClass->GetJetFuelMinBorder();
-    HUD::Event jetFuelWarningEvent(events.jetFuelWarning, jetFuelWarning);
-    jetFuelWarningEvent.Send();
-    HUD::Event jetFuelEvent(events.jetFuelFraction, jetFuel);
-    jetFuelEvent.Send();
-    data.jetFuel = jetFuel;
 }
 
 // FUNCTION: SWBF2 0x00562060
 void HUD::GameEvents::UpdateShield(const GameObject* const pObject, PlayerEvents& events, PlayerData& data)
 {
-    const float maxShield = pObject->mMaxShield;
+    const float fMaxShield = pObject->mMaxShield;
     const float fShield = pObject->mCurShield;
-    const bool hasShield = maxShield > 0.0f && fShield > 0.0001f;
-    if (hasShield != data.hasShield)
+    const bool bShield = fMaxShield > 0.0f && fShield > 0.0001f;
+    if (bShield != data.hasShield)
     {
-        if (!hasShield)
+        if (!bShield)
         {
-            HUD::Event shieldDisable(events.jetDisable, true);
-            shieldDisable.Send();
+            HUD::Event disableEvent(events.jetDisable, true);
+            disableEvent.Send();
             data.shield = -1.0f;
         }
-        data.hasShield = hasShield;
+        data.hasShield = bShield;
     }
 
     if (!data.hasShield)
@@ -1879,8 +1918,8 @@ void HUD::GameEvents::UpdateShield(const GameObject* const pObject, PlayerEvents
     }
     if (data.unknownBool00D8)
     {
-        HUD::Event shieldDisable(events.jetDisable, true);
-        shieldDisable.Send();
+        HUD::Event disableEvent(events.jetDisable, true);
+        disableEvent.Send();
         data.shield = -1.0f;
         return;
     }
@@ -1888,13 +1927,23 @@ void HUD::GameEvents::UpdateShield(const GameObject* const pObject, PlayerEvents
     {
         return;
     }
-    const float shieldFraction = Clamp(fShield / maxShield, 0.0f, 1.0f);
-    HUD::Event shieldFractionEvent(events.jetFuelFraction, shieldFraction);
-    shieldFractionEvent.Send();
-    HUD::Event shieldWarning(events.jetFuelWarning, 1.0f - shieldFraction);
-    shieldWarning.Send();
-    HUD::Event shieldThreshold(events.jetFuelThreshold, 0.0f);
-    shieldThreshold.Send();
+    float fFraction = fShield / fMaxShield;
+    if (0.0f > fFraction)
+    {
+        fFraction = 0.0f;
+    }
+    else if (fFraction > 1.0f)
+    {
+        fFraction = 1.0f;
+    }
+    {
+        HUD::Event fractionEvent(events.jetFuelFraction, fFraction);
+        fractionEvent.Send();
+        HUD::Event warningEvent(events.jetFuelWarning, 1.0f - fFraction);
+        warningEvent.Send();
+    }
+    HUD::Event thresholdEvent(events.jetFuelThreshold, 0.0f);
+    thresholdEvent.Send();
 }
 
 // FUNCTION: SWBF2 0x005621a0
@@ -2243,7 +2292,8 @@ void HUD::GameEvents::UpdateStatistics(const Character* const pCharacter, Player
         {
             data.statisticData[i] = 0;
         }
-        HUD::Event(events.statistic[i], iValue).Send();
+        HUD::Event valueEvent(events.statistic[i], iValue);
+        valueEvent.Send();
 
         unsigned short acDelta[128];
         const int iDelta = iValue - data.statisticData[i];
@@ -2257,13 +2307,15 @@ void HUD::GameEvents::UpdateStatistics(const Character* const pCharacter, Player
         {
             acDelta[0] = 0;
         }
-        HUD::Event(events.statisticDelta[i], (const wchar_t*)acDelta).Send();
+        HUD::Event deltaEvent(events.statisticDelta[i], (const wchar_t*)acDelta);
+        deltaEvent.Send();
         data.statisticData[i] = iValue;
         bChanged = true;
     }
     if (bChanged)
     {
-        HUD::Event(events.statisticsChanged, true).Send();
+        HUD::Event changedEvent(events.statisticsChanged, true);
+        changedEvent.Send();
     }
 }
 
@@ -2276,12 +2328,14 @@ void HUD::GameEvents::UpdateMissleLock(const GameObject* const pObject, const Co
                          pControllable->GetEnemyLockedOnMeState() > 0.0f;
     if (bLocked != data.missileLocked)
     {
-        HUD::Event(bLocked ? events.missileLock : events.missileLockDisable, true).Send();
+        HUD::Event lock(bLocked ? events.missileLock : events.missileLockDisable, true);
+        lock.Send();
         data.missileLocked = bLocked;
     }
     if (bLocked)
     {
-        HUD::Event(events.missileLockDistance, static_cast<unsigned int>((int)pControllable->mEnemyLockedOnMeDistance)).Send();
+        HUD::Event distance(events.missileLockDistance, static_cast<unsigned int>((int)pControllable->mEnemyLockedOnMeDistance));
+        distance.Send();
     }
 }
 
@@ -2301,8 +2355,8 @@ void HUD::GameEvents::HideObjectiveDetailsElements(PlayerEvents& events, PlayerD
 void HUD::GameEvents::DisplayCenterMessage(unsigned int uTextHash, unsigned int uTeamMask,
                                            const RedColor* const pColor)
 {
-    const unsigned int uNumCameras = NetGame::GetNumLocalPlayers();
-    for (unsigned int i = 0; i < uNumCameras; ++i)
+    const unsigned int uNumLocal = NetGame::GetNumLocalPlayers();
+    for (unsigned int i = 0; i < uNumLocal; ++i)
     {
         Character* pCharacter = NetGame::GetLocalPlayer(i);
         if (!pCharacter || !(uTeamMask & (1u << pCharacter->mTeamNumber)))
@@ -2312,10 +2366,12 @@ void HUD::GameEvents::DisplayCenterMessage(unsigned int uTextHash, unsigned int 
         HUD::GameEvents::PlayerEvents& events = HUD::GameEvents::gPlayerEvents[i];
         if (pColor)
         {
-            HUD::Event(events.messageColor, pColor).Send();
+            HUD::Event colorEvent(events.messageColor, pColor);
+            colorEvent.Send();
         }
         const unsigned short* pText = RedLocalizeDB::Find(uTextHash, false);
-        HUD::Event(events.message, (const wchar_t*)pText).Send();
+        HUD::Event textEvent(events.message, (const wchar_t*)pText);
+        textEvent.Send();
     }
 }
 

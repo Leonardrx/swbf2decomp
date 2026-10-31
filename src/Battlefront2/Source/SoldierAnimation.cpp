@@ -16,11 +16,7 @@ MemoryPool SoldierAnimation::sMemoryPool("SoldierAnimation", sizeof(SoldierAnima
 // FUNCTION: SWBF2 0x0063c2d0
 unsigned short SoldierAnimation::GetAnimationNumFrames() const
 {
-    if (m_pZephyrAnim)
-    {
-        return m_pZephyrAnim->GetNumFrames();
-    }
-    return 0;
+    return m_pZephyrAnim ? m_pZephyrAnim->GetNumFrames() : 0;
 }
 
 // FUNCTION: SWBF2 0x0063c290
@@ -49,7 +45,7 @@ void SoldierAnimation::SetupDynamicPose(ZephyrPoseDyn<32>& pose, float fTime) co
     {
         pose.SetAnimation(m_pZephyrAnim, 30.0f);
         pose.SetCurTime(0.0f);
-        pose.SetLoop(IsLooping());
+        pose.SetLoop(m_pAnimData->IsLooping());
         if (fTime <= 0.0f)
         {
             pose.Update(0.0f);

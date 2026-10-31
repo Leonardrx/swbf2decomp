@@ -88,7 +88,8 @@ void LuaEvent::SendEvent()
     lua_gettable(pState, LUA_GLOBALSINDEX);
     if (lua_isstring(pState, 1))
     {
-        lua_pushstring(pState, "true");
+        const char szTrue[] = "true";
+        lua_pushstring(pState, szTrue);
         lua_pushstring(pState, _pcFlagName);
         lua_insert(pState, -2);
         lua_settable(pState, LUA_GLOBALSINDEX);

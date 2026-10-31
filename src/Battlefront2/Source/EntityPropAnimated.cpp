@@ -32,12 +32,7 @@ EntityPropAnimatedClass::EntityPropAnimatedClass(unsigned int uHash)
 {
     mAnimObj = 0;
     memset(mAnimations, 0, sizeof(mAnimations));
-    for (int i = 0; i < 3; i++)
-    {
-        mAnimationTriggers[i].mTriggerPoint = 0;
-        mAnimationTriggers[i].mTriggerRadius = 0.0f;
-        mAnimationTriggers[i].mAnimationID = 0;
-    }
+    memset(mAnimationTriggers, 0, sizeof(mAnimationTriggers));
     memset(mAttachTriggers, 0, sizeof(mAttachTriggers));
     for (int i = 0; i < 3; i++)
     {
@@ -93,7 +88,7 @@ EntityPropAnimated::EntityPropAnimated(EntityPropAnimatedClass* pClass, const En
     {
         mShadowProxy->Deactivate();
     }
-    mZephyrSkeleton.Open(*mAnimObj->GetZephyrSkeletonShared(), mZephyrPoseStatic);
+    mZephyrSkeleton.Open(*mAnimatedClass->mAnimObj->GetZephyrSkeletonShared(), mZephyrPoseStatic);
     mZephyrPoseStatic.Open(mZephyrSkeleton);
     mZephyrPoseDyn.Open(mZephyrSkeleton);
     mAttachedSoldier.mObject = 0;
@@ -111,13 +106,13 @@ EntityPropAnimated::~EntityPropAnimated()
 // FUNCTION: SWBF2 0x004db670
 void EntityPropAnimated::Render(unsigned char ucLod, float fAlpha, unsigned int uFlags)
 {
-    if (mAnimatedClass->m_bDynamicLighting)
+    if (!static_cast<EntityPropAnimatedClass*>(mEntityClass)->m_bDynamicLighting)
     {
-        uFlags &= ~0x80u;
+        uFlags |= 0x80u;
     }
     else
     {
-        uFlags |= 0x80u;
+        uFlags &= ~0x80u;
     }
 
     // GLOBAL: SWBF2 0x01faa92c
@@ -125,7 +120,7 @@ void EntityPropAnimated::Render(unsigned char ucLod, float fAlpha, unsigned int 
     static PblHash sPlayerShadow("player_shadow");
     SetupShadow(0, mModel, ucLod, uFlags, sPlayerShadow);
     const GameModel* pModel = GetModel();
-    const RedColor kWhite = RedColor::WHITE;
+    const RedColor kWhite(255, 255, 255, 255);
     pModel->Render(ucLod, fAlpha, &mMatrix, &mPose, kWhite,
                    uFlags | 0x01000000, 0);
 }
@@ -157,18 +152,9 @@ EntityPropAnimatedClass::EntityPropAnimatedClass(EntityPropAnimatedClass* pBase,
     : EntityPropClass(pBase, uHash)
 {
     mAnimObj = pBase->mAnimObj;
-    for (int i = 0; i < 5; i++)
-    {
-        mAnimations[i] = pBase->mAnimations[i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mAnimationTriggers[i] = pBase->mAnimationTriggers[i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mAttachTriggers[i] = pBase->mAttachTriggers[i];
-    }
+    memcpy(mAnimations, pBase->mAnimations, sizeof(mAnimations));
+    memcpy(mAnimationTriggers, pBase->mAnimationTriggers, sizeof(mAnimationTriggers));
+    memcpy(mAttachTriggers, pBase->mAttachTriggers, sizeof(mAttachTriggers));
     for (int i = 0; i < 3; i++)
     {
         mAttachTriggers[i].mSoldierAnimation = -1;
@@ -187,7 +173,7 @@ EntityPropAnimatedClass::~EntityPropAnimatedClass()
 bool EntityPropAnimatedClass::InitAnimations(const char* pszName)
 {
     mAnimObj = RedAnimation::Find(PblHash(pszName));
-    return mAnimObj != 0;
+    return mAnimObj ? true : false;
 }
 
 // FUNCTION: SWBF2 0x004dc380
@@ -349,8 +335,8 @@ EntityClass* EntityPropAnimatedClass::Derive(unsigned int uHash)
 Entity* EntityPropAnimatedClass::Build(const EntityDesc& desc)
 {
     EntityPropAnimated* pProp = new EntityPropAnimated(this, desc);
-    static_cast<CollisionObject*>(pProp)->AddStaticToCollisionManager();
-    static_cast<Thread*>(pProp)->ActivateThread(0, PER_LOCAL_TURN);
+    pProp->AddStaticToCollisionManager();
+    pProp->ActivateThread(0, PER_LOCAL_TURN);
     pProp->BuildEffects();
     return pProp;
 }

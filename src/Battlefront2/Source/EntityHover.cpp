@@ -802,7 +802,11 @@ Entity* EntityHoverClass::Build(const EntityDesc& desc)
 bool EntityHoverClass::InitAnimations(const char* pszName)
 {
     mAnimObj = RedAnimation::Find(PblHash(pszName));
-    return mAnimObj != 0;
+    if (mAnimObj)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004ca980
@@ -819,31 +823,8 @@ void EntityHoverClass::SetupDefaultColliderBodyFactors(ColliderBodyInfo& info, i
     info.mSpringLength = pBody->GetRadius() * sBodySpringLengthRadiusMultiplier;
 
     const PblVector3& vOffset = matrix.GetTranslation();
-    if (vOffset.z > 0.1f)
-    {
-        info.mOmegaXSpringFactor = -1.0f;
-    }
-    else if (vOffset.z < -0.1f)
-    {
-        info.mOmegaXSpringFactor = 1.0f;
-    }
-    else
-    {
-        info.mOmegaXSpringFactor = 0.0f;
-    }
-
-    if (vOffset.x > 0.1f)
-    {
-        info.mOmegaZSpringFactor = 1.0f;
-    }
-    else if (vOffset.x < -0.1f)
-    {
-        info.mOmegaZSpringFactor = -1.0f;
-    }
-    else
-    {
-        info.mOmegaZSpringFactor = 0.0f;
-    }
+    info.mOmegaXSpringFactor = vOffset.z > 0.1f ? -1.0f : (vOffset.z < -0.1f ? 1.0f : 0.0f);
+    info.mOmegaZSpringFactor = vOffset.x > 0.1f ? 1.0f : (vOffset.x < -0.1f ? -1.0f : 0.0f);
 }
 
 namespace
@@ -2936,9 +2917,8 @@ bool EntityHover::ApplyDamage(const DamageDesc& damage, const PblVector3& vDir, 
         int iJoystick = NetGame::GetJoystickIndex(mPlayerId);
         if (iJoystick >= 0)
         {
-            PblMatrix mInverse = mMatrix.GetInverseFast();
             PblVector3 vLocal;
-            D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+            D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXMATRIX*>(&mMatrix.GetInverseFast()));
             StatusDisplay::Instance(iJoystick)->SetDamageDirection(vLocal);
         }
     }
@@ -2970,7 +2950,8 @@ int EntityHover::UpdateCollisionOnColliderBody(unsigned int uBodyId, float fOver
     {
         if (uBodyId == mClass->mColliderBodyInfo[i].mCollisionBodyId)
         {
-            PblVector3 vUp = mMatrix.GetYAxis();
+            PblVector3 vUp;
+            vUp = mMatrix.GetYAxis();
             float fUp = vNormal.x * vUp.x + vNormal.y * vUp.y + vNormal.z * vUp.z;
             if (fUp > 0.5f && vNormal.y > 0.5f)
             {
@@ -2981,10 +2962,7 @@ int EntityHover::UpdateCollisionOnColliderBody(unsigned int uBodyId, float fOver
                     fCompress = fLength;
                 }
                 float fRatio = fCompress / fLength;
-                if (!(mColliderBody[i].mOverlap > fRatio))
-                {
-                    mColliderBody[i].mOverlap = fRatio;
-                }
+                mColliderBody[i].mOverlap = mColliderBody[i].mOverlap > fRatio ? mColliderBody[i].mOverlap : fRatio;
             }
             return i;
         }
@@ -3106,8 +3084,8 @@ void EntityHover::ApplyCollisionImpact(float fApproach, const PblVector3& vNorma
 
     FoleyFXCollider::CollisionCallback(pOther->GetCollisionType(), pOther, &GetPosition());
     PlayImpactEffects(&mMatrix.GetTranslation(), &mVelocity);
-    PblVector3 vPos = mMatrix.GetTranslation();
     PblVector3 vVel = mVelocity;
+    PblVector3 vPos = mMatrix.GetTranslation();
     VehicleEngine::Collision(mClass, vPos, vVel);
 
     DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
@@ -3118,7 +3096,8 @@ void EntityHover::ApplyCollisionImpact(float fApproach, const PblVector3& vNorma
         owner.mTeam = pOther->GetGameObject()->GetTeam();
         owner.mClass = pOther->GetGameObject()->GetGameObjectClass();
     }
-    Damageable::ApplyDamage(DamageDesc(owner, fDamage), 0xffffffff);
+    DamageDesc desc(owner, fDamage);
+    Damageable::ApplyDamage(desc, 0xffffffff);
 }
 
 // FUNCTION: SWBF2 0x004c66a0
@@ -3424,11 +3403,15 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
 // FUNCTION: SWBF2 0x004c7f20
 float EntityHover::GetSoundRadius() const
 {
-    float fRadius = 0.0f;
     float fEngine = VehicleEngine::GetMuteDistance();
-    if (fEngine > fRadius)
+    float fRadius;
+    if (fEngine > 0.0f)
     {
         fRadius = fEngine;
+    }
+    else
+    {
+        fRadius = 0.0f;
     }
     return fRadius;
 }
@@ -3534,41 +3517,43 @@ void EntityHover::SetupCameraZoomFactor(float& rZoom)
 // FUNCTION: SWBF2 0x004c7cd0
 void EntityHover::SetupCameraFOV(float& rFOV)
 {
-    if (!IsAlive())
+    if (IsAlive())
     {
-        rFOV = GetDefaultFOV();
-        return;
-    }
-    const float fNormalSpeed = mClass->mForwardSpeed;
-    const float fBoostSpeed = mClass->mBoostSpeed;
-    const float fForwardSpeed = DotProduct(mVelocity, mMatrix.GetZAxis());
-    if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
-    {
-        if (fForwardSpeed > fNormalSpeed && fBoostSpeed > fNormalSpeed && mClass->mBoostFOV != 0.0f)
+        const float fNormalSpeed = mClass->mForwardSpeed;
+        const float fBoostSpeed = mClass->mBoostSpeed;
+        const float fForwardSpeed = DotProduct(mVelocity, mMatrix.GetZAxis());
+        if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
         {
-            const float fBlend = Clamp((fForwardSpeed - fNormalSpeed) /
-                                      (fBoostSpeed - fNormalSpeed), 0.0f, 1.0f);
-            const float fNormalFOV = GetControllableClass()->mFirstPersonFOV;
-            rFOV = (1.0f - fBlend) * fNormalFOV + mClass->mBoostFOV * fBlend;
+            if (fForwardSpeed > fNormalSpeed && fBoostSpeed > fNormalSpeed && mClass->mBoostFOV != 0.0f)
+            {
+                const float fBlend = Clamp((fForwardSpeed - fNormalSpeed) /
+                                          (fBoostSpeed - fNormalSpeed), 0.0f, 1.0f);
+                const float fNormalFOV = GetControllableClass()->mFirstPersonFOV;
+                rFOV = (1.0f - fBlend) * fNormalFOV + mClass->mBoostFOV * fBlend;
+            }
+            else
+            {
+                rFOV = GetControllableClass()->mFirstPersonFOV;
+            }
         }
         else
         {
-            rFOV = GetControllableClass()->mFirstPersonFOV;
+            if (fForwardSpeed > fNormalSpeed && fBoostSpeed > fNormalSpeed && mClass->mBoostFOV != 0.0f)
+            {
+                const float fBlend = Clamp((fForwardSpeed - fNormalSpeed) /
+                                          (fBoostSpeed - fNormalSpeed), 0.0f, 1.0f);
+                const float fNormalFOV = GetControllableClass()->mThirdPersonFOV;
+                rFOV = (1.0f - fBlend) * fNormalFOV + mClass->mBoostFOV * fBlend;
+            }
+            else
+            {
+                rFOV = GetControllableClass()->mThirdPersonFOV;
+            }
         }
     }
     else
     {
-        if (fForwardSpeed > fNormalSpeed && fBoostSpeed > fNormalSpeed && mClass->mBoostFOV != 0.0f)
-        {
-            const float fBlend = Clamp((fForwardSpeed - fNormalSpeed) /
-                                      (fBoostSpeed - fNormalSpeed), 0.0f, 1.0f);
-            const float fNormalFOV = GetControllableClass()->mThirdPersonFOV;
-            rFOV = (1.0f - fBlend) * fNormalFOV + mClass->mBoostFOV * fBlend;
-        }
-        else
-        {
-            rFOV = GetControllableClass()->mThirdPersonFOV;
-        }
+        rFOV = GetDefaultFOV();
     }
 }
 

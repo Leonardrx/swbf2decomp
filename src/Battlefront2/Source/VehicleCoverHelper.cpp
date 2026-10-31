@@ -157,15 +157,14 @@ void VehicleCoverHelper::EnterState()
 // FUNCTION: SWBF2 0x0066c260
 void VehicleCoverHelper::ExitState()
 {
-    AttackHelper* pAttack = &mOwner->mAttackHelper;
     switch (mCurState)
     {
     case STATE_GOTO:
     case STATE_COVERED:
-        pAttack->AllowEnemyUnseen(false);
+        mOwner->mAttackHelper.AllowEnemyUnseen(false);
         break;
     case STATE_STEP_OUT:
-        pAttack->ResetWaitDelay();
+        mOwner->mAttackHelper.ResetWaitDelay();
         break;
     }
 }
@@ -228,7 +227,14 @@ void VehicleCoverHelper::UpdateState(float dt)
         mHint->Reserve(GetMe()->GetGameObject());
         if (GameLoop::GetMissionTime() > mTimer)
         {
-            SetNextState(mHint->HasSidestep() ? STATE_STEP_OUT : STATE_POP_UP);
+            if (mHint->HasSidestep())
+            {
+                SetNextState(STATE_STEP_OUT);
+            }
+            else
+            {
+                SetNextState(STATE_POP_UP);
+            }
         }
         break;
     case STATE_POP_UP:
@@ -300,17 +306,16 @@ void VehicleCoverHelper::HELPERClean()
 // FUNCTION: SWBF2 0x0066c690
 bool VehicleCoverHelper::HELPERFaceTarget() const
 {
-    if (mCurState != STATE_GOTO)
+    if (mCurState == STATE_GOTO)
     {
-        return true;
+        PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
+        PblVector3 vHint = mHint->GetCollisionCenter();
+        float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius() + 1.0f;
+        float dx = vHint.x - vMe.x;
+        float dz = vHint.z - vMe.z;
+        return !(dx * dx + dz * dz > fRadius * fRadius);
     }
-
-    PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
-    PblVector3 vHint = mHint->GetCollisionCenter();
-    float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius() + 1.0f;
-    float dx = vHint.x - vMe.x;
-    float dz = vHint.z - vMe.z;
-    return dx * dx + dz * dz <= fRadius * fRadius;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0066c760
@@ -340,12 +345,12 @@ const UnitController* VehicleCoverHelper::GetCtrl() const
 // FUNCTION: SWBF2 0x0066c7a0
 float VehicleCoverHelper::GetMaxHintDist() const
 {
-    if (!GetMe()->GetCurWpn())
+    if (GetMe()->GetCurWpn())
     {
-        return 100.0f;
+        float fRange = CombatUtil::GetWeaponMaxRange(GetMe());
+        return fRange > 100.0f ? 100.0f : fRange;
     }
-    float fRange = CombatUtil::GetWeaponMaxRange(GetMe());
-    return fRange > 100.0f ? 100.0f : fRange;
+    return 100.0f;
 }
 
 // FUNCTION: SWBF2 0x0066c7e0
@@ -393,29 +398,27 @@ float VehicleCoverHelper::IsHintSuitable_Combat(const VehicleCoverHint* pHint) c
     float fCosMax = PblMath::Cos(1.0471976f);
     PblVector3 vTargetToHint(vHint.x - vTarget.x, vHint.y - vTarget.y, vHint.z - vTarget.z);
 
-    if (vTargetToHint.x * vMeToTarget.x + vTargetToHint.y * vMeToTarget.y + vTargetToHint.z * vMeToTarget.z >= 0.0f)
+    if (vTargetToHint.x * vMeToTarget.x + vTargetToHint.y * vMeToTarget.y + vTargetToHint.z * vMeToTarget.z < 0.0f)
     {
-        return FLT_MAX;
+        PblVector3 vHintToTarget(vTarget.x - vHint.x, vTarget.y - vHint.y, vTarget.z - vHint.z);
+        PblVector3 vDir = AIUtil::GetSafeNormalXZ(vHintToTarget);
+        const PblVector3& vZ = pHint->GetZAxis();
+        if (vZ.y * vDir.y + vZ.x * vDir.x + vZ.z * vDir.z > fCosMax)
+        {
+            float fMaxDist = GetMaxHintDist();
+            float fDistSq = vTargetToHint.z * vTargetToHint.z + vTargetToHint.x * vTargetToHint.x;
+            if (fMaxDist * fMaxDist > fDistSq)
+            {
+                if (fDistSq > 0.0f)
+                {
+                    float dx = vHint.x - vMe.x;
+                    float dz = vHint.z - vMe.z;
+                    return dz * dz * 2.25f + dx * dx * 2.25f + fDistSq;
+                }
+            }
+        }
     }
-
-    PblVector3 vHintToTarget(vTarget.x - vHint.x, vTarget.y - vHint.y, vTarget.z - vHint.z);
-    PblVector3 vDir = AIUtil::GetSafeNormalXZ(vHintToTarget);
-    const PblVector3& vZ = pHint->GetZAxis();
-    if (vZ.y * vDir.y + vZ.x * vDir.x + vZ.z * vDir.z <= fCosMax)
-    {
-        return FLT_MAX;
-    }
-
-    float fMaxDist = GetMaxHintDist();
-    float fDistSq = vTargetToHint.z * vTargetToHint.z + vTargetToHint.x * vTargetToHint.x;
-    if (fMaxDist * fMaxDist <= fDistSq || fDistSq <= 0.0f)
-    {
-        return FLT_MAX;
-    }
-
-    float dx = vHint.x - vMe.x;
-    float dz = vHint.z - vMe.z;
-    return dz * dz * 2.25f + dx * dx * 2.25f + fDistSq;
+    return FLT_MAX;
 }
 
 // FUNCTION: SWBF2 0x0066cab0

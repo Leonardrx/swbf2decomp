@@ -170,7 +170,7 @@ HUD::ElementText& HUD::ElementText::operator=(const ElementText& other)
 // FUNCTION: SWBF2 0x0055bb30
 void HUD::ElementText::CopyToTextElement(RedTextElement& textElement)
 {
-    textElement.m_color = mColorDefault;
+    textElement.m_color = RedColor(mColorDefault);
     textElement.SetZOrder((unsigned char)RedTextElement::m_zorder);
     textElement.SetBlendMode(static_cast<RedTextElement&>(*this).GetBlendMode());
     textElement.SetMatrix(m_mLocal);
@@ -335,12 +335,15 @@ bool HUD::ElementText::CopyString(char** ppDest, const char* const pSource)
         FreeString(ppDest);
         const unsigned int uLength = strlen(pSource);
         *ppDest = new char[uLength + 1];
-        if (!*ppDest)
+        if (*ppDest)
+        {
+            strncpy(*ppDest, pSource, uLength);
+            (*ppDest)[uLength] = 0;
+        }
+        else
         {
             return false;
         }
-        strncpy(*ppDest, pSource, uLength);
-        (*ppDest)[uLength] = 0;
     }
     return true;
 }
@@ -359,21 +362,22 @@ void HUD::ElementText::FreeString(char** ppString)
 void HUD::ElementText::EventText(const HUD::Event& event, void* const pData)
 {
     ElementText* pText = (ElementText*)pData;
+    RedTextElement& textElement = static_cast<RedTextElement&>(pText->GetRedInterfaceElement());
     switch (event.GetClass()->GetType())
     {
     case EventClass::type_Uint:
-        static_cast<RedTextElement&>(pText->GetRedInterfaceElement()).SetText(RedLocalizeDB::Find(event.GetData().uintValue, false), true);
+        textElement.SetText(RedLocalizeDB::Find(event.GetData().uintValue, false), true);
         break;
     case EventClass::type_String:
     {
         const unsigned short* pString = event.GetData().string;
         if (pString)
         {
-            static_cast<RedTextElement&>(pText->GetRedInterfaceElement()).SetText(pString, true);
+            textElement.SetText(pString, true);
         }
         else
         {
-            static_cast<RedTextElement&>(pText->GetRedInterfaceElement()).SetText("", true);
+            textElement.SetText("", true);
         }
         break;
     }
@@ -578,8 +582,22 @@ bool HUD::ElementText::GetProperty(const unsigned int uHashID, void* pValue)
         ((float*)pValue)[1] = (float)uHeight / sViewportHeight;
         return true;
     }
-    case 0xAF7A0A77u: *(unsigned int*)pValue = m_halign; return true;
-    case 0xFD78EA2Du: *(unsigned int*)pValue = m_valign; return true;
+    case 0xAF7A0A77u: /* "TextHAlignment" */
+    {
+        TextHAlignT eHAlign;
+        TextVAlignT eVAlign;
+        GetTextAlign(eHAlign, eVAlign);
+        *(unsigned int*)pValue = eHAlign;
+        return true;
+    }
+    case 0xFD78EA2Du: /* "TextVAlignment" */
+    {
+        TextHAlignT eHAlign;
+        TextVAlignT eVAlign;
+        GetTextAlign(eHAlign, eVAlign);
+        *(unsigned int*)pValue = eVAlign;
+        return true;
+    }
     case kEventTextHash: *(const char**)pValue = mEventText.GetRegisteredClassName(false); return true;
     case kEventNumberHash: *(const char**)pValue = mEventNumber.GetRegisteredClassName(false); return true;
     default: return Element::GetProperty(uHashID, pValue);
@@ -664,7 +682,8 @@ void HUD::ElementText::WriteData(HUD::File& file, unsigned int uTabs)
     TextHAlignT eHAlign;
     TextVAlignT eVAlign;
     GetTextAlign(eHAlign, eVAlign);
-    if (eHAlign != TEXT_HALIGN_LEFT || eVAlign != TEXT_VALIGN_TOP)
+    if (Factory::sTextAlignHorizontal[eHAlign] != Factory::sTextAlignHorizontal[0] ||
+        Factory::sTextAlignVertical[eVAlign] != Factory::sTextAlignVertical[0])
     {
         file.WriteTabs(uTabs);
         file.WriteStringf("TextAlignment(\"%s\", \"%s\")\n",
@@ -673,12 +692,12 @@ void HUD::ElementText::WriteData(HUD::File& file, unsigned int uTabs)
     file.WriteProperty("TextScale", uTabs, m_fScaleX, m_fScaleY, 1.0f, 1.0f);
     file.WriteProperty("TextCharacterSpacing", uTabs, (int)m_iSpacing, 1);
     file.WriteProperty("TextTabSpacing", uTabs, (int)GetTabSpacing(), 10);
-    file.WriteProperty("TextFont", uTabs, mFontName ? mFontName : "", "");
+    file.WriteProperty("TextFont", uTabs, mFontName, "");
     file.WriteProperty("EventText", uTabs, mEventText.GetRegisteredClassName(true), "");
     file.WriteProperty("EventNumber", uTabs, mEventNumber.GetRegisteredClassName(true), "");
-    file.WriteProperty("IntegerFormat", uTabs, mIntegerFormat ? mIntegerFormat : "", "");
-    file.WriteProperty("FloatFormat", uTabs, mFloatFormat ? mFloatFormat : "", "");
-    file.WriteProperty("NumberToTime", uTabs, mNumberToTime ? mNumberToTime : "", "");
+    file.WriteProperty("IntegerFormat", uTabs, mIntegerFormat, "");
+    file.WriteProperty("FloatFormat", uTabs, mFloatFormat, "");
+    file.WriteProperty("NumberToTime", uTabs, mNumberToTime, "");
     file.WriteProperty("Percent", uTabs, (int)mPercent, 0);
     file.WriteProperty("InfiniteDashes", uTabs, (int)mShowInfiniteDashes, 1);
     Element::WriteData(file, uTabs);

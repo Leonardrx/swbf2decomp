@@ -64,21 +64,21 @@ void CustomContent::Create(bool bMission)
 {
     if (HasHD())
     {
-        if (bMission)
-        {
-            char acMission[64];
-            strlcpy(acMission, GameLoop::mMissionScript, sizeof(acMission));
-            acMission[sizeof(acMission) - 1] = 0;
-            _strlwr(acMission);
-            strncmp(acMission, "tat2", 4);
-        }
-        else
+        if (!bMission)
         {
             if (firstTime)
             {
                 CopyFiles();
             }
             firstTime = false;
+        }
+        else
+        {
+            char acMission[64];
+            strlcpy(acMission, GameLoop::mMissionScript, sizeof(acMission));
+            acMission[sizeof(acMission) - 1] = 0;
+            _strlwr(acMission);
+            strncmp(acMission, "tat2", 4);
         }
     }
 }

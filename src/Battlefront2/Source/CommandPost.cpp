@@ -69,12 +69,10 @@ PblMatrix NormalMatrix(const PblVector3& vDir, const PblVector3& vNormal, const 
 {
     PblVector3 vUp;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUp), reinterpret_cast<const D3DXVECTOR3*>(&vNormal));
-    PblVector3 vSide(vUp.y * vDir.z - vUp.z * vDir.y, vUp.z * vDir.x - vUp.x * vDir.z,
-                     vUp.x * vDir.y - vUp.y * vDir.x);
+    PblVector3 vSide = CrossProduct(vUp, vDir);
     PblVector3 vRight;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-    PblVector3 vFront(vRight.y * vUp.z - vRight.z * vUp.y, vRight.z * vUp.x - vRight.x * vUp.z,
-                      vRight.x * vUp.y - vRight.y * vUp.x);
+    PblVector3 vFront = CrossProduct(vRight, vUp);
 
     return PblMatrix(vRight, vUp, vFront, vPos);
 }
@@ -95,20 +93,17 @@ CommandPostClass::CommandPostClass(unsigned int  )
     mSpawnRotation = 0;
     mSpawnPosition = 0;
     mSpawnCount = 0;
-    mBleedValue[0] = 0;
     mBleedValue[1] = 10;
     mBleedValue[2] = 10;
     mBleedValue[3] = 10;
     mBleedValue[4] = 10;
-    mBleedValue[5] = 0;
     mBleedValue[6] = 10;
     mBleedValue[7] = 10;
+    mBleedValue[0] = 0;
+    mBleedValue[5] = 0;
     for (int i = 0; i < 8; i++)
     {
         mStrategicAttackValue[i] = 100;
-    }
-    for (int i = 0; i < 8; i++)
-    {
         mStrategicDefendValue[i] = 100;
     }
     mDisplayHUDIndex = true;
@@ -547,9 +542,13 @@ int CommandPost::GetCount()
 CommandPost* CommandPost::GetActive(int iIndex)
 {
     CommandPost* pPost = sPostArray[iIndex];
-    if (!pPost || !pPost->IsThreadActive())
+    if (!pPost)
     {
         return 0;
+    }
+    if (!pPost->IsThreadActive())
+    {
+        pPost = 0;
     }
     return pPost;
 }
@@ -598,14 +597,8 @@ CommandPost::CommandPost(CommandPostClass* pClass, int iIndex)
     {
         mBleedValue[i] = pClass->mBleedValue[i];
     }
-    for (int i = 0; i < 8; i++)
-    {
-        mStrategicAttackValue[i] = pClass->mStrategicAttackValue[i];
-    }
-    for (int i = 0; i < 8; i++)
-    {
-        mStrategicDefendValue[i] = pClass->mStrategicDefendValue[i];
-    }
+    memcpy(mStrategicAttackValue, pClass->mStrategicAttackValue, sizeof(mStrategicAttackValue));
+    memcpy(mStrategicDefendValue, pClass->mStrategicDefendValue, sizeof(mStrategicDefendValue));
     mClass = pClass;
     mStrategicBan = 0;
     mAISpawnWeight = 100.0f;
@@ -658,12 +651,8 @@ CommandPost* CommandPost::BuildPost(GameObject* pObject, CommandPostClass* pClas
         {
             if (sPostArray[i] && !sPostArray[i]->mObject && sPostArray[i]->mClass == pClass)
             {
-                const PblMatrix& mMatrix = pObject->GetMatrix();
-                const PblVector3& vPos = sPostArray[i]->mPosition;
-                float fX = vPos.x - mMatrix.m[3][0];
-                float fY = vPos.y - mMatrix.m[3][1];
-                float fZ = vPos.z - mMatrix.m[3][2];
-                if (fX * fX + fY * fY + fZ * fZ < 1.0f)
+                const PblVector3 vDelta = sPostArray[i]->mPosition - pObject->GetMatrix().GetTranslation();
+                if (SquaredLength(vDelta) < 1.0f)
                 {
                     iIndex = i;
                     break;
@@ -716,7 +705,8 @@ void CommandPost::Attach(GameObject* pObject)
     {
         EntityDesc desc;
         PblMatrix mBone;
-        if (mObject->GetModel()->_mLod[0]->GetBoneMatrix(0xD1E4CC7A, mBone))
+        const GameModel* pModel = mObject->GetModel();
+        if (pModel->_mLod[0]->GetBoneMatrix(0xD1E4CC7A, mBone))
         {
             PblMatrix mWorld;
             D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mWorld), reinterpret_cast<const D3DXMATRIX*>(&mBone), reinterpret_cast<const D3DXMATRIX*>(&mObject->GetMatrix()));
@@ -755,14 +745,18 @@ void CommandPost::Kill()
         EventManager::CommandPostEvent::mKill.Trigger(*this, mObject->mDamageOwner);
     }
 
-    TurnHologramOff();
+    if (m_pHologram)
+    {
+        m_pHologram->TurnOff();
+    }
 
     if (mKillRegion)
     {
         for (int i = 0; i < 15; i++)
         {
-            PblVector3 vPos = mKillRegion->mMatrix.ApplyTransform(
-                mKillRegion->mSize * PblRandom::GetGlobalVector3());
+            PblVector3 vPos = PblRandom::GetGlobalVector3();
+            vPos = mKillRegion->mSize * vPos;
+            vPos = mKillRegion->mMatrix.ApplyTransform(vPos);
 
             FLEffectClass* pEffectClass;
             switch (PblRandom::GetGlobalInt() % 3)
@@ -1154,7 +1148,11 @@ int CommandPost::GetBleedValue(int iTeam) const
 // FUNCTION: SWBF2 0x0047c550
 bool CommandPost::CanTeamSpawnHere(int iTeam) const
 {
-    if (!mIsAISpawnPoint || !GetGameObject())
+    if (!mIsAISpawnPoint)
+    {
+        return false;
+    }
+    if (!GetGameObject())
     {
         return false;
     }
@@ -1250,29 +1248,33 @@ void CommandPost::PlayVoiceOver(Team::Side eSide, VoiceOver::Stream eStream, boo
     }
     const Team::Side eListener = Team::sTeams[VoiceOverManager::sInstance->GetPlayerTeamNumber() + 1]->GetSide();
     const bool bPlay = VoiceOverManager::sInstance->mPlay;
-    bPlayMusic = bPlayMusic && bPlay;
+    bPlayMusic &= bPlay;
     if (CommandPost::sEnableVO && bPlay)
     {
         GameSoundStream& rStream = mVoiceOver[eListener].mStream[eSide][eStream];
-        const PblVector3* pPos = 0;
-        if (rStream.GetProperties(false) && rStream.GetProperties(false)->Get3DMode())
-        {
-            pPos = (const PblVector3*)GetMatrix().m[3];
-        }
-        rStream.Play(pPos, 0, false, true);
+        rStream.Play((rStream.GetProperties(false) && rStream.GetProperties(false)->Get3DMode())
+                         ? (const PblVector3*)GetMatrix().m[3]
+                         : 0,
+                     0, false, true);
     }
 
     GameMusic* pMusic = 0;
     switch (eStream)
     {
     case VoiceOver::stream_Capture:
-        mClass->mSoundCaptured.Play((const PblVector3*)GetMatrix().m[3], 0, false, true);
+    {
+        const PblVector3* pPos = (const PblVector3*)GetMatrix().m[3];
+        mClass->mSoundCaptured.Play(pPos, 0, false, true);
         pMusic = &mClass->mMusicCapture[eListener];
         break;
+    }
     case VoiceOver::stream_Lost:
-        mClass->mSoundLost.Play((const PblVector3*)GetMatrix().m[3], 0, false, true);
+    {
+        const PblVector3* pPos = (const PblVector3*)GetMatrix().m[3];
+        mClass->mSoundLost.Play(pPos, 0, false, true);
         pMusic = &mClass->mMusicLost[eListener];
         break;
+    }
     }
     if (bPlayMusic && pMusic && pMusic->ReadyToPlay())
     {
@@ -1696,7 +1698,8 @@ void CommandPost::SetTeam(int iOldTeam, int iNewTeam)
     if (iNewTeam > 0)
     {
         mSoundAmbienceProps = mClass->mSoundAmbience[Team::sTeams[iNewTeam]->GetSide()];
-        mSoundAmbience.Play(&mSoundAmbienceProps, (const PblVector3*)GetMatrix().m[3], 0, true);
+        const PblVector3* pPosition = (const PblVector3*)GetMatrix().m[3];
+        mSoundAmbience.Play(&mSoundAmbienceProps, pPosition, 0, true);
     }
 }
 

@@ -113,10 +113,9 @@ int AIDifficulty::GetIntSkill(const UnitController* pController, bool bClamp)
     }
     else if (pController)
     {
-        const Controllable* pMe = pController->GetMe();
-        if (pMe && pMe->GetGameObject())
+        if (pController->GetMe() && pController->GetMe()->GetGameObject())
         {
-            bPlayer = AIUtil::IsPlayerTeam(pMe->GetGameObject()->mTeam);
+            bPlayer = AIUtil::IsPlayerTeam(pController->GetMe()->GetGameObject()->mTeam);
         }
     }
 
@@ -144,13 +143,10 @@ int AIDifficulty::GetIntSkill(const UnitController* pController, bool bClamp)
     }
 
     iSkill += iModifier;
-    if (iSkill < 1)
+    iSkill = (iSkill > 1) ? iSkill : 1;
+    if (bClamp)
     {
-        iSkill = 1;
-    }
-    if (bClamp && iSkill > 20)
-    {
-        iSkill = 20;
+        return (iSkill < 20) ? iSkill : 20;
     }
     return iSkill;
 }
@@ -373,7 +369,11 @@ void AIDifficulty::GetFlyerSpeedRange(const UnitController* pController, float f
 {
     rLow = GetRangedSpeed(GetFloatSkill_RangedLinear(pController, 0.3f, 0.8f, true), fMin, fMid, fMax, fBoost);
     float fHigh = GetRangedSpeed(GetFloatSkill_RangedLinear(pController, 0.5f, 1.2f, true), fMin, fMid, fMax, fBoost);
-    rHigh = (rLow > fHigh) ? rLow : fHigh;
+    rHigh = fHigh;
+    if (rLow > fHigh)
+    {
+        rHigh = rLow;
+    }
 }
 
 namespace AIDifficulty
@@ -433,11 +433,11 @@ static GameObject* GetRandomFlyer(const Team* pTeam, AI::AIAffil eAffil)
 {
     GameObject* apObjects[40];
     const PblVector3 vOrigin(0.0f, 0.0f, 0.0f);
-    const int iCount = ControllerManager::GetAIInRange(vOrigin, 3.402823466e38f,
-                                                         apObjects, 40, pTeam, eAffil);
-    for (int i = iCount - 1; i >= 0; --i)
+    int iRemaining = ControllerManager::GetAIInRange(vOrigin, 3.402823466e38f,
+                                                     apObjects, 40, pTeam, eAffil);
+    while (iRemaining != 0)
     {
-        GameObject* pObject = apObjects[i];
+        GameObject* pObject = apObjects[--iRemaining];
         if (!pObject || !pObject->GetControllable() ||
             !pObject->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
@@ -471,8 +471,10 @@ static void SpaceAssault_RandomFlyerKill(const Team* pTeam)
         return;
     }
     Controllable* pCtrl = pKiller->GetControllable();
-    DamageOwner owner(pCtrl->mCharacter, pKiller, pKiller->GetTeam(),
-                      pKiller->mEntityClass, pCtrl->GetCurWpn()->mClass, 1.0f);
+    Character* pCharacter = pCtrl->mCharacter;
+    const WeaponClass* pWeaponClass = pCtrl->GetCurWpn()->mClass;
+    DamageOwner owner(pCharacter, pKiller, pKiller->GetTeam(),
+                      pKiller->mEntityClass, pWeaponClass, 1.0f);
     pVictim->InstantDeath(owner, true);
 }
 }
@@ -498,26 +500,24 @@ static void SpaceAssault_RandomCritSysDamage(const Team* pTeam)
     Controllable* pCtrl = pFlyer->GetControllable();
     DamageOwner owner(pCtrl->mCharacter, pFlyer, pFlyer->GetTeam(),
                       pFlyer->mEntityClass, 0, 1.0f);
-    const WeaponClass* pBestWeapon = 0;
     float fBestDamage = 0.0f;
+    const WeaponClass* pBestWeapon = 0;
     for (int i = 0; i < pCtrl->GetWeaponCount(); ++i)
     {
         Weapon* pWeapon = pCtrl->GetWeaponPtr(i);
-        OrdnanceClass* pOrdnance = pWeapon->mClass->mOrdnanceClass;
-        float fDamage = CombatUtil::CalcDamagePerSecond(pCtrl, pWeapon->mClass, pTarget);
-        owner.mWeapon = pWeapon->mClass;
+        const WeaponClass* pClass = pWeapon->mClass;
+        OrdnanceClass* pOrdnance = pClass->mOrdnanceClass;
+        float fDamage = CombatUtil::CalcDamagePerSecond(pCtrl, pClass, pTarget);
+        owner.mWeapon = pClass;
         float fMinDamage = 0.0f;
         float fShieldDamage = 0.0f;
         CombatUtil::GetAverageDamageValues(owner, pOrdnance, pTarget,
                                            fMinDamage, fShieldDamage);
-        if (fDamage < fMinDamage * 2.0f)
-        {
-            fDamage = fMinDamage * 2.0f;
-        }
+        fDamage = (fDamage > fMinDamage * 2.0f) ? fDamage : fMinDamage * 2.0f;
         if (fDamage > fBestDamage)
         {
             fBestDamage = fDamage;
-            pBestWeapon = pWeapon->mClass;
+            pBestWeapon = pClass;
         }
     }
     if (!pBestWeapon)
@@ -525,18 +525,11 @@ static void SpaceAssault_RandomCritSysDamage(const Team* pTeam)
         return;
     }
 
-    if (pTarget->mCurHealth > 0.0f)
+    if (pTarget->mCurShield > 0.0f)
     {
         float fCap = fBestDamage * 5.0f;
-        if (fCap > 15000.0f)
-        {
-            fCap = 15000.0f;
-        }
-        if (pTarget->mCurHealth < fCap)
-        {
-            fCap = pTarget->mCurHealth;
-        }
-        fBestDamage = fCap;
+        fCap = (fCap > 15000.0f) ? 15000.0f : fCap;
+        fBestDamage = (pTarget->mCurShield > fCap) ? fCap : pTarget->mCurShield;
     }
     owner.mWeapon = pBestWeapon;
     DamageDesc damage(owner, fBestDamage);
@@ -565,17 +558,18 @@ void SpaceAssault_CheatLikeABastard()
     if (fTime > AIDifficulty::mNextFlyerKillTime)
     {
         AIDifficulty::mNextFlyerKillTime = fTime + AIDifficulty::SpaceAssault_GetRandomFlyerKillTime() * fIntervalScale;
-        const bool bEnemy = AIUtil::IsPlayerTeam(1) ^
-            (AIUtil::GetRandomInt(0, 100) > AIDifficulty::SpaceAssault_GetFlyerKillForPlayerTeam() * 100.0f);
-        AIDifficulty::SpaceAssault_RandomFlyerKill(Team::GetPtr(bEnemy ? 2 : 1));
+        const int bRoll = AIUtil::GetRandomInt(0, 100) > AIDifficulty::SpaceAssault_GetFlyerKillForPlayerTeam() * 100.0f;
+        const int bEnemy = AIUtil::IsPlayerTeam(1) ^ bRoll;
+        AIDifficulty::SpaceAssault_RandomFlyerKill(bEnemy ? Team::GetPtr(2) : Team::GetPtr(1));
     }
 
     if (fTime > AIDifficulty::mNextCritSysDamageTime)
     {
         AIDifficulty::mNextCritSysDamageTime = fTime + AIDifficulty::SpaceAssault_GetRandomCritSysDamageTime() * fIntervalScale;
         const float fRoll = (float)AIUtil::GetRandomInt(0, 100);
-        const bool bEnemy = AIUtil::IsPlayerTeam(1) ^ (fRoll > AIDifficulty::SpaceAssault_GetCritSysKillForPlayerTeam() * 100.0f);
-        AIDifficulty::SpaceAssault_RandomCritSysDamage(Team::GetPtr(bEnemy ? 2 : 1));
+        const int bRoll = fRoll > AIDifficulty::SpaceAssault_GetCritSysKillForPlayerTeam() * 100.0f;
+        const int bEnemy = AIUtil::IsPlayerTeam(1) ^ bRoll;
+        AIDifficulty::SpaceAssault_RandomCritSysDamage(bEnemy ? Team::GetPtr(2) : Team::GetPtr(1));
     }
 }
 }
@@ -613,7 +607,11 @@ namespace AIDifficulty
 // FUNCTION: SWBF2 0x00439380
 bool AutoBalanceActive()
 {
-    return AIDifficulty::gAutoBalanceEnabled && AIDifficulty::mAutoBalanceEnabled && AIDifficulty::GetAutoBalanceMode() != 3;
+    if (AIDifficulty::gAutoBalanceEnabled && AIDifficulty::mAutoBalanceEnabled)
+    {
+        return AIDifficulty::GetAutoBalanceMode() != 3;
+    }
+    return false;
 }
 }
 
@@ -624,8 +622,8 @@ namespace AIDifficulty
 void GetAutoBalanceScores(int& iPlayerScore, int& iEnemyScore, int& iThreshold, int& iDivisor)
 {
     bool bPlayerTeam1 = AIUtil::IsPlayerTeam(1);
-    Team* pPlayer = Team::GetPtr(bPlayerTeam1 ? 1 : 2);
-    Team* pEnemy = Team::GetPtr(bPlayerTeam1 ? 2 : 1);
+    Team* pPlayer = bPlayerTeam1 ? Team::GetPtr(1) : Team::GetPtr(2);
+    Team* pEnemy = bPlayerTeam1 ? Team::GetPtr(2) : Team::GetPtr(1);
     switch (AIDifficulty::GetAutoBalanceMode())
     {
     case 0:
@@ -670,7 +668,7 @@ void UpdateAutoBalance()
         return;
     }
     bool bPlayerTeam1 = AIUtil::IsPlayerTeam(1);
-    if (bPlayerTeam1 == AIUtil::IsPlayerTeam(2))
+    if (!(bPlayerTeam1 ^ AIUtil::IsPlayerTeam(2)))
     {
         return;
     }
@@ -678,7 +676,7 @@ void UpdateAutoBalance()
     int iPlayerScore, iEnemyScore, iThreshold, iDivisor;
     AIDifficulty::GetAutoBalanceScores(iPlayerScore, iEnemyScore, iThreshold, iDivisor);
 
-    Team* pEnemy = Team::GetPtr(bPlayerTeam1 ? 2 : 1);
+    Team* pEnemy = bPlayerTeam1 ? Team::GetPtr(2) : Team::GetPtr(1);
     float fMax = (float)pEnemy->GetMaxReinforcements();
     float fCur = (float)pEnemy->GetCurReinforcements();
     int iHandicap = 0;
@@ -710,7 +708,7 @@ void UpdateAutoBalance()
 // FUNCTION: SWBF2 0x00438c50
 void AIDifficulty::SetAILuaModifier(int iPlayer, int iEnemy, int iDifficulty)
 {
-    if ((unsigned int)(iDifficulty - 1) < 3)
+    if ((unsigned int)(iDifficulty - 1) <= 2)
     {
         AIDifficulty::mScriptPlayerModifier[iDifficulty - 1] = iPlayer;
         AIDifficulty::mScriptEnemyModifier[iDifficulty - 1] = iEnemy;

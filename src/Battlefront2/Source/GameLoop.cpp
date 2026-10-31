@@ -329,10 +329,10 @@ void UpdateDedicatedNoRender()
 {
     HDC hDC = GetDC(hGlobalWnd);
     RECT rect;
-    rect.left = 0;
-    rect.top = 0;
-    rect.right = RedInterfaceScreen::s_screenFull.m_uiWidthInPixels;
     rect.bottom = RedInterfaceScreen::s_screenFull.m_uiHeightInPixels;
+    rect.left = 0;
+    rect.right = RedInterfaceScreen::s_screenFull.m_uiWidthInPixels;
+    rect.top = 0;
     char acText[1024] = "";
     FillRect(hDC, &rect, (HBRUSH)GetStockObject(WHITE_BRUSH));
     HGDIOBJ hOldFont = SelectObject(hDC, GetStockObject(ANSI_FIXED_FONT));
@@ -345,8 +345,10 @@ void UpdateDedicatedNoRender()
     acLine[sizeof(acLine) - 1] = 0;
     strlcat(acText, acLine, sizeof(acText));
 
-    const unsigned short* pTeam1 = Team::sTeams[1] ? Team::sTeams[1]->GetName() : 0;
-    const unsigned short* pTeam2 = Team::sTeams[2] ? Team::sTeams[2]->GetName() : 0;
+    Team* pFirstTeam = Team::sTeams[1];
+    Team* pSecondTeam = Team::sTeams[2];
+    const unsigned short* pTeam1 = pFirstTeam ? pFirstTeam->GetName() : 0;
+    const unsigned short* pTeam2 = pSecondTeam ? pSecondTeam->GetName() : 0;
     if (pTeam1 && pTeam2)
     {
         char acTeam1[128];
@@ -767,11 +769,11 @@ namespace GameLoop
 // FUNCTION: SWBF2 0x00530ea0
 float GetMissionTime()
 {
-    if (!sMissionTimeInitialized)
+    if (sMissionTimeInitialized)
     {
-        return 0.0f;
+        return sMissionTime.GetElapsed();
     }
-    return sMissionTime.GetElapsed();
+    return 0.0f;
 }
 
 // FUNCTION: SWBF2 0x00530ed0
@@ -1081,10 +1083,10 @@ int PostLoad()
             mAttractInfoText.SetText(pText, true);
         }
         mAttractGroup.AddElement(&mAttractInfoText);
-        mAttractGroup.Visible(true);
+        mAttractGroup.Enable(true);
         for (unsigned int i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
         {
-            FLRenderer::AddInterfaceElement(CameraManager::Instance()->m_hView[i], &mAttractGroup, RedInterfaceScreen::CENTER, RedInterfaceScreen::CENTER,
+            FLRenderer::AddInterfaceElement(CameraManager::Instance()->m_hView[i], &mAttractGroup, 0.5f, 0.5f,
                                             true);
         }
     }
@@ -1106,7 +1108,7 @@ int PostLoad()
         mDedicatedTeam2Text.SetFont(RedFont::GAMEFONT_SMALL);
         mDedicatedTeam2Text.SetTextAlign(RedTextElement::TEXT_HALIGN_RIGHT, RedTextElement::TEXT_VALIGN_BOTTOM);
         mDedicatedTeam2Text.SetColor(RedColor::RED);
-        mDedicatedGroup.Visible(false);
+        mDedicatedGroup.Enable(false);
         mDedicatedTitleText.SetText("", true);
         mDedicatedTeam1Text.SetText("", true);
         mDedicatedTeam2Text.SetText("", true);
@@ -1143,17 +1145,17 @@ int PostLoad()
     RedSceneManager::SetupStaticWorld();
 
     mWaitMessageGroup.SetPosition(0.0f, -30.0f);
-    mWaitMessageGroup.Visible(false);
+    mWaitMessageGroup.Enable(false);
     mWaitTextElement.SetIntercharacterSpacing(0);
     mWaitTextElement.SetTextStyle(RedGlyphCacheElement::TEXT_STYLE_SHADOW);
     mWaitTextElement.SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER, RedTextElement::TEXT_VALIGN_BASELINE);
-    mWaitTextElement.Visible(true);
+    mWaitTextElement.Enable(true);
     mWaitMessageGroup.AddElement(&mWaitTextElement);
     mWaitTimer = 0.0f;
     FLRenderer::AddInterfaceElement(&mWaitMessageGroup, RedInterfaceScreen::CENTER, RedInterfaceScreen::CENTER, true);
 
     sMissionActive = true;
-    LuaHelper::CallGlobalProc("ScriptPostLoad");
+    LuaHelper::CallProc("ScriptPostLoad");
     LuaHelper::CloseScript();
     FLInputManager::s_instance.Update(0.0f);
     NetGame::CreateVeryLast();
@@ -1703,32 +1705,28 @@ int Cleanup()
 // FUNCTION: SWBF2 0x00533740
 void SetWorldFilename(char const* pcName)
 {
-    if (pcName)
-    {
-        if (!mWorldFileName[0])
-        {
-            strlcpy(mWorldFileName, pcName, sizeof(mWorldFileName));
-        }
-    }
-    else
+    if (!pcName)
     {
         memset(mWorldFileName, 0, sizeof(mWorldFileName));
+        return;
+    }
+    if (!mWorldFileName[0])
+    {
+        strlcpy(mWorldFileName, pcName, sizeof(mWorldFileName));
     }
 }
 
 // FUNCTION: SWBF2 0x00533770
 void SetTerrainFilename(char const* pcName)
 {
-    if (pcName)
-    {
-        if (!mTerrainFileName[0])
-        {
-            strlcpy(mTerrainFileName, pcName, sizeof(mTerrainFileName));
-        }
-    }
-    else
+    if (!pcName)
     {
         memset(mTerrainFileName, 0, sizeof(mTerrainFileName));
+        return;
+    }
+    if (!mTerrainFileName[0])
+    {
+        strlcpy(mTerrainFileName, pcName, sizeof(mTerrainFileName));
     }
 }
 
@@ -1748,7 +1746,7 @@ int GetJoystickYFlip()
     RawControllerInputs* pJoystick = FLInputManager::s_instance.GetPlayerJoystick(PauseMenu::GetPausingViewport());
     if (pJoystick)
     {
-        return pJoystick->GetFlip();
+        return pJoystick->GetFlipForMode(pJoystick->GetInputMode());
     }
     return 0;
 }
@@ -1842,11 +1840,11 @@ namespace GameLoop
 // FUNCTION: SWBF2 0x00533560
 bool GetCanSwitchSides()
 {
-    if (NetGame::IsEnabled())
+    if (!NetGame::IsEnabled())
     {
-        return !netAutoAssignTeams;
+        return GameLoop::mbCanSwitchSides && !GameLoop::mbMetagameRules;
     }
-    return GameLoop::mbCanSwitchSides && !GameLoop::mbMetagameRules;
+    return !netAutoAssignTeams;
 }
 }
 
@@ -1913,7 +1911,7 @@ void GameLoop::UpdateStats(float fDeltaTime, float fSystemDeltaTime)
         }
         if (MissionPlayList::SelectNextEntry())
         {
-            GameState::SetState(0x8ff60339);
+            GameState::SetState(0x8ff60339 /* "mission" */);
         }
         else
         {
@@ -1925,7 +1923,7 @@ void GameLoop::UpdateStats(float fDeltaTime, float fSystemDeltaTime)
             {
                 postLoadJoinGame->Cancel();
             }
-            GameState::SetState(0x11e1fc01);
+            GameState::SetState(0x11e1fc01 /* "shell" */);
         }
         return;
     }
@@ -1953,7 +1951,7 @@ void GameLoop::UpdateStats(float fDeltaTime, float fSystemDeltaTime)
     static_cast<Thread&>(sFlashyTextManagerInstance).Update(fSystemDeltaTime);
     GameSoundEngine::Update(fSystemDeltaTime);
     GuiManager::UpdateAll(fSystemDeltaTime);
-    ScreenTransition::sInstance->Update(fSystemDeltaTime);
+    ScreenTransition::sInstance->ScreenTransition::Update(fSystemDeltaTime);
     NetGame::ReceiveClient();
     NetGame::LeaveClient();
     if (NetGame::IsHost())

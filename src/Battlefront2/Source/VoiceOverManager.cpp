@@ -18,16 +18,16 @@ void VoiceOverManager::Create()
 // FUNCTION: SWBF2 0x00675290
 VoiceOverManager::VoiceOverManager()
 {
-    mBleedingTime[0] = 0.0f;
-    mBleedingTime[1] = 0.0f;
-    mBleedingRepeatTime = 30.0f;
-    mLowReinforcements[0] = 20;
-    mLowReinforcements[1] = 20;
-    mLowReinforcementsTriggered = false;
+    mPlay = false;
     mTeamBleeding[0] = false;
     mTeamBleeding[1] = false;
+    mLowReinforcements[0] = 20;
+    mBleedingTime[0] = 0.0f;
+    mLowReinforcements[1] = 20;
+    mLowReinforcementsTriggered = false;
     mMusicTeamIndexPrev = 0;
-    mPlay = false;
+    mBleedingTime[1] = 0.0f;
+    mBleedingRepeatTime = 30.0f;
     if (NetGame::IsEnabled())
     {
         Enable(true);
@@ -46,27 +46,27 @@ VoiceOverManager::~VoiceOverManager()
 // FUNCTION: SWBF2 0x006754c0
 VoiceOverManager::GameStage VoiceOverManager::DetermineGameStage() const
 {
-    GameStage minGameStage = gameStage_max;
+    int stage = gameStage_max;
     for (int team = 0; team < 2; ++team)
     {
-        int reinforcements = Team::sTeams[team + 1]->GetCurReinforcements();
-        for (int i = gameStage_max - 1; i >= 0; --i)
+        int reinforcements = Team::sTeams[team + 1]->mCurReinforcements;
+        for (int i = gameStage_max; i > 0; --i)
         {
-            if (reinforcements <= mAmbientMusic[team][i].mReinforcementCount)
+            if (reinforcements <= mAmbientMusic[team][i - 1].mReinforcementCount)
             {
-                if (i < minGameStage)
+                if (i - 1 < stage)
                 {
-                    minGameStage = (GameStage)i;
+                    stage = i - 1;
                 }
                 break;
             }
         }
     }
-    if (minGameStage == gameStage_max)
+    if (stage == gameStage_max)
     {
-        minGameStage = gameStage_beginning;
+        stage = gameStage_beginning;
     }
-    return minGameStage;
+    return (GameStage)stage;
 }
 
 // FUNCTION: SWBF2 0x00675520
@@ -223,8 +223,8 @@ void VoiceOverManager::PlayVoiceOver(unsigned int uSoundID, int iTeamMask)
     GameSoundStream sound;
     sound.SetID(uSoundID, false, false);
     const int iLocalIndex = NetGame::GetLocalIndex(0);
-    Character* pPlayer = Character::FindPlayer(iLocalIndex);
-    if (pPlayer && (iTeamMask & (1 << pPlayer->mTeamNumber)))
+    Character* pPlayer = Character::GetPtr(iLocalIndex);
+    if (pPlayer && pPlayer->mPlayerId == iLocalIndex && (iTeamMask & (1 << pPlayer->mTeamNumber)))
     {
         sound.Play(0, 0, pPlayer->mTeamNumber, true);
     }

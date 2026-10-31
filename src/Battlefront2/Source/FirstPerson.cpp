@@ -185,15 +185,19 @@ WEAPONCLASS _GetWeaponClassFromWeapon(const Weapon* pWeapon)
     }
 
     switch (SoldierAnimationBank::GetWeaponRoot(
-        (SoldierAnimationBank::WEAPON)pWeapon->GetClass()->mSoldierAnimationWeapon))
+        (SoldierAnimationBank::WEAPON)pWeapon->GetSoldierAnimationWeapon()))
     {
     case SoldierAnimationBank::RIFLE:
         return RIFLE;
     case SoldierAnimationBank::BAZOOKA:
         return BAZOOKA;
-    default:
+    case SoldierAnimationBank::INVALID_WEAPON:
+    case SoldierAnimationBank::TOOL:
+    case SoldierAnimationBank::PISTOL:
+    case SoldierAnimationBank::MELEE:
         return TOOL;
     }
+    return TOOL;
 }
 
 // FUNCTION: SWBF2 0x0051ecb0
@@ -226,12 +230,12 @@ void FirstPersonRenderable::UpdateAimer(const PblMatrix& mMatrix)
 
     switch (mObjectType)
     {
-    case TYPE_SOLDIER:
-        UpdateSoldierAimer(mMatrix);
-        break;
     case TYPE_COCKPIT:
     case TYPE_HOVER:
         UpdateCockpitAimer(mMatrix);
+        break;
+    case TYPE_SOLDIER:
+        UpdateSoldierAimer(mMatrix);
         break;
     case TYPE_DROIDEKA:
         UpdateDroidekaAimer(mMatrix);
@@ -517,7 +521,7 @@ void FirstPersonRenderable::Activate(int value)
     }
 
     bReadyToRender = false;
-    PblMatrix mCamera = CameraManager::sInstance->GetChaseCameraTransform(mCameraId);
+    PblMatrix mCamera = CameraManager::sInstance->mChaseCamera[mCameraId]->GetMatrix();
     mCockpitRotation = PblQuaternion(mCamera);
     mCockpitTrans = PblVector3(-66.6f, 66.6f, -66.6f);
     Renderable::Activate(value);
@@ -768,9 +772,9 @@ void FirstPersonRenderable::UpdateCockpit(const RedModel* pModel, Controllable* 
         return;
     }
 
+    PblMatrix mCamera = CameraManager::sInstance->mChaseCamera[mCameraId]->GetMatrix();
     if (!bReadyToRender)
     {
-        PblMatrix mCamera = CameraManager::sInstance->GetChaseCameraTransform(mCameraId);
         pOwner->GetTrackable()->SetupCameraTrackMatrix(mCamera, 0.0f);
         mCockpitRotation = PblQuaternion(mCamera);
         mCockpitTrans = PblVector3(-66.6f, 66.6f, -66.6f);
@@ -814,7 +818,7 @@ void FirstPersonRenderable::UpdateDroideka(const RedModel* pModel, Controllable*
     WEAPONCLASS eWeaponClass = _GetWeaponClassFromWeapon(pWeapon);
     mAnimPlaySpeed = 1.0f;
 
-    SOLDIERANIMATION eAnim;
+    SOLDIERANIMATION eAnim = DROIDEKA_IDLE;
     bool bLoop;
     switch (pWeapon->GetState())
     {
@@ -832,7 +836,10 @@ void FirstPersonRenderable::UpdateDroideka(const RedModel* pModel, Controllable*
         bLoop = false;
         break;
     default:
-        eAnim = pOwner->GetThrust() == 0.0f ? DROIDEKA_IDLE : DROIDEKA_WALK;
+        if (pOwner->GetThrust() != 0.0f)
+        {
+            eAnim = DROIDEKA_WALK;
+        }
         bLoop = true;
         break;
     }
@@ -1022,12 +1029,12 @@ void FirstPersonRenderable::Render(int value)
 
     switch (mObjectType)
     {
-    case TYPE_SOLDIER:
-        RenderSoldier(uFlags);
-        break;
     case TYPE_COCKPIT:
     case TYPE_HOVER:
         RenderCockpit(uFlags);
+        break;
+    case TYPE_SOLDIER:
+        RenderSoldier(uFlags);
         break;
     case TYPE_DROIDEKA:
         RenderDroideka(uFlags);
@@ -1220,13 +1227,13 @@ int FirstPerson::AddGeometry(const char* pszName)
             return i;
         }
     }
-    if (FirstPerson::sModelCount >= 64)
+    if (FirstPerson::sModelCount < 64)
     {
-        return -1;
+        strncpy(sModelName[FirstPerson::sModelCount], pszName, 255);
+        sModelName[FirstPerson::sModelCount][255] = 0;
+        return FirstPerson::sModelCount++;
     }
-    strncpy(sModelName[FirstPerson::sModelCount], pszName, 255);
-    sModelName[FirstPerson::sModelCount][255] = 0;
-    return FirstPerson::sModelCount++;
+    return -1;
 }
 
 
@@ -1322,8 +1329,7 @@ void FirstPerson::Update(unsigned int uPlayer, eViewObjectType eType, int iArg,
     {
         return;
     }
-    FirstPersonRenderable* pRenderable = s_pRenderable[uPlayer];
-    if (!pRenderable)
+    if (!s_pRenderable[uPlayer])
     {
         return;
     }
@@ -1332,42 +1338,40 @@ void FirstPerson::Update(unsigned int uPlayer, eViewObjectType eType, int iArg,
         if (iArg == -1 || iArg == -2)
         {
             FirstPerson::sModel[uPlayer] = 0;
-            pRenderable->bReadyToRender = false;
-            pRenderable->bStreamingModel = false;
+            s_pRenderable[uPlayer]->bReadyToRender = false;
+            s_pRenderable[uPlayer]->bStreamingModel = false;
             FirstPerson::sModelId[uPlayer] = iArg;
         }
         else
         {
-            const RedModel* pModel = LoadDynamicModel(sModelName[iArg], true);
-            FirstPerson::sModel[uPlayer] = pModel;
-            if (pModel)
+            FirstPerson::sModel[uPlayer] = LoadDynamicModel(sModelName[iArg], true);
+            if (FirstPerson::sModel[uPlayer])
             {
-                pRenderable->bStreamingModel = false;
+                s_pRenderable[uPlayer]->bStreamingModel = false;
                 FirstPerson::sModelId[uPlayer] = iArg;
             }
             else
             {
-                pRenderable->bReadyToRender = false;
-                pRenderable->bStreamingModel = true;
+                s_pRenderable[uPlayer]->bReadyToRender = false;
+                s_pRenderable[uPlayer]->bStreamingModel = true;
             }
         }
     }
-    const RedModel* pModel = FirstPerson::sModel[uPlayer];
     switch (eType)
     {
     case TYPE_SOLDIER:
-        pRenderable->UpdateSoldier(pModel, pOwner, pAimer);
-        break;
-    case TYPE_COCKPIT:
-        pRenderable->mObjectType = TYPE_COCKPIT;
-        pRenderable->UpdateCockpit(pModel, pOwner, pAimer);
-        break;
-    case TYPE_DROIDEKA:
-        pRenderable->UpdateDroideka(pModel, pOwner, pAimer);
+        s_pRenderable[uPlayer]->UpdateSoldier(FirstPerson::sModel[uPlayer], pOwner, pAimer);
         break;
     case TYPE_HOVER:
-        pRenderable->mObjectType = TYPE_HOVER;
-        pRenderable->UpdateCockpit(pModel, pOwner, pAimer);
+        s_pRenderable[uPlayer]->mObjectType = TYPE_HOVER;
+        s_pRenderable[uPlayer]->UpdateCockpit(FirstPerson::sModel[uPlayer], pOwner, pAimer);
+        break;
+    case TYPE_COCKPIT:
+        s_pRenderable[uPlayer]->mObjectType = TYPE_COCKPIT;
+        s_pRenderable[uPlayer]->UpdateCockpit(FirstPerson::sModel[uPlayer], pOwner, pAimer);
+        break;
+    case TYPE_DROIDEKA:
+        s_pRenderable[uPlayer]->UpdateDroideka(FirstPerson::sModel[uPlayer], pOwner, pAimer);
         break;
     }
 }
@@ -1544,7 +1548,8 @@ void FirstPersonRenderable::RenderDroideka(unsigned int uFlags) const
     Weapon* pWeapon = mOwner->GetWeaponPtr(mOwner->GetActiveWeaponChannel());
     if (pWeapon)
     {
-        pWeapon->Render(PblMatrix(reinterpret_cast<const _D3DXMATRIXA16*>(&mWeaponMatrix)), &pose, RedColor::WHITE, uFlags, true);
+        PblMatrix weaponMatrix(reinterpret_cast<const _D3DXMATRIXA16*>(&mWeaponMatrix));
+        pWeapon->Render(weaponMatrix, &pose, RedColor::WHITE, uFlags, true);
     }
 
     if (bShadow)

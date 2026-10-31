@@ -190,7 +190,7 @@ LightBeam::LightBeam(const LightBeam& that)
 {
 }
 
-ManagedLightBeam::ManagedLightBeam(const LightBeam& beam)
+inline ManagedLightBeam::ManagedLightBeam(const LightBeam& beam)
     : RedSceneObject(&largeEffectLodData)
     , LightBeam(beam)
     , _uiHideInView(0)
@@ -253,19 +253,16 @@ void LightBeam::SetLength(float fLength)
     {
         bool bWasBeam = _fLength > 0.0f;
         bool bIsBeam = fLength > 0.0f;
-        if (bWasBeam)
+        if (bWasBeam && !bIsBeam)
         {
-            if (!bIsBeam)
-            {
-                RedColor color = _color;
-                color.a = (unsigned char)(int)(_color.a * _fFlareIntensity);
-                _Flare._color = color;
-                _Flare._fSize = _fHeadSizeZ * 0.5f + _fHeadSizeX * 0.5f;
-                RemoveFromRenderList();
-                FLEffectObject::DeactivateEffect();
-            }
+            RedColor color = _color;
+            color.a = (unsigned char)(int)(_color.a * _fFlareIntensity);
+            _Flare._color = color;
+            _Flare._fSize = _fHeadSizeZ * 0.5f + _fHeadSizeX * 0.5f;
+            RemoveFromRenderList();
+            FLEffectObject::DeactivateEffect();
         }
-        else if (bIsBeam)
+        else if (!bWasBeam && bIsBeam)
         {
             AddToRenderList();
             FLEffectObject::ActivateEffect();
@@ -307,7 +304,7 @@ void LightBeam::SetFinalWidth(float fWidth)
 void LightBeam::SetFinalWidth(float fWidthX, float fWidthZ)
 {
     bool bIsBeam = fWidthX > 0.0f && fWidthZ > 0.0f;
-    if (IsEffectActive() && !(_fLength > 0.0f))
+    if (IsEffectActive() && _fLength <= 0.0f)
     {
         if (_fTailSizeX > 0.0f && _fTailSizeZ > 0.0f)
         {
@@ -371,15 +368,11 @@ void LightBeam::GetLocalBoundingSphere(PblVector3& vCenter, float& fRadius) cons
     if (fFarRadius * fFarRadius > fNearRadius2)
     {
         fRadius = fFarRadius;
-        vCenter.x = _vDirection.x * fFar;
-        vCenter.y = _vDirection.y * fFar;
-        vCenter.z = _vDirection.z * fFar;
+        vCenter = _vDirection * fFar;
     }
     else
     {
         fRadius = sqrtf(fNearRadius2);
-        vCenter.x = _vDirection.x * fNear;
-        vCenter.y = _vDirection.y * fNear;
-        vCenter.z = _vDirection.z * fNear;
+        vCenter = _vDirection * fNear;
     }
 }

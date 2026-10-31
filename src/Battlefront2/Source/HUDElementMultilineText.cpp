@@ -96,14 +96,18 @@ HUD::ElementMultilineText::ElementMultilineText(const char* const pName,
       mLinesPending(0),
       mNumLinesDisplayed(0),
       mNextLine(0),
-      mDisplayInterval(2.0f),
-      mState(state_Waiting),
-      mScrollSpeed(1.0f)
+      mDisplayInterval(2.0f)
 {
     mAlwaysScroll = false;
     mAddToTop = false;
     mDisableOnEmpty = false;
-    mFormat.SetFactory(HUD::Item::Factory::FindByHashID(kTextFactory));
+    mState = state_Waiting;
+    mScrollSpeed = 1.0f;
+    Line* pFormat = &mFormat;
+    if (pFormat)
+    {
+        pFormat->SetFactory(HUD::Item::Factory::FindByHashID(kTextFactory));
+    }
     mFormat.mDynamicAlloc = false;
     mFormat.mWriteEnabled = false;
     mFormat.SetGroup(this);
@@ -125,68 +129,68 @@ HUD::ElementMultilineText::~ElementMultilineText()
 // FUNCTION: SWBF2 0x005577b0
 unsigned int HUD::ElementMultilineText::GetNextPendingLineIndex() const
 {
-    if (mNextLine < mLinesPending)
+    if (mNextLine >= mLinesPending)
     {
-        return mNextLine + mNumLines - mLinesPending;
+        return mNextLine - mLinesPending;
     }
-    return mNextLine - mLinesPending;
+    return mNextLine + mNumLines - mLinesPending;
 }
 
 // FUNCTION: SWBF2 0x005577e0
 unsigned int HUD::ElementMultilineText::GetEldestLineIndex(unsigned int uIndex) const
 {
-    if (uIndex < mNumLinesDisplayed)
+    if (uIndex >= mNumLinesDisplayed)
     {
-        return uIndex + mNumLines - mNumLinesDisplayed;
+        return uIndex - mNumLinesDisplayed;
     }
-    return uIndex - mNumLinesDisplayed;
+    return uIndex + mNumLines - mNumLinesDisplayed;
 }
 
 // FUNCTION: SWBF2 0x00557810
 HUD::ElementMultilineText::Line* HUD::ElementMultilineText::GetTop()
 {
-    if (!mNumLinesDisplayed)
+    if (mNumLinesDisplayed)
     {
-        return 0;
+        return &mLines[GetEldestLineIndex(GetNextPendingLineIndex())];
     }
-    return &mLines[GetEldestLineIndex(GetNextPendingLineIndex())];
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00557840
 HUD::ElementMultilineText::Line* HUD::ElementMultilineText::GetBottom()
 {
-    if (!mNumLinesDisplayed)
+    if (mNumLinesDisplayed)
     {
-        return 0;
+        unsigned int uIndex = GetNextPendingLineIndex();
+        if (!uIndex)
+        {
+            uIndex = mNumLines;
+        }
+        return &mLines[uIndex - 1];
     }
-    unsigned int uIndex = GetNextPendingLineIndex();
-    if (!uIndex)
-    {
-        uIndex = mNumLines;
-    }
-    return &mLines[uIndex - 1];
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00557870
 bool HUD::ElementMultilineText::TopLineAtTop()
 {
     Line* pTop = GetTop();
-    if (!pTop)
+    if (pTop)
     {
-        return false;
+        return pTop->GetPosition().y <= 0.0001f;
     }
-    return GetText(*pTop).GetPosition().y <= 0.0001f;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x005578a0
 bool HUD::ElementMultilineText::BottomLineOutOfBottomRegion(float fHeight, float fLineHeight)
 {
     Line* pBottom = GetBottom();
-    if (!pBottom)
+    if (pBottom)
     {
-        return true;
+        return fHeight - fLineHeight >= pBottom->GetPosition().y + fLineHeight;
     }
-    return fHeight - fLineHeight >= GetText(*pBottom).GetPosition().y + fLineHeight;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x005578d0
@@ -194,12 +198,12 @@ void HUD::ElementMultilineText::EnableNextLine(unsigned int uIndex)
 {
     if (mLinesPending)
     {
-        const float fLineHeight = (float)GetText(mFormat).GetTextHeight();
-        const float fHeight = (float)GetHeightPixels();
+        const float fLineHeight = (float)(int)mFormat.GetTextHeight();
+        const float fHeight = (float)(int)GetHeightPixels();
         if (BottomLineOutOfBottomRegion(fHeight, fLineHeight))
         {
-            const float fY = mAddToTop ? mNumLinesDisplayed * fLineHeight : fHeight - fLineHeight;
-            GetText(mLines[uIndex]).SetPosition(0.0f, fY);
+            const float fY = mAddToTop ? (float)(int)mNumLinesDisplayed * fLineHeight : fHeight - fLineHeight;
+            mLines[uIndex].SetPosition(0.0f, fY);
             mLines[uIndex].HUD::Element::Enable(true);
             mState = state_EnablingLine;
             return;
@@ -215,10 +219,22 @@ void HUD::ElementMultilineText::DisableAndScroll(Line& line, unsigned int uIndex
         (mAlwaysScroll ||
          (mLinesPending && (!mAddToTop || mNumLinesDisplayed == mMaxDisplayLines))))
     {
-        if (line.GetFadeHoldElapsed() > mDisplayInterval)
+        float fHoldElapsed;
+        if (line.mFader.GetPhase() < HUD::Envelope::phase_Hold)
         {
-            RedTextElement& text = GetText(line);
-            if (text.m_bEnabled && text.GetPosition().y <= 0.1f)
+            fHoldElapsed = 0.0f;
+        }
+        else if (line.mFader.GetPhase() == HUD::Envelope::phase_Hold)
+        {
+            fHoldElapsed = line.mFader.GetElapsed();
+        }
+        else
+        {
+            fHoldElapsed = FLT_MAX;
+        }
+        if (fHoldElapsed > mDisplayInterval)
+        {
+            if (line.IsEnabled() && line.GetPosition().y <= 0.1f)
             {
                 line.HUD::Element::Enable(false);
                 mState = state_DisablingLine;
@@ -373,7 +389,7 @@ void HUD::ElementMultilineText::FreeLines()
 void HUD::ElementMultilineText::RefreshFormatting(bool bAddToGroup)
 {
     const unsigned int uWidth = GetWidthPixels();
-    const unsigned int uLineHeight = GetText(mFormat).GetTextHeight();
+    const unsigned int uLineHeight = mFormat.GetTextHeight();
     for (unsigned int i = 0; i < mNumLines; ++i)
     {
         mLines[i].mDynamicAlloc = false;
@@ -383,15 +399,18 @@ void HUD::ElementMultilineText::RefreshFormatting(bool bAddToGroup)
         }
         mLines[i].mWriteEnabled = false;
         mLines[i] = mFormat;
-        GetText(mLines[i]).SetPosition(0.0f, 0.0f);
-        GetText(mLines[i]).SetTextBox(uWidth, uLineHeight);
+        mLines[i].SetPosition(0.0f, 0.0f);
+        mLines[i].SetTextBox(uWidth, uLineHeight);
     }
 }
 
 // FUNCTION: SWBF2 0x00557f10
 void HUD::ElementMultilineText::SetupLines(unsigned int uNumLines)
 {
-    RefreshTextBoxSize(GetText(mFormat).GetTextHeight(), GetWidthPixels(), GetHeightPixels());
+    const unsigned int uWidth = GetWidthPixels();
+    const unsigned int uHeight = GetHeightPixels();
+    const unsigned int uLineHeight = mFormat.GetTextHeight();
+    RefreshTextBoxSize(uLineHeight, uWidth, uHeight);
     const bool bChanged = (uNumLines != mNumLines);
     if (bChanged)
     {
@@ -401,7 +420,7 @@ void HUD::ElementMultilineText::SetupLines(unsigned int uNumLines)
         {
             RedTextElement::TextHAlignT eHAlign;
             RedTextElement::TextVAlignT eVAlign;
-            GetText(mFormat).GetTextAlign(eHAlign, eVAlign);
+            mFormat.GetTextAlign(eHAlign, eVAlign);
             mNumLines = uNumLines;
         }
     }
@@ -658,36 +677,41 @@ void HUD::ElementMultilineText::WriteData(HUD::File& file, unsigned int uTabs)
 // FUNCTION: SWBF2 0x00558a40
 void HUD::ElementMultilineText::EventText(const HUD::Event& event, void* const pData)
 {
-    const unsigned short* pText;
+    unsigned short acNewline[2];
     switch (event.GetClass()->GetType())
     {
     case EventClass::type_Uint:
-        pText = RedLocalizeDB::Find(event.GetData().uintValue, false);
+        ((ElementMultilineText*)pData)->AddText(RedLocalizeDB::Find(event.GetData().uintValue, false), 0);
         break;
     case EventClass::type_String:
-        pText = event.GetData().string;
-        if (!pText)
+    {
+        const unsigned short* pText = event.GetData().string;
+        if (pText)
         {
-            static const unsigned short acNewline[] = { '\n', 0 };
-            pText = acNewline;
+            ((ElementMultilineText*)pData)->AddText(pText, 0);
+        }
+        else
+        {
+            PblUnicode::usnprintf(acNewline, 2, "\n");
+            ((ElementMultilineText*)pData)->AddText(acNewline, 0);
         }
         break;
+    }
     default:
         return;
     }
-    ((ElementMultilineText*)pData)->AddText(pText, 0);
     Element::EventChanged(event, pData);
 }
 
 // FUNCTION: SWBF2 0x00558ad0
 void HUD::ElementMultilineText::EventColor(const HUD::Event& event, void* const pData)
 {
+    ElementMultilineText* pDisplay = (ElementMultilineText*)pData;
     if (event.GetClass()->GetType() == EventClass::type_Color)
     {
-        ElementMultilineText* pDisplay = (ElementMultilineText*)pData;
-        pDisplay->mFormat.RedInterfaceElement::SetColor(*event.GetData().color);
-        pDisplay->mFormat.SetColorDefault(*event.GetData().color);
-        pDisplay->mFormat.SetAlpha((float)event.GetData().color->a / 255.0f);
+        pDisplay->mFormat.SetColor(*event.GetData().color);
+        pDisplay->mFormat.mColorDefault = *event.GetData().color;
+        pDisplay->mFormat.mAlpha = (float)event.GetData().color->a / 255.0f;
     }
 }
 

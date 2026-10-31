@@ -213,13 +213,13 @@ BirdParticleType BirdParticleManager::sBirdTypes[3];
 // FUNCTION: SWBF2 0x0044af30
 void BirdParticleManager::SetNumBirdTypes(int iNum)
 {
-    if (iNum < 0)
-    {
-        iNum = 0;
-    }
-    else if (iNum > 3)
+    if (iNum > 3)
     {
         iNum = 3;
+    }
+    else if (iNum < 0)
+    {
+        iNum = 0;
     }
     BirdParticleManager::sNumBirdTypes = iNum;
 }
@@ -244,16 +244,12 @@ bool BirdParticleManager::CreateClient()
 bool BirdParticle::UpdateHoppingCircleBird()
 {
     BirdParticle* pBird = (BirdParticle*)this;
-    float fRise = PblMath::Sin((pBird->mFlapTime + fHalfPi) * 10.0f);
+    float fRise = PblMath::Sin((pBird->mFlapTime + PblMath::fPi * 0.5f) * 10.0f);
     if (fRise > 0.0f)
     {
-        PblVector3 vPosition(pBird->mMatrix.m[3][0], pBird->mMatrix.m[3][1],
-                             pBird->mMatrix.m[3][2]);
+        PblVector3 vPosition = pBird->mMatrix.GetTranslation();
         vPosition.y += fRise * 0.3f * pBird->mType.mSize;
-        pBird->mMatrix.m[3][0] = vPosition.x;
-        pBird->mMatrix.m[3][1] = vPosition.y;
-        pBird->mMatrix.m[3][2] = vPosition.z;
-        pBird->mMatrix.m[3][3] = 1.0f;
+        pBird->mMatrix.SetTranslation(vPosition);
         pBird->SetRenderPos(vPosition);
     }
     return true;
@@ -953,14 +949,14 @@ bool BirdParticleManager::Create()
 // FUNCTION: SWBF2 0x0044b050
 bool BirdParticleManager::Destroy()
 {
-    if (!sInstance)
+    if (sInstance)
     {
-        return false;
+        PlatformCleanup();
+        delete sInstance;
+        sInstance = 0;
+        return true;
     }
-    PlatformCleanup();
-    delete sInstance;
-    sInstance = 0;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0044b430
@@ -989,8 +985,7 @@ BirdParticle* BirdParticleManager::GetFreeBird()
 // FUNCTION: SWBF2 0x0044b480
 void BirdParticleManager::ScatterRandomBirds(int iNum, const PblVector3& vPos)
 {
-    BirdParticleManager* pManager = BirdParticleManager::sInstance;
-    if (!pManager)
+    if (!BirdParticleManager::sInstance)
     {
         return;
     }
@@ -1006,6 +1001,7 @@ void BirdParticleManager::ScatterRandomBirds(int iNum, const PblVector3& vPos)
         uRandom = PblRandom::GetGlobalInt();
         union { unsigned int u; float f; } randomFloat;
         randomFloat.u = (uRandom >> 9) | 0x3f800000u;
+        const float fRandom = randomFloat.f - 1.0f;
         if (BirdParticleManager::sNumBirdTypes)
         {
             int iType = 1;
@@ -1014,7 +1010,7 @@ void BirdParticleManager::ScatterRandomBirds(int iNum, const PblVector3& vPos)
             while (iType <= BirdParticleManager::sNumBirdTypes)
             {
                 fThreshold += fStep;
-                if (fThreshold >= randomFloat.f - 1.0f)
+                if (fThreshold >= fRandom)
                 {
                     pBird->RespawnScatterBird(vPos, BirdParticleManager::sBirdTypes[iType - 1],
                                               PblVector3(0.0f, -1.0f, 0.0f));
@@ -1027,9 +1023,9 @@ void BirdParticleManager::ScatterRandomBirds(int iNum, const PblVector3& vPos)
     }
     if (bScattered)
     {
-        pManager->mScatterSound.Play(&vPos, NULL, true, true);
+        BirdParticleManager::sInstance->mScatterSound.Play(&vPos, NULL, true, true);
     }
-    pManager->mScatterTimer = 0.0f;
+    BirdParticleManager::sInstance->mScatterTimer = 0.0f;
 }
 
 // FUNCTION: SWBF2 0x0044bdb0

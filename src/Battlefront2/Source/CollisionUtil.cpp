@@ -42,7 +42,8 @@ bool CollisionUtil::CollideSphereRay(const PblVector3& rCenter, float fRadius,
                                      const PblVector3& rFrom, const PblVector3& rDir, float fLength)
 {
     PblVector3 vDelta = rCenter - rFrom;
-    float fProj = DotProduct(vDelta, rDir);
+    PblVector3 vDir = rDir;
+    float fProj = DotProduct(vDelta, vDir);
     float fDist2 = DotProduct(vDelta, vDelta);
     float fRadius2 = fRadius * fRadius;
 
@@ -75,7 +76,7 @@ bool CollisionUtil::CollideSpheres2(const PblVector3& rCenter1, float fRadius1,
     PblVector3 vDelta = rCenter2 - rCenter1;
     float fRadii = fRadius1 + fRadius2;
     float fDist2 = SquaredLength(vDelta);
-    return fDist2 < fRadii * fRadii;
+    return !(fDist2 >= fRadii * fRadii);
 }
 
 // FUNCTION: SWBF2 0x0046ae60
@@ -216,7 +217,9 @@ bool CollideSpheres(const PblVector3& vCenter, float fRadius, const PblVector3& 
     }
     else
     {
-        vNormal = PblVector3(0.0f, 0.0f, 1.0f);
+        vNormal.x = 0.0f;
+        vNormal.y = 0.0f;
+        vNormal.z = 1.0f;
     }
     return true;
 }
@@ -318,9 +321,7 @@ bool CollideSphereBox(const PblVector3& vCenter, float fRadius, const PblMatrix&
                 float fHeight, PblVector3& vNormal, float& fPenetration)
 {
     bool bCollided = CollisionUtil::CollideBoxSphere(matrix, fWidth, fDepth, fHeight, vCenter, fRadius, vNormal, fPenetration);
-    vNormal.x *= -1.0f;
-    vNormal.y *= -1.0f;
-    vNormal.z *= -1.0f;
+    vNormal = PblVector3(vNormal.x * -1.0f, vNormal.y * -1.0f, vNormal.z * -1.0f);
     return bCollided;
 }
 }
@@ -741,20 +742,22 @@ bool CollisionUtil::CollideAxisAlignedCylinders(PblVector3& vDelta, float fRadiu
         return false;
     }
 
-    if (fHalfHeight - fAbsY > fRadii - fDistXZ)
+    float fVerticalOverlap = fHalfHeight - fAbsY;
+    float fHorizontalOverlap = fRadii - fDistXZ;
+    if (fVerticalOverlap > fHorizontalOverlap)
     {
         vDelta.y = 0.0f;
         fDepth = fDistXZ;
-        if (fDistXZ == 0.0f)
-        {
-            vDelta.z = -1.0f;
-        }
-        else
+        if (fDistXZ != 0.0f)
         {
             float fInv = 1.0f / fDistXZ;
             vDelta.x = vDelta.x * fInv;
             vDelta.y = fInv * vDelta.y;
             vDelta.z = vDelta.z * fInv;
+        }
+        else
+        {
+            vDelta.z = -1.0f;
         }
         fDepth = fRadii - fDepth;
     }
@@ -763,16 +766,16 @@ bool CollisionUtil::CollideAxisAlignedCylinders(PblVector3& vDelta, float fRadiu
         vDelta.x = 0.0f;
         vDelta.z = 0.0f;
         fDepth = fAbsY;
-        if (fAbsY == 0.0f)
-        {
-            vDelta.y = 1.0f;
-        }
-        else
+        if (fAbsY != 0.0f)
         {
             float fInv = 1.0f / fAbsY;
             vDelta.x = vDelta.x * fInv;
             vDelta.y = fInv * vDelta.y;
             vDelta.z = vDelta.z * fInv;
+        }
+        else
+        {
+            vDelta.y = 1.0f;
         }
         fDepth = fHalfHeight - fDepth;
     }

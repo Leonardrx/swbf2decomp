@@ -551,7 +551,7 @@ void LoadUtil::ProcessWorld(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        char acName[260];
+        char acName[256];
         switch (child._iId)
         {
         case 0x454D414E:
@@ -594,7 +594,6 @@ void LoadUtil::ProcessWorld(PblFileChunk& chunk)
 Entity* LoadUtil::ProcessEntityInfo(PblFileChunk& chunk)
 {
     EntityDesc desc;
-    desc.mMatrix = gMatrixIdentity;
     EntityClass* pClass = 0;
     char acName[128];
 
@@ -662,7 +661,8 @@ void LoadUtil::ProcessEntity(PblFileChunk& chunk)
         case 0x504F5250:
         {
             const unsigned int uProperty = child._pFile->Read32();
-            pEntity->SetProperty(uProperty, child.ReadString(acValue, sizeof(acValue)));
+            const char* pcValue = child.ReadString(acValue, sizeof(acValue));
+            pEntity->SetProperty(uProperty, pcValue);
             break;
         }
         }

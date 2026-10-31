@@ -66,7 +66,7 @@ void HintManager::AddHint(BaseHint* pHint)
 // FUNCTION: SWBF2 0x00543830
 void HintManager::Initialize()
 {
-    sHints = new TreeGrid(PblVector3((float)-WORLD_EXTENTS, 0.0f, (float)-WORLD_EXTENTS),
+    sHints = new TreeGrid(PblVector3(-(float)WORLD_EXTENTS, 0.0f, -(float)WORLD_EXTENTS),
                           PblVector3((float)WORLD_EXTENTS, 0.0f, (float)WORLD_EXTENTS), 16.0f);
 }
 
@@ -133,25 +133,22 @@ PblMatrix BaseHint::BuildMatrix() const
     PblMatrix mat;
     const PblVector3& vPos = GetCollisionCenter();
     mat.SetTranslation(vPos);
-    mat.m[2][0] = mForward.x;
-    mat.m[2][1] = mForward.y;
-    mat.m[2][2] = mForward.z;
+    mat[2] = mForward;
     mat.m[2][3] = 0.0f;
 
     const PblVector3 vUp(0.0f, 1.0f, 0.0f);
-    PblVector3 vRight(mForward.y * vUp.z - mForward.z * vUp.y,
-                      mForward.z * vUp.x - mForward.x * vUp.z,
-                      mForward.x * vUp.y - mForward.y * vUp.x);
+    PblVector3 vRight;
+    vRight = PblVector3(mForward.y * vUp.z - mForward.z * vUp.y,
+                        mForward.z * vUp.x - mForward.x * vUp.z,
+                        mForward.x * vUp.y - mForward.y * vUp.x);
     PblVector3 vX;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vX), reinterpret_cast<const D3DXVECTOR3*>(&vRight));
-    mat.m[0][0] = vX.x;
-    mat.m[0][1] = vX.y;
-    mat.m[0][2] = vX.z;
+    mat[0] = vX;
     mat.m[0][3] = 0.0f;
 
-    mat.m[1][0] = mForward.y * vX.z - mForward.z * vX.y;
-    mat.m[1][1] = mForward.z * vX.x - mForward.x * vX.z;
-    mat.m[1][2] = mForward.x * vX.y - mForward.y * vX.x;
+    mat[1] = PblVector3(mat[0].z * mForward.y - mat[0].y * mForward.z,
+                        mat[0].x * mForward.z - mat[0].z * mForward.x,
+                        mat[0].y * mForward.x - mat[0].x * mForward.y);
     mat.m[1][3] = 0.0f;
     return mat;
 }
@@ -187,7 +184,7 @@ ControllableHeight BaseHint::GetRandomSecondaryStance() const
 // FUNCTION: SWBF2 0x00543610
 bool BaseHint::HasSidestep() const
 {
-    return mSidestep != 0;
+    return (unsigned short)mSidestep > (unsigned short)0;
 }
 
 // FUNCTION: SWBF2 0x00543630
@@ -294,7 +291,7 @@ void BaseHint::SetProperty(unsigned int uProperty, const char* pszValue)
         int iValue;
         sscanf(pszValue, "%d", &iValue);
         int iStance = iValue & 3;
-        if (iStance)
+        if (iStance > 0)
         {
             mPrimaryStance = iStance;
         }
@@ -305,7 +302,7 @@ void BaseHint::SetProperty(unsigned int uProperty, const char* pszValue)
         int iValue;
         sscanf(pszValue, "%d", &iValue);
         int iStance = iValue & 7;
-        if (iStance & 3)
+        if ((iStance & 3) > 0)
         {
             mSecondaryStance = iStance;
         }
@@ -340,11 +337,14 @@ bool GenerateHintListCallback(const TreeGridObject* pObject, TreeGridCallbackDat
     if ((pHint->GetType() & pList->mTypes) > 0 &&
         (!pList->mMe || AIUtil::IsHintAvailable(pList->mMe, pHint)))
     {
-        if (pList->mCount >= pList->mMaxHints)
+        if (pList->mCount < pList->mMaxHints)
+        {
+            pList->mHints[pList->mCount++] = pHint;
+        }
+        else
         {
             return false;
         }
-        pList->mHints[pList->mCount++] = pHint;
     }
     return true;
 }
@@ -376,10 +376,10 @@ int RequestHintsCommon(int iType, const UnitController* pController,
         }
     }
 
-    HintList list(pMe, iType, iMaxHints, ppHints);
     const float fRadius = (float)iRadius;
     const PblVector3 vMin(vPos.x - fRadius, vPos.y - fRadius, vPos.z - fRadius);
     const PblVector3 vMax(vPos.x + fRadius, vPos.y + fRadius, vPos.z + fRadius);
+    HintList list(pMe, iType, iMaxHints, ppHints);
     sHints->CallbackOnRect(vMin, vMax, HintManager::GenerateHintListCallback, &list);
     return list.mCount;
 }
@@ -430,9 +430,9 @@ int RequestMinefieldHints(const UnitController* pController, const PblVector3& v
     int iCount = RequestHintsCommon(16  , pController, vPos,
                                     iArg3, iArg4, ppHints);
 
+    int i = 0;
     const int iTeam = pController->GetMe()->GetGameObject()->GetTeam();
 
-    int i = 0;
     if (iCount > 0)
     {
         const BaseHint** ppLast = &ppHints[iCount - 1];

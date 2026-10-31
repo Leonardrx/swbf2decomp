@@ -18,7 +18,7 @@ void RawControllerInputs::ClearInputsToOff()
     {
         for (int j = 0; j < 76; j++)
         {
-            if ((j >= 66 && j <= 75) || j <= 4)
+            if ((j >= 66 && j <= 75) || j <= 4u)
             {
                 mLockedRawInputBool[i][j] = fabsf(mRawInputFloat[i][j]) >= 0.125f;
             }
@@ -60,7 +60,7 @@ void GUIInputs::Process()
 {
     for (int i = 0; i < eGUIINPUT_MAX; i++)
     {
-        float fAbs = fabsf(mGUIInputs[i]);
+        float fAbs = mGUIInputs[i] < 0.0f ? -mGUIInputs[i] : mGUIInputs[i];
         bool bRepeat = false;
         switch (i)
         {
@@ -290,11 +290,15 @@ void GUIInputs::Set(eGUIINPUT_TYPE eType, float fValue)
 {
     if (eType >= 0 && eType < eGUIINPUT_MAX)
     {
-        if (eType == eGUIINPUT_xAxis || eType == eGUIINPUT_yAxis ||
-            fabsf(fValue) > fabsf(mGUIInputs[eType]))
+        if (eType != eGUIINPUT_xAxis && eType != eGUIINPUT_yAxis)
         {
-            mGUIInputs[eType] = fValue;
+            const float fCurrent = mGUIInputs[eType];
+            if (!((fValue < 0.0f ? -fValue : fValue) > (fCurrent < 0.0f ? -fCurrent : fCurrent)))
+            {
+                fValue = fCurrent;
+            }
         }
+        mGUIInputs[eType] = fValue;
     }
 }
 
@@ -363,8 +367,8 @@ void Rumble::Update(float fDeltaTime)
         mTime += fDeltaTime;
         if (mTime > mInterval)
         {
-            mDelayHeavy -= fDeltaTime;
             mDelayLight -= fDeltaTime;
+            mDelayHeavy -= fDeltaTime;
             if (mDelayLight <= 0.0f)
             {
                 mJoystick->SetLightEngine(mLight);

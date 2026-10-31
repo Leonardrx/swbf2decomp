@@ -386,16 +386,9 @@ int GetVisualPriority(const Controllable* pMe, const GameObject* pObj)
     }
 
     PblVector3 vEyePos = pMe->mEyePoint;
-    PblVector3 vTarget = pObj->GetTargetPoint(vEyePos, pMe->mEyeDir, -1);
-    float fDx = vTarget.x - vEyePos.x;
-    float fDy = vTarget.y - vEyePos.y;
-    float fDz = vTarget.z - vEyePos.z;
-    int iDist = (int)sqrtf(fDx * fDx + fDy * fDy + fDz * fDz);
-    if (iDist > 1500)
-    {
-        iDist = 1500;
-    }
-    int iKey = (21 - iPriority) * iDist;
+    int iRawDist = (int)sqrtf(SquaredLength(pObj->GetTargetPoint(vEyePos, pMe->mEyeDir, -1) - vEyePos));
+    int iDist = iRawDist < 1500 ? iRawDist : 1500;
+    int iKey = iDist * (21 - iPriority);
 
     if (pObj->GetControllable() && pObj->GetControllable()->GetPlayerId() >= 0 &&
         !AIUtil::IsVehicle(pMe->GetGameObject()))
@@ -416,31 +409,31 @@ RayRequest::RayRequest(UnitController* pCtrl, GameObject* pHim, int iPriority)
 // FUNCTION: SWBF2 0x00670a60
 bool VisionTest(UnitController* pController, GameObject* pTarget)
 {
-    if (!pController || !pTarget)
+    bool bResult = false;
+    if (pController && pTarget)
     {
-        return false;
-    }
-
-    PblVector3 vSeenPos;
-    bool bCanSee = AIUtil::CanSee(pController->mOwner, pTarget, &vSeenPos);
-    if (bCanSee && !pController->IsNewCommand())
-    {
-        AI::EventInfo info(AI::EVT_Vision_CanSeeEnemy, pTarget, vSeenPos);
-        pController->SendEvent(&info);
-    }
-    pController->mThreatManager.RayhitResult(pTarget, bCanSee);
-
-    UnitController* pHim = UnitControllerPtr(pTarget->mControllableList.GetFirst()->_pObject);
-    if (pHim && bCanSee)
-    {
-        AI::EventInfo info(AI::EVT_Vision_CanSeeEnemy, pController->mOwner->GetGameObject());
-        if (!pHim->IsNewCommand() && pHim->SendEvent(&info) == AI::EVT_Handled)
+        PblVector3 vSeenPos;
+        bool bCanSee = AIUtil::CanSee(pController->mOwner, pTarget, &vSeenPos);
+        bResult = true;
+        if (bCanSee && !pController->IsNewCommand())
         {
-            pHim->mThreatManager
-                .ForceThreat(pController->mOwner->GetGameObject());
+            AI::EventInfo info(AI::EVT_Vision_CanSeeEnemy, pTarget, vSeenPos);
+            pController->SendEvent(&info);
+        }
+        pController->mThreatManager.RayhitResult(pTarget, bCanSee);
+
+        UnitController* pHim = UnitControllerPtr(pTarget->mControllableList.GetFirst()->_pObject);
+        if (pHim && bCanSee)
+        {
+            AI::EventInfo info(AI::EVT_Vision_CanSeeEnemy, pController->mOwner->GetGameObject());
+            if (!pHim->IsNewCommand() && pHim->SendEvent(&info) == AI::EVT_Handled)
+            {
+                pHim->mThreatManager
+                    .ForceThreat(pController->mOwner->GetGameObject());
+            }
         }
     }
-    return true;
+    return bResult;
 }
 
 // FUNCTION: SWBF2 0x00670c60

@@ -92,9 +92,8 @@ HUD::ElementBarBitmap::ElementBarBitmap(const char* const pName, HUD::Item::Fact
 
     mFlashyBit.SetWriteEnabled(false);
     mFlashyBit.SetDynamicallyAllocated(false);
-    RedBitmapElement& rFlashy = mFlashyBit;
-    rFlashy.SetTexture(0xDE020766u);
-    rFlashy.SetColor(RedColor::WHITE);
+    mFlashyBit.SetTexture(0xDE020766u);
+    mFlashyBit.SetColor(RedColor::WHITE);
     mFlashyBit.mFader.SetPhaseTime(HUD::Envelope::phase_Hold, 0.0f);
     mFlashyBit.mFader.SetPhaseTime(HUD::Envelope::phase_Sustain, 0.0f);
     mEventDisable.Init(EventDisable, this);
@@ -119,9 +118,8 @@ void HUD::ElementBarBitmap::PostReadSetup()
 // FUNCTION: SWBF2 0x0054b390
 void HUD::ElementBarBitmap::RefreshFlashyBit()
 {
-    RedBitmapElement& rFlashy = mFlashyBit;
     RedGroupElement* pGroup = RedBitmapElement::GetGroup();
-    RedGroupElement* pFlashyGroup = rFlashy.GetGroup();
+    RedGroupElement* pFlashyGroup = mFlashyBit.GetGroup();
     if (pGroup != pFlashyGroup)
     {
         if (pFlashyGroup)
@@ -133,16 +131,17 @@ void HUD::ElementBarBitmap::RefreshFlashyBit()
             pGroup->AddElement(&mFlashyBit);
         }
     }
-    rFlashy.SetMatrix(m_mLocal);
+    mFlashyBit.RedBitmapElement::SetMatrix(m_mLocal);
     mFlashyBit.mAlpha = mAlpha;
-    rFlashy.SetZOrder(m_zorder ? m_zorder - 1 : 0);
-    rFlashy.SetBlendMode(GetBlendMode());
+    const unsigned char uZOrder = m_zorder;
+    mFlashyBit.SetZOrder(uZOrder ? uZOrder - 1 : 0);
+    mFlashyBit.SetBlendMode(GetBlendMode());
     mFlashyBit.mFader.SetPhaseTime(HUD::Envelope::phase_Release,
                                    mIncreasedValue ? mFlashyIncFadeOutTime : mFlashyDecFadeOutTime);
     const RedTexture* pTexture = GetTexture();
     if (pTexture)
     {
-        rFlashy.SetTexture(pTexture->GetName());
+        mFlashyBit.SetTexture(pTexture->GetName());
     }
 }
 
@@ -189,15 +188,8 @@ void HUD::ElementBarBitmap::Update(const float fElapsed)
     float fT = 0.0f;
     if (mFlashyBit.mFader.GetPhase() == HUD::Envelope::phase_Release)
     {
-        fT = mFlashyBit.mFader.GetElapsed();
-        if (fT < 0.0f)
-        {
-            fT = 0.0f;
-        }
-        else if (fT > 1.0f)
-        {
-            fT = 1.0f;
-        }
+        const float fFade = mFlashyBit.mFader.GetElapsed();
+        fT = fFade < 0.0f ? 0.0f : (fFade > 1.0f ? 1.0f : fFade);
     }
 
     mFlashyBit.RedBitmapElement::SetRect(
@@ -255,7 +247,15 @@ bool HUD::ElementBarBitmap::GetProperty(const unsigned int uHashID, void* const 
     case kScaleTexture: *(bool*)pValue = mScaleTex; return true;
     case kScaleSize: *(bool*)pValue = mScaleSize; return true;
     }
-    return ElementBitmapBase::GetProperty(uHashID, pValue) || ElementBar::GetProperty(uHashID, pValue);
+    if (ElementBitmapBase::GetProperty(uHashID, pValue))
+    {
+        return true;
+    }
+    if (ElementBar::GetProperty(uHashID, pValue))
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0054ae90

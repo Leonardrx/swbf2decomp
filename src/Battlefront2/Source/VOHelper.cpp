@@ -105,7 +105,7 @@ void GetModifiers(const GameObject* pTarget, const PblVector3& vPos, VOModifier&
     const float fHeight = vPos.y - vTarget.y;
     const float fX = vTarget.x - vPos.x;
     const float fZ = vTarget.z - vPos.z;
-    float fDist = sqrtf(fX * fX + fZ * fZ);
+    float fDist = sqrtf(fZ * fZ + fX * fX);
     if (!(fDist > 0.1f))
     {
         fDist = 0.1f;
@@ -126,7 +126,7 @@ void GetModifiers(const GameObject* pTarget, const PblVector3& vPos, VOModifier&
     vDelta.y = vPos.y - vTarget.y;
     vDelta.z = vPos.z - vTarget.z;
     const PblVector3 vDir = AIUtil::GetSafeNormalXZ(vDelta);
-    const float fFront = vDir.x * vFacing.x + vDir.y * vFacing.y + vDir.z * vFacing.z;
+    const float fFront = vFacing.x * vDir.x + vDir.y * vFacing.y + vDir.z * vFacing.z;
     if (fFront < -0.7071f)
     {
         modifiers.mRightLeftBehind = VO_RLB_Behind;
@@ -564,23 +564,22 @@ int Queue(VOType eType, const GameObject* pSpeaker, const GameObject* pTarget,
 {
     for (int i = 0; i < 20; ++i)
     {
-        QueuedSound& rSound = mSndQueue[i];
-        if (rSound.mType != VOT_NONE)
+        if (mSndQueue[i].mType != VOT_NONE)
         {
             continue;
         }
-        rSound.mType = eType;
-        rSound.mSpeaker = pSpeaker;
-        rSound.mPlayer = pTarget;
-        rSound.mTarget = pOther;
+        mSndQueue[i].mType = eType;
+        mSndQueue[i].mSpeaker = pSpeaker;
+        mSndQueue[i].mPlayer = pTarget;
+        mSndQueue[i].mTarget = pOther;
         if (pPos)
         {
-            rSound.mPos = *pPos;
+            mSndQueue[i].mPos = *pPos;
         }
-        rSound.mUseTarget = pPos == 0;
-        rSound.mTime = fDelay;
-        rSound.mHandle = mNextQueueHandle++;
-        return rSound.mHandle;
+        mSndQueue[i].mUseTarget = pPos == 0;
+        mSndQueue[i].mTime = fDelay;
+        mSndQueue[i].mHandle = mNextQueueHandle++;
+        return mSndQueue[i].mHandle;
     }
     return -1;
 }

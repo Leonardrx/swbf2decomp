@@ -64,23 +64,23 @@ void Controller::KillController()
 
 // FUNCTION: SWBF2 0x00485190
 Controller::Controller(Controllable* pOwner)
-    : mOwner(pOwner),
-      mTargetBubbleLastVel(0.0f, 0.0f, 0.0f),
-      mTargetBubbleSize(0.0f),
-      mAvailableBubbleCharge(0.0f),
-      mTargetBubbleOffset(0.0f, 0.0f, 0.0f),
-      mOpenRadius(0.0f),
-      mOpenRadiusTime(-100.0f),
-      mFoliageVisCrouch(1.0f),
-      mFoliageVisStand(1.0f),
-      mRegionVisCrouch(1.0f),
-      mRegionVisStand(1.0f),
-      mTotalVisFactor(1.0f),
-      mForceAudible(false),
-      mCrowdTestTimer(-100.0f),
-      mCrowdEnemies(0),
-      mCrowdAllies(0)
 {
+    mOwner = pOwner;
+    mTargetBubbleLastVel = PblVector3(0.0f, 0.0f, 0.0f);
+    mTargetBubbleOffset = PblVector3(0.0f, 0.0f, 0.0f);
+    mCrowdTestTimer = -100.0f;
+    mCrowdEnemies = 0;
+    mCrowdAllies = 0;
+    mTargetBubbleSize = 0.0f;
+    mAvailableBubbleCharge = 0.0f;
+    mOpenRadius = 0.0f;
+    mOpenRadiusTime = -100.0f;
+    mFoliageVisCrouch = 1.0f;
+    mFoliageVisStand = 1.0f;
+    mRegionVisCrouch = 1.0f;
+    mRegionVisStand = 1.0f;
+    mForceAudible = false;
+    mTotalVisFactor = 1.0f;
 }
 
 // FUNCTION: SWBF2 0x004856d0
@@ -128,19 +128,12 @@ void Controller::IncreaseTargetBubbleSize(float fIncrease)
     float fMin = 1.5f;
     if (mOwner)
     {
-        Trackable* pTrackable = GetTrackable(mOwner);
         fMin = AIDifficulty::GetMinBubbleSize(
-            !(pTrackable->GetGameObject() && AIUtil::IsPlayerTeam(GetTeam(pTrackable->GetGameObject()))));
+            !(mOwner->GetGameObject() && AIUtil::IsPlayerTeam(mOwner->GetGameObject()->GetTeam())));
     }
 
-    if (mTargetBubbleSize < fMin)
-    {
-        mTargetBubbleSize = fMin;
-    }
-    else if (mTargetBubbleSize > 2.0f)
-    {
-        mTargetBubbleSize = 2.0f;
-    }
+    const float fSize = mTargetBubbleSize;
+    mTargetBubbleSize = fSize < fMin ? fMin : (fSize > 2.0f ? 2.0f : fSize);
 }
 
 // FUNCTION: SWBF2 0x00485520
@@ -279,10 +272,9 @@ void Controller::UpdateFreeSpace()
     {
         const Obstacle* pIgnore = AIUtil::GetGameObjectBarrier(mOwner->GetGameObject());
         const PblMatrix& mMatrix = mOwner->GetMatrix();
-        GameObject* pObject = mOwner->GetGameObject();
-        if (PathFinder::IsPointValid(mMatrix.GetTranslation(),
-                                     fRadius + AIUtil::GetCollisionRadius(pObject),
-                                     AIUtil::GetAIType(pObject), 0, &pIgnore, 1))
+        if (PathFinder::IsPointValid(*(const PblVector3*)&mMatrix.m[3][0],
+                                     fRadius + AIUtil::GetCollisionRadius(mOwner->GetGameObject()),
+                                     AIUtil::GetAIType(mOwner->GetGameObject()), 0, &pIgnore, 1))
         {
             fRadius += fStep;
         }

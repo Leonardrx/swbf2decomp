@@ -46,8 +46,8 @@ void NetSocket::StartSockets()
 void NetSocket::OpenBroadcastSockets()
 {
     sockaddr_in addr;
-    BOOL bBroadcast = TRUE;
     netBroadcastSendSocket = (unsigned int)socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    BOOL bBroadcast = TRUE;
     setsockopt((SOCKET)netBroadcastSendSocket, SOL_SOCKET, SO_BROADCAST, (const char*)&bBroadcast,
                sizeof(bBroadcast));
     addr.sin_family = AF_INET;
@@ -58,8 +58,8 @@ void NetSocket::OpenBroadcastSockets()
         DecodeError(WSAGetLastError());
     }
 
-    BOOL bReuse = TRUE;
     netBroadcastRecvSocket = (unsigned int)socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    BOOL bReuse = TRUE;
     setsockopt((SOCKET)netBroadcastRecvSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&bReuse,
                sizeof(bReuse));
     addr.sin_family = AF_INET;
@@ -121,19 +121,19 @@ int NetSocket::SendSocket(int iDest, char* pData, int iLen)
     if (!NetComm::IsLAN())
     {
         const NetSocketPeerRecord* pPeer = (const NetSocketPeerRecord*)NetCommP::GetAddr(iDest);
-        if (!gf::isInitialized())
+        if (gf::isInitialized())
         {
-            return 0;
-        }
-        unsigned __int64 lobbyId;
-        if (iDest > 64 || !*CopyEnteredLobbyId(&lobbyId))
-        {
+            unsigned __int64 lobbyId;
+            if (iDest <= 64 && *CopyEnteredLobbyId(&lobbyId))
+            {
+                void* pNetworking = GetGalaxyNetworking();
+                return ((galaxy::api::INetworking*)pNetworking)->SendP2PPacket(
+                           pPeer->mGalaxyId, pData, iLen, 2, 0)
+                     ? iLen : -1;
+            }
             return -1;
         }
-        void* pNetworking = GetGalaxyNetworking();
-        return ((galaxy::api::INetworking*)pNetworking)->SendP2PPacket(
-                   pPeer->mGalaxyId, pData, iLen, 2, 0)
-             ? iLen : -1;
+        return 0;
     }
     else
     {

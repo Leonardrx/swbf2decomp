@@ -311,11 +311,19 @@ void GameVoiceChat::Node::SetID(unsigned int uChannel)
         return;
     }
 
+    unsigned char ucChannel = (unsigned char)uChannel;
     const bool bNoChannel = GameVoiceChat::IsBanned();
-    ((VoiceChat::Node*)pNode)->SetID(bNoChannel ? 0xFF : (unsigned char)uChannel);
-    if (bNoChannel && (unsigned char)uChannel != 0xFF)
+    if (bNoChannel)
     {
-        GameVoiceChat::GetTransport()->SetLocalNode((unsigned char)uChannel, false, false, false);
+        ((VoiceChat::Node*)pNode)->SetID(0xFF);
+        if (ucChannel != 0xFF)
+        {
+            GameVoiceChat::GetTransport()->SetLocalNode(ucChannel, false, false, false);
+        }
+    }
+    else
+    {
+        ((VoiceChat::Node*)pNode)->SetID(ucChannel);
     }
 }
 
@@ -324,36 +332,29 @@ VoiceChat::AudioPacket* GameVoiceChat::Encoder::GetData()
 {
     VoiceChat::AudioPacket* const pAudio = mAudioPacket + mAudioPacketIndex;
 
-    if (!IsPlaying())
+    if (IsPlaying() && pAudio->mAppData == 0)
     {
-        return 0;
+        mAGC.Update();
+        mVAD.Update();
+        mEncoder.Update();
+
+        Snd::StreamPacket* const pPacket = mEncoder.GetPacket(0);
+        if (pPacket != 0)
+        {
+            pAudio->mAppData = pPacket;
+            pAudio->mData = pPacket->mBuffer;
+            pAudio->mDiscontinuity = pPacket->GetDiscontinuity();
+            pAudio->mSize = pPacket->mBufferUsed;
+
+            if (++mAudioPacketIndex == 1)
+            {
+                mAudioPacketIndex = 0;
+            }
+
+            return pAudio;
+        }
     }
-    if (pAudio->mAppData != 0)
-    {
-        return 0;
-    }
-
-    mAGC.Update();
-    mVAD.Update();
-    mEncoder.Update();
-
-    Snd::StreamPacket* const pPacket = mEncoder.GetPacket(0);
-    if (pPacket == 0)
-    {
-        return 0;
-    }
-
-    pAudio->mAppData = pPacket;
-    pAudio->mData = pPacket->mBuffer;
-    pAudio->mDiscontinuity = pPacket->GetDiscontinuity();
-    pAudio->mSize = pPacket->mBufferUsed;
-
-    if (++mAudioPacketIndex == 1)
-    {
-        mAudioPacketIndex = 0;
-    }
-
-    return pAudio;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0053d8e0

@@ -28,7 +28,7 @@ void EntityBuildingAnimatedArmedClass::SetProperty(unsigned int uProperty, const
 {
     if (uProperty == 0xD89B1A5Cu)
     {
-        int iSection = -1;
+        int iSection;
         switch ((unsigned int)PblHash(pszValue))
         {
         case 0xEA20FEF2u:
@@ -40,11 +40,14 @@ void EntityBuildingAnimatedArmedClass::SetProperty(unsigned int uProperty, const
         case 0xE520F713u: iSection = 5; break;
         case 0xE420F580u: iSection = 6; break;
         case 0xF3210D1Du: iSection = 7; break;
+        default:
+            sCurrentSection = -1;
+            return;
         }
         sCurrentSection = iSection;
-        if (iSection >= 0 && !mTurretClass[iSection])
+        if (!mTurretClass[sCurrentSection])
         {
-            mTurretClass[iSection] = new MountedTurretClass(mId);
+            mTurretClass[sCurrentSection] = new MountedTurretClass(mId);
         }
         return;
     }
@@ -98,10 +101,7 @@ EntityBuildingAnimatedArmedClass::EntityBuildingAnimatedArmedClass(EntityBuildin
     : EntityBuildingAnimatedClass(pBase, uHash)
 {
     sCurrentSection = -1;
-    for (int i = 0; i < 8; i++)
-    {
-        mTurretClass[i] = pBase->mTurretClass[i];
-    }
+    memcpy(mTurretClass, pBase->mTurretClass, sizeof(mTurretClass));
 }
 
 // FUNCTION: SWBF2 0x00495860
@@ -174,7 +174,7 @@ void EntityBuildingAnimatedArmed::Init()
 // FUNCTION: SWBF2 0x004952e0
 void EntityBuildingAnimatedArmed::ActivatePhysics()
 {
-    static_cast<Thread*>(this)->ActivateThread(0, PER_TURN);
+    ActivateThread(0, PER_TURN);
     if (!mState)
     {
         for (int i = 0; i < mNumTurrets; ++i)
@@ -206,7 +206,7 @@ void EntityBuildingAnimatedArmed::DeactivatePhysics()
 // FUNCTION: SWBF2 0x00495380
 bool EntityBuildingAnimatedArmed::Update(float fDeltaTime)
 {
-    static_cast<Damageable*>(this)->UpdateStatus(fDeltaTime);
+    Damageable::UpdateStatus(fDeltaTime);
     return EntityBuildingAnimated::Update(fDeltaTime);
 }
 
@@ -238,13 +238,13 @@ void EntityBuildingAnimatedArmed::Respawn()
 // FUNCTION: SWBF2 0x004953b0
 void EntityBuildingAnimatedArmed::Render(unsigned char uFlags, float fDist, unsigned int uMask)
 {
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uMask &= ~0x80;
+        uMask |= 0x80;
     }
     else
     {
-        uMask |= 0x80;
+        uMask &= ~0x80;
     }
 
     PblMatrix mSaved[8];
@@ -261,11 +261,14 @@ void EntityBuildingAnimatedArmed::Render(unsigned char uFlags, float fDist, unsi
     }
 
     EntityBuildingAnimated::Render(uFlags, fDist, uMask);
-    for (int i = 0; i < mNumTurrets; ++i)
+    if (mNumTurrets > 0)
     {
-        if (mTurret[i])
+        for (int i = 0; i < mNumTurrets; ++i)
         {
-            mTurret[i]->PostRender(mSaved[i]);
+            if (mTurret[i])
+            {
+                mTurret[i]->PostRender(mSaved[i]);
+            }
         }
     }
 }
@@ -309,10 +312,10 @@ Trackable* EntityBuildingAnimatedArmed::GetTrackable()
 {
     for (int i = 0; i < mNumTurrets; i++)
     {
-        Controllable* pPilot = TurretControllable(mTurret[i])->GetPilot();
+        Controllable* pPilot = mTurret[i]->GetPilot();
         if (pPilot && pPilot->mPlayerId >= 0 && NetGame::GetJoystickIndex(pPilot->mPlayerId) >= 0)
         {
-            return TurretControllable(mTurret[i]);
+            return mTurret[i];
         }
     }
     return 0;

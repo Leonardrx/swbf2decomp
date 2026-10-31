@@ -73,43 +73,44 @@ LeafPatchClass::LeafPatchClass(unsigned int uHash)
     : Thread()
     , EntityClass(uHash)
 {
-    mBoundingRadius = 10.0f;
-    mMaxFallingLeaves = 0;
-    mMaxScatterBirds = 0;
-    mRadius = 5.0f;
-    mHeightScale = 1.0f;
-    mHeight = 5.0f;
-    mSeed = (int)PblRandom::GetGlobalInt();
-    mType = 0;
     mParticle = 0;
     mNumParticles = 50;
-    mOffset.x = 0.0f;
-    mOffset.y = 0.0f;
-    mOffset.z = 0.0f;
+    mBoundingRadius = 10.0f;
     mSizeMin = 10.0f;
     mSizeMax = 15.0f;
     mAlpha = 0.5f;
-    mMaxDistance = 100.0f;
-    mConeHeight = 0.0f;
-    mBoxSize.x = 0.0f;
-    mBoxSize.y = 0.0f;
-    mBoxSize.z = 0.0f;
+    mRenderData = 0;
     mTextureHash = 0xB26FAC7Du;
+    mRadius = 5.0f;
+    mHeight = 5.0f;
+    mMaxDistance = 100.0f;
     mDarknessMin = 1.0f;
     mDarknessMax = 1.0f;
+    mMaxFallingLeaves = 0;
+    mMaxScatterBirds = 0;
+    mOffset.z = 0.0f;
+    mOffset.y = 0.0f;
+    mOffset.x = 0.0f;
+    mHeightScale = 1.0f;
+    mSeed = (int)PblRandom::GetGlobalInt();
     mNearFadeDist = 6.0f;
     mNumParts = 4;
+
+    sClasses.AddLast(&mClassNode, this);
+
+    mBoxSize.z = 0.0f;
+    mBoxSize.y = 0.0f;
+    mBoxSize.x = 0.0f;
+    mConeHeight = 0.0f;
+    mType = 0;
     mVineXSpread = 1.0f;
     mVineZSpread = 0.0f;
+    mWiggleSpeed = 1.2f;
+    mWiggleAmount = 0.11f;
     mVineLengthMin = 2;
     mVineLengthMax = 4;
     mVineSpread = 0.6f;
-    mWiggleSpeed = 1.2f;
-    mWiggleAmount = 0.11f;
     mFadeInStep = 1.0f;
-    mRenderData = 0;
-
-    sClasses.AddLast(&mClassNode, this);
 }
 
 // GLOBAL: SWBF2 0x01e573d4
@@ -577,7 +578,7 @@ bool LeafPatch::RayTest(const PblVector3& vStart, const PblVector3& vDir, float 
     dx = vStart.x - vCenter2.x;
     dy = vStart.y - vCenter2.y;
     dz = vStart.z - vCenter2.z;
-    return fRadiusSq <= dy * dy + dx * dx + dz * dz;
+    return !(fRadiusSq > dy * dy + dx * dx + dz * dz);
 }
 
 // FUNCTION: SWBF2 0x0056d4d0
@@ -602,8 +603,8 @@ float LeafPatch::RayHit(const PblVector3& vStart, const PblVector3& vDir, float 
     const float fLength = (float)sqrt((double)(vLocalDir.x * vLocalDir.x + vLocalDir.y * vLocalDir.y +
                                                vLocalDir.z * vLocalDir.z));
     const float fInv = 1.0f / fLength;
-    const PblVector3 vUnit(vLocalDir.x * fInv, vLocalDir.y * fInv, vLocalDir.z * fInv);
-    const float fHit = CollisionUtil::RayHitSphere(vLocalStart, vUnit, fLength * fMaxT,
+    vLocalDir = vLocalDir * fInv;
+    const float fHit = CollisionUtil::RayHitSphere(vLocalStart, vLocalDir, fLength * fMaxT,
                                                    PblVector3(0.0f, 0.0f, 0.0f), 1.0f, pNormal);
     if (pMaterial)
     {
@@ -637,22 +638,26 @@ void LeafPatch::Render(unsigned char ucViewport, float fDist, unsigned int uiFla
     {
         return;
     }
-    for (int i = mClass->mMaxFallingLeaves - mNumFallingLeaves; i > 0; --i)
+    int iLeavesLeft = mClass->mMaxFallingLeaves - mNumFallingLeaves;
+    if (iLeavesLeft > 0)
     {
-        FallingLeafParticle* pLeaf = LeafParticleManager::GetFreeLeaf();
-        if (!pLeaf)
+        do
         {
-            continue;
-        }
-        PblVector3 vPos = mMatrix.GetTranslation();
-        const float fX = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mRadius;
-        const float fY = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mHeight * mClass->mHeightScale;
-        const float fZ = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mRadius;
-        vPos.x += fX;
-        vPos.y += fY;
-        vPos.z += fZ;
-        pLeaf->RespawnLeaf(vPos, this, LEAF_NONE);
-        ++mNumFallingLeaves;
+            FallingLeafParticle* pLeaf = LeafParticleManager::GetFreeLeaf();
+            if (!pLeaf)
+            {
+                continue;
+            }
+            PblVector3 vPos = mMatrix.GetTranslation();
+            const float fX = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mRadius;
+            const float fY = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mHeight * mClass->mHeightScale;
+            const float fZ = (PblRandom::GetGlobalFloat() * 2.0f - 1.0f) * mClass->mRadius;
+            vPos.x += fX;
+            vPos.y += fY;
+            vPos.z += fZ;
+            pLeaf->RespawnLeaf(vPos, this, LEAF_NONE);
+            ++mNumFallingLeaves;
+        } while (--iLeavesLeft != 0);
     }
 }
 

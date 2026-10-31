@@ -60,19 +60,16 @@ AttachedEffects::AttachedEffects(const AttachedEffectsClass* pClass, const Entit
     if (!(const GameObject*)m_pGameObject)
     {
         m_pEntityGeometry = const_cast<EntityGeometry*>(pGeometry);
-        if (!m_bDynamic)
+        if (!bDynamic)
         {
-            bool bTimed = false;
-            for (unsigned int i = 0; i < m_pClass->m_uiNumAttached; ++i)
+            unsigned int i = 0;
+            while (i < m_pClass->m_uiNumAttached &&
+                   (m_pClass->m_aAttachClassData[i].bIsOdf ||
+                    m_pClass->m_aAttachClassData[i].uiNumParams < 1))
             {
-                const AttachedEffectsClass::AttachClassData& classData = m_pClass->m_aAttachClassData[i];
-                if (!classData.bIsOdf && classData.uiNumParams >= 1)
-                {
-                    bTimed = true;
-                    break;
-                }
+                ++i;
             }
-            if (!bTimed)
+            if (i == m_pClass->m_uiNumAttached)
             {
                 return;
             }
@@ -159,9 +156,10 @@ bool AttachedEffectsClass::SetProperty(unsigned int uiProperty, const char* pszV
         if (s_uiNumAttached < MAX_ATTACHED && s_aAttachClassData[s_uiNumAttached].pOdfClass)
         {
             char acBone[256];
-            AttachClassData& data = s_aAttachClassData[s_uiNumAttached];
             const int iNumRead =
-                sscanf(pszValue, "%s %f %f", acBone, &data.afParam[0], &data.afParam[1]);
+                sscanf(pszValue, "%s %f %f", acBone,
+                       &s_aAttachClassData[s_uiNumAttached].afParam[0],
+                       &s_aAttachClassData[s_uiNumAttached].afParam[1]);
             if (iNumRead >= 1)
             {
                 s_aAttachClassData[s_uiNumAttached].uiBoneName = PblTEMPHash(acBone);
@@ -208,13 +206,13 @@ bool AttachedEffectsClass::SetProperty(unsigned int uiProperty, const char* pszV
     case 0xa9d0d48b:
         if (s_uiNumAttached < MAX_ATTACHED)
         {
-            AttachClassData& data = s_aAttachClassData[s_uiNumAttached];
-            data.bIsOdf = 1;
-            data.pOdfClass = EntityClass::Find(PblHash(pszValue));
-            if (data.pOdfClass && !data.pOdfClass->IsRtti(EntityLightClass::GetRtti()))
+            s_aAttachClassData[s_uiNumAttached].bIsOdf = 1;
+            EntityClass* pOdfClass = EntityClass::Find(PblHash(pszValue));
+            s_aAttachClassData[s_uiNumAttached].pOdfClass = pOdfClass;
+            if (pOdfClass && !pOdfClass->IsRtti(EntityLightClass::GetRtti()))
             {
-                data.bIsOdf = 0;
-                data.pOdfClass = 0;
+                s_aAttachClassData[s_uiNumAttached].bIsOdf = 0;
+                s_aAttachClassData[s_uiNumAttached].pOdfClass = 0;
             }
         }
         return true;

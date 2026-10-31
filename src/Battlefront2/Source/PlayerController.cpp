@@ -154,15 +154,15 @@ PlayerController::PlayerController(Controllable* pOwner)
     mMouseTurnBuildup = 0.0f;
     mAutoAimScale = 0.0f;
     mNextCritHitTime = 0.0f;
-    if (pOwner->mPlayerId < 0)
-    {
-        mIsFireButtonDebounced = true;
-        mUseButtonDebounced = true;
-    }
-    else
+    if (pOwner->mPlayerId >= 0)
     {
         mIsFireButtonDebounced = false;
         mUseButtonDebounced = false;
+    }
+    else
+    {
+        mIsFireButtonDebounced = true;
+        mUseButtonDebounced = true;
     }
     for (int i = 0; i < 4; ++i)
     {
@@ -808,7 +808,8 @@ void PlayerController::Update(float dt)
 void PlayerController::DeployCargo()
 {
     GameObject* pObject = mOwner->GetGameObject();
-    if (pObject->GetControllable() != mOwner ||
+    Controllable* pControl = pObject->GetControllable();
+    if (pControl != mOwner ||
         static_cast<GameObjectClass*>(pObject->mEntityClass)->GetVehicleType() != 5)
     {
         return;
@@ -866,23 +867,27 @@ void PlayerController::LogVODeath(int iVictimTeam, int iKillerTeam)
         return;
     }
 
-    const Team* pTeam = mOwner->mCharacter->mTeamPtr;
+    Controllable* pOwner = mOwner;
+    const Team* pTeam = pOwner->mCharacter->mTeamPtr;
     float* pDeaths;
     AI::VOType eType;
-    if (pTeam->GetAffiliation(iVictimTeam) <= 0)
+    if (pTeam->GetAffiliation(iVictimTeam) > 0)
     {
-        pDeaths = mEnemyDeaths;
-        eType = AI::VOT_NearbyEnemySlaughter;
-    }
-    else if (pTeam->GetAffiliation(iKillerTeam) <= 0)
-    {
-        pDeaths = mAllyDeaths;
-        eType = AI::VOT_NearbyFriendlySlaughter;
+        if (pTeam->GetAffiliation(iKillerTeam) > 0)
+        {
+            pDeaths = mTeamKills;
+            eType = AI::VOT_NearbyTeamKillSlaughter;
+        }
+        else
+        {
+            pDeaths = mAllyDeaths;
+            eType = AI::VOT_NearbyFriendlySlaughter;
+        }
     }
     else
     {
-        pDeaths = mTeamKills;
-        eType = AI::VOT_NearbyTeamKillSlaughter;
+        pDeaths = mEnemyDeaths;
+        eType = AI::VOT_NearbyEnemySlaughter;
     }
 
     const float fTime = GameLoop::GetMissionTime();
@@ -905,11 +910,11 @@ void PlayerController::LogVODeath(int iVictimTeam, int iKillerTeam)
     }
     if (i == 4)
     {
-        AI::VOHelper::Play(eType, 0, mOwner->GetGameObject(), 0, 0.0f);
-        pDeaths[0] = -1000.0f;
-        pDeaths[1] = -1000.0f;
-        pDeaths[2] = -1000.0f;
-        pDeaths[3] = -1000.0f;
+        AI::VOHelper::Play(eType, 0, pOwner->GetGameObject(), 0, 0.0f);
+        for (i = 0; i < 4; ++i)
+        {
+            pDeaths[i] = -1000.0f;
+        }
     }
 }
 
@@ -1029,7 +1034,7 @@ void PlayerController::CheckForAutoFollow(float dt)
     }
 
     const PblMatrix& mMatrix = mOwner->GetMatrix();
-    mAutoFollowTime += dt;
+    mAutoFollowTime = dt + mAutoFollowTime;
     if (4.0f > mAutoFollowTime)
     {
         return;
@@ -1038,7 +1043,7 @@ void PlayerController::CheckForAutoFollow(float dt)
     mAutoFollowTime = Max(0.0f, fTime);
 
     const Team* pTeam = Team::GetPtr(pSoldier->GetTeam());
-    PblVector3 vBehind = (mMatrix.GetZAxis() * vVelocity) * 10.0f / 2.0f;
+    PblVector3 vBehind = (vVelocity * mMatrix.GetZAxis()) * 10.0f / 2.0f;
     PblVector3 vCenter = pSoldier->GetPosition() - vBehind;
     GameObject* apObjects[15];
     int iCount = TeamManager::GetObjectsInRange(vCenter, 10.0f, apObjects, 15, pTeam, 4);

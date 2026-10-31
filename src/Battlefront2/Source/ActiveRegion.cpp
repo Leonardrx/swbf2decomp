@@ -35,7 +35,8 @@ void Event<RedRegion, Character>::Callback::Trigger(RedRegion& item, Character& 
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->mAliveFlag;
+                if (!bAlive)
                 {
                     pChild->Release();
                     break;
@@ -65,10 +66,9 @@ namespace ActiveRegions
 {
 
 // FUNCTION: SWBF2 0x004375d0
-ActiveRegion::ActiveRegion(RedRegion& region) : mRegion(region)
+ActiveRegion::ActiveRegion(RedRegion& region) : mRegion(region), mPlayers(GetPlayersInRegion())
 {
-    mPlayers = GetPlayersInRegion();
-    sMap.Store(region.mId, this);
+    sMap.Store(mRegion.mId, this);
     ActivateThread(-100, PER_FRAME);
 }
 
@@ -104,12 +104,11 @@ RedRegion* __fastcall Find(lua_State*, int iIndex)
     {
         return (RedRegion*)lua_topointer(LuaHelper::mState, iIndex);
     }
-    if (!lua_isstring(LuaHelper::mState, iIndex))
+    if (lua_isstring(LuaHelper::mState, iIndex))
     {
-        return 0;
+        return RedRegion::Find(PblHash(luaL_checklstring(LuaHelper::mState, iIndex, 0)));
     }
-    PblHash name(luaL_checklstring(LuaHelper::mState, iIndex, 0));
-    return RedRegion::Find(name);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00437c60
@@ -245,7 +244,8 @@ PblBitVector<600> ActiveRegion::GetPlayersInRegion()
     int iCount = CollisionManager::GetObjectsInRegion(mRegion, pObjects, 64, 0, 10);
     for (int i = 0; i < iCount; ++i)
     {
-        if (!GameObject_IsAlive(pObjects[i]))
+        const bool bAlive = pObjects[i]->mIsAlive;
+        if (!bAlive)
         {
             continue;
         }

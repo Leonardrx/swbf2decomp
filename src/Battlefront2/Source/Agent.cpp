@@ -13,5 +13,6 @@ const char Agent::rttiNameAgent[] = "Agent";
 bool Agent::Update(float dt, bool b)
 {
     FSMUpdate(dt, b);
-    return mCurState == 100;
+    bool bFinished = (mCurState == 100);
+    return bFinished;
 }

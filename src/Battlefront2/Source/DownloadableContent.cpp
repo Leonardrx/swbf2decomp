@@ -38,15 +38,12 @@ void SetCurrentMission(unsigned int uiHash)
 {
     mCurMissionIndex = -1;
 
-    if (mNumMissions > 0)
+    for (int i = 0; i < mNumMissions; ++i)
     {
-        for (int i = 0; i < mNumMissions; ++i)
+        if (mMissions[i].mMissionName == uiHash)
         {
-            if (mMissions[i].mMissionName == uiHash)
-            {
-                mCurMissionIndex = i;
-                break;
-            }
+            mCurMissionIndex = i;
+            break;
         }
     }
 }
@@ -148,15 +145,12 @@ void SetCurrentMap(unsigned int uiHash)
 {
     mCurMissionIndex = -1;
 
-    if (mNumMissions > 0)
+    for (int i = 0; i < mNumMissions; ++i)
     {
-        for (int i = 0; i < mNumMissions; ++i)
+        if (mMissions[i].mMapName == uiHash)
         {
-            if (mMissions[i].mMapName == uiHash)
-            {
-                mCurMissionIndex = i;
-                break;
-            }
+            mCurMissionIndex = i;
+            break;
         }
     }
 }

@@ -272,22 +272,20 @@ EntityClothClass::EntityClothClass(unsigned int uHash)
         mNetIndex = -1;
     }
 
-    mModelHash = 0;
-    mWindDirection.x = 1.0f;
-    mWindDirection.y = 0.0f;
-    mWindDirection.z = 0.0f;
+    mWindDirection = gVectorUnitX;
     mWindSpeed = 10.0f;
     mDampening = 0.5f;
     mDrag = -2.0f;
     mParticleMass = 1.0f;
     mMaxAcceleration = 20.0f;
     mMaxVelocity = 10.0f;
-    mPriority = 0.0f;
     m_uiDoCrossConstraints = 1;
     m_uiDoBendConstraints = 1;
     m_uiDoStretchConstraints = 1;
     m_uiHardEdge = 0;
     m_uiTransparent = 0;
+    mModelHash = 0;
+    mPriority = 0.0f;
 }
 
 namespace ClothBE
@@ -393,7 +391,7 @@ bool ClothBank::Remove(EntityCloth* pCloth)
     return cloth_.FindRemove(pCloth);
 }
 
-EntityCloth* ClothBank::GetTop(float fPriority)
+inline EntityCloth* ClothBank::GetTop(float fPriority)
 {
     lowPriority_ = 1000000.0f;
     for (int i = 0; i < cloth_.GetSize(); i++)
@@ -696,16 +694,16 @@ void ClothData::PlatformBindInit(EntityClothClass* pClass)
 
 // FUNCTION: SWBF2 0x0045a260
 EntityCloth::EntityCloth(EntityClothClass* pClass, const EntityDesc& desc)
-    : bank_(0),
-      m_pPos(0),
-      m_pOldPos(0),
-      m_pNormal(0),
-      m_pAcceleration(0),
-      m_pFixedPos(0),
-      priority_(0.0f),
-      mClass(pClass)
+    : mClass(pClass)
 {
     mDesc = desc;
+    m_pFixedPos = 0;
+    m_pAcceleration = 0;
+    m_pNormal = 0;
+    m_pOldPos = 0;
+    m_pPos = 0;
+    bank_ = 0;
+    priority_ = 0.0f;
     CreateData_();
 }
 
@@ -854,30 +852,29 @@ void EntityCloth::SetWorldMatrix(const PblMatrix& mWorld, float fDeltaTime)
 // FUNCTION: SWBF2 0x0045bd50
 void EntityCloth::ComputeNormals()
 {
-    EntityCloth* pCloth = (EntityCloth*)this;
-    ClothData* pData = pCloth->mData;
-    const unsigned short* pIndices = pData->m_pTriangleIndices;
-    memset(pCloth->m_pNormal, 0, pData->m_uiNumParticles * sizeof(PblVector3));
+    const unsigned short* pIndices = mData->m_pTriangleIndices;
+    memset(m_pNormal, 0, mData->m_uiNumParticles * sizeof(PblVector3));
 
+    const ClothData* pData = mData;
+    const PblVector3* pPos = m_pPos;
+    PblVector3* pN = m_pNormal;
     for (unsigned int t = 0; t < pData->m_uiNumTriangles; ++t, pIndices += 3)
     {
-        const PblVector3* pPos = pCloth->m_pPos;
         const unsigned int i0 = pIndices[0];
         const unsigned int i1 = pIndices[1];
         const unsigned int i2 = pIndices[2];
 
-        const float e1x = pPos[i1].x - pPos[i0].x;
         const float e1y = pPos[i1].y - pPos[i0].y;
         const float e1z = pPos[i1].z - pPos[i0].z;
-        const float e2x = pPos[i2].x - pPos[i0].x;
         const float e2y = pPos[i2].y - pPos[i0].y;
         const float e2z = pPos[i2].z - pPos[i0].z;
+        const float e2x = pPos[i2].x - pPos[i0].x;
+        const float e1x = pPos[i1].x - pPos[i0].x;
 
         const float nx = e1y * e2z - e1z * e2y;
         const float ny = e1z * e2x - e2z * e1x;
         const float nz = e2y * e1x - e1y * e2x;
 
-        PblVector3* pN = pCloth->m_pNormal;
         pN[i0].x += nx;
         pN[i0].y += ny;
         pN[i0].z += nz;
@@ -889,11 +886,11 @@ void EntityCloth::ComputeNormals()
         pN[i2].z += nz;
     }
 
-    for (unsigned int i = 0; i < pData->m_uiNumParticles; ++i)
+    for (unsigned int i = 0; i < mData->m_uiNumParticles; ++i)
     {
         PblVector3 vNormal;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&pCloth->m_pNormal[i]));
-        pCloth->m_pNormal[i] = vNormal;
+        D3DXVec3Normalize(&vNormal, &m_pNormal[i]);
+        m_pNormal[i] = vNormal;
     }
 }
 
@@ -1123,9 +1120,7 @@ void EntityCloth::Verlet(float fDeltaTime)
         PblVector3& vOld = m_pOldPos[i];
         const PblVector3& vAccel = m_pAcceleration[i];
         const PblVector3 vTemp = vPos;
-        vPos.x += (vPos.x - vOld.x) + vAccel.x * fDt2;
-        vPos.y += (vPos.y - vOld.y) + vAccel.y * fDt2;
-        vPos.z += (vPos.z - vOld.z) + vAccel.z * fDt2;
+        vPos += (vPos - vOld) + vAccel * fDt2;
         vOld = vTemp;
     }
 }
@@ -1235,11 +1230,7 @@ void EntityCloth::RestoreFixedPoints(const RedPose* pPose)
         mBone.Reset();
         if (pBone)
         {
-            PblMatrix mTemp;
-            mTemp = *pBone * mParentInverse;
-            PblMatrix mFull;
-            mFull = mTemp * mTransformInverse;
-            mBone = mFull;
+            mBone = *pBone * mParentInverse * mTransformInverse;
         }
         PblVector3 vPos;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&m_pFixedPos[i]), reinterpret_cast<const D3DXMATRIX*>(&mBone));
@@ -1372,7 +1363,10 @@ void EntityCloth::EnforceCylinderCollision(const PblMatrix& mMatrix, float fHeig
 // FUNCTION: SWBF2 0x00458df0
 void EntityCloth::ClearSpecialAllocator()
 {
-    delete ClothBE::gMultiAllocator_;
+    if (ClothBE::gMultiAllocator_)
+    {
+        delete ClothBE::gMultiAllocator_;
+    }
     ClothBE::gMultiAllocator_ = 0;
 
     for (ClothBE::ClothDataT::Itor it = ClothBE::clothData_.Begin();

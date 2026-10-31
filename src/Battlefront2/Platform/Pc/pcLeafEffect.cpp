@@ -112,13 +112,13 @@ void FallingLeafParticle::Render(unsigned char, float, unsigned int)
     color.a = 0xff;
 
     pcRedPrimitive* pPrimitive;
-    if (RedRenderer::pcGetGeometryMode())
+    if (!RedRenderer::pcGetGeometryMode())
     {
-        pPrimitive = CreateCompressedGeometry(0.17f, color);
+        pPrimitive = CreateGeometry(0.17f, color);
     }
     else
     {
-        pPrimitive = CreateGeometry(0.17f, color);
+        pPrimitive = CreateCompressedGeometry(0.17f, color);
     }
 
     RedRenderer::pcRenderPrimitive(pPrimitive, m_pShader, mMatrix, RedColor::WHITE, 0x200, 0, 0, 0);
@@ -138,6 +138,6 @@ void FallingLeafParticle::PlatformCleanup()
 void FallingLeafParticle::PlatformInit()
 {
     const unsigned int uiFormat = RedRenderer::pcGetGeometryMode() ? 0x9282 : 0x282;
-    m_pShader = pcRedShader::Create(PblHash("Particle"), uiFormat, &mTextureHash, 1, 0x10004,
+    m_pShader = pcRedShader::Create(0x8a8743bf /* "Particle" */, uiFormat, &mTextureHash, 1, 0x10004,
                                     RedColor::WHITE, RedColor::BLACK, 32.0f);
 }

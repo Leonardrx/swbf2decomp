@@ -36,14 +36,12 @@ EntityEffectClass::~EntityEffectClass()
 // FUNCTION: SWBF2 0x004a9a70
 void EntityEffectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x6E6E8D54)
-    {
-        mEffectClass = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
-    }
-    else
+    if (uProperty != 0x6E6E8D54 /* "Effect" */)
     {
         EntityClass::SetProperty(uProperty, pszValue);
+        return;
     }
+    mEffectClass = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
 }
 
 // FUNCTION: SWBF2 0x004a9ac0

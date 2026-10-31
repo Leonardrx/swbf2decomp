@@ -97,14 +97,14 @@ void FogCloudEffect::PlatformInit()
 {
     if (!m_pShader)
     {
-        if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED)
+        if (RedRenderer::pcGetGeometryMode())
         {
-            m_pShader = pcRedShader::Create(PblHash("Particle"), 0x9282, &TEXTURE_HASH, 1, 0x10004,
+            m_pShader = pcRedShader::Create(0x8A8743BF /* "Particle" */, 0x9282, &TEXTURE_HASH, 1, 0x10004,
                                             RedColor::WHITE, RedColor::BLACK, 32.0f);
         }
         else
         {
-            m_pShader = pcRedShader::Create(PblHash("Particle"), 0x282, &TEXTURE_HASH, 1, 0x10004,
+            m_pShader = pcRedShader::Create(0x8A8743BF /* "Particle" */, 0x282, &TEXTURE_HASH, 1, 0x10004,
                                             RedColor::WHITE, RedColor::BLACK, 32.0f);
         }
     }
@@ -861,16 +861,30 @@ void PrecipitationEffect::PlatformInit()
 
     if (PARTICLE_TYPE == PRECIPITATION_STREAKS)
     {
-        m_pShader = pcRedShader::Create(PblHash("Rain"),
-                                        RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ? 0x1082 : 0x82,
-                                        0, 0, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        if (RedRenderer::pcGetGeometryMode())
+        {
+            m_pShader = pcRedShader::Create(0x89A3B5D3 /* "Rain" */, 0x1082,
+                                            0, 0, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        }
+        else
+        {
+            m_pShader = pcRedShader::Create(0x89A3B5D3 /* "Rain" */, 0x82,
+                                            0, 0, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        }
         ((pcRainShader*)m_pShader)->SetLineWidth(PARTICLE_SIZE);
         ((pcRainShader*)m_pShader)->SetMaxPixelWidth(1.0f);
     }
     else
     {
-        m_pShader = pcRedShader::Create(PblHash("Particle"),
-                                        RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ? 0x9282 : 0x282,
-                                        &TEXTURE_HASH, 1, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        if (RedRenderer::pcGetGeometryMode())
+        {
+            m_pShader = pcRedShader::Create(0x8A8743BF /* "Particle" */, 0x9282,
+                                            &TEXTURE_HASH, 1, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        }
+        else
+        {
+            m_pShader = pcRedShader::Create(0x8A8743BF /* "Particle" */, 0x282,
+                                            &TEXTURE_HASH, 1, 0x10004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        }
     }
 }

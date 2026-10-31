@@ -64,11 +64,8 @@ const char EntityBuildingArmedClass::rttiNameEntityBuildingArmedClass[] = "Entit
 EntityBuildingArmedClass::EntityBuildingArmedClass(EntityBuildingArmedClass* pBase, unsigned int uHash)
     : EntityBuildingClass(pBase, uHash)
 {
+    memcpy(mTurretClass, pBase->mTurretClass, sizeof(mTurretClass));
     sCurrentSection = -1;
-    for (int i = 0; i < 8; i++)
-    {
-        mTurretClass[i] = pBase->mTurretClass[i];
-    }
 }
 
 // FUNCTION: SWBF2 0x00496950
@@ -138,6 +135,8 @@ void EntityBuildingArmedClass::SetProperty(unsigned int uProperty, const char* p
             sCurrentSection = 7;
             break;
         case 0xdbaa7975:
+            sCurrentSection = -1;
+            return;
         default:
             sCurrentSection = -1;
             return;
@@ -228,9 +227,11 @@ void EntityBuildingArmed::Init()
         RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
         if (!pLight->IsShadowCaster())
         {
-            pLight = RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster()
-                         ? RedLight::GetGlobalDirectionalLight(1)
-                         : NULL;
+            pLight = RedLight::GetGlobalDirectionalLight(1);
+            if (!pLight->IsShadowCaster())
+            {
+                pLight = NULL;
+            }
         }
         if (pLight)
         {
@@ -358,14 +359,12 @@ void EntityBuildingArmed::Respawn()
 // FUNCTION: SWBF2 0x00495d50
 void EntityBuildingArmed::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0x966F4238u)
-    {
-        mNoAIBoard = atoi(pszValue) != 0;
-    }
-    else
+    if (uProperty != 0x966F4238u /* "NoAIBoard" */)
     {
         reinterpret_cast<GameObject*>(this)->GameObject::SetProperty(uProperty, pszValue);
+        return;
     }
+    mNoAIBoard = atoi(pszValue) != 0;
 }
 
 // FUNCTION: SWBF2 0x00476e50
@@ -401,12 +400,12 @@ Trackable* EntityBuildingArmed::GetTrackable()
 {
     for (int i = 0; i < mNumTurrets; i++)
     {
-        Controllable* pPilot = TurretControllable(mTurret[i])->GetPilot();
+        Controllable* pPilot = mTurret[i]->GetPilot();
         if (pPilot && pPilot->mPlayerId >= 0 &&
             (NetGame::GetSpectator(NetGame::GetLocalIndex(0)) == pPilot->mPlayerId ||
              NetGame::GetJoystickIndex(pPilot->mPlayerId) >= 0))
         {
-            return TurretControllable(mTurret[i]);
+            return mTurret[i];
         }
     }
     return 0;
@@ -558,9 +557,5 @@ bool EntityBuildingArmed::Update(float fDeltaTime)
     UpdateStatus(fDeltaTime);
     EntityBuilding::Update(fDeltaTime);
 
-    if (IsAlive() || mClass->mDestroyedModel || mClass->mUnbuiltModel)
-    {
-        return true;
-    }
-    return NetGame::IsEnabled();
+    return IsAlive() || mClass->mDestroyedModel || mClass->mUnbuiltModel || NetGame::IsEnabled();
 }

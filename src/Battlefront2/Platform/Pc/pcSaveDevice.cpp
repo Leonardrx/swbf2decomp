@@ -315,11 +315,11 @@ void SaveDevice::ResetFileIterator()
 // FUNCTION: SWBF2 0x004265f0
 SaveFile* SaveDevice::GetNextFile()
 {
-    if (mCurFile >= mNumFiles)
+    if (mCurFile < mNumFiles)
     {
-        return 0;
+        return &mFileList[mCurFile++];
     }
-    return &mFileList[mCurFile++];
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00426620

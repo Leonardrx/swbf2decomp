@@ -108,11 +108,10 @@ void AIVisRegionManager::UpdateNextRegion()
     int iCount = TriggerRegionManager::GetObjectsInRegion(pRegion, apObjects, 40);
     for (int i = 0; i < iCount; ++i)
     {
-        GameObject* pObject = apObjects[i];
-        if (pObject && GetControllable(pObject))
+        if (apObjects[i] && GetControllable(apObjects[i]))
         {
-            Controller* pController = GetControllable(pObject)->mCtrl;
-            if (pController && pRegion->IsPointInside(*(const PblVector3*)&GetMatrix(pObject).m[3][0]))
+            Controller* pController = GetControllable(apObjects[i])->mCtrl;
+            if (pController && pRegion->IsPointInside(*(const PblVector3*)&static_cast<CollisionObject&>(*apObjects[i]).GetMatrix().m[3][0]))
             {
                 pController->SetRegionVisFactor(pRegion->GetVisCrouch(), pRegion->GetVisStand());
             }

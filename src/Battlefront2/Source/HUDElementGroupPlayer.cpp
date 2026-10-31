@@ -13,34 +13,34 @@ static const unsigned int kEventPlayerIndexHash = 0x3c80f682;
 // FUNCTION: SWBF2 0x0054f710
 bool HUD::ElementGroupPlayer::SetProperty(const unsigned int uHashID, const void* pValue)
 {
-    if (uHashID == kEventPlayerIndexHash)
+    if (uHashID != kEventPlayerIndexHash)
     {
-        Item::SetEvent(*(const char* const*)pValue, mEventPlayerIndex);
-        return true;
+        return ElementGroupBase::SetProperty(uHashID, pValue);
     }
-    return ElementGroupBase::SetProperty(uHashID, pValue);
+    Item::SetEvent(*(const char* const*)pValue, mEventPlayerIndex);
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0054f740
 bool HUD::ElementGroupPlayer::GetProperty(const unsigned int uHashID, void* pValue)
 {
-    if (uHashID == kEventPlayerIndexHash)
+    if (uHashID != kEventPlayerIndexHash)
     {
-        *(const char**)pValue = mEventPlayerIndex.GetRegisteredClassName(false);
-        return true;
+        return ElementGroupBase::GetProperty(uHashID, pValue);
     }
-    return ElementGroupBase::GetProperty(uHashID, pValue);
+    *(const char**)pValue = mEventPlayerIndex.GetRegisteredClassName(false);
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0054f770
 bool HUD::ElementGroupPlayer::ReadData(PblConfig& config, PblConfig::Data& data)
 {
-    if (*(const unsigned int*)&data == kEventPlayerIndexHash)
+    if (*(const unsigned int*)&data != kEventPlayerIndexHash)
     {
-        Item::ReadEvent(data, mEventPlayerIndex);
-        return true;
+        return ElementGroupBase::ReadData(config, data);
     }
-    return ElementGroupBase::ReadData(config, data);
+    Item::ReadEvent(data, mEventPlayerIndex);
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0054f7a0

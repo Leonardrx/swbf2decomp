@@ -113,9 +113,7 @@ void DustEffect::Render(unsigned char ucViewport, float fDist, unsigned int uiFl
 
     if (mClass->mCameraDistance > 0.0f)
     {
-        mMatrix.m[3][0] = camMatrix.m[3][0];
-        mMatrix.m[3][2] = camMatrix.m[3][2];
-        mMatrix.m[3][3] = 1.0f;
+        mMatrix.SetTranslation(camMatrix.m[3][0], mMatrix.m[3][1], camMatrix.m[3][2], 1.0f);
         SetRenderPos(mMatrix.GetTranslation());
     }
 
@@ -157,19 +155,21 @@ void DustEffectClass::CreateClient()
 
     for (PblList<DustEffectClass>::Itor it(sDustEffectClasses); it; ++it)
     {
-        if (it->mParticle)
+        DustEffectClass* pClass = it;
+        if (pClass->mParticle)
         {
-            it->Deactivate();
-            it->DeactivateThread();
+            pClass->Deactivate();
+            pClass->DeactivateThread();
         }
     }
     NetGame::EnterClient();
     for (PblList<DustEffectClass>::Itor it(sDustEffectClasses); it; ++it)
     {
-        if (it->mParticle)
+        DustEffectClass* pClass = it;
+        if (pClass->mParticle)
         {
-            it->Activate(10000);
-            it->ActivateThread(0, PER_FRAME);
+            pClass->Activate(10000);
+            pClass->ActivateThread(0, PER_FRAME);
         }
     }
     NetGame::LeaveClient();
@@ -191,9 +191,7 @@ bool DustEffectClass::UpdateParticle(DustParticle& particle, float fDeltaTime,
     }
 
     particle.mColor.a = mColor.a;
-    particle.mPos.x += vWind.x + particle.mVel.x * fDeltaTime;
-    particle.mPos.y += vWind.y + particle.mVel.y * fDeltaTime;
-    particle.mPos.z += vWind.z + particle.mVel.z * fDeltaTime;
+    particle.mPos += vWind + particle.mVel * fDeltaTime;
 
     float fFadeIn = particle.mLifeTime * FADE_IN_PERCENT;
     if (particle.mTime < fFadeIn)
@@ -270,7 +268,7 @@ bool DustEffectClass::Update(float fDeltaTime)
                            mOldCamPos.z - camMatrix.m[3][2]);
         if (vWind.x * vWind.x + vWind.y * vWind.y + vWind.z * vWind.z > 100.0f)
         {
-            vWind = PblVector3(0.0f, 0.0f, 0.0f);
+            vWind.x = vWind.y = vWind.z = 0.0f;
         }
         mOldCamPos = camMatrix.GetTranslation();
     }
@@ -311,23 +309,19 @@ DustEffectClass::DustEffectClass(unsigned int uHash)
     mSizeMax = 15.0f;
     mLifeTimeMin = 2.0f;
     mLifeTimeMax = 3.0f;
-    mColor.r = 1.0f;
-    mColor.g = 1.0f;
-    mColor.b = 1.0f;
-    mColor.a = 1.0f;
-    mMinDistance = 0.0f;
+    mColor = RedColorValue(1.0f, 1.0f, 1.0f, 1.0f);
+    mRenderData = 0;
     mTextureHash = 0xAA3E3A1Fu;
     mRadiusFadeMin = -1.0f;
     mRadiusFadeMax = -1.0f;
     mHeightScale = 0.2f;
     mTimer = 0.0f;
     mCameraDistance = -1.0f;
-    mOldCamPos.x = 0.0f;
-    mOldCamPos.y = 0.0f;
-    mOldCamPos.z = 0.0f;
-    mRenderData = 0;
+    mMinDistance = 0.0f;
 
     sDustEffectClasses.AddLast(&mClassNode, this);
+
+    mOldCamPos.x = mOldCamPos.y = mOldCamPos.z = 0.0f;
 }
 
 // SYNTHETIC: SWBF2 0x00490b0d
@@ -350,98 +344,108 @@ DustEffectClass::~DustEffectClass()
 // FUNCTION: SWBF2 0x0048fad0
 void DustEffectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    float fX, fY, fZ;
-
     switch (uProperty)
     {
-    case 0x3c6468f4:
+    case 0x3c6468f4: /* "Texture" */
         mTextureHash = PblHash(pszValue);
         break;
 
-    case 0x38b0b50d:
+    case 0x38b0b50d: /* "MaxPos" */
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mPosMax.x = fX;
         mPosMax.y = fY;
         mPosMax.z = fZ;
         break;
+    }
 
-    case 0x3d7e6258:
+    case 0x3d7e6258: /* "Color" */
         sscanf(pszValue, "%f %f %f %f", &mColor.r, &mColor.g, &mColor.b, &mColor.a);
         break;
 
-    case 0x597c1bb7:
+    case 0x597c1bb7: /* "MinPos" */
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mPosMin.x = fX;
         mPosMin.y = fY;
         mPosMin.z = fZ;
         break;
+    }
 
-    case 0x4e2c3b35:
+    case 0x4e2c3b35: /* "CameraDistance" */
         sscanf(pszValue, "%f", &mCameraDistance);
         break;
 
-    case 0x5d8b6dab:
+    case 0x5d8b6dab: /* "Alpha" */
         sscanf(pszValue, "%f", &mColor.a);
         break;
 
-    case 0x80ba1308:
+    case 0x80ba1308: /* "MaxSize" */
         sscanf(pszValue, "%f", &mSizeMax);
         break;
 
-    case 0x80887a6f:
+    case 0x80887a6f: /* "RadiusFadeMin" */
         sscanf(pszValue, "%f", &mRadiusFadeMin);
         break;
 
-    case 0x6e74d661:
+    case 0x6e74d661: /* "RadiusFadeMax" */
         sscanf(pszValue, "%f", &mRadiusFadeMax);
         break;
 
-    case 0x9d399b92:
+    case 0x9d399b92: /* "MaxLifeTime" */
         sscanf(pszValue, "%f", &mLifeTimeMax);
         break;
 
-    case 0xb10f20ca:
+    case 0xb10f20ca: /* "MinVel" */
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mVelMin.x = fX;
         mVelMin.y = fY;
         mVelMin.z = fZ;
         break;
+    }
 
-    case 0xa7bcb86c:
+    case 0xa7bcb86c: /* "MaxVel" */
+    {
+        float fX, fY, fZ;
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
         mVelMax.x = fX;
         mVelMax.y = fY;
         mVelMax.z = fZ;
         break;
+    }
 
-    case 0xb4368857:
+    case 0xb4368857: /* "SpawnSound" */
         mDustSound.SetID(pszValue, false, false);
         break;
 
-    case 0xcaaa3778:
+    case 0xcaaa3778: /* "HeightScale" */
         sscanf(pszValue, "%f", &mHeightScale);
         break;
 
-    case 0xbd9397ec:
+    case 0xbd9397ec: /* "MinLifeTime" */
         sscanf(pszValue, "%f", &mLifeTimeMin);
         break;
 
-    case 0xb835cf50:
+    case 0xb835cf50: /* "MinDistance" */
         sscanf(pszValue, "%f", &mMinDistance);
         break;
 
-    case 0xd133f7da:
+    case 0xd133f7da: /* "NumParticles" */
         if (sscanf(pszValue, "%i", &mNumParticles))
         {
             mNumParticles = (unsigned int)mNumParticles / CameraManager::sInstance->m_iNumCam;
         }
         break;
 
-    case 0xeaebcf6e:
+    case 0xeaebcf6e: /* "MinSize" */
         sscanf(pszValue, "%f", &mSizeMin);
         break;
 
-    case 0xe6915cf6:
+    case 0xe6915cf6: /* "MaxDistance" */
         sscanf(pszValue, "%f", &mMaxDistance);
         break;
 
@@ -493,7 +497,7 @@ bool DustEffectClass::Init()
     for (int i = 0; i < mNumParticles; ++i)
     {
         SpawnParticle(mParticle[i]);
-        mParticle[i].mLifeTime *= PblRandom::GetGlobalFloat();
+        mParticle[i].mLifeTime = PblRandom::_Global.GetFloat() * mParticle[i].mLifeTime;
         mParticle[i].mColor = mColor;
         mParticle[i].mTime = 0.0f;
     }
@@ -671,7 +675,8 @@ CloudClusterObject::CloudClusterObject(CloudClusterClass* pClass, const PblVecto
     mClass = pClass;
     SetRenderPos(mPosition);
     SetRenderRadius(mClass->mBoundingRadius);
-    Activate();
+    RedSceneObject* pObject = this;
+    pObject->Activate();
 }
 
 // FUNCTION: SWBF2 0x00490a10
@@ -691,12 +696,10 @@ void CloudClusterObject::Render(unsigned char ucViewport, float fDist, unsigned 
     {
         return;
     }
-    if (RedSceneManager::InTransparentPhase())
-    {
-        mClass->RenderDustEffects(mPosition, mSeed, uiFlags);
-    }
-    else
+    if (!RedSceneManager::InTransparentPhase())
     {
         RedSceneManager::AddTransparentObject(this);
+        return;
     }
+    mClass->RenderDustEffects(mPosition, mSeed, uiFlags);
 }

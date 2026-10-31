@@ -35,7 +35,8 @@ unsigned int GetViewportCount();
 // FUNCTION: SWBF2 0x00635be0
 void ShadowEffect::Init()
 {
-    s_pInstance->Enable(!(FLRenderer::GetViewportCount() > 1));
+    bool bSplitScreen = FLRenderer::GetViewportCount() > 1;
+    s_pInstance->Enable(!bSplitScreen);
 }
 
 // FUNCTION: SWBF2 0x00635d00
@@ -89,7 +90,8 @@ void ShadowEffect::ReadConfig(PblConfig& config)
             break;
         }
     }
-    ShadowEffect::Init();
+    bool bSplitScreen = FLRenderer::GetViewportCount() > 1;
+    s_pInstance->Enable(!bSplitScreen);
 }
 
 // FUNCTION: SWBF2 0x00635d20

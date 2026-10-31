@@ -23,16 +23,13 @@ void EnergyBarClass::Init(float fEnergyMax, float fEnergyOverheat)
 
     if (0.0f > fEnergyOverheat)
     {
-        m_fEnergyOverheat = 0.0f;
+        fEnergyOverheat = 0.0f;
     }
     else if (fEnergyOverheat > fEnergyMax)
     {
-        m_fEnergyOverheat = fEnergyMax;
+        fEnergyOverheat = fEnergyMax;
     }
-    else
-    {
-        m_fEnergyOverheat = fEnergyOverheat;
-    }
+    m_fEnergyOverheat = fEnergyOverheat;
 }
 
 // FUNCTION: SWBF2 0x004914a0
@@ -58,13 +55,13 @@ bool EnergyBarClass::SetProperty(unsigned int uProperty, const char* pszValue)
         {
             m_fEnergyOverheat = 0.0f;
         }
-        else if (m_fEnergyOverheat > 0.0f)
+        else if (m_fEnergyOverheat <= 0.0f)
         {
-            m_fEnergyOverheat = 1.0f - m_fEnergyOverheat;
+            m_fEnergyOverheat = 1.0f;
         }
         else
         {
-            m_fEnergyOverheat = 1.0f;
+            m_fEnergyOverheat = 1.0f - m_fEnergyOverheat;
         }
         return true;
 

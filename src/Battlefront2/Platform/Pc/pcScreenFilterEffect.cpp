@@ -21,7 +21,7 @@ static pcClearShader* s_pClearShader;
 void ScreenFilterEffect::PlatformInit()
 {
     s_pClearShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x203, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "Clear" */, 0x203, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
 }
 
 // FUNCTION: SWBF2 0x00426f00

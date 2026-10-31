@@ -57,8 +57,8 @@ EndDisplay::EndDisplay()
     sCanRender = true;
     for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
     {
-        FLRenderer::AddInterfaceElement(CameraManager::sInstance->m_hView[i], &mEndGroup[i], 0.5f, 0.5f,
-                                        true);
+        FLRenderer::AddInterfaceElement(CameraManager::sInstance->m_hView[i], &mEndGroup[i],
+                                        RedInterfaceScreen::CENTER, RedInterfaceScreen::CENTER, true);
         mEndText[i].Enable(false);
         mEndGroup[i].AddElement(&mEndText[i]);
     }
@@ -281,16 +281,16 @@ bool EndDisplay::IsReallyFinished()
 // FUNCTION: SWBF2 0x00491320
 bool EndDisplay::IsFinished()
 {
-    if (!IsReallyFinished())
+    if (IsReallyFinished())
     {
-        return false;
+        bool finished = true;
+        for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
+        {
+            finished &= !mEndText[i].IsEnabled();
+        }
+        return finished;
     }
-    bool finished = true;
-    for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
-    {
-        finished &= !mEndText[i].IsEnabled();
-    }
-    return finished;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00491360

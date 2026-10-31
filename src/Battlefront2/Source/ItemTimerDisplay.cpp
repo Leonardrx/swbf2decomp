@@ -38,24 +38,23 @@ void ItemTimerDisplay::Init()
     for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
     {
         const unsigned int hView = CameraManager::sInstance->m_hView[i];
-        DisplayThread* pThread = sDisplayThread[i];
-        pThread->ActivateThread(0, PER_FRAME);
-        pThread->mItemTimerCount = 0;
+        sDisplayThread[i]->ActivateThread(0, PER_FRAME);
+        sDisplayThread[i]->mItemTimerCount = 0;
 
         for (int j = 0; j < 8; ++j)
         {
-            pThread->mItemArray[j] = 0;
-            RedScreenGroupElement* pGroup = &pThread->mItemGroup[j];
-            pGroup->Enable(false);
-            pGroup->AddElement(&pThread->mItemText[j]);
+            sDisplayThread[i]->mItemArray[j] = 0;
+            sDisplayThread[i]->mItemGroup[j].Enable(false);
+            sDisplayThread[i]->mItemGroup[j].AddElement(&sDisplayThread[i]->mItemText[j]);
 
-            RedTextElement* pText = &pThread->mItemText[j];
-            pText->SetFont(RedFont::GAMEFONT_TINY);
-            pText->SetIntercharacterSpacing(0);
-            pText->m_eStyle = RedGlyphCacheElement::TEXT_STYLE_SHADOW;
-            pText->SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER, RedTextElement::TEXT_VALIGN_BOTTOM);
+            sDisplayThread[i]->mItemText[j].SetFont(RedFont::GAMEFONT_TINY);
+            sDisplayThread[i]->mItemText[j].SetIntercharacterSpacing(0);
+            sDisplayThread[i]->mItemText[j].m_eStyle = RedGlyphCacheElement::TEXT_STYLE_SHADOW;
+            sDisplayThread[i]->mItemText[j].SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER,
+                                                         RedTextElement::TEXT_VALIGN_BOTTOM);
 
-            FLRenderer::AddInterfaceElement(hView, pGroup, 0.5f, 0.5f, false);
+            FLRenderer::AddInterfaceElement(hView, &sDisplayThread[i]->mItemGroup[j], RedInterfaceScreen::CENTER,
+                                            RedInterfaceScreen::CENTER, false);
         }
     }
 }

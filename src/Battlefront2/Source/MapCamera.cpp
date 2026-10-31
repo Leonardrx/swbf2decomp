@@ -69,11 +69,10 @@ void MapCamera::SetMatrix(const PblMatrix& rMatrix)
 // FUNCTION: SWBF2 0x005a1ea0
 void MapCamera::SetZoomLevel(ZoomLevel eLevel)
 {
-    int iDir = eLevel - mZoomLevel;
     int iOldDir = mZoomDir;
-    mZoomDir = iDir;
+    mZoomDir = eLevel - mZoomLevel;
     mZoomLevel = eLevel;
-    if (iOldDir * iDir < 0)
+    if (iOldDir * mZoomDir < 0)
     {
         mZoomRatio = 1.0f - mZoomRatio;
         mZoomOldDir = mZoomNewDir;

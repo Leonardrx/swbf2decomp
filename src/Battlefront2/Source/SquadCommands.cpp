@@ -85,13 +85,13 @@ void SquadCommands::VehicleCommand(GameObject* pObject, Character* pCharacter)
     {
         pNode = pNode->_pNext;
     }
-    if (pNode->_pObject)
+    if (!pNode->_pObject)
     {
-        SquadCommands::VehicleGetIn(pObject, pCharacter);
+        SquadCommands::VehicleGetOut(pObject, pCharacter);
     }
     else
     {
-        SquadCommands::VehicleGetOut(pObject, pCharacter);
+        SquadCommands::VehicleGetIn(pObject, pCharacter);
     }
 }
 
@@ -250,7 +250,7 @@ void SquadCommands::AIShoutOrder(SquadCommandOrder& order, float fDelay)
     if (order.mWhatOrder == SC_FOLLOW && order.mWhoGaveIt->mVehicle)
     {
         order.mWhatOrder = SC_BOARDVEHICLE;
-        order.mGameObj = PblHandle<GameObject>(static_cast<Trackable*>(order.mWhoGaveIt->mVehicle)->GetGameObject());
+        order.mGameObj = order.mWhoGaveIt->mVehicle->GetGameObject();
     }
 
     (void)fDelay;

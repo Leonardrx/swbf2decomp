@@ -19,8 +19,8 @@ FoleyFXGroup* FoleyFXGroup::smWater;
 
 // FUNCTION: SWBF2 0x0052c780
 FoleyFXGroup::FoleyFXGroup()
+    : mID(0)
 {
-    mID = 0;
     smList.AddLast(&mNode);
 }
 
@@ -35,21 +35,22 @@ void FoleyFXGroup::Read(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        unsigned int uChunkID = child._pFile->Read32();
-        if (uChunkID == 0x8d39bde6)
+        switch (child._pFile->Read32())
         {
+        case 0x8d39bde6:
             child._pFile->Read8();
             mID = child._pFile->Read32();
-            if (mID == 0x26c04c0e)
+            switch (mID)
             {
+            case 0x26c04c0e:
                 smTerrain = this;
-            }
-            else if (mID == 0x425aa124)
-            {
+                break;
+            case 0x425aa124:
                 smWater = this;
+                break;
             }
-        }
-        else if (uChunkID == 0xe64c1c32)
+            break;
+        case 0xe64c1c32:
         {
             child._pFile->Read8();
             FoleyFX* pFX = FoleyFX::FindByID(child._pFile->Read32());
@@ -57,6 +58,8 @@ void FoleyFXGroup::Read(PblFileChunk& chunk)
             {
                 mList.Add(pFX);
             }
+            break;
+        }
         }
     }
 }
@@ -111,8 +114,8 @@ void FoleyFXGroup::DestroyAll()
             (FoleyFXGroup*)((char*)smList.mHead.mNext - offsetof(FoleyFXGroup, mNode));
         delete pGroup;
     }
-    smTerrain = 0;
     smWater = 0;
+    smTerrain = 0;
 }
 
 // FUNCTION: SWBF2 0x0052c9c0

@@ -26,9 +26,9 @@ void BlurEffect::PlatformInit()
     m_constantBlend = 0.25f;
     m_downSizeFactor = 0.25f;
     m_pFilterShader = (pcFilterCopyShader*)pcRedShader::Create(
-        PblHash("FilterCopy"), 0x202, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0xfb9eb106 /* "FilterCopy" */, 0x202, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
     m_pClearShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x203, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "Clear" */, 0x203, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
 }
 
 // FUNCTION: SWBF2 0x0040f810
@@ -58,6 +58,7 @@ void BlurEffect::PlatformReadConfigData(PblConfig::Data& data)
         m_downSizeFactor = data.GetFloatArg(0);
         break;
     case 0x055CEA38u:
+        (void)data.GetFloatArg(0);
         break;
     }
 }

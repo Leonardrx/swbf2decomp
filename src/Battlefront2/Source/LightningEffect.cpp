@@ -78,13 +78,10 @@ void LightningEffect::Destroy()
 
 // FUNCTION: SWBF2 0x005728e0
 LightningEffect::LightningEffect()
-    : FLEffect(0xE812F405u, 3)
+    : FLEffect(0xE812F405u /* "Lightning" */, 3)
 {
     Enable(false);
-    m_colorLightning.r = 0.937254965f;
-    m_colorLightning.g = 0.972549081f;
-    m_colorLightning.b = 1.0f;
-    m_colorLightning.a = 1.0f;
+    m_colorLightning = RedColorValue(0.937254965f, 0.972549081f, 1.0f, 1.0f);
     m_fSunlightFadeMax = 0.1f;
     m_fSkyDomeDarken = 0.4f;
     m_fBrightnessMin = 0.9f;

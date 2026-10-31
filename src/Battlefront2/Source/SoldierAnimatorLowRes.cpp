@@ -494,20 +494,15 @@ SoldierAnimatorLowRes* SoldierAnimatorLowResClass::GetAnimator(const EntitySoldi
 {
     ZephyrSkeletonShared* pSkeleton = soldier.mClass->mSpecialSkeletonLowRes;
 
-    SoldierAnimatorLowResClass* pClass;
-    for (pClass = s_pHead; pClass; pClass = pClass->m_pNext)
+    for (SoldierAnimatorLowResClass* pClass = s_pHead; pClass; pClass = pClass->m_pNext)
     {
         if (pClass->m_pZephyrSkeletonShared == pSkeleton)
         {
-            break;
+            return pClass->GetAnimatorLocal(soldier);
         }
     }
-    if (!pClass)
-    {
-        pClass = s_pHead;
-    }
 
-    return pClass->GetAnimatorLocal(soldier);
+    return s_pHead->GetAnimatorLocal(soldier);
 }
 
 // FUNCTION: SWBF2 0x00648e40
@@ -528,11 +523,12 @@ SoldierAnimatorLowResClass::SoldierAnimatorLowResClass(const char* pcName,
         pAnimation = RedAnimation::Find(PblHash(uiNameHash, "_0"));
     }
 
-    m_pZephyrSkeletonShared = pAnimation->GetZephyrSkeletonShared();
+    ZephyrSkeletonShared* pSkeletonShared = pAnimation->GetZephyrSkeletonShared();
+    m_pZephyrSkeletonShared = pSkeletonShared;
     strlcpy(m_szName, pcName, sizeof(m_szName) - 1);
     m_uiNameHash = uiNameHash;
 
-    SetupJointTransformAnimationFlag(m_pZephyrSkeletonShared);
+    SetupJointTransformAnimationFlag(pSkeletonShared);
 }
 
 // FUNCTION: SWBF2 0x00648ee0
@@ -869,13 +865,13 @@ void SoldierAnimatorLowRes::Initialize(const ZephyrSkeletonShared* pSkeleton, co
         {
             fTime = 0.0f;
         }
-        else if (pPoseClass->m_iFrame >= iNumFrames)
+        else if (pPoseClass->m_iFrame < iNumFrames)
         {
-            fTime = 1.0f;
+            fTime = (float)(pPoseClass->m_iFrame - 1) / (float)iNumFrames;
         }
         else
         {
-            fTime = (float)(pPoseClass->m_iFrame - 1) / (float)iNumFrames;
+            fTime = 1.0f;
         }
 
         kPoseDyn.Update(fTime);
@@ -992,7 +988,11 @@ SoldierAnimatorLowRes* SoldierAnimatorLowRes::GetOwnerAnimator(const EntitySoldi
                                                                SoldierAnimatorLowResClass::POSE ePose,
                                                                SoldierAnimatorLowResClass::ANIMPOOL eAnimPool)
 {
-    return ePose == m_ePose ? this : NULL;
+    if (ePose != m_ePose)
+    {
+        return NULL;
+    }
+    return this;
 }
 
 // FUNCTION: SWBF2 0x00649bb0
@@ -1024,8 +1024,8 @@ void SoldierAnimatorLowRes_Pool::Initialize(const ZephyrSkeletonShared* pSkeleto
     mZephyrPoseDyn.Open(mZephyrSkeleton);
     mPose.ConvertFromZephyrPose(mZephyrPoseStatic);
 
-    mZephyrPoseDyn.m_bInterpolate = false;
     mZephyrPoseDyn.SetLoop(pPoolClass->m_bLoop);
+    mZephyrPoseDyn.m_bInterpolate = false;
     mZephyrPoseDyn.SetAnimation(pPool->m_apZephyrAnim[0], 30.0f);
 
     if (pPool->m_apZephyrAnim[0])
@@ -1034,14 +1034,14 @@ void SoldierAnimatorLowRes_Pool::Initialize(const ZephyrSkeletonShared* pSkeleto
 
         int iNumFrames = pPool->m_apZephyrAnim[0]->m_u16NumFrames;
         float fTime;
-        if (iNumFrames <= 1)
-        {
-            fTime = 0.0f;
-        }
-        else
+        if (iNumFrames > 1)
         {
             fTime = (float)(int)(this - pPool->m_apAnimator) * (float)(iNumFrames - 1) /
                     ((float)pPoolClass->m_iPoolSize * 30.0f);
+        }
+        else
+        {
+            fTime = 0.0f;
         }
 
         mZephyrPoseDyn.Update(fTime);
@@ -1099,8 +1099,7 @@ bool SoldierAnimatorLowRes_Pool::GetRootMatrixAnimation(const EntitySoldier& sol
     PblVector3 vFront(fSin, 0.0f, fCos);
     PblVector3 vRight(fCos, 0.0f, -fSin);
 
-    PblMatrix kRoot(vRight, gVectorUnitY, vFront, gVectorZero);
-    kMatrix = kRoot;
+    kMatrix = PblMatrix(vRight, gVectorUnitY, vFront, gVectorZero);
     return true;
 }
 
@@ -1127,8 +1126,8 @@ void SoldierAnimatorLowRes_UnsharedPool::Initialize(const ZephyrSkeletonShared* 
     mZephyrPoseDyn.Open(mZephyrSkeleton);
     mPose.ConvertFromZephyrPose(mZephyrPoseStatic);
 
-    mZephyrPoseDyn.m_bInterpolate = false;
     mZephyrPoseDyn.SetLoop(pPoolClass->m_bLoop);
+    mZephyrPoseDyn.m_bInterpolate = false;
     mZephyrPoseDyn.SetAnimation(pPool->m_apZephyrAnim[0], 30.0f);
 
     if (pPool->m_apZephyrAnim[0])

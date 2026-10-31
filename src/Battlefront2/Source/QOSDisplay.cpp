@@ -175,10 +175,11 @@ void QOSDisplay::InitClient()
     QosIcon.SetRect(64.0f, 64.0f, RedBitmapElement::BITMAP_HALIGN_LEFT,
                     RedBitmapElement::BITMAP_VALIGN_TOP);
     QosIcon.m_color.a = QosIconAlpha;
-    QosIcon.SetTexture(0x298058FEu);
+    QosIcon.SetTexture(0x298058FEu /* "tooltip_bg" */);
     msgGroup.AddElement(&QosIcon);
 
-    FLRenderer::AddInterfaceElement(&msgGroup, 1.0f, 1.0f, false);
+    FLRenderer::AddInterfaceElement(&msgGroup, RedInterfaceScreen::RIGHT,
+                                    RedInterfaceScreen::BOTTOM, false);
 }
 
 // FUNCTION: SWBF2 0x0062dd10

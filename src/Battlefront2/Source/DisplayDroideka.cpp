@@ -140,10 +140,22 @@ void DroidekaElement::RenderUsingContext(const PblMatrix& mContext, const RedCol
     mScreen.m[3][2] *= fScale;
     mScreen.m[3][3] = 1.0f;
 
-    PblMatrix mWorld(mRotation, mTranslation);
+    PblMatrix mWorld;
+    PblQuaternion qUnit;
+    D3DXMatrixRotationQuaternion((D3DXMATRIX*)&mWorld,
+                                 D3DXQuaternionNormalize((D3DXQUATERNION*)&qUnit,
+                                                         (const D3DXQUATERNION*)&mRotation));
+    mWorld.m[3][0] = mTranslation.x;
+    mWorld.m[3][1] = mTranslation.y;
+    mWorld.m[3][2] = mTranslation.z;
+    mWorld.m[3][3] = 1.0f;
 
-    mWorld.Scale(mScale);
-    mScreen = mWorld * mScreen;
+    PblMatrix mScaling;
+    D3DXMatrixMultiply((D3DXMATRIX*)&mWorld, (const D3DXMATRIX*)&mWorld,
+                       D3DXMatrixScaling((D3DXMATRIX*)&mScaling, mScale, mScale, mScale));
+    D3DXMatrixMultiply((D3DXMATRIX*)&mScaling, (const D3DXMATRIX*)&mWorld,
+                       (const D3DXMATRIX*)&mScreen);
+    mScreen = mScaling;
 
     BuildWorldMatrices();
     mModel->GetRedModel(0)->Render(&mScreen, &mPose, color, 0x4000000, 0);
@@ -247,9 +259,15 @@ void DroidekaElement::UpdateState(bool bRoll)
             SetState(EntityDroideka::IdleToRoll);
         }
     }
-    else if (mState == EntityDroideka::IdleToRoll || mState == EntityDroideka::Rolling)
+    else
     {
-        SetState(EntityDroideka::RollToIdle);
+        switch (mState)
+        {
+        case EntityDroideka::IdleToRoll:
+        case EntityDroideka::Rolling:
+            SetState(EntityDroideka::RollToIdle);
+            break;
+        }
     }
 }
 

@@ -256,17 +256,21 @@ bool FishParticle::Update(float fDeltaTime)
     }
 
     mTimeOffCamera += fDeltaTime;
-    if (!(mTimeOffCamera > 5.0f))
+    if (mTimeOffCamera > 5.0f)
     {
-        switch (mState)
-        {
-        case FISH_SWIM:
-            return UpdateSwimmingFish(fDeltaTime);
-        case FISH_FLOAT:
-            return UpdateFloatingFish(fDeltaTime);
-        case FISH_JUMP:
-            return UpdateJumpingFish(fDeltaTime);
-        }
+        mIsValid = false;
+        Deactivate();
+        return true;
+    }
+
+    switch (mState)
+    {
+    case FISH_SWIM:
+        return UpdateSwimmingFish(fDeltaTime);
+    case FISH_FLOAT:
+        return UpdateFloatingFish(fDeltaTime);
+    case FISH_JUMP:
+        return UpdateJumpingFish(fDeltaTime);
     }
     mIsValid = false;
     Deactivate();
@@ -338,14 +342,14 @@ bool FishParticleManager::Create()
 // FUNCTION: SWBF2 0x005237d0
 bool FishParticleManager::Destroy()
 {
-    if (!sInstance)
+    if (sInstance)
     {
-        return false;
+        PlatformCleanup();
+        delete sInstance;
+        sInstance = NULL;
+        return true;
     }
-    PlatformCleanup();
-    delete sInstance;
-    sInstance = NULL;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00523800

@@ -90,19 +90,23 @@ HUD::TransformNumberVector3::TransformNumberVector3(const char* const pName,
 PblVector3 HUD::TransformNumberVector3::CalculateOutputVector3(float fInput) const
 {
     const float fValue = CalculateInputValue(fInput, mMapping[0].number, mMapping[mNumMappings - 1].number);
-    unsigned int i = 0;
-    while (i < mNumMappings && mMapping[i].number < fValue)
+    unsigned int i;
+    for (i = 0; i < mNumMappings; ++i)
     {
-        ++i;
+        if (mMapping[i].number >= fValue)
+        {
+            break;
+        }
     }
-    const NumberVector3& high = mMapping[(i == mNumMappings) ? i - 1 : i];
-    const NumberVector3& low = mMapping[i ? i - 1 : 0];
+    const NumberVector3 high = mMapping[(i == mNumMappings) ? i - 1 : i];
+    const NumberVector3 low = mMapping[i ? i - 1 : 0];
     const float fDelta = high.number - low.number;
     if (fDelta == 0.0f)
     {
         return high.vector3;
     }
-    return Interpolate(low.vector3, high.vector3, (fValue - low.number) / fDelta);
+    const PblVector3 result = Interpolate(low.vector3, high.vector3, (fValue - low.number) / fDelta);
+    return result;
 }
 
 // FUNCTION: SWBF2 0x005689e0
@@ -121,7 +125,8 @@ void HUD::TransformNumberVector3::EventInput(const HUD::Event& event, void* cons
         }
         const PblVector3 vector = pTransform->CalculateOutputVector3(
             event.GetDataFloat() * pTransform->mInputFactorConstant * pTransform->mInputFactor);
-        HUD::Event(pTransform->mEventClassOutput, &vector).Send();
+        HUD::Event outEvent(pTransform->mEventClassOutput, &vector);
+        outEvent.Send();
         break;
     }
     default:

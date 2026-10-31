@@ -29,6 +29,7 @@ namespace PowerupUtility
 // FUNCTION: SWBF2 0x00626690
 static bool DoHealth(GameObject* pObject, float fHealth, bool bApply, DamageOwner* pOwner)
 {
+    bool bResult = false;
     if (fHealth != 0.0f)
     {
         if ((pObject->mCurHealth < pObject->mMaxHealth && pObject->mAddHealth >= 0.0f) || fHealth < 0.0f)
@@ -36,16 +37,13 @@ static bool DoHealth(GameObject* pObject, float fHealth, bool bApply, DamageOwne
             if (bApply)
             {
                 float fNewHealth = pObject->mCurHealth + fHealth;
-                if (fNewHealth > pObject->mMaxHealth)
-                {
-                    fNewHealth = pObject->mMaxHealth;
-                }
-                pObject->SetCurHealth(fNewHealth, true, pOwner);
+                pObject->SetCurHealth(fNewHealth > pObject->mMaxHealth ? pObject->mMaxHealth : fNewHealth,
+                                      true, pOwner);
             }
-            return true;
+            bResult = true;
         }
     }
-    return false;
+    return bResult;
 }
 
 // FUNCTION: SWBF2 0x00626700
@@ -68,47 +66,47 @@ bool CheckHealth(GameObject* pObject, float fHealth)
 static bool DoAmmo(GameObject* pObject, float fAmmo, bool bSkipPowerupDispensers, bool bApply)
 {
     bool bResult = false;
-    if (fAmmo == 0.0f)
+    if (fAmmo != 0.0f)
     {
-        return bResult;
-    }
-
-    for (PblList<Controllable>::Itor it(pObject->GetControllableList()); it; ++it)
-    {
-        int iNumWeapons = it->GetWeaponCount();
-        for (int i = 0; i < iNumWeapons; ++i)
+        for (PblList<Controllable>::Itor it(pObject->GetControllableList()); it; ++it)
         {
-            Weapon* pWeapon = it->GetWeaponPtr(i);
-            if (!pWeapon)
+            int iNumWeapons = it->GetWeaponCount();
+            for (int i = 0; i < iNumWeapons; ++i)
             {
-                continue;
-            }
-            if (bSkipPowerupDispensers &&
-                pWeapon->mClass->IsRtti(WeaponDispenserClass::rttiHashWeaponDispenserClass))
-            {
-                EntityClass* pDispenseClass = ((WeaponDispenserClass*)pWeapon->mClass)->mDispenseClass;
-                if (pDispenseClass && pDispenseClass->IsRtti(PowerupItemClass::rttiHashPowerupItemClass))
+                Weapon* pWeapon = it->GetWeaponPtr(i);
+                if (!pWeapon)
                 {
                     continue;
                 }
-            }
-
-            AmmoCounter* pAmmo = pWeapon->m_pAmmoCounter;
-            bool bClipEmpty = pAmmo->mMaxClips <= 1.0f && pAmmo->mCurClip < 1.0f;
-            bool bTook = false;
-            if (fAmmo > 0.0f && !pAmmo->HasInfiniteAmmo() && (!pAmmo->IsReserveFull() || bClipEmpty))
-            {
-                bTook = true;
-                if (bApply)
+                if (bSkipPowerupDispensers &&
+                    pWeapon->mClass->IsRtti(WeaponDispenserClass::rttiHashWeaponDispenserClass))
                 {
-                    if (bClipEmpty)
+                    EntityClass* pDispenseClass = ((WeaponDispenserClass*)pWeapon->mClass)->mDispenseClass;
+                    if (pDispenseClass && pDispenseClass->IsRtti(PowerupItemClass::rttiHashPowerupItemClass))
                     {
-                        pWeapon->m_pAmmoCounter->UnloadClip();
+                        continue;
                     }
-                    pWeapon->m_pAmmoCounter->AddClips(fAmmo);
                 }
+
+                AmmoCounter* pAmmo = pWeapon->m_pAmmoCounter;
+                bool bReserveFull = pAmmo->IsReserveFull();
+                bool bClipEmpty = pAmmo->mMaxClips <= 1.0f && pAmmo->mCurClip < 1.0f;
+                bool bInfinite = pAmmo->HasInfiniteAmmo();
+                bool bTook = false;
+                if (fAmmo > 0.0f && !bInfinite && (!bReserveFull || bClipEmpty))
+                {
+                    bTook = true;
+                    if (bApply)
+                    {
+                        if (bClipEmpty)
+                        {
+                            pWeapon->m_pAmmoCounter->UnloadClip();
+                        }
+                        pWeapon->m_pAmmoCounter->AddClips(fAmmo);
+                    }
+                }
+                bResult |= bTook;
             }
-            bResult |= bTook;
         }
     }
     return bResult;
@@ -142,47 +140,42 @@ bool CheckAmmo(GameObject* pObject, float fAmmo, bool bSkipPowerupDispensers)
 static bool DoEnergy(GameObject* pObject, float fEnergy, bool bApply)
 {
     bool bResult = false;
-    if (fEnergy == 0.0f)
+    if (fEnergy != 0.0f)
     {
-        return bResult;
-    }
-
-    for (PblList<Controllable>::Itor it(pObject->GetControllableList()); it; ++it)
-    {
-        EnergyBar* pBar = it->GetEnergyBar();
-        if (!pBar)
+        for (PblList<Controllable>::Itor it(pObject->GetControllableList()); it; ++it)
         {
-            continue;
-        }
-        float fCur = pBar->m_fEnergy;
-        if (fEnergy > 0.0f)
-        {
-            float fMax = pBar->m_pClass->m_fEnergyMax;
-            if (fMax > fCur)
+            EnergyBar* pBar = it->GetEnergyBar();
+            if (!pBar)
             {
-                float fAdd = fMax - fCur;
-                bResult = true;
-                if (fAdd > fEnergy)
+                continue;
+            }
+            float fCur = pBar->m_fEnergy;
+            if (fEnergy > 0.0f)
+            {
+                float fMax = pBar->m_pClass->m_fEnergyMax;
+                if (fMax > fCur)
                 {
-                    fAdd = fEnergy;
+                    float fAdd = fMax - fCur;
+                    bResult = true;
+                    if (fAdd > fEnergy)
+                    {
+                        fAdd = fEnergy;
+                    }
+                    if (bApply)
+                    {
+                        pBar->AddEnergy(fAdd);
+                    }
                 }
+            }
+            else if (fCur > 0.0f)
+            {
+                float fSpend = -fEnergy;
+                bResult = true;
+                fSpend = fCur > fSpend ? fSpend : fCur;
                 if (bApply)
                 {
-                    pBar->AddEnergy(fAdd);
+                    pBar->SpendEnergy(fSpend);
                 }
-            }
-        }
-        else if (fCur > 0.0f)
-        {
-            float fSpend = -fEnergy;
-            bResult = true;
-            if (fSpend > fCur)
-            {
-                fSpend = fCur;
-            }
-            if (bApply)
-            {
-                pBar->SpendEnergy(fSpend);
             }
         }
     }
@@ -223,7 +216,8 @@ static bool DoBuff(GameObject* pObject, float fOffenseTimer, float fOffenseMult,
             {
                 if (fDamageTimer > 0.0f)
                 {
-                    pSoldier->DebuffDamage(fDamageTimer, fDamageRate, DamageOwner(0, 0, 0, 0, 0, 1.0f));
+                    DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
+                    pSoldier->DebuffDamage(fDamageTimer, fDamageRate, owner);
                 }
                 if (fOffenseTimer > 0.0f)
                 {
@@ -247,7 +241,8 @@ static bool DoBuff(GameObject* pObject, float fOffenseTimer, float fOffenseMult,
             {
                 if (fDamageTimer > 0.0f)
                 {
-                    pDroideka->DebuffDamage(fDamageTimer, fDamageRate, DamageOwner(0, 0, 0, 0, 0, 1.0f));
+                    DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
+                    pDroideka->DebuffDamage(fDamageTimer, fDamageRate, owner);
                 }
                 if (fOffenseTimer > 0.0f)
                 {

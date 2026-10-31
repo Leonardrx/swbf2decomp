@@ -253,16 +253,21 @@ void PatrolHelper::UpdateState(float dt)
 const PatrolHint* PatrolHelper::SelectHint(int i, const BaseHint** ppHint)
 {
     const GameObject* pMe = GetMe()->GetGameObject();
-    while (i > 0)
+    if (i > 0)
     {
-        --i;
-        const BaseHint** ppPick = &ppHint[AIUtil::GetRandomInt(0, i)];
-        const BaseHint* pHint = *ppPick;
-        if (AIUtil::IsHintAvailable(pMe, pHint) && pHint != mHint)
+        const BaseHint** ppLast = ppHint + (i - 1);
+        do
         {
-            return static_cast<const PatrolHint*>(pHint);
-        }
-        *ppPick = ppHint[i];
+            --i;
+            const BaseHint** ppPick = &ppHint[AIUtil::GetRandomInt(0, i)];
+            const BaseHint* pHint = *ppPick;
+            if (AIUtil::IsHintAvailable(pMe, pHint) && pHint != mHint)
+            {
+                return static_cast<const PatrolHint*>(pHint);
+            }
+            *ppPick = *ppLast;
+            --ppLast;
+        } while (i > 0);
     }
     return NULL;
 }

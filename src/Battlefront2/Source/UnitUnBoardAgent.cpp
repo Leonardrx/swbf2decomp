@@ -36,9 +36,11 @@ UnitUnBoardAgent::UnitUnBoardAgent(UnitController* pCtrl)
 // FUNCTION: SWBF2 0x0066b270
 void UnitUnBoardAgent::EnterState()
 {
-    if (mCurState == 1)
+    switch (mCurState)
     {
+    case 1:
         GetLowLevel().SetExitVehicle(0);
+        break;
     }
 }
 

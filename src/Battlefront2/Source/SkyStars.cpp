@@ -23,12 +23,15 @@ unsigned int GetCurrentViewport();
 // FUNCTION: SWBF2 0x00639960
 SkyStars::SkyStars()
     : m_uiNumStars(0), m_uiRandomSeed(0), m_fBrightStarRatio(0.08f),
-      m_fMinBrightness(0.05f), m_fColorSaturation(1.0f), m_color(RedColor::WHITE),
-      m_fTwinkleFactor(0.0f), m_fTwinkleFrequency(0.0f), m_fTwinkleTimer(0.0f),
-      m_fSinAngleMin(-1.0f), m_fSinAngleFade(-1.0f), m_bRenderBottom(false),
-      m_pShader(0)
+      m_fMinBrightness(0.05f), m_fColorSaturation(1.0f),
+      m_fTwinkleFactor(0.0f), m_fTwinkleFrequency(0.0f), m_fTwinkleTimer(0.0f)
 {
+    m_color = RedColor::WHITE;
+    m_fSinAngleMin = -1.0f;
+    m_fSinAngleFade = -1.0f;
+    m_bRenderBottom = false;
     memset(m_aStarFields, 0, sizeof(m_aStarFields));
+    m_pShader = 0;
 }
 
 // SYNTHETIC: SWBF2 0x00639a10

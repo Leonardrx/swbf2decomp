@@ -24,31 +24,21 @@ void LockOnManager::Target::InitCommon(GameObject* const pObject, unsigned int u
 // FUNCTION: SWBF2 0x0057da40
 void LockOnManager::AddTargetCommon(GameObject* pActor, unsigned int uTeamMask)
 {
-    unsigned int i = 0;
-    for (; i < 32; ++i)
+    unsigned int i;
+    for (i = 0; i < 32; ++i)
     {
         LockOnManager::Target& target = LockOnManager::sTargetCommon[i];
-        if (!target.obj.mObject)
+        GameObject* pObject = target.obj;
+        if (!pObject || pActor == pObject || !target.teamMask)
         {
-            break;
-        }
-        if (target.obj.mObject->mHandleId != target.obj.mSavedHandleId)
-        {
-            target.obj.mObject = 0;
-            target.obj.mSavedHandleId = 0;
-            break;
-        }
-        if (target.obj.mObject == pActor || !target.teamMask)
-        {
+            target.InitCommon(pActor, uTeamMask | target.teamMask);
             break;
         }
     }
-    if (i == 32)
+    if (i >= 32)
     {
         return;
     }
-    LockOnManager::Target& target = LockOnManager::sTargetCommon[i];
-    target.InitCommon(pActor, uTeamMask | target.teamMask);
     for (unsigned int j = 0; j < 4; ++j)
     {
         LockOnManager* pManager = LockOnManager::sLockOnManagers[j];
@@ -173,7 +163,7 @@ const RedColor& ColorByHash(unsigned int hashID)
 {
     for (unsigned int i = 0; i < MAX_COLORS; ++i)
     {
-        if (gColorTable[i].hashID == hashID)
+        if (hashID == gColorTable[i].hashID)
         {
             return gColorTable[i].color;
         }
@@ -184,9 +174,10 @@ const RedColor& ColorByHash(unsigned int hashID)
 // FUNCTION: SWBF2 0x00652360
 unsigned int HashByColor(RedColor& color)
 {
+    unsigned int uARGB = color.GetARGB();
     for (unsigned int i = 0; i < MAX_COLORS; ++i)
     {
-        if (color.GetARGB() == gColorTable[i].color.GetARGB())
+        if (uARGB == gColorTable[i].color.GetARGB())
         {
             return gColorTable[i].hashID;
         }
@@ -201,7 +192,8 @@ bool UpdateInterface()
     {
         return true;
     }
-    return (NetGame::IsHost() && NetGame::IsDedicated()) != NetGame::IsClient();
+    bool bHostDedicated = NetGame::IsHost() && NetGame::IsDedicated();
+    return !bHostDedicated == NetGame::IsClient();
 }
 
 extern Marker _gHostMarkers[MAX_MARKERS];
@@ -297,10 +289,11 @@ void RemoveTarget(GameObject* const actor)
     unsigned int i;
     for (i = 0; i < MAX_TARGETS; ++i)
     {
-        if (_gTarget[i].actor == actor)
+        Target& target = _gTarget[i];
+        if (target.actor == actor)
         {
-            _gTarget[i].actor = 0;
-            _gTarget[i].alwaysVisibleToFriends = false;
+            target.actor = 0;
+            target.alwaysVisibleToFriends = false;
             break;
         }
     }
@@ -413,8 +406,9 @@ void AddPost(CommandPost* const post)
 
     if (uIndex != MAX_POSTS)
     {
-        _gPost[uIndex].actor = post;
-        _gPost[uIndex].mapParams = pClass->mMapParams;
+        Post& entry = _gPost[uIndex];
+        entry.actor = post;
+        entry.mapParams = pClass->mMapParams;
         HUD::Event event(HUD::GameEvents::gPlayerEvents[0].mapRefreshPost, uIndex);
         event.Send();
     }
@@ -440,9 +434,10 @@ void RemovePost(CommandPost* const post)
     unsigned int i;
     for (i = 0; i < MAX_POSTS; ++i)
     {
-        if (_gPost[i].actor == post)
+        Post& entry = _gPost[i];
+        if (entry.actor == post)
         {
-            _gPost[i].actor = 0;
+            entry.actor = 0;
             break;
         }
     }
@@ -553,16 +548,17 @@ void AddMarker(GameObject* const actor, const RedRegion* const region, unsigned 
 // FUNCTION: SWBF2 0x00652c30
 void RemoveMarker(GameObject* const actor, const RedRegion* const region, unsigned int teamMask)
 {
-    if (actor ? region != 0 : region == 0)
+    if ((!actor && !region) || (actor && region))
     {
         return;
     }
 
     unsigned int uTeams = teamMask;
+    Marker* markers = _gMarkers;
     for (unsigned int i = 0; i < MAX_MARKERS; ++i)
     {
-        Marker& marker = _gMarkers[i];
-        if (!((actor && marker.actor == actor) ||
+        Marker& marker = markers[i];
+        if (!((actor && actor == marker.actor) ||
               (region && marker.region == region)))
         {
             continue;
@@ -574,8 +570,9 @@ void RemoveMarker(GameObject* const actor, const RedRegion* const region, unsign
             continue;
         }
         uTeams &= ~uTaken;
-        marker.teamMask &= ~uTaken;
-        if (!marker.teamMask)
+        unsigned int uRemaining = marker.teamMask & ~uTaken;
+        marker.teamMask = uRemaining;
+        if (!uRemaining)
         {
             marker.Clear();
         }
@@ -596,9 +593,9 @@ void CheckObjectClassMarker(GameObject* const actor)
 {
     for (int i = 0; i < MAX_CLASS_MARKERS; ++i)
     {
-        const ClassMarker& marker = _gClassMarker[i];
-        if (marker.classID == ((Entity*)actor)->GetEntityClass()->mId)
+        if (_gClassMarker[i].classID == ((Entity*)actor)->GetEntityClass()->mId)
         {
+            const ClassMarker& marker = _gClassMarker[i];
             AddMarker(actor, 0, marker.textureHash, marker.scale, marker.teamMask,
                       marker.colorHash, marker.showHudTarget, marker.flashAlpha,
                       marker.pulseSize, marker.pulseStartScale);

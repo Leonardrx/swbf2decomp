@@ -185,10 +185,14 @@ bool Boundary::IsInBounds(const PblVector3& vPos) const
 // FUNCTION: SWBF2 0x0044e2c0
 void Boundary::AddEdge(int i, const PblVector3& vStart, const PblVector3& vEnd)
 {
-    mEdges[i].x = vStart.x;
-    mEdges[i].z = vStart.z;
-    mEdges[i].nx = -(vEnd.z - vStart.z);
-    mEdges[i].nz = vEnd.x - vStart.x;
+    const float fStartX = vStart.x;
+    const float fStartZ = vStart.z;
+    const float fEndX = vEnd.x;
+    const float fEndZ = vEnd.z;
+    mEdges[i].x = fStartX;
+    mEdges[i].z = fStartZ;
+    mEdges[i].nx = -(fEndZ - fStartZ);
+    mEdges[i].nz = fEndX - fStartX;
 }
 
 // FUNCTION: SWBF2 0x0044dee0

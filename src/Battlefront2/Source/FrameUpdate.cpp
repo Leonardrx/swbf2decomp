@@ -36,9 +36,10 @@ float fOneOverTicksPerSecond;
 // FUNCTION: SWBF2 0x0052d480
 void Create()
 {
-    tickFramePeriod = PblTime::GetTicksPerSecond() / (NetGame::IsEnabled() ? 15 : 30);
-    tickFramePeriodReal = PblTime::GetTicksPerSecond() / 30;
-    fOneOverTicksPerSecond = 1.0f / (float)PblTime::GetTicksPerSecond();
+    const unsigned long long ticksPerSecond = PblTime::GetTicksPerSecond();
+    tickFramePeriod = ticksPerSecond / (NetGame::IsEnabled() ? 15 : 30);
+    tickFramePeriodReal = ticksPerSecond / 30;
+    fOneOverTicksPerSecond = 1.0f / (float)ticksPerSecond;
 }
 
 }
@@ -51,10 +52,10 @@ void FrameUpdate::Update()
 
     const unsigned int elapsed = (unsigned int)(tickCount > _prevTickCount
         ? tickCount - _prevTickCount
-        : ~_prevTickCount + tickCount);
+        : tickCount - _prevTickCount - 1);
     const unsigned int elapsedReal = (unsigned int)(tickCount > _prevTickCountReal
         ? tickCount - _prevTickCountReal
-        : ~_prevTickCountReal + tickCount);
+        : tickCount - _prevTickCountReal - 1);
 
     char update = 0;
     if (elapsed > tickFramePeriod)

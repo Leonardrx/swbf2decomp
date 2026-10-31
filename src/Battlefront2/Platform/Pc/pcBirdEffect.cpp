@@ -14,13 +14,13 @@ void BirdParticle::Render(unsigned char, float, unsigned int)
     mTimeOffCamera = 0.0f;
 
     pcRedPrimitive* pPrimitive;
-    if (RedRenderer::pcGetGeometryMode())
+    if (!RedRenderer::pcGetGeometryMode())
     {
-        pPrimitive = CreateCompressedGeometry();
+        pPrimitive = CreateGeometry();
     }
     else
     {
-        pPrimitive = CreateGeometry();
+        pPrimitive = CreateCompressedGeometry();
     }
 
     RedRenderer::pcRenderPrimitive(pPrimitive,
@@ -37,8 +37,7 @@ void BirdParticle::Render(unsigned char, float, unsigned int)
 // FUNCTION: SWBF2 0x0040cd00
 void BirdParticleManager::PlatformInit()
 {
-    unsigned int uiFormat =
-        RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED ? 0x9282 : 0x282;
+    unsigned int uiFormat = RedRenderer::pcGetGeometryMode() ? 0x9282 : 0x282;
     for (int i = 0; i < sNumBirdTypes; i++)
     {
         sBirdTypes[i].m_pShader = pcRedShader::Create(kuiNormalShader, uiFormat, &sBirdTypes[i].mTexture, 1,

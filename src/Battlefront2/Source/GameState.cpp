@@ -498,9 +498,9 @@ void TTYInit()
     sTTYInvalidIndex = -1;
     sTTYGrid = (char*)RedAllocFromHeap(__RedCurrHeap, 0xC800, 0);
 
-    for (unsigned int i = 0; i < 0x50; ++i)
+    for (unsigned int i = 0; i < (unsigned int)sTTYColumns; ++i)
     {
-        sTTYGrid[i * 0x280] = 0x0A;
+        sTTYGrid[i * (sTTYRows << 3)] = 0x0A;
     }
 }
 
@@ -572,40 +572,24 @@ void GameState::UpdateTime()
 
     __int64 iDeltaTicks = 0;
 
-    if (g_fFixedRate > 0.0f)
+    if (!(g_fFixedRate > 0.0f))
     {
-        float fDeltaTime = 1.0f / g_fFixedRate;
-        if (g_fFrameRateScale > 0.0f)
+        __int64 iMinTicks;
+        do
         {
-            fDeltaTime = g_fFrameRateScale * fDeltaTime;
-        }
-
-        if (!GameLoop::sPauseMode)
-        {
-            _TimeBase.AdvanceTime(fDeltaTime);
-        }
-        _SystemTimeBase.AdvanceTime(fDeltaTime);
-    }
-    else
-    {
-
-        __int64 iMinTicks = Frequency.QuadPart / 80;
-        for (;;)
-        {
+            iMinTicks = Frequency.QuadPart / 80;
             QueryPerformanceCounter(&perfCount);
             iDeltaTicks = perfCount.QuadPart - oldPerfCount.QuadPart;
-            if (iDeltaTicks >= iMinTicks)
+            if (iDeltaTicks < iMinTicks)
             {
-                break;
+                int iSleep = -15 - (int)((double)(unsigned __int64)(iMinTicks - iDeltaTicks)
+                                         * -1000.0 / (double)Frequency.QuadPart);
+                if (iSleep > 0)
+                {
+                    Sleep(iSleep);
+                }
             }
-
-            int iSleep = -15 - (int)((double)(unsigned __int64)(iMinTicks - iDeltaTicks)
-                                     * -1000.0 / (double)Frequency.QuadPart);
-            if (iSleep > 0)
-            {
-                Sleep(iSleep);
-            }
-        }
+        } while (iDeltaTicks < iMinTicks);
 
         if (iDeltaTicks > maxAdvanceTicks)
         {
@@ -624,6 +608,20 @@ void GameState::UpdateTime()
         _SystemTimeBase.AdvanceTicks(iDeltaTicks);
 
         oldPerfCount = perfCount;
+    }
+    else
+    {
+        float fDeltaTime = 1.0f / g_fFixedRate;
+        if (g_fFrameRateScale > 0.0f)
+        {
+            fDeltaTime = g_fFrameRateScale * fDeltaTime;
+        }
+
+        if (!GameLoop::sPauseMode)
+        {
+            _TimeBase.AdvanceTime(fDeltaTime);
+        }
+        _SystemTimeBase.AdvanceTime(fDeltaTime);
     }
 
     if (!sIgnoreNextTime)
@@ -690,17 +688,16 @@ bool GameState::Update()
         _pNextState = 0;
     }
 
-    if (!_pCurrentState)
+    if (_pCurrentState)
     {
-        return false;
+        PblProfile::StartFrame();
+        FrameUpdate::Update();
+        UpdateTime();
+        _pCurrentState->Update(sDeltaTime, sSystemDeltaTime);
+        PblProfile::EndFrame();
+        return true;
     }
-
-    PblProfile::StartFrame();
-    FrameUpdate::Update();
-    UpdateTime();
-    _pCurrentState->Update(sDeltaTime, sSystemDeltaTime);
-    PblProfile::EndFrame();
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0053adc0
@@ -1301,7 +1298,7 @@ void GameState::ShellState::Enter()
     ShellLoop::Init();
     GameSound::SetupDeferred();
 
-    Snd::Bus* pBus = Snd::Bus::FindByHashID(0x985C8F54);
+    Snd::Bus* pBus = Snd::Bus::FindByHashID(0x985C8F54 /* "ingame" */);
     if (pBus)
     {
         pBus->Fade(0.0f, 1.0f, -1.0f);
@@ -1319,7 +1316,7 @@ void GameState::ShellState::Enter()
 
     RedProfile::DisplayCountersByGroup();
 
-    if (gMemoryPoolErrors)
+    if (gMemoryPoolErrors == true)
     {
         MemoryPool::PoolErrorPostLoad();
     }
@@ -1493,7 +1490,7 @@ void GameState::PostStateCleanup(bool bMission)
         DamageRegion::Destroy();
 
         BonusManager::Destroy();
-        CommandPostManager::Destroy();
+        CommandPost::Destroy();
         CollisionManager::Destroy();
     }
 

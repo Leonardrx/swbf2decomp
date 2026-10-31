@@ -155,8 +155,8 @@ void FLEffectObject::UpdatedWorldMatrix()
 // FUNCTION: SWBF2 0x004be070
 void LightBeam::SetInitialWidth(float fWidth)
 {
-    _Flare._fSize = fWidth;
     _fHeadSizeX = _fHeadSizeZ = fWidth * 0.5f;
+    _Flare._fSize = fWidth;
 }
 
 // FUNCTION: SWBF2 0x004be0a0
@@ -425,10 +425,10 @@ bool EntityHologram::Update(float fDeltaTime)
              pClass->m_fFlickerAlphaMin) * m_fCurrentIntensity;
     }
 
-    RedColor lightColor = m_color;
+    RedColor teamColor;
+    const RedColor* pLightColor = &m_color;
     if (pClass->m_eType == TYPE_ICON_BUILD)
     {
-
         CameraManager* pCameraManager = CameraManager::Instance();
         unsigned int uView = pCameraManager->m_hView[0];
         if (uView < 1)
@@ -463,14 +463,15 @@ bool EntityHologram::Update(float fDeltaTime)
             Character* pCharacter = Character::FindPlayer(iPlayer);
             Team* pTeam = pCharacter ? pCharacter->mTeamPtr : Team::sTeams[1];
 
-            lightColor = pTeam->GetColor(m_iTeam);
+            teamColor = pTeam->mColor[m_iTeam];
+            pLightColor = &teamColor;
         }
     }
 
     if (m_apOmniLight[0])
     {
         m_apOmniLight[0]->SetColor(ToColorValue(
-            Interpolate(RedColor::BLACK, lightColor, pClass->m_fLightIntensity * m_fCurrentIntensity)));
+            Interpolate(RedColor::BLACK, *pLightColor, pClass->m_fLightIntensity * m_fCurrentIntensity)));
     }
     if (m_pLightBeam)
     {
@@ -844,7 +845,7 @@ EntityHologramClass::EntityHologramClass(unsigned int uHash)
     m_fImageIntensity = 0.5f;
     m_fFlareIntensity = 0.0f;
     m_fLightRadius = 10.0f;
-    m_fRotateRate = 6.2831855f * 0.5f;
+    m_fRotateRate = PblMath::fTwoPi * 0.5f;
     m_fPopRate = 0.03f;
     m_fFlickerRate = 0.2f;
     m_fFlickerAlphaMin = 0.4f;

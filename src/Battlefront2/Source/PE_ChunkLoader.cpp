@@ -45,7 +45,7 @@ FLEffectClass* ParticleEmitterEffect::BuildClass(PblConfig& config) const
 static void ReadVarianceValueWithArg(VarianceValue& value, PblConfig::Data& data, unsigned int uiArg, float fScale)
 {
     float fFirst = data.GetFloatArg(uiArg) * fScale;
-    if (uiArg + 1 < data.GetNumArgs())
+    if (data.GetNumArgs() > uiArg + 1)
     {
         value.Setup(fFirst, data.GetFloatArg(uiArg + 1) * fScale);
     }
@@ -94,22 +94,17 @@ void PE_ChunkLoader::LoadRotationData(ParticleSpawner::RotationData& data, PblCo
     while (!config.IsDone())
     {
         PblConfig::Data line = config.ReadNextData();
-        VarianceValue* pValue = 0;
         switch (line.GetId())
         {
-        case 0xe9b852e5u: pValue = &data.mStartX; break;
-        case 0xf102de8au: pValue = &data.mStartMoveX; break;
-        case 0xaa11aa04u: pValue = &data.mMoveX; break;
-        case 0xe8b85152u: pValue = &data.mStartY; break;
-        case 0xab11ab97u: pValue = &data.mMoveY; break;
-        case 0xf202e01du: pValue = &data.mStartMoveY; break;
-        case 0xe7b84fbfu: pValue = &data.mStartZ; break;
-        case 0xac11ad2au: pValue = &data.mMoveZ; break;
-        case 0xef02db64u: pValue = &data.mStartMoveZ; break;
-        }
-        if (pValue)
-        {
-            ReadVarianceValue(*pValue, line, 1.0f);
+        case 0xe9b852e5u: /* "StartX" */ ReadVarianceValue(data.mStartX, line, 1.0f); break;
+        case 0xf102de8au: /* "StartMoveX" */ ReadVarianceValue(data.mStartMoveX, line, 1.0f); break;
+        case 0xaa11aa04u: /* "MoveX" */ ReadVarianceValue(data.mMoveX, line, 1.0f); break;
+        case 0xe8b85152u: /* "StartY" */ ReadVarianceValue(data.mStartY, line, 1.0f); break;
+        case 0xab11ab97u: /* "MoveY" */ ReadVarianceValue(data.mMoveY, line, 1.0f); break;
+        case 0xf202e01du: /* "StartMoveY" */ ReadVarianceValue(data.mStartMoveY, line, 1.0f); break;
+        case 0xe7b84fbfu: /* "StartZ" */ ReadVarianceValue(data.mStartZ, line, 1.0f); break;
+        case 0xac11ad2au: /* "MoveZ" */ ReadVarianceValue(data.mMoveZ, line, 1.0f); break;
+        case 0xef02db64u: /* "StartMoveZ" */ ReadVarianceValue(data.mStartMoveZ, line, 1.0f); break;
         }
     }
 }
@@ -346,46 +341,40 @@ void PE_ChunkLoader::LoadTransformer(ParticleTransformer& transformer, PblConfig
 
         switch (data.GetId())
         {
-        case 0x23a0d95cu:
+        case 0x23a0d95cu: /* "Size" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             int iIndex = (int)fArg;
             transformer.mSizeTrans[iIndex] = LoadSizeTrans(scope);
-            if (iIndex + 1 > transformer.mNumSizeTrans)
-            {
-                transformer.mNumSizeTrans = iIndex + 1;
-            }
+            int iCount = iIndex + 1;
+            transformer.mNumSizeTrans = transformer.mNumSizeTrans > iCount ? transformer.mNumSizeTrans : iCount;
             break;
         }
-        case 0x21ac415fu:
+        case 0x21ac415fu: /* "Rotation" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             int iIndex = (int)fArg;
             transformer.mRotationTrans[iIndex] = LoadRotationTrans(scope);
-            if (iIndex + 1 > transformer.mNumRotationTrans)
-            {
-                transformer.mNumRotationTrans = iIndex + 1;
-            }
+            int iCount = iIndex + 1;
+            transformer.mNumRotationTrans = transformer.mNumRotationTrans > iCount ? transformer.mNumRotationTrans : iCount;
             break;
         }
-        case 0x3d7e6258u:
+        case 0x3d7e6258u: /* "Color" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             int iIndex = (int)fArg;
             transformer.mColorTrans[iIndex] = LoadColorTrans(scope);
-            if (iIndex + 1 > transformer.mNumColorTrans)
-            {
-                transformer.mNumColorTrans = iIndex + 1;
-            }
+            int iCount = iIndex + 1;
+            transformer.mNumColorTrans = transformer.mNumColorTrans > iCount ? transformer.mNumColorTrans : iCount;
             break;
         }
-        case 0x934f4e0au:
+        case 0x934f4e0au: /* "Position" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             transformer.mPositionTrans = LoadPositionTrans(scope);
             break;
         }
-        case 0x5212abeeu:
+        case 0x5212abeeu: /* "LifeTime" */
             transformer.mLifeTime = fArg;
             break;
         }
@@ -524,32 +513,39 @@ ParticleTransformer::PositionTransformer* PE_ChunkLoader::LoadPositionTrans(PblC
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
-        case 0x5212abeeu:
+        case 0x5212abeeu: /* "LifeTime" */
         {
             float fLifeTime = data.GetFloatArg(0);
             pTrans->mLifeTime = fLifeTime;
-            pTrans->mTimeScale = fLifeTime > 0.0f ? 1.0f / fLifeTime : 0.0f;
+            if (fLifeTime > 0.0f)
+            {
+                pTrans->mTimeScale = 1.0f / fLifeTime;
+            }
+            else
+            {
+                pTrans->mTimeScale = 0.0f;
+            }
             break;
         }
-        case 0x5cb68de8u:
+        case 0x5cb68de8u: /* "Next" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             pTrans->mNextState = LoadPositionTrans(scope);
             break;
         }
-        case 0x9d9f16f0u:
+        case 0x9d9f16f0u: /* "Accelerate" */
             pTrans->mData.mAccelerate.mAccX = data.GetFloatArg(0);
             pTrans->mData.mAccelerate.mAccY = data.GetFloatArg(1);
             pTrans->mType = ParticleTransformer::PositionTransformer::ACCELERATE;
             pTrans->mData.mAccelerate.mAccZ = data.GetFloatArg(2);
             break;
-        case 0x4cfd5078u:
+        case 0x4cfd5078u: /* "Reach" */
             pTrans->mData.mReach.mVelX = data.GetFloatArg(0);
             pTrans->mData.mReach.mVelY = data.GetFloatArg(1);
             pTrans->mType = ParticleTransformer::PositionTransformer::REACH;
             pTrans->mData.mReach.mVelZ = data.GetFloatArg(2);
             break;
-        case 0x82971c71u:
+        case 0x82971c71u: /* "Scale" */
             pTrans->mType = ParticleTransformer::PositionTransformer::SCALE;
             pTrans->mData.mScale.mScale = data.GetFloatArg(0);
             break;
@@ -567,14 +563,21 @@ ParticleTransformer::SizeTransformer* PE_ChunkLoader::LoadSizeTrans(PblConfig& c
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
-        case 0x5212abeeu:
+        case 0x5212abeeu: /* "LifeTime" */
         {
             float fLifeTime = data.GetFloatArg(0);
             pTrans->mLifeTime = fLifeTime;
-            pTrans->mTimeScale = fLifeTime > 0.0f ? 1.0f / fLifeTime : 0.0f;
+            if (fLifeTime > 0.0f)
+            {
+                pTrans->mTimeScale = 1.0f / fLifeTime;
+            }
+            else
+            {
+                pTrans->mTimeScale = 0.0f;
+            }
             break;
         }
-        case 0x5cb68de8u:
+        case 0x5cb68de8u: /* "Next" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             pTrans->mNextState = LoadSizeTrans(scope);
@@ -597,14 +600,21 @@ ParticleTransformer::RotationTransformer* PE_ChunkLoader::LoadRotationTrans(PblC
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
-        case 0x5212abeeu:
+        case 0x5212abeeu: /* "LifeTime" */
         {
             float fLifeTime = data.GetFloatArg(0);
             pTrans->mLifeTime = fLifeTime;
-            pTrans->mTimeScale = fLifeTime > 0.0f ? 1.0f / fLifeTime : 0.0f;
+            if (fLifeTime > 0.0f)
+            {
+                pTrans->mTimeScale = 1.0f / fLifeTime;
+            }
+            else
+            {
+                pTrans->mTimeScale = 0.0f;
+            }
             break;
         }
-        case 0x5cb68de8u:
+        case 0x5cb68de8u: /* "Next" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             pTrans->mNextState = LoadRotationTrans(scope);
@@ -628,9 +638,14 @@ ParticleTransformer::ColorTransformer* PE_ChunkLoader::LoadColorTrans(PblConfig&
         switch (data.GetId())
         {
         case 0x184b0014u:
+            pTrans->mType = ParticleTransformer::ColorTransformer::MOVE;
+            pTrans->mR = data.GetFloatArg(0) * (1.0f / 255.0f);
+            pTrans->mG = data.GetFloatArg(1) * (1.0f / 255.0f);
+            pTrans->mB = data.GetFloatArg(2) * (1.0f / 255.0f);
+            pTrans->mA = data.GetFloatArg(3) * (1.0f / 255.0f);
+            break;
         case 0x4cfd5078u:
-            pTrans->mType = data.GetId() == 0x4cfd5078u ? ParticleTransformer::ColorTransformer::REACH
-                                                         : ParticleTransformer::ColorTransformer::MOVE;
+            pTrans->mType = ParticleTransformer::ColorTransformer::REACH;
             pTrans->mR = data.GetFloatArg(0) * (1.0f / 255.0f);
             pTrans->mG = data.GetFloatArg(1) * (1.0f / 255.0f);
             pTrans->mB = data.GetFloatArg(2) * (1.0f / 255.0f);
@@ -640,7 +655,14 @@ ParticleTransformer::ColorTransformer* PE_ChunkLoader::LoadColorTrans(PblConfig&
         {
             float fLifeTime = data.GetFloatArg(0);
             pTrans->mLifeTime = fLifeTime;
-            pTrans->mTimeScale = fLifeTime > 0.0f ? 1.0f / fLifeTime : 0.0f;
+            if (fLifeTime > 0.0f)
+            {
+                pTrans->mTimeScale = 1.0f / fLifeTime;
+            }
+            else
+            {
+                pTrans->mTimeScale = 0.0f;
+            }
             break;
         }
         case 0x5cb68de8u:

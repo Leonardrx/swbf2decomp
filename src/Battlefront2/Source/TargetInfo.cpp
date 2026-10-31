@@ -20,8 +20,8 @@ TargetInfo::TargetInfo()
 float TargetInfo::GetTargetPrio(const PblVector3& vStart, const PblVector3& vDir, const PblVector3& vTarget,
                                 float fRadius, float fAngle, float fRange, bool bFlag)
 {
-    float fX = vTarget.x - vStart.x;
     float fY = vTarget.y - vStart.y;
+    float fX = vTarget.x - vStart.x;
     float fZ = vTarget.z - vStart.z;
     float fAlong = vDir.x * fX + vDir.y * fY + vDir.z * fZ;
     if (fAlong < 0.0f || fAlong > fRadius + fRange)

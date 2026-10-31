@@ -30,11 +30,11 @@ void UnitFlyController::ApplyNextState()
     const UnitCmdInfo* pCmd = GetCurCmd();
     switch (pCmd->GetCommand())
     {
-    case CMD_COMBAT:
-        SetNextState(STATE_COMBAT);
-        break;
     case CMD_WAIT_SECONDARY:
         SetNextState(STATE_WAIT_SECONDARY);
+        break;
+    case CMD_COMBAT:
+        SetNextState(STATE_COMBAT);
         break;
     case CMD_CAPTURECP:
     case CMD_CTFOFFENSE:
@@ -66,13 +66,13 @@ void UnitFlyController::ApplyNextState()
 // FUNCTION: SWBF2 0x00667e80
 void UnitFlyController::EnterState()
 {
-    if (mCurState == STATE_FLY)
+    if (mCurState != STATE_FLY)
     {
-        mAgent = new UnitFlyAgent(this);
+        UnitController::EnterState();
     }
     else
     {
-        UnitController::EnterState();
+        mAgent = new UnitFlyAgent(this);
     }
 }
 

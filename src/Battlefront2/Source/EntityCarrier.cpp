@@ -34,12 +34,16 @@ CameraTrackSetting* EntityFlyer::GetCameraTrackSettings()
 // FUNCTION: SWBF2 0x004b5f00
 void EntityFlyer::SetupCameraZoomFactor(float& rZoom)
 {
-    rZoom = 1.0f;
-    if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 &&
-        mWeapon[mWeaponIndex[0]])
+    if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0)
     {
-        rZoom = mWeapon[mWeaponIndex[0]]->mZoomTurnScale;
+        Weapon* pWeapon = mWeapon[mWeaponIndex[0]];
+        if (pWeapon)
+        {
+            rZoom = pWeapon->mZoomTurnScale;
+            return;
+        }
     }
+    rZoom = 1.0f;
 }
 
 
@@ -87,7 +91,7 @@ EntityCarrier::EntityCarrier(EntityCarrierClass* pClass, const EntityDesc& desc)
     mCargoCount = pClass->mCargoCount;
     static_cast<VehicleEngine*>(this)->TurnOn(
         mClass ? static_cast<VehicleEngineClass*>(mClass) : 0,
-        mCollisionSphere.GetCenter(), mVelocity, 1.0f);
+        mMatrix.GetTranslation(), mVelocity, 1.0f);
 }
 
 // SYNTHETIC: SWBF2 0x00497957
@@ -183,7 +187,7 @@ void EntityFlyer::SetMatrix(const PblMatrix& mMatrix)
 // FUNCTION: SWBF2 0x004778d0
 Trackable* EntityFlyer::GetTrackable()
 {
-    return this ? static_cast<Trackable*>(static_cast<Controllable*>(this)) : 0;
+    return this;
 }
 
 // FUNCTION: SWBF2 0x004779a0
@@ -281,71 +285,43 @@ const char EntityCarrierClass::rttiNameEntityCarrierClass[] = "EntityCarrierClas
 // FUNCTION: SWBF2 0x00497300
 bool EntityCarrier::AttachCargo(int, GameObject* pGameObject)
 {
-
-    if (mCargoArray[0].mObject.mObject)
+    if (mCargoArray[0].mObject)
     {
-        if (mCargoArray[0].mObject.mObject->mHandleId != mCargoArray[0].mObject.mSavedHandleId)
-        {
-            mCargoArray[0].mObject.mObject = 0;
-            mCargoArray[0].mObject.mSavedHandleId = 0;
-        }
-        else
-        {
-            return false;
-        }
+        return false;
     }
 
     EntityCarrierClass* pClass = GetClass();
-    const PblVector3* pOffset = &pGameObject->GetAttachOffset();
-
-    mCargoArray[0].mOffset.x = pClass->mCargoInfo[0].mOffset.x - pOffset->x;
-    mCargoArray[0].mOffset.y = pClass->mCargoInfo[0].mOffset.y - pOffset->y;
-    mCargoArray[0].mOffset.z = pClass->mCargoInfo[0].mOffset.z - pOffset->z;
-    mCargoArray[0].mObject.mObject = (GameObject*)pGameObject;
-    mCargoArray[0].mObject.mSavedHandleId = ((GameObject*)pGameObject)->mHandleId;
-
-    static_cast<CollisionObject*>(pGameObject)->mParent = static_cast<CollisionObject*>(this);
+    mCargoArray[0].mOffset = pClass->mCargoInfo[0].mOffset - pGameObject->GetAttachOffset();
+    mCargoArray[0].mObject = pGameObject;
+    mCargoArray[0].mObject->mParent = static_cast<CollisionObject*>(this);
 
     UpdateLandedHeight();
 
-    const PblVector3& vVelocity = GetVelocity();
-    GetClass()->mSoundCargoPickup.Play(&mMatrix.GetTranslation(), &vVelocity, true, true);
+    GetClass()->mSoundCargoPickup.Play(&mMatrix.GetTranslation(), &GetVelocity(), true, true);
     return true;
 }
 
 // FUNCTION: SWBF2 0x00497410
 bool EntityCarrier::DetachCargo(int iSlot)
 {
-
-    EntityCarrier::CargoSlot* pSlot = &mCargoArray[iSlot];
-    if (!pSlot->mObject.mObject)
+    if (!mCargoArray[iSlot].mObject)
     {
         return false;
     }
 
-    if (pSlot->mObject.mObject->mHandleId != pSlot->mObject.mSavedHandleId)
-    {
-        pSlot->mObject.mObject = 0;
-        pSlot->mObject.mSavedHandleId = 0;
-        return false;
-    }
-
-    static_cast<CollisionObject*>(pSlot->mObject.mObject)->mParent = 0;
-    pSlot->mObject.mObject = 0;
-    pSlot->mObject.mSavedHandleId = 0;
+    mCargoArray[iSlot].mObject->mParent = 0;
+    mCargoArray[iSlot].mObject = 0;
 
     UpdateLandedHeight();
 
-    const PblVector3& vVelocity = GetVelocity();
-    GetClass()->mSoundCargoDropoff.Play(&mMatrix.GetTranslation(), &vVelocity, true, true);
+    GetClass()->mSoundCargoDropoff.Play(&mMatrix.GetTranslation(), &GetVelocity(), true, true);
     return true;
 }
 
 // FUNCTION: SWBF2 0x004974b0
 void EntityCarrier::UpdateLandedHeight()
 {
-    float& fLandedHeight = mLandedHeight;
-    fLandedHeight = GetClass()->mLandedHeight;
+    mLandedHeight = GetClass()->mLandedHeight;
 
     for (int i = 0; i < mCargoCount; ++i)
     {
@@ -355,28 +331,27 @@ void EntityCarrier::UpdateLandedHeight()
             continue;
         }
 
-        if (pSlot->mObject.mObject->mHandleId != pSlot->mObject.mSavedHandleId)
+        if (pSlot->mObject.mObject->mHandleId == pSlot->mObject.mSavedHandleId)
+        {
+            const GameModel* pModel = pSlot->mObject.mObject->GetModel();
+            if (pModel)
+            {
+                float fCandidate = -pSlot->mOffset.y - pModel->_mModel->_TotalBoundingBox._vMin.y;
+                mLandedHeight = mLandedHeight > fCandidate ? mLandedHeight : fCandidate;
+            }
+        }
+        else
         {
             pSlot->mObject.mObject = 0;
             pSlot->mObject.mSavedHandleId = 0;
-            continue;
         }
-
-        const GameModel* pModel = pSlot->mObject.mObject->GetModel();
-        if (!pModel)
-        {
-            continue;
-        }
-
-        float fCandidate = -pSlot->mOffset.y - pModel->_mModel->_TotalBoundingBox._vMin.y;
-        fLandedHeight = fLandedHeight > fCandidate ? fLandedHeight : fCandidate;
     }
 }
 
 // FUNCTION: SWBF2 0x00497560
 void EntityCarrier::ActivatePhysics()
 {
-    static_cast<Controllable*>(this)->ActivateThread(-1, PER_TURN);
+    ActivateThread(-1, PER_TURN);
 }
 
 // FUNCTION: SWBF2 0x00497580
@@ -420,28 +395,13 @@ EntityCarrierClass::EntityCarrierClass(EntityCarrierClass* pSrc, unsigned int uH
 // FUNCTION: SWBF2 0x004976b0
 void EntityCarrierClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty > 0x8897DB28u)
+    switch (uProperty)
     {
-        if (uProperty != 0x910A89FCu)
-        {
-            EntityFlyerClass::SetProperty(uProperty, pszValue);
-            return;
-        }
+    case 0x759C8F54u:
+        mSoundCargoPickup.SetID(pszValue, true, false);
+        break;
 
-        float x, y, z;
-        sscanf(pszValue, "%f %f %f", &x, &y, &z);
-        mCargoInfo[mCargoCount].mHash = 0;
-        mCargoInfo[mCargoCount].mOffset.x = x;
-        mCargoInfo[mCargoCount].mOffset.y = y;
-        mCargoInfo[mCargoCount].mOffset.z = z;
-        ++mCargoCount;
-    }
-    else if (uProperty == 0x8897DB28u)
-    {
-        mSoundCargoDropoff.SetID(pszValue, true, false);
-    }
-    else if (uProperty == 0x3E2C4DA4u)
-    {
+    case 0x3E2C4DA4u:
         mCargoInfo[mCargoCount].mHash = PblTEMPHash(pszValue);
 
         if (mModel)
@@ -449,7 +409,7 @@ void EntityCarrierClass::SetProperty(unsigned int uProperty, const char* pszValu
             const RedSkeleton* pSkeleton = mModel->GetRedModel(0)->GetSkeleton();
             if (pSkeleton)
             {
-                for (unsigned int i = 0; i < 128; ++i)
+                for (int i = 0; i < 128; ++i)
                 {
                     if (pSkeleton->GetBoneNameHash(i) == mCargoInfo[mCargoCount].mHash)
                     {
@@ -462,14 +422,28 @@ void EntityCarrierClass::SetProperty(unsigned int uProperty, const char* pszValu
                 }
             }
         }
-    }
-    else if (uProperty == 0x759C8F54u)
-    {
-        mSoundCargoPickup.SetID(pszValue, true, false);
-    }
-    else
-    {
+        break;
+
+    case 0x8897DB28u:
+        mSoundCargoDropoff.SetID(pszValue, true, false);
+        break;
+
+    default:
         EntityFlyerClass::SetProperty(uProperty, pszValue);
+        break;
+
+    case 0x910A89FCu:
+    {
+        float x, y, z;
+        sscanf(pszValue, "%f %f %f", &x, &y, &z);
+        mCargoInfo[mCargoCount].mHash = 0;
+        PblVector3& vOffset = mCargoInfo[mCargoCount].mOffset;
+        vOffset.x = x;
+        vOffset.y = y;
+        vOffset.z = z;
+        ++mCargoCount;
+        break;
+    }
     }
 }
 

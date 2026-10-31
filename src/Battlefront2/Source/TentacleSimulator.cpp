@@ -147,12 +147,9 @@ TentacleSimulator::TentacleSimulator(unsigned int uiNumTentacles, unsigned int u
     {
         for (int b = 0; b < mBonesPerTentacle; b++)
         {
-            oldPos[t][b].x = 0.0f;
-            oldPos[t][b].y = 0.0f;
-            oldPos[t][b].z = 0.0f;
-            tPos[t][b].x = 0.0f;
-            tPos[t][b].y = 0.0f;
-            tPos[t][b].z = 0.0f;
+            const PblVector3 vZero(0.0f, 0.0f, 0.0f);
+            oldPos[t][b] = vZero;
+            tPos[t][b] = vZero;
         }
     }
     mNumTentacles = uiNumTentacles;
@@ -176,14 +173,13 @@ void TentacleSimulator::UpdateTimer(float fDeltaTime)
         if (mTimeSinceLastUpdate > 0.0f)
         {
             mTimerOffset = mInternalTimer - mTimeSinceLastUpdate;
-            mTimeSinceLastUpdate = 0.0f;
             mInternalTimer = fDeltaTime;
         }
         else
         {
-            mTimeSinceLastUpdate = 0.0f;
             mInternalTimer = fDeltaTime + mInternalTimer;
         }
+        mTimeSinceLastUpdate = 0.0f;
     }
     else
     {
@@ -212,8 +208,8 @@ void TentacleSimulator::DoTentacles(RedPose* pPose, const PblMatrix& mParent,
         {
             fDeltaTime = fDeltaTime - mTimeSinceLastUpdate;
         }
-        mTimerOffset = 0.0f;
         mTimeSinceLastUpdate = NetGame::GetTurnRatio() * mInternalTimer;
+        mTimerOffset = 0.0f;
     }
 
     if (!pPose)
@@ -532,16 +528,11 @@ void TentacleSimulator::EnforceSphereCollision(const PblMatrix& mMatrix, float f
         for (int j = 1; j < mBonesPerTentacle + 1; ++j)
         {
             PblVector3& vPos = tPos[i][j];
-            const float dx = vPos.x - vCenter.x;
-            const float dy = vPos.y - vCenter.y;
-            const float dz = vPos.z - vCenter.z;
-            const float fDistSq = dx * dx + dy * dy + dz * dz;
+            const PblVector3 vDelta = vPos - vCenter;
+            const float fDistSq = SquaredLength(vDelta);
             if (fRadiusSq > fDistSq)
             {
-                const float fScale = fRadius / sqrtf(fDistSq);
-                vPos.x = dx * fScale + vCenter.x;
-                vPos.y = dy * fScale + vCenter.y;
-                vPos.z = dz * fScale + vCenter.z;
+                vPos = vCenter + vDelta * (fRadius / sqrtf(fDistSq));
             }
         }
     }

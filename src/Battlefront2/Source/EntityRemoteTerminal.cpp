@@ -164,13 +164,13 @@ EntityRemoteTerminal::~EntityRemoteTerminal()
 // FUNCTION: SWBF2 0x004dd420
 void EntityRemoteTerminal::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
     SetupShadow(this, mModel, ucViewport, uiFlags, 0);
 
@@ -185,13 +185,13 @@ void EntityRemoteTerminal::Render(unsigned char ucViewport, float fDist, unsigne
     }
     mModel->Render(ucViewport, fDist, GetRenderMatrix(), GetRenderPose(), color, uiFlags | 0x1000000, 0);
 
-    PblMatrix mReflection;
+    PblMatrix mWorld;
     if ((uiFlags & 0x200000) ||
-        !FLRenderer::IsReflected(*(const PblVector3*)&_Sphere, _Sphere.w, mReflection, false))
+        !FLRenderer::IsReflected(*(const PblVector3*)&_Sphere, _Sphere.w, mWorld, false))
     {
         return;
     }
-    PblMatrix mWorld = *GetRenderMatrix() * mReflection;
+    mWorld = *GetRenderMatrix() * mWorld;
     mModel->Render(ucViewport, fDist, &mWorld, GetRenderPose(), color,
                    (uiFlags & ~0x10000) | 0x10000100, 0);
 }
@@ -271,15 +271,14 @@ void EntityRemoteTerminal::SetMatrix(const PblMatrix& matrix)
     PblVector3 vCenter;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter, (const D3DXVECTOR3*)&mModel->_mModel->_BoundingSphere,
                            (const D3DXMATRIX*)&mMatrix);
-    CollisionObject* pCollision = static_cast<CollisionObject*>(this);
-    pCollision->SetCollisionCenter(vCenter);
-    pCollision->RecalculateAABB();
+    SetCollisionCenter(vCenter);
+    RecalculateAABB();
 }
 
 // FUNCTION: SWBF2 0x004dcab0
 Trackable* EntityRemoteTerminal::GetTrackable()
 {
-    return EntityRemoteTerminal::GetControllable();
+    return static_cast<Trackable*>(this);
 }
 
 // SYNTHETIC: SWBF2 0x004dde99
@@ -329,17 +328,15 @@ float EntityRemoteTerminal::GetMaxStrafe() const
 // FUNCTION: SWBF2 0x0046db50
 GameObject* EntityRemoteTerminal::GetRemoteGameObject()
 {
-    if (!HandleObject(mRemoteGameObject))
+    if (!mRemoteGameObject)
     {
-        EntityEx* pEntity = EntityEx::Find(mRemoteGameObjectHash);
+        EntityEx* pEntity = EntityEx::mIdMap.Find(mRemoteGameObjectHash);
         if (pEntity)
         {
-            GameObject* pObject = pEntity->GetGameObject();
-            mRemoteGameObject.mObject = pObject;
-            mRemoteGameObject.mSavedHandleId = pObject ? GameObjectHandleId(pObject) : 0;
+            mRemoteGameObject = pEntity->GetGameObject();
         }
     }
-    return HandleObject(mRemoteGameObject);
+    return mRemoteGameObject;
 }
 
 // FUNCTION: SWBF2 0x004dce00
@@ -385,9 +382,8 @@ bool EntityRemoteTerminal::Update(float fDeltaTime)
 
     UpdateHealthRemote(0.0f);
 
-    Controllable* pThis = this;
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && pThis->mPilot &&
-        pThis->mPilot->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
+    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mPilot &&
+        mPilot->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
     {
         GameObject* pRemote = GetRemoteGameObject();
         if (pRemote)
@@ -398,10 +394,10 @@ bool EntityRemoteTerminal::Update(float fDeltaTime)
                 Controllable* pRemoteControl = list.GetFirst()->_pObject;
                 if (pRemoteControl)
                 {
-                    EntitySoldier* pSoldier = PilotSoldier(pThis->mPilot);
+                    EntitySoldier* pSoldier = PilotSoldier(mPilot);
                     if (pRemoteControl->mControlUse.IsPressed())
                     {
-                        SoldierControllable(pSoldier)->ExitVehicle(true, true);
+                        pSoldier->ExitVehicle(true, true);
                     }
                     else if (pRemoteControl->mControlSwitch[0] != 0.0f)
                     {
@@ -410,8 +406,8 @@ bool EntityRemoteTerminal::Update(float fDeltaTime)
                                                               : GetPrevAvailableTerminal(pSoldier);
                         if (pTerminal)
                         {
-                            SoldierControllable(pSoldier)->ExitVehicle(true, true);
-                            SoldierControllable(pSoldier)->EnterVehicle(reinterpret_cast<GameObject*>(pTerminal));
+                            pSoldier->ExitVehicle(true, true);
+                            pSoldier->EnterVehicle(reinterpret_cast<GameObject*>(pTerminal));
                         }
                     }
                 }
@@ -419,9 +415,8 @@ bool EntityRemoteTerminal::Update(float fDeltaTime)
         }
     }
 
-    const RedPose* pPose = GetRenderPose();
     PblVector3 vOffset(0.0f, 0.0f, 0.0f);
-    mClass->UpdatePilotAnimation(pThis->mPilot, pPose, mMatrix, vOffset, fDeltaTime, -1.0f, -1.0f, -1.0f);
+    mClass->UpdatePilotAnimation(mPilot, GetRenderPose(), mMatrix, vOffset, fDeltaTime, -1.0f, -1.0f, -1.0f);
     return true;
 }
 
@@ -431,9 +426,8 @@ void EntityRemoteTerminal::UpdateHealthRemote(float fAddHealth)
     GameObject* pRemote = GetRemoteGameObject();
     if (pRemote)
     {
-        Damageable* pRemoteDamageable = GameObjectDamageable(pRemote);
-        float fHealth = pRemoteDamageable->mCurHealth;
-        float fMaxHealth = pRemoteDamageable->mMaxHealth;
+        float fHealth = pRemote->mCurHealth;
+        float fMaxHealth = pRemote->mMaxHealth;
         if (fAddHealth != 0.0f)
         {
             float fNewHealth = fHealth + fAddHealth;
@@ -445,8 +439,8 @@ void EntityRemoteTerminal::UpdateHealthRemote(float fAddHealth)
             {
                 fNewHealth = fMaxHealth;
             }
-            pRemoteDamageable->SetCurHealth(fNewHealth, true, 0);
-            fHealth = pRemoteDamageable->mCurHealth;
+            pRemote->SetCurHealth(fNewHealth, true, 0);
+            fHealth = pRemote->mCurHealth;
         }
         if (fHealth == fMaxHealth)
         {
@@ -456,7 +450,7 @@ void EntityRemoteTerminal::UpdateHealthRemote(float fAddHealth)
         float fOldHealth = mCurHealth;
         mMaxHealth = fMaxHealth;
         SetCurHealth(fHealth, false, 0);
-        mHealthType = pRemoteDamageable->mHealthType;
+        mHealthType = pRemote->mHealthType;
         if (fOldHealth != fHealth)
         {
             Damageable::HealthChangeCallback(false, fOldHealth - fHealth);
@@ -499,31 +493,29 @@ void EntityRemoteTerminal::HealthChangeCallback(bool bUnused, float fDelta)
 // FUNCTION: SWBF2 0x004dd2f0
 void EntityRemoteTerminal::SetupController()
 {
-    Controllable* pThis = this;
     Controller* pController = 0;
-    if (pThis->mPlayerId >= 0)
+    if (mPlayerId >= 0)
     {
-        pController = new PlayerController(pThis);
-        pThis->Track(pThis->mPlayerId);
+        pController = new PlayerController(this);
+        Track(mPlayerId);
     }
-    else if (pThis->mPilot && !(NetGame::IsEnabled() && NetGame::IsClient()))
+    else if (mPilot && !(NetGame::IsEnabled() && NetGame::IsClient()))
     {
-        pController = new UnitStationaryController(pThis);
+        pController = new UnitStationaryController(this);
     }
     if (pController)
     {
-        pThis->AddController(pController, pThis->mPilot->mPlayerId < 0);
+        AddController(pController, mPilot->mPlayerId < 0);
     }
-    pThis->ClearControllable();
+    ClearControllable();
 }
 
 // FUNCTION: SWBF2 0x004dd5d0
 void EntityRemoteTerminal::SetPilot(Controllable* pPilot)
 {
-    Controllable* pThis = this;
     if (pPilot)
     {
-        pThis->Controllable::SetPilot(pPilot);
+        Controllable::SetPilot(pPilot);
         GameObject* pRemote = GetRemoteGameObject();
         if (pRemote)
         {
@@ -539,11 +531,11 @@ void EntityRemoteTerminal::SetPilot(Controllable* pPilot)
     }
     else
     {
-        if (pThis->mPilot && pThis->mCharacter && pThis->mCharacter->mRemote)
+        if (mPilot && mCharacter && mCharacter->mRemote)
         {
-            pThis->mPilot->ExitRemote();
+            mPilot->ExitRemote();
         }
-        pThis->Controllable::SetPilot(0);
+        Controllable::SetPilot(0);
     }
 }
 
@@ -551,22 +543,22 @@ void EntityRemoteTerminal::SetPilot(Controllable* pPilot)
 bool EntityRemoteTerminal::IsTerminalAvailable(const EntitySoldier* pSoldier)
 {
     GameObject* pRemote = GetRemoteGameObject();
-    return pRemote && SoldierControllable(pSoldier)->CanEnterRemote(pRemote);
+    return pRemote && pSoldier->CanEnterRemote(pRemote);
 }
 
 // FUNCTION: SWBF2 0x004dd6a0
 EntityRemoteTerminal* EntityRemoteTerminal::GetNextAvailableTerminal(const EntitySoldier* pSoldier)
 {
     int iCount = 0;
-    for (EntityRemoteTerminal* pTerminal = GetNextLinkedTerminal();
-         pTerminal && pTerminal != this && iCount < 20;
-         pTerminal = pTerminal->GetNextLinkedTerminal())
+    EntityRemoteTerminal* pTerminal = GetNextLinkedTerminal();
+    while (pTerminal && pTerminal != this && iCount < 20)
     {
         if (pTerminal->IsTerminalAvailable(pSoldier))
         {
             return pTerminal;
         }
         ++iCount;
+        pTerminal = pTerminal->GetNextLinkedTerminal();
     }
     return 0;
 }
@@ -589,15 +581,13 @@ EntityRemoteTerminal* EntityRemoteTerminal::GetPrevAvailableTerminal(const Entit
 // FUNCTION: SWBF2 0x004dd7c0
 void EntityRemoteTerminal::ActivatePhysics()
 {
-    Controllable* pThis = this;
-    pThis->ActivateThread(0, PER_TURN);
+    ActivateThread(0, PER_TURN);
 }
 
 // FUNCTION: SWBF2 0x004dd7e0
 void EntityRemoteTerminal::DeactivatePhysics()
 {
-    Controllable* pThis = this;
-    pThis->DeactivateThread();
+    DeactivateThread();
 }
 
 // FUNCTION: SWBF2 0x004dd7f0

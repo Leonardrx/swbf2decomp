@@ -41,9 +41,7 @@ extern PblVector3 gVectorZero;
 EntityBuildingClass::EntityBuildingClass(unsigned int uHash)
     : GameObjectClass(uHash)
 {
-    mExplosionOffset.x = 0.0f;
-    mExplosionOffset.y = 0.0f;
-    mExplosionOffset.z = 0.0f;
+    mExplosionOffset = PblVector3(0.0f, 0.0f, 0.0f);
     mHealthType = HEALTH_TYPE_BUILDING;
     mDestroyedModel = 0;
     mUnbuiltModel = 0;
@@ -165,7 +163,7 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
 {
     switch (uProperty)
     {
-    case 0x47c86b4a:
+    case 0x47c86b4a: /* "GeometryName" */
     {
         GameObjectClass::SetProperty(uProperty, pszValue);
         const CollisionMesh* pMesh = CollisionMesh::_HashTable.Find(PblHash(pszValue));
@@ -187,10 +185,10 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         break;
     }
 
-    case 0x5dc6e917:
+    case 0x5dc6e917: /* "DestroyedGeometryName" */
     {
         mDestroyedModel = (GameModel*)GameModel::Find(PblHash(pszValue));
-        const CollisionMesh* pMesh = CollisionMesh::_HashTable.Find(PblHash(pszValue));
+        const CollisionMesh* pMesh = CollisionMesh::Find(PblHash(pszValue));
         if (pMesh)
         {
             mDestroyedCollisionModel.AddBody(new CollisionBodyMesh(pMesh, "DestroyedCollisionMesh", gMatrixIdentity, 0));
@@ -212,7 +210,7 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         break;
     }
 
-    case 0x97c931c5:
+    case 0x97c931c5: /* "UnbuiltGeometryName" */
     {
         mUnbuiltModel = GameModel::_HashTable.Find(PblHash(pszValue));
         const CollisionMesh* pMesh = CollisionMesh::_HashTable.Find(PblHash(pszValue));
@@ -223,12 +221,12 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         break;
     }
 
-    case 0x48542041:
+    case 0x48542041: /* "UnbuiltHoloOdf" */
         m_pHologramClass = EntityHologramClass::Find(PblHash(pszValue));
         break;
 
-    case 0x02bb1fe0:
-    case 0x9b30e763:
+    case 0x02bb1fe0: /* "Explosion" */
+    case 0x9b30e763: /* "ExplosionName" */
         if (*pszValue)
         {
             mExplosion = ExplosionClass::Find(PblHash(pszValue));
@@ -239,7 +237,7 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
 
-    case 0xc5637083:
+    case 0xc5637083: /* "ExplosionOffset" */
         if (*pszValue)
         {
             float x = 0.0f, y = 0.0f, z = 0.0f;
@@ -250,27 +248,27 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
 
-    case 0xbd94b44e:
+    case 0xbd94b44e: /* "RespawnTime" */
         sscanf(pszValue, "%f", &mRespawnTime);
         break;
 
-    case 0x66aab312:
+    case 0x66aab312: /* "BuiltSound" */
         mBuiltSound.SetID(pszValue, false, false);
         break;
 
-    case 0xeba16fe4:
+    case 0xeba16fe4: /* "BuildingSound" */
         mAmbientBuildingSound.SetID(pszValue, false, false);
         break;
 
-    case 0xc1f062c6:
+    case 0xc1f062c6: /* "AutoBarrierEnable" */
         mAutoCreateBarrier = atoi(pszValue) != 0;
         break;
 
-    case 0x43de19e2:
+    case 0x43de19e2: /* "AutoBarrierRemoveOnDeath" */
         mDisableBarrierWhenDead = atoi(pszValue) != 0;
         break;
 
-    case 0x22f50f8a:
+    case 0x22f50f8a: /* "ColorizeByTeam" */
     {
         int iValue = 0;
         sscanf(pszValue, "%i", &iValue);
@@ -278,7 +276,7 @@ void EntityBuildingClass::SetProperty(unsigned int uProperty, const char* pszVal
         break;
     }
 
-    case 0xf52eced4:
+    case 0xf52eced4: /* "AutoBarrierSize" */
         if (*pszValue)
         {
             sscanf(pszValue, "%f %f", &mBarrierX, &mBarrierZ);
@@ -485,7 +483,7 @@ const RedPose* EntityBuilding::GetRenderPose() const
 
 
 
-static GameObject* GetHandleObject(PblHandle<GameObject>& handle)
+static inline GameObject* GetHandleObject(PblHandle<GameObject>& handle)
 {
     if (handle.mObject &&
         handle.mObject->mHandleId !=
@@ -516,28 +514,24 @@ void EntityBuilding::ClientKill()
 // FUNCTION: SWBF2 0x004929b0
 void EntityBuilding::HealthChangeCallback(bool bArg, float fDelta)
 {
-    Damageable* pDamageable = this;
     bool bClient = NetGame::IsEnabled() && NetGame::IsClient();
-    if (pDamageable->mCurHealth > 0.0f)
+    if (mCurHealth <= 0.0f)
     {
-        if (pDamageable->mCurHealth >= pDamageable->mMaxHealth)
-        {
-            pDamageable->mCurHealth = pDamageable->mMaxHealth;
-            if (!bClient && mState != STATE_ALIVE)
-            {
-                pDamageable->Respawn();
-            }
-        }
-    }
-    else
-    {
-        pDamageable->mCurHealth = 0.0f;
+        mCurHealth = 0.0f;
         if (mState == STATE_ALIVE)
         {
-            pDamageable->Kill();
+            Kill();
         }
     }
-    pDamageable->Damageable::HealthChangeCallback(bArg, fDelta);
+    else if (mCurHealth >= mMaxHealth)
+    {
+        mCurHealth = mMaxHealth;
+        if (!bClient && mState != STATE_ALIVE)
+        {
+            Respawn();
+        }
+    }
+    Damageable::HealthChangeCallback(bArg, fDelta);
 }
 
 // FUNCTION: SWBF2 0x00492b00
@@ -718,13 +712,12 @@ bool EntityBuilding::ApplyDamage(const DamageDesc& damage, const PblVector3& vDi
     {
         return true;
     }
-    if (!Damageable::ApplyDamage(damage, vDir, vPos, iBodyPart, uFlags))
+    if (Damageable::ApplyDamage(damage, vDir, vPos, iBodyPart, uFlags))
     {
-        return false;
+        mClass->mSoundHurt.Play(&mMatrix.GetTranslation(), 0, false, true);
+        return true;
     }
-
-    mClass->mSoundHurt.Play(&mMatrix.GetTranslation(), 0, false, true);
-    return true;
+    return false;
 }
 
 
@@ -748,15 +741,17 @@ void EntityBuilding::SetMatrix(const PblMatrix& matrix)
 // FUNCTION: SWBF2 0x004932a0
 void EntityBuilding::RecalculateAABB()
 {
-    mAABB = mModel->_mModel->_TotalBoundingBox.GetTransformedBox(mMatrix);
+    const PblBox& modelBox = mModel->_mModel->_TotalBoundingBox;
+    mAABB = modelBox.GetTransformedBox(mMatrix);
 }
 
 // FUNCTION: SWBF2 0x004932e0
 void EntityBuilding::Update(float fDeltaTime)
 {
     bool bPlaying = mAmbientSound.GetPlaying();
-    PblVector3 vPos = mMatrix.GetTranslation();
-    if (IsAlive())
+    PblVector3 vPos;
+    vPos = mMatrix.GetTranslation();
+    if (mIsAlive)
     {
         if (!bPlaying)
         {
@@ -776,13 +771,13 @@ void EntityBuilding::Render(unsigned char uFlags, float fDist, unsigned int uMas
 
     Update(0.0f);
 
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uMask &= ~0x80;
+        uMask |= 0x80;
     }
     else
     {
-        uMask |= 0x80;
+        uMask &= ~0x80;
     }
     if (mpShadow && mpShadow->IsInScene())
     {

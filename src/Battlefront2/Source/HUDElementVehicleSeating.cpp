@@ -360,12 +360,15 @@ void HUD::ElementVehicleSeating::Update(const float fElapsed)
         Character* pCharacter = NetGame::GetLocalPlayer(mPlayerIndex);
         if (pCharacter)
         {
-            Controllable* pControllable = pCharacter->GetControllable();
-            const Controllable* pPilot = pControllable ? pControllable->GetPilot() : 0;
+            const Controllable* pControllable = pCharacter->GetControllable();
+            const Controllable* pPilot = 0;
+            if (pControllable)
+            {
+                pPilot = pControllable->GetPilot();
+            }
             const GameObject* pPilotObject = pPilot ? pPilot->GetGameObject() : 0;
-            const Controllable* pConstControllable = pControllable;
-            const GameObject* pVehicle = pConstControllable ? pConstControllable->GetGameObject() : 0;
-            uNumSeats = UpdateSeatingMarkers(pCharacter, pPilotObject != pVehicle ? pVehicle : 0);
+            const GameObject* pVehicle = pControllable ? pControllable->GetGameObject() : 0;
+            uNumSeats = UpdateSeatingMarkers(pCharacter, pPilotObject == pVehicle ? 0 : pVehicle);
             if (!uNumSeats)
             {
                 mBackdrop.SetModel(0u);
@@ -417,10 +420,14 @@ bool HUD::ElementVehicleSeating::GetProperty(const unsigned int uHashID, void* p
 // FUNCTION: SWBF2 0x0055d7d0
 void HUD::ElementVehicleSeating::WriteData(HUD::File& file, unsigned int uTabs)
 {
-    float fX = RedGroupElement::GetPosition().x;
-    if (CameraManager::sInstance->GetNumCameras() <= 1)
+    float fX;
+    if (CameraManager::sInstance->GetNumCameras() > 1)
     {
-        fX = HUD::ConvertXForWideScreen(fX, GetContainerViewWidth(), GetContainerViewHeight());
+        fX = RedGroupElement::GetPosition().x;
+    }
+    else
+    {
+        fX = HUD::ConvertXForWideScreen(RedGroupElement::GetPosition().x, GetContainerViewWidth(), GetContainerViewHeight());
     }
     const PblVector3& vPosition = RedGroupElement::GetPosition();
     RedGroupElement::SetPosition(fX, vPosition.y, vPosition.z);

@@ -170,7 +170,6 @@ void HUD::ObjectiveList::AddObjective(unsigned int uiTextHashID, unsigned int ui
 void HUD::ObjectiveList::SetupText()
 {
     float fY = 8.0f;
-    float fUsedHeight = 0.0f;
     float fWidth = GetWidthPixelsFloat() - 16.0f;
     if (fWidth < 0.0f)
     {
@@ -181,9 +180,10 @@ void HUD::ObjectiveList::SetupText()
     {
         fHeight = 0.0f;
     }
+    float fUsedHeight = 0.0f;
     bool bFull = false;
     int iNumShown = 0;
-    float fLeft, fTop, fRight, fBottom;
+    float fBottom, fTop, fRight, fLeft;
 
     for (PblList<Objective>::Itor it(_objectives.GetLast()); it != _objectives.End(); --it)
     {

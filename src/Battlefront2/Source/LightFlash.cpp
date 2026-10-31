@@ -25,7 +25,10 @@ static inline RedColorValue ToColorValue(const RedColor& c)
 LightFlash::LightFlash(const PblSphere& sphere, const RedColor& color, float fLifeTime)
     : RedOmniLight(sphere.GetCenter(), sphere.GetRadius(), ToColorValue(color))
 {
-    m_color0 = color;
+    m_color0.b = color.b;
+    m_color0.g = color.g;
+    m_color0.r = color.r;
+    m_color0.a = color.a;
     m_fLifeTime = fLifeTime;
     m_fTimer = 0.0f;
     Activate();
@@ -49,18 +52,18 @@ LightFlash::~LightFlash()
 bool LightFlash::Update(float fDeltaTime)
 {
     m_fTimer += fDeltaTime;
-    if (m_fTimer < m_fLifeTime)
+    if (m_fTimer >= m_fLifeTime)
     {
-        float t = m_fTimer / m_fLifeTime;
-        RedColor color;
-        color.b = (unsigned char)(int)(RedColor::BLACK.b * t + m_color0.b * (1.0f - t) + 0.5f);
-        color.g = (unsigned char)(int)(m_color0.g * (1.0f - t) + RedColor::BLACK.g * t + 0.5f);
-        color.r = (unsigned char)(int)(m_color0.r * (1.0f - t) + RedColor::BLACK.r * t + 0.5f);
-        color.a = (unsigned char)(int)(m_color0.a * (1.0f - t) + RedColor::BLACK.a * t + 0.5f);
-        SetColor(ToColorValue(color));
-        return true;
+        SetColor(ToColorValue(RedColor::BLACK));
+        return false;
     }
 
-    SetColor(ToColorValue(RedColor::BLACK));
-    return false;
+    float t = m_fTimer / m_fLifeTime;
+    RedColor color;
+    color.b = (unsigned char)(int)(RedColor::BLACK.b * t + m_color0.b * (1.0f - t) + 0.5f);
+    color.g = (unsigned char)(int)(m_color0.g * (1.0f - t) + RedColor::BLACK.g * t + 0.5f);
+    color.r = (unsigned char)(int)(m_color0.r * (1.0f - t) + RedColor::BLACK.r * t + 0.5f);
+    color.a = (unsigned char)(int)(m_color0.a * (1.0f - t) + RedColor::BLACK.a * t + 0.5f);
+    SetColor(ToColorValue(color));
+    return true;
 }

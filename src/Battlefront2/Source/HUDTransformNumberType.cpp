@@ -90,7 +90,7 @@ float HUD::TransformNumberType::CalculateInputValue(float fInput, float fMin, fl
 // FUNCTION: SWBF2 0x00568630
 void HUD::TransformNumberType::EventInputFactor(const HUD::Event& event, void* const pData)
 {
-    const EventClass::Type type = event.mClass->mType;
+    const EventClass::Type type = event.GetClass()->GetType();
     if (type >= EventClass::type_Int && type <= EventClass::type_Float)
     {
         static_cast<TransformNumberType*>(pData)->mInputFactor = event.GetDataFloat();

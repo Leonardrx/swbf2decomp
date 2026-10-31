@@ -157,11 +157,11 @@ namespace GameLoop
 int GetFunctionIdForButtonId(int iButton)
 {
     RawControllerInputs* pInputs = FLInputManager::s_instance.GetPlayerJoystick(PauseMenu::GetPausingViewport());
-    if (!pInputs)
+    if (pInputs)
     {
-        return -1;
+        return pInputs->mCurBindings[pInputs->GetInputMode()][iButton].mDest;
     }
-    return pInputs->mCurBindings[pInputs->GetInputMode()][iButton].mDest;
+    return -1;
 }
 }
 
@@ -197,7 +197,7 @@ int EnumToLuaFunctionIndex(int iEnum, int iMode)
 {
     for (int i = 0; i < 21; ++i)
     {
-        if (sLuaFunctionToEnum[iMode][i] == iEnum)
+        if (iEnum == sLuaFunctionToEnum[iMode][i])
         {
             return i;
         }
@@ -216,12 +216,11 @@ void _SetGameRules(eGAME_RULES eRules);
 // FUNCTION: SWBF2 0x00596b70
 int ScriptCB_SetSplitscreen(lua_State* L)
 {
-    int NumArgs = LuaHelper::GetTop();
-    if (NumArgs == 1 && LuaHelper::IsNumber(1))
+    if (lua_gettop(LuaHelper::mState) == 1 && lua_isnumber(LuaHelper::mState, 1))
     {
-        int iNumCameras = LuaHelper::GetInt(1);
-        iNumCameras = Max(iNumCameras, 1);
-        iNumCameras = Min(iNumCameras, 1);
+        int iNumCameras = (int)luaL_checknumber(LuaHelper::mState, 1);
+        iNumCameras = iNumCameras < 1 ? 1 : iNumCameras;
+        iNumCameras = iNumCameras > 1 ? 1 : iNumCameras;
         GameLoop::SetNumCameras(iNumCameras);
     }
     else
@@ -252,7 +251,7 @@ int ScriptCB_SetDifficulty(lua_State* L)
     if ((NumArgs == 1 || NumArgs == 2) && LuaHelper::IsNumber(1))
     {
         int val = LuaHelper::GetInt(1);
-        if (val < eDIFFICULTY_EASY || val > eDIFFICULTY_HARD)
+        if (val < eDIFFICULTY_EASY || val >= eDIFFICULTY_LAST)
         {
             val = eDIFFICULTY_MEDIUM;
         }
@@ -524,65 +523,75 @@ int ScriptCB_GetGeneralOptions(lua_State* L)
 // FUNCTION: SWBF2 0x00597da0
 int ScriptCB_SetGeneralOptions(lua_State* L)
 {
-    if (lua_gettop(LuaHelper::mState) == 1 && lua_istable(LuaHelper::mState, 1))
+    if (lua_gettop(LuaHelper::mState) != 1 || !lua_istable(LuaHelper::mState, 1))
     {
-        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
-        if (pProfile)
+        return 0;
+    }
+
+    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
+    if (!pProfile)
+    {
+        return 0;
+    }
+
+    PlayerProfile::tGameOpt& rGame = pProfile->mGameOptions;
+    bool bVal;
+    LuaHelper::TableReadVal("bFirstPerson", bVal);
+    rGame.mCockpitCam = bVal;
+    LuaHelper::TableReadVal("bFirstPersonFlyer", bVal);
+    rGame.mCockpitCamFlyer = bVal;
+    LuaHelper::TableReadVal("bRumble", bVal);
+    rGame.mbRumble = bVal;
+    LuaHelper::TableReadVal("bAutoAim", bVal);
+    rGame.mbTargetAutoTracking = bVal;
+
+    {
+        int iFriendlyFire = 100;
+        LuaHelper::TableReadVal("iFriendlyFire", iFriendlyFire, false);
+        if (iFriendlyFire != 0 && iFriendlyFire != 100)
         {
-            PlayerProfile::tGameOpt& rGame = pProfile->mGameOptions;
-            bool bVal;
-            LuaHelper::TableReadVal("bFirstPerson", bVal);
-            rGame.mCockpitCam = bVal;
-            LuaHelper::TableReadVal("bFirstPersonFlyer", bVal);
-            rGame.mCockpitCamFlyer = bVal;
-            LuaHelper::TableReadVal("bRumble", bVal);
-            rGame.mbRumble = bVal;
-            LuaHelper::TableReadVal("bAutoAim", bVal);
-            rGame.mbTargetAutoTracking = bVal;
+            iFriendlyFire = 0;
+        }
+        rGame.mFriendlyFire = (unsigned char)iFriendlyFire;
+    }
 
-            int iFriendlyFire = 100;
-            LuaHelper::TableReadVal("iFriendlyFire", iFriendlyFire, false);
-            if (iFriendlyFire != 0 && iFriendlyFire != 100)
-            {
-                iFriendlyFire = 0;
-            }
-            rGame.mFriendlyFire = (unsigned char)iFriendlyFire;
+    LuaHelper::TableReadVal("bHeroes", bVal);
+    rGame.mbHerosEnabled = bVal;
+    LuaHelper::TableReadVal("bAimAssist", bVal);
+    rGame.mbAimAssist = bVal;
+    LuaHelper::TableReadVal("bStickyReticule", bVal);
+    rGame.mbStickyReticule = bVal;
+    LuaHelper::TableReadVal("bFlyerRolling", bVal);
+    rGame.mbFlyerRolling = bVal;
+    LuaHelper::TableReadVal("bObjectiveDetails", bVal);
+    rGame.mbObjectiveDetails = bVal;
+    LuaHelper::TableReadVal("bMovieSubtitles", bVal);
+    rGame.mu8MovieSubtitles = bVal != 0;
+    LuaHelper::TableReadVal("bSoldierHints", bVal);
+    rGame.mbSoldierHints = bVal != 0;
 
-            LuaHelper::TableReadVal("bHeroes", bVal);
-            rGame.mbHerosEnabled = bVal;
-            LuaHelper::TableReadVal("bAimAssist", bVal);
-            rGame.mbAimAssist = bVal;
-            LuaHelper::TableReadVal("bStickyReticule", bVal);
-            rGame.mbStickyReticule = bVal;
-            LuaHelper::TableReadVal("bFlyerRolling", bVal);
-            rGame.mbFlyerRolling = bVal;
-            LuaHelper::TableReadVal("bObjectiveDetails", bVal);
-            rGame.mbObjectiveDetails = bVal;
-            LuaHelper::TableReadVal("bMovieSubtitles", bVal);
-            rGame.mu8MovieSubtitles = bVal != 0;
-            LuaHelper::TableReadVal("bSoldierHints", bVal);
-            rGame.mbSoldierHints = bVal != 0;
+    {
+        float fReticuleAlpha = 1.0f;
+        LuaHelper::TableReadVal("iReticuleAlpha", fReticuleAlpha, false);
+        rGame.mReticuleAlpha = fReticuleAlpha;
+    }
 
-            float fReticuleAlpha = 1.0f;
-            LuaHelper::TableReadVal("iReticuleAlpha", fReticuleAlpha, false);
-            rGame.mReticuleAlpha = fReticuleAlpha;
-
-            int iDifficulty = eDIFFICULTY_MEDIUM;
-            LuaHelper::TableReadVal("iDifficulty", iDifficulty, false);
-            if (iDifficulty < eDIFFICULTY_EASY || iDifficulty >= eDIFFICULTY_LAST)
-            {
-                iDifficulty = eDIFFICULTY_MEDIUM;
-            }
-            if (rGame.mCurDiffLevel != iDifficulty || PlayerPrefs::mAllUserPrefs[0].mDifficulty != iDifficulty)
-            {
-                PlayerPrefs::mAllUserPrefs[0].mDifficulty = (eGAME_DIFFICULTY)iDifficulty;
-                rGame.mCurDiffLevel = (eGAME_DIFFICULTY)iDifficulty;
-            }
-
-            pProfile->ApplySettings();
-            pProfile->UpdateProfCRC();
+    {
+        int iDifficulty = eDIFFICULTY_MEDIUM;
+        LuaHelper::TableReadVal("iDifficulty", iDifficulty, false);
+        if (iDifficulty < eDIFFICULTY_EASY || iDifficulty >= eDIFFICULTY_LAST)
+        {
+            iDifficulty = eDIFFICULTY_MEDIUM;
+        }
+        if (rGame.mCurDiffLevel != iDifficulty || PlayerPrefs::mAllUserPrefs[0].mDifficulty != iDifficulty)
+        {
+            PlayerPrefs::mAllUserPrefs[0].mDifficulty = (eGAME_DIFFICULTY)iDifficulty;
+            rGame.mCurDiffLevel = (eGAME_DIFFICULTY)iDifficulty;
         }
     }
+
+    pProfile->ApplySettings();
+    pProfile->UpdateProfCRC();
     return 0;
 }
 
@@ -620,8 +629,7 @@ int ScriptCB_GetHUDScale(lua_State* L)
 // FUNCTION: SWBF2 0x00598030
 int ScriptCB_NextToolTipState(lua_State* L)
 {
-    int NumArgs = LuaHelper::GetTop();
-    if (NumArgs == 0)
+    if (lua_gettop(LuaHelper::mState) == 0)
     {
         PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
         if (pProfile)
@@ -647,11 +655,12 @@ int ScriptCB_NextToolTipState(lua_State* L)
             }
             else
             {
+                ToolTipsDisplay* pDisplay = ToolTipsDisplay::sInstance;
                 rTips.mOn = false;
                 rTips.mOff = true;
-                if (ToolTipsDisplay::sInstance)
+                if (pDisplay)
                 {
-                    ToolTipsDisplay::sInstance->SetAlwaysOff();
+                    pDisplay->SetAlwaysOff();
                 }
             }
             pProfile->UpdateProfCRC();
@@ -663,8 +672,7 @@ int ScriptCB_NextToolTipState(lua_State* L)
 // FUNCTION: SWBF2 0x005980f0
 int ScriptCB_PrevToolTipState(lua_State* L)
 {
-    int NumArgs = LuaHelper::GetTop();
-    if (NumArgs == 0)
+    if (lua_gettop(LuaHelper::mState) == 0)
     {
         PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
         if (pProfile)
@@ -672,11 +680,12 @@ int ScriptCB_PrevToolTipState(lua_State* L)
             PlayerProfile::tToolTipOpt& rTips = pProfile->mToolTipOptions;
             if (rTips.mOn)
             {
+                ToolTipsDisplay* pDisplay = ToolTipsDisplay::sInstance;
                 rTips.mOn = false;
                 rTips.mOff = true;
-                if (ToolTipsDisplay::sInstance)
+                if (pDisplay)
                 {
-                    ToolTipsDisplay::sInstance->SetAlwaysOff();
+                    pDisplay->SetAlwaysOff();
                 }
             }
             else if (rTips.mOff)
@@ -815,43 +824,45 @@ int ScriptCB_GetSideSelectButtonSetting(lua_State* L)
 // FUNCTION: SWBF2 0x00598450
 int ScriptCB_SetOnlineOpts(lua_State* L)
 {
-    if (lua_gettop(LuaHelper::mState) == 1 && lua_istable(LuaHelper::mState, 1))
+    if (lua_gettop(LuaHelper::mState) != 1 || !lua_istable(LuaHelper::mState, 1))
     {
-        bool bAppearOffline = false;
-        bool bVoiceMask = false;
-        int iTVVoiceVol = 10;
-        int iVoiceRecordVol = 10;
-        int iVoicePlayVol = 10;
-        int iPlayersSupported = 3;
-        int iTurnsPerSecond = 20;
-        int iOnlineIcon = 0;
-        bool bAllRegions = false;
-        LuaHelper::TableReadVal("bAppearOffline", bAppearOffline);
-        LuaHelper::TableReadVal("bVoiceMask", bVoiceMask);
-        LuaHelper::TableReadVal("iTVVoiceVol", iTVVoiceVol, false);
-        LuaHelper::TableReadVal("iVoiceRecordVol", iVoiceRecordVol, false);
-        LuaHelper::TableReadVal("iVoicePlayVol", iVoicePlayVol, false);
-        LuaHelper::TableReadVal("iPlayersSupported", iPlayersSupported, false);
-        LuaHelper::TableReadVal("iTurnsPerSecond", iTurnsPerSecond, false);
-        LuaHelper::TableReadVal("iOnlineIcon", iOnlineIcon, false);
-        LuaHelper::TableReadVal("bAllRegions", bAllRegions);
+        return 0;
+    }
 
-        PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
-        if (pProfile)
-        {
-            PlayerProfile::tOnlineOpt& rOnline = pProfile->mOnlineOptions;
-            rOnline.mu8AppearOffline = bAppearOffline;
-            rOnline.mu8VoiceMask = bVoiceMask;
-            rOnline.mu8VoiceToTVVol = (unsigned char)iTVVoiceVol;
-            rOnline.mu8VoiceRecordVol = (unsigned char)iVoiceRecordVol;
-            rOnline.mu8VoicePlayVol = (unsigned char)iVoicePlayVol;
-            rOnline.mu8PlayersSupported = (unsigned char)iPlayersSupported;
-            rOnline.mu8TurnsPerSecond = (unsigned char)iTurnsPerSecond;
-            rOnline.mOnlineIcon = (unsigned char)iOnlineIcon;
-            rOnline.mShowAllRegions = bAllRegions;
-            pProfile->ApplySettings();
-            pProfile->UpdateProfCRC();
-        }
+    bool bAppearOffline = false;
+    bool bVoiceMask = false;
+    int iTVVoiceVol = 10;
+    int iVoiceRecordVol = 10;
+    int iVoicePlayVol = 10;
+    int iPlayersSupported = 3;
+    int iTurnsPerSecond = 20;
+    int iOnlineIcon = 0;
+    bool bAllRegions = false;
+    LuaHelper::TableReadVal("bAppearOffline", bAppearOffline);
+    LuaHelper::TableReadVal("bVoiceMask", bVoiceMask);
+    LuaHelper::TableReadVal("iTVVoiceVol", iTVVoiceVol, false);
+    LuaHelper::TableReadVal("iVoiceRecordVol", iVoiceRecordVol, false);
+    LuaHelper::TableReadVal("iVoicePlayVol", iVoicePlayVol, false);
+    LuaHelper::TableReadVal("iPlayersSupported", iPlayersSupported, false);
+    LuaHelper::TableReadVal("iTurnsPerSecond", iTurnsPerSecond, false);
+    LuaHelper::TableReadVal("iOnlineIcon", iOnlineIcon, false);
+    LuaHelper::TableReadVal("bAllRegions", bAllRegions);
+
+    PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
+    if (pProfile)
+    {
+        PlayerProfile::tOnlineOpt& rOnline = pProfile->mOnlineOptions;
+        rOnline.mu8AppearOffline = bAppearOffline;
+        rOnline.mu8VoiceMask = bVoiceMask;
+        rOnline.mu8VoiceToTVVol = (unsigned char)iTVVoiceVol;
+        rOnline.mu8VoiceRecordVol = (unsigned char)iVoiceRecordVol;
+        rOnline.mu8VoicePlayVol = (unsigned char)iVoicePlayVol;
+        rOnline.mu8PlayersSupported = (unsigned char)iPlayersSupported;
+        rOnline.mu8TurnsPerSecond = (unsigned char)iTurnsPerSecond;
+        rOnline.mOnlineIcon = (unsigned char)iOnlineIcon;
+        rOnline.mShowAllRegions = bAllRegions;
+        pProfile->ApplySettings();
+        pProfile->UpdateProfCRC();
     }
     return 0;
 }
@@ -879,20 +890,20 @@ int ScriptCB_GetOnlineOpts(lua_State* L)
         iVoiceRecordVol = rOnline.mu8VoiceRecordVol;
         iVoicePlayVol = rOnline.mu8VoicePlayVol;
         iPlayersSupported = rOnline.mu8PlayersSupported;
+        iTurnsPerSecond = rOnline.mu8TurnsPerSecond;
+        iOnlineIcon = rOnline.mOnlineIcon;
+        bAllRegions = rOnline.mShowAllRegions != 0;
         if (iPlayersSupported >= 9)
         {
             iPlayersSupported = 8;
         }
-        iTurnsPerSecond = rOnline.mu8TurnsPerSecond;
-        iOnlineIcon = rOnline.mOnlineIcon;
-        bAllRegions = rOnline.mShowAllRegions != 0;
     }
     if (iTurnsPerSecond == 0)
     {
         iTurnsPerSecond = 20;
     }
 
-    LuaHelper::PushEmptyTable();
+    lua_newtable(LuaHelper::mState);
     LuaHelper::TableWriteVal("bAppearOffline", bAppearOffline);
     LuaHelper::TableWriteVal("bVoiceMask", bVoiceMask);
     LuaHelper::TableWriteVal("iTVVoiceVol", iTVVoiceVol);
@@ -1014,13 +1025,29 @@ int ScriptCB_GetNetGameDefaults(lua_State* L)
     LuaHelper::TableWriteVal("iDMMult", gDMReinforcementMult[gCurRules]);
     LuaHelper::TableWriteVal("iCONMult", gCONReinforcementMult[gCurRules]);
 
-    int iBots = (unsigned int)gCurRules <= eGAMERULES_METAGAME ? gCONNumBots[gCurRules] : netNumBots;
+    int iBots = netNumBots;
+    if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+    {
+        iBots = gCONNumBots[gCurRules];
+    }
     LuaHelper::TableWriteVal("iCONNumBots", iBots < 32 ? iBots : 32);
-    iBots = (unsigned int)gCurRules <= eGAMERULES_METAGAME ? gCTFNumBots[gCurRules] : netNumBots;
+    iBots = netNumBots;
+    if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+    {
+        iBots = gCTFNumBots[gCurRules];
+    }
     LuaHelper::TableWriteVal("iCTFNumBots", iBots < 32 ? iBots : 32);
-    iBots = (unsigned int)gCurRules <= eGAMERULES_METAGAME ? gELINumBots[gCurRules] : netNumBots;
+    iBots = netNumBots;
+    if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+    {
+        iBots = gELINumBots[gCurRules];
+    }
     LuaHelper::TableWriteVal("iELINumBots", iBots < 32 ? iBots : 32);
-    iBots = (unsigned int)gCurRules <= eGAMERULES_METAGAME ? gASSNumBots[gCurRules] : netNumBots;
+    iBots = netNumBots;
+    if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+    {
+        iBots = gASSNumBots[gCurRules];
+    }
     LuaHelper::TableWriteVal("iASSNumBots", iBots < 32 ? iBots : 32);
 
     LuaHelper::TableWriteVal("iASSScoreLimit", gSpaceAssaultScoreLimit[gCurRules]);
@@ -1052,7 +1079,16 @@ int ScriptCB_SetNetGameDefaults(lua_State* L)
         LuaHelper::TableReadVal("bIsPrivate", bIsPrivate);
         LuaHelper::TableReadVal("bShowNames", bShowNames);
         LuaHelper::TableReadVal("bAutoAssignTeams", bAutoAssignTeams);
-        GameLoop::SetCanSwitchSides(NetGame::IsEnabled() ? !bAutoAssignTeams : true);
+        bool bCanSwitchSides;
+        if (NetGame::IsEnabled())
+        {
+            bCanSwitchSides = !bAutoAssignTeams;
+        }
+        else
+        {
+            bCanSwitchSides = true;
+        }
+        GameLoop::SetCanSwitchSides(bCanSwitchSides);
 
         int iStartCnt;
         LuaHelper::TableReadVal("iStartCnt", iStartCnt, false);
@@ -1065,12 +1101,14 @@ int ScriptCB_SetNetGameDefaults(lua_State* L)
         LuaHelper::TableReadVal("PasswordStr", acPassword, sizeof(acPassword), true);
         NetSetup::SetPassword(acPassword);
 
-        int iValue;
-        LuaHelper::TableReadVal("iVoiceMode", iValue, false);
-        void* pTransport = GameVoiceChat::GetTransport();
-        VoiceChat::Transport::Method cMethod((VoiceChat::Transport::Method::Type)iValue,
-            ((VoiceChat::Transport*)pTransport)->GetMethod().GetNumRelayNodes());
-        ((VoiceChat::Transport*)pTransport)->SetMethod(cMethod, true);
+        {
+            int iVoiceMode;
+            LuaHelper::TableReadVal("iVoiceMode", iVoiceMode, false);
+            void* pTransport = GameVoiceChat::GetTransport();
+            VoiceChat::Transport::Method cMethod((VoiceChat::Transport::Method::Type)iVoiceMode,
+                ((VoiceChat::Transport*)pTransport)->GetMethod().GetNumRelayNodes());
+            ((VoiceChat::Transport*)pTransport)->SetMethod(cMethod, true);
+        }
 
         NetGame::SetMaxPreGameTime(iWarmUp);
         hostVoteThreshold = iVote;
@@ -1101,25 +1139,28 @@ int ScriptCB_SetNetGameDefaults(lua_State* L)
 
         LuaHelper::TableReadVal("iDMMult", gDMReinforcementMult[gCurRules], false);
         LuaHelper::TableReadVal("iCONMult", gCONReinforcementMult[gCurRules], false);
-        LuaHelper::TableReadVal("iCONNumBots", iValue, false);
-        if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
         {
-            gCONNumBots[gCurRules] = iValue;
-        }
-        LuaHelper::TableReadVal("iCTFNumBots", iValue, false);
-        if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
-        {
-            gCTFNumBots[gCurRules] = iValue;
-        }
-        LuaHelper::TableReadVal("iELINumBots", iValue, false);
-        if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
-        {
-            gELINumBots[gCurRules] = iValue;
-        }
-        LuaHelper::TableReadVal("iASSNumBots", iValue, false);
-        if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
-        {
-            gASSNumBots[gCurRules] = iValue;
+            int iValue;
+            LuaHelper::TableReadVal("iCONNumBots", iValue, false);
+            if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+            {
+                gCONNumBots[gCurRules] = iValue;
+            }
+            LuaHelper::TableReadVal("iCTFNumBots", iValue, false);
+            if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+            {
+                gCTFNumBots[gCurRules] = iValue;
+            }
+            LuaHelper::TableReadVal("iELINumBots", iValue, false);
+            if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+            {
+                gELINumBots[gCurRules] = iValue;
+            }
+            LuaHelper::TableReadVal("iASSNumBots", iValue, false);
+            if ((unsigned int)gCurRules <= eGAMERULES_METAGAME)
+            {
+                gASSNumBots[gCurRules] = iValue;
+            }
         }
         LuaHelper::TableReadVal("iASSScoreLimit", gSpaceAssaultScoreLimit[gCurRules], false);
         LuaHelper::TableReadVal("iCTFScore", gCTFScore[gCurRules], false);
@@ -1131,9 +1172,11 @@ int ScriptCB_SetNetGameDefaults(lua_State* L)
         LuaHelper::TableReadVal("bIsDedicated", gIsDedicated);
         Lua_Callbacks::gTeamSetReinforcementMult = 0;
 
-        bool bAwards = true;
-        LuaHelper::TableReadVal("bIsPlayerAwardsEnabled", bAwards);
-        SetNetAwardsEnabled(bAwards);
+        {
+            bool bAwards = true;
+            LuaHelper::TableReadVal("bIsPlayerAwardsEnabled", bAwards);
+            SetNetAwardsEnabled(bAwards);
+        }
         if (gIsDedicated)
         {
             NetSetup::SetAsDedicated(true);
@@ -1145,7 +1188,11 @@ int ScriptCB_SetNetGameDefaults(lua_State* L)
 // FUNCTION: SWBF2 0x00598ee0
 int ScriptCB_GetNetHeroDefaults(lua_State* L)
 {
-    int iHeroUnlock = (netHeroRuleUnlock == 3) ? 3 : 5;
+    int iHeroUnlock = netHeroRuleUnlock;
+    if (iHeroUnlock != 3)
+    {
+        iHeroUnlock = 5;
+    }
     int iHeroUnlockVal = netHeroRuleUnlockVal;
     int iHeroPlayer;
     if (netHeroRulePlayer < 4)
@@ -1160,7 +1207,7 @@ int ScriptCB_GetNetHeroDefaults(lua_State* L)
     int iHeroRespawn = netHeroRuleRespawn;
     int iHeroRespawnVal = netHeroRuleRespawnVal;
 
-    LuaHelper::PushEmptyTable();
+    lua_newtable(LuaHelper::mState);
     LuaHelper::TableWriteVal("iHeroUnlock", iHeroUnlock);
     LuaHelper::TableWriteVal("iHeroUnlockVal", iHeroUnlockVal);
     LuaHelper::TableWriteVal("iHeroPlayer", iHeroPlayer);
@@ -1358,19 +1405,18 @@ int ScriptCB_GetFunctionIdForAnalogId(lua_State*)
 int ScriptCB_SetFunctionIdForAnalogId(lua_State*)
 {
     int NumArgs = LuaHelper::GetTop();
-    if (NumArgs != 3 || !LuaHelper::IsNumber(1) ||
-        !LuaHelper::IsNumber(2) || !LuaHelper::IsNumber(3))
+    if (NumArgs == 3 && LuaHelper::IsNumber(1) &&
+        LuaHelper::IsNumber(2) && LuaHelper::IsNumber(3))
     {
-        return 0;
-    }
-    int analogStick = LuaHelper::GetInt(1);
-    int functionId = LuaHelper::GetInt(2);
-    int controlMode = LuaHelper::GetInt(3);
-    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
-    if (pProfile)
-    {
-        pProfile->NoteBindingChange();
-        pProfile->UpdateProfCRC();
+        int analogStick = LuaHelper::GetInt(1);
+        int functionId = LuaHelper::GetInt(2);
+        int controlMode = LuaHelper::GetInt(3);
+        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
+        if (pProfile)
+        {
+            pProfile->NoteBindingChange();
+            pProfile->UpdateProfCRC();
+        }
     }
     return 0;
 }
@@ -1393,24 +1439,27 @@ int ScriptCB_GetFunctionIdForButtonId(lua_State*)
 // FUNCTION: SWBF2 0x00597370
 int ScriptCB_SetFunctionIdForButtonId(lua_State*)
 {
-    if (lua_gettop(LuaHelper::mState) != 3 || !lua_isnumber(LuaHelper::mState, 1))
+    if (lua_gettop(LuaHelper::mState) == 3 && lua_isnumber(LuaHelper::mState, 1))
     {
-        return 0;
-    }
-    int iButton = (int)luaL_checknumber(LuaHelper::mState, 1) - 1;
-    int iFunction = -1;
-    if (lua_isnumber(LuaHelper::mState, 2) && lua_isnumber(LuaHelper::mState, 3))
-    {
-        int iFunctionIndex = (int)luaL_checknumber(LuaHelper::mState, 2);
-        int iMode = (int)luaL_checknumber(LuaHelper::mState, 3);
-        iFunction = LuaFunctionIndexToEnum(iFunctionIndex, iMode);
-    }
-    GameLoop::SetFunctionIdForButtonId(LuaButtonIndexToEnum(iButton), iFunction);
-    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
-    if (pProfile)
-    {
-        pProfile->NoteBindingChange();
-        pProfile->UpdateProfCRC();
+        int iButton = (int)luaL_checknumber(LuaHelper::mState, 1) - 1;
+        int iFunction;
+        if (lua_isnumber(LuaHelper::mState, 2) && lua_isnumber(LuaHelper::mState, 3))
+        {
+            int iFunctionIndex = (int)luaL_checknumber(LuaHelper::mState, 2);
+            int iMode = (int)luaL_checknumber(LuaHelper::mState, 3);
+            iFunction = LuaFunctionIndexToEnum(iFunctionIndex, iMode);
+        }
+        else
+        {
+            iFunction = -1;
+        }
+        GameLoop::SetFunctionIdForButtonId(LuaButtonIndexToEnum(iButton), iFunction);
+        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
+        if (pProfile)
+        {
+            pProfile->NoteBindingChange();
+            pProfile->UpdateProfCRC();
+        }
     }
     return 0;
 }
@@ -1419,7 +1468,7 @@ int ScriptCB_SetFunctionIdForButtonId(lua_State*)
 int ScriptCB_SetPlayerSide(lua_State*)
 {
     int NumArgs = LuaHelper::GetTop();
-    if ((NumArgs == 1 || NumArgs == 2) && LuaHelper::IsNumber(1))
+    if (NumArgs >= 1 && NumArgs <= 2 && lua_isnumber(LuaHelper::mState, 1))
     {
         int TheirTeam = LuaHelper::GetInt(1);
         if (TheirTeam >= 1 && TheirTeam <= 2)
@@ -1445,18 +1494,17 @@ int ScriptCB_SetPlayerSide(lua_State*)
 // FUNCTION: SWBF2 0x00597950
 int ScriptCB_SetMouseTurnAssist(lua_State*)
 {
-    if (LuaHelper::GetTop() != 1 || !LuaHelper::IsNumber(1))
+    if (LuaHelper::GetTop() == 1 && LuaHelper::IsNumber(1))
     {
-        return 0;
-    }
-    int bAssist = LuaHelper::GetInt(1);
-    RawControllerInputs* pJoystick = FLInputManager::s_instance.GetPlayerJoystick(PauseMenu::GetPausingViewport());
-    pJoystick->SetMouseAssist(bAssist == 1, pJoystick->GetInputMode());
-    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
-    if (pProfile)
-    {
-        pProfile->NoteBindingChange();
-        pProfile->UpdateProfCRC();
+        int bAssist = LuaHelper::GetInt(1);
+        RawControllerInputs* pJoystick = FLInputManager::s_instance.GetPlayerJoystick(PauseMenu::GetPausingViewport());
+        pJoystick->SetMouseAssist(bAssist == 1, pJoystick->GetInputMode());
+        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PauseMenu::GetPausingJoystick());
+        if (pProfile)
+        {
+            pProfile->NoteBindingChange();
+            pProfile->UpdateProfCRC();
+        }
     }
     return 0;
 }
@@ -1704,21 +1752,33 @@ int Base64Encode(unsigned char* dst, unsigned int capacity, unsigned int* length
         *length = groups * 4 + 1;
         return -42;
     }
+    unsigned int whole = size / 3 * 3;
     unsigned char* out = dst;
-    unsigned int i = 0;
-    for (; i < size / 3 * 3; i += 3, src += 3)
+    unsigned int i;
+    for (i = 0; i < whole; i += 3)
     {
-        *out++ = kBase64Alphabet[src[0] >> 2];
-        *out++ = kBase64Alphabet[((src[0] << 4) | (src[1] >> 4)) & 63];
-        *out++ = kBase64Alphabet[((src[1] << 2) | (src[2] >> 6)) & 63];
-        *out++ = kBase64Alphabet[src[2] & 63];
+        int c1 = *src++;
+        int c2 = *src++;
+        int c3 = *src++;
+        *out++ = kBase64Alphabet[(c1 >> 2) & 63];
+        *out++ = kBase64Alphabet[(((c1 & 3) << 4) + (c2 >> 4)) & 63];
+        *out++ = kBase64Alphabet[(((c2 & 15) << 2) + (c3 >> 6)) & 63];
+        *out++ = kBase64Alphabet[c3 & 63];
     }
     if (i < size)
     {
-        unsigned int second = i + 1 < size ? src[1] : 0;
-        *out++ = kBase64Alphabet[src[0] >> 2];
-        *out++ = kBase64Alphabet[((src[0] << 4) | (second >> 4)) & 63];
-        *out++ = i + 1 < size ? kBase64Alphabet[(second & 15) << 2] : '=';
+        int c1 = *src++;
+        int c2 = i + 1 < size ? *src++ : 0;
+        *out++ = kBase64Alphabet[(c1 >> 2) & 63];
+        *out++ = kBase64Alphabet[(((c1 & 3) << 4) + (c2 >> 4)) & 63];
+        if (i + 1 < size)
+        {
+            *out++ = kBase64Alphabet[((c2 & 15) << 2) & 63];
+        }
+        else
+        {
+            *out++ = '=';
+        }
         *out++ = '=';
     }
     *length = out - dst;
@@ -1729,7 +1789,7 @@ int Base64Encode(unsigned char* dst, unsigned int capacity, unsigned int* length
 // FUNCTION: SWBF2 0x006347b0
 void Sha512WipeContext(Sha512Context* ctx)
 {
-    volatile unsigned char* p = reinterpret_cast<volatile unsigned char*>(ctx);
+    volatile unsigned char* volatile p = reinterpret_cast<volatile unsigned char*>(ctx);
     for (unsigned int i = 0; i < sizeof(*ctx); ++i)
     {
         *p++ = 0;
@@ -1754,7 +1814,8 @@ void Sha512WipeContextIfPresent(Sha512Context* ctx)
 // FUNCTION: SWBF2 0x00634800
 void Sha512InitContext(Sha512Context* ctx, int mode)
 {
-    ctx->total[0] = ctx->total[1] = 0;
+    ctx->total[0] = 0;
+    ctx->total[1] = 0;
     ctx->mode = mode;
     if (!mode)
     {

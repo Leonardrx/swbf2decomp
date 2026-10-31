@@ -148,14 +148,13 @@ bool FlagItem::Drop()
 void FlagItem::ResetFlag()
 {
     FlagItem* pItem = this;
-    static_cast<CollisionObject*>(pItem)->SetMatrix(PblMatrix(pItem->mStartRotation,
+    static_cast<CollisionObject&>(*pItem).SetMatrix(PblMatrix(pItem->mStartRotation,
         pItem->mStartPosition));
     pItem->mLastPosition = pItem->mStartPosition;
 
     if (!NetGame::IsEnabled() || !netEnabledNext || !netClientActive)
     {
-        static char unusedParam;
-        EventManager::FlagEvent::mReset.mRoot.Trigger(*pItem, unusedParam);
+        EventManager::FlagEvent::mReset.mRoot.Trigger(*pItem, EventManager::noContext);
     }
     AI::EventInfo event(AI::EVT_CTF_FlagKill, reinterpret_cast<GameObject*>(pItem));
     ControllerManager::BroadcastEvent(&event, 1000);
@@ -195,32 +194,29 @@ void FlagItem::ResetFlag()
 // FUNCTION: SWBF2 0x00524b80
 void FlagItem::SetupCollisionGeometry()
 {
-    const RedModel* pRedModel = reinterpret_cast<EntityGeometry*>(this)->mModel->_mModel;
-    const float fRadius = pRedModel->_BoundingSphere.GetRadius();
-    const PblVector3& vCenter = *reinterpret_cast<const PblVector3*>(
-        &pRedModel->_BoundingSphere);
     CollisionPrimitive primitive;
-    primitive.SetSphere(fRadius);
+    primitive.SetSphere(mModel->_mModel->_BoundingSphere.GetRadius());
 
     PblMatrix matrix;
-    static const float kIdentity[16] = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
-    };
-    memcpy(&matrix, kIdentity, sizeof(matrix));
-    memcpy(&matrix.m[3][0], &vCenter, sizeof(vCenter));
+    matrix = gMatrixIdentity;
+    memcpy(&matrix.m[3][0], &mModel->_mModel->_BoundingSphere.GetCenter(), sizeof(PblVector3));
+    matrix.m[3][3] = 1.0f;
 
     CollisionModel* pModel = &mCollisionModel;
     pModel->ClearAll(true);
     pModel->AddBody(new CollisionBodyPrimitive(primitive, 0, matrix, 0));
 
-    CollisionObject* pCollision = FlagCollision(this);
-    pCollision->SetCollisionRadius(fRadius);
+    const float fRadius = mModel->_mModel->_BoundingSphere.GetRadius();
+    CollisionObject& collision = static_cast<CollisionObject&>(
+        *reinterpret_cast<GameObject*>(this));
+    collision.SetCollisionRadius(fRadius);
+    collision.Set2DCollisionRadius(fRadius);
     const PblVector3& vPos = mMatrix.GetTranslation();
-    pCollision->SetCollisionCenter(vPos);
-    pCollision->SetCollisionModel(pModel);
-    pCollision->RecalculateAABB();
-    CollisionManager::RemoveBody(pCollision);
-    pCollision->AddItemToCollisionManager();
+    collision.SetCollisionCenter(vPos);
+    collision.SetCollisionModel(pModel);
+    collision.RecalculateAABB();
+    collision.RemoveFromCollisionManager();
+    collision.AddItemToCollisionManager();
 }
 
 // FUNCTION: SWBF2 0x00524ab0
@@ -236,21 +232,19 @@ void FlagItem::ClearCarrierFlagItem()
 // FUNCTION: SWBF2 0x00524b10
 bool FlagItem::IsInLandingZone() const
 {
-    FlagItem* pItem = const_cast<FlagItem*>(this);
     TriggerRegionManager* pManager = TriggerRegionManager::sInstance;
-    if (!pManager->mLandingRegionsExist)
+    if (pManager->mLandingRegionsExist)
     {
-        return false;
-    }
-    CollisionObject* pCollision = static_cast<CollisionObject*>(
-        reinterpret_cast<GameObject*>(pItem));
-    for (int i = 0; i < 32; ++i)
-    {
-        TriggerRegionManager::TriggerRegionData* pData = pManager->GetTriggerRegionData(i);
-        if (pData && pData->mType == TriggerRegionManager::TRIGGER_LANDING &&
-            pData->mRegion->IsPointInside(pCollision->GetMatrix().GetTranslation()))
+        const CollisionObject& collision = static_cast<const CollisionObject&>(
+            *reinterpret_cast<const GameObject*>(this));
+        for (int i = 0; i < 32; ++i)
         {
-            return true;
+            TriggerRegionManager::TriggerRegionData* pData = pManager->GetTriggerRegionData(i);
+            if (pData && pData->mType == TriggerRegionManager::TRIGGER_LANDING &&
+                pData->mRegion->IsPointInside(*(const PblVector3*)collision.GetMatrix().m[3]))
+            {
+                return true;
+            }
         }
     }
     return false;
@@ -528,8 +522,7 @@ FlagItemClass::FlagItemClass(FlagItemClass* pBase, unsigned int uHash)
     mCarriedModel = pBase->mCarriedModel;
     mDroppedInLandingZoneModel = pBase->mDroppedInLandingZoneModel;
     mCarriedOffset = pBase->mCarriedOffset;
-    mTeamColorize[0] = pBase->mTeamColorize[0];
-    mTeamColorize[1] = pBase->mTeamColorize[1];
+    memcpy(mTeamColorize, pBase->mTeamColorize, sizeof(mTeamColorize));
     mCarriedSoldierBoneHash = pBase->mCarriedSoldierBoneHash;
     mCarriedDroidekaBoneHash = pBase->mCarriedDroidekaBoneHash;
     mPickupSound = pBase->mPickupSound;
@@ -547,63 +540,45 @@ void FlagItemClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
     switch (uProperty)
     {
-    case 0x05CEA8DE:
-    {
+    case 0x05CEA8DE: /* "CarriedGeometryName" */
         mCarriedModel = const_cast<GameModel*>(GameModel::Find(PblHash(pszValue)));
-            break;
-    }
-    case 0x0E0C4B60:
-    {
+        break;
+    case 0x0E0C4B60: /* "DroppedInLandingZoneGeometryName" */
         mDroppedInLandingZoneModel = const_cast<GameModel*>(GameModel::Find(PblHash(pszValue)));
-            break;
-    }
-    case 0x58A48A9E:
+        break;
+    case 0x58A48A9E: /* "CarriedOffset" */
     {
         float x, y, z;
         sscanf(pszValue, "%f %f %f", &x, &y, &z);
-        mCarriedOffset = PblVector3(x, y, z);
-            break;
+        mCarriedOffset.x = x;
+        mCarriedOffset.y = y;
+        mCarriedOffset.z = z;
+        break;
     }
-    case 0xDA070BBA:
-    {
+    case 0xDA070BBA: /* "DroppedColorize" */
         mTeamColorize[0] = atoi(pszValue) != 0;
-            break;
-    }
-    case 0xCC229F56:
-    {
+        break;
+    case 0xCC229F56: /* "CarriedColorize" */
         mTeamColorize[1] = atoi(pszValue) != 0;
-            break;
-    }
-    case 0x759C8F54:
-    {
+        break;
+    case 0x759C8F54: /* "PickupSound" */
         mPickupSound.SetID(pszValue, false, false);
-            break;
-    }
-    case 0x5B2F29F3:
-    {
+        break;
+    case 0x5B2F29F3: /* "DropSound" */
         mDropSound.SetID(pszValue, false, false);
-            break;
-    }
-    case 0x65A920BA:
-    {
+        break;
+    case 0x65A920BA: /* "AmbientSound" */
         mAmbientSound.SetID(pszValue, false, false);
-            break;
-    }
-    case 0x826BFFDA:
-    {
+        break;
+    case 0x826BFFDA: /* "SoldierAttachBone" */
         mCarriedSoldierBoneHash = PblTEMPHash(pszValue);
-            break;
-    }
-    case 0x4B80027B:
-    {
+        break;
+    case 0x4B80027B: /* "DroidekaAttachBone" */
         mCarriedDroidekaBoneHash = PblTEMPHash(pszValue);
-            break;
-    }
+        break;
     default:
-    {
         EntityItemClass::SetProperty(uProperty, pszValue);
-            break;
-    }
+        break;
     }
 }
 
@@ -617,9 +592,9 @@ EntityClass* FlagItemClass::Derive(unsigned int uHash)
 
 // FUNCTION: SWBF2 0x005240b0
 FlagItem::FlagItem(FlagItemClass* pClass, const EntityDesc& desc)
-    : EntityItem(pClass, desc), mStartRotation(desc.mMatrix)
+    : EntityItem(pClass, desc), mStartRotation(desc.mMatrix),
+      mStartPosition(desc.mMatrix.GetTranslation())
 {
-    mStartPosition = desc.mMatrix.GetTranslation();
     mLifeTimer = FLT_MAX;
     NetGame::Created(this);
     mDroppedModel = mModel;
@@ -638,8 +613,9 @@ FlagItem::FlagItem(FlagItemClass* pClass, const EntityDesc& desc)
     SetPortalActive(false);
     pvs::IManager::GetInstance().UnregisterDynamic(*this);
 
+    unsigned int i = 0;
     memset(mClothPiece, 0, sizeof(mClothPiece));
-    for (unsigned int i = 0; i < mModel->mClothCount; ++i)
+    for (; i < mModel->mClothCount; ++i)
     {
         EntityClass* pClothClass = EntityClass::Find(mModel->mClothList[i]);
         if (pClothClass)
@@ -685,87 +661,70 @@ FlagItem::~FlagItem()
 // FUNCTION: SWBF2 0x005244f0
 bool FlagItem::PickUp(GameObject* pObject)
 {
-    if (NetGame::IsPreGame())
+    if (!NetGame::IsPreGame())
     {
-        return false;
-    }
-
-    if (pObject->IsRtti(EntityDroideka::rttiHashEntityDroideka))
-    {
-        const int iState = reinterpret_cast<EntityDroideka*>(pObject)->mState;
-        if (iState == 12 || iState == 11 || iState == 13)
+        bool bDroidekaBusy = false;
+        if (pObject->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
-            return false;
+            const int iState = reinterpret_cast<EntityDroideka*>(pObject)->mState;
+            bDroidekaBusy = (iState == 12 || iState == 11 || iState == 13);
+        }
+        if (!bDroidekaBusy)
+        {
+            Controllable* pControllable = pObject->GetControllable();
+            if (pControllable && (mAllowAIPickup || pControllable->mPlayerId >= 0))
+            {
+                Character* pCharacter = pControllable->mCharacter;
+                if (pCharacter)
+                {
+                    for (PblList<FlagItem>::Node* pNode = sList->GetFirst(); pNode->_pObject; pNode = pNode->_pNext)
+                    {
+                        if (pNode->_pObject->mOwner == pCharacter)
+                        {
+                            return false;
+                        }
+                    }
+                    if (!pCharacter->mRemote && (IsASpaceMap() || !pCharacter->mVehicle) &&
+                        !(pCharacter->mPlayerId >= 0 && NetGame::IsEnabled() &&
+                          NetComm::GetTime() - pCharacter->mSpawnTime < (float)gSpawnInvicibility))
+                    {
+                        mOwner = pCharacter;
+                        mStationary = true;
+                        pCharacter->mCarriedFlagPtr = this;
+                        Character::GetPlayerStats(mOwner).PointsProcess(0x1a, 0);
+                        if (mCarriedModel)
+                        {
+                            SetModel(mCarriedModel);
+                        }
+                        else
+                        {
+                            static_cast<RedSceneObject*>(this)->Deactivate();
+                        }
+                        if (m_pLight)
+                        {
+                            m_pLight->TurnOff();
+                        }
+                        mLifeTimer = FLT_MAX;
+                        mMoved = true;
+                        if (mClass->mLifeSpan < FLT_MAX)
+                        {
+                            ItemTimerDisplay::RemoveItemTimer(this);
+                        }
+
+                        AI::EventInfo event(AI::EVT_CTF_FlagPickup, this);
+                        ControllerManager::BroadcastEvent(&event, 1000);
+                        if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG)
+                        {
+                            mCarriedTimer = 180.0f;
+                        }
+                        RemoveFromCollisionManager();
+                        return true;
+                    }
+                }
+            }
         }
     }
-
-    Controllable* pControllable = pObject->GetControllable();
-    if (!pControllable)
-    {
-        return false;
-    }
-    if (!mAllowAIPickup && pControllable->mPlayerId < 0)
-    {
-        return false;
-    }
-    Character* pCharacter = pControllable->mCharacter;
-    if (!pCharacter)
-    {
-        return false;
-    }
-
-    for (PblList<FlagItem>::Node* pNode = sList->GetFirst(); pNode->_pObject; pNode = pNode->_pNext)
-    {
-        if (pNode->_pObject->mOwner == pCharacter)
-        {
-            return false;
-        }
-    }
-    if (pCharacter->mRemote)
-    {
-        return false;
-    }
-    if (!IsASpaceMap() && pCharacter->mVehicle)
-    {
-        return false;
-    }
-    if (pCharacter->mPlayerId >= 0 && NetGame::IsEnabled() &&
-        (float)gSpawnInvicibility > NetComm::GetTime() - pCharacter->mSpawnTime)
-    {
-        return false;
-    }
-
-    mOwner = pCharacter;
-    mStationary = true;
-    pCharacter->mCarriedFlagPtr = this;
-    Character::GetPlayerStats(mOwner).PointsProcess(0x1a, 0);
-    if (mCarriedModel)
-    {
-        SetModel(mCarriedModel);
-    }
-    else
-    {
-        static_cast<RedSceneObject*>(this)->Deactivate();
-    }
-    if (m_pLight)
-    {
-        m_pLight->TurnOff();
-    }
-    mLifeTimer = FLT_MAX;
-    mMoved = true;
-    if (mClass->mLifeSpan < FLT_MAX)
-    {
-        ItemTimerDisplay::RemoveItemTimer(this);
-    }
-
-    AI::EventInfo event(AI::EVT_CTF_FlagPickup, this);
-    ControllerManager::BroadcastEvent(&event, 1000);
-    if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG)
-    {
-        mCarriedTimer = 180.0f;
-    }
-    RemoveFromCollisionManager();
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x005248d0
@@ -819,7 +778,7 @@ void FlagItem::BroadcastMessage(unsigned int uHash)
 // FUNCTION: SWBF2 0x00524de0
 bool FlagItem::Update(float fDeltaTime)
 {
-    if (!IsAlive())
+    if (!mIsAlive)
     {
         return false;
     }
@@ -827,11 +786,7 @@ bool FlagItem::Update(float fDeltaTime)
     if (mOwner)
     {
         Controllable* pControllable = mOwner->mVehicle ? mOwner->mVehicle : mOwner->mUnit;
-        if (!pControllable)
-        {
-            ResetFlag();
-        }
-        else
+        if (pControllable)
         {
             GameObject* pCarrier = static_cast<Trackable*>(pControllable)->GetGameObject();
             if (pCarrier)
@@ -840,7 +795,7 @@ bool FlagItem::Update(float fDeltaTime)
                 {
                     Drop();
                 }
-                if (!NetGame::IsEnabled() || !NetGame::IsClient())
+                if (!NetGame::IsEnabled() || !netEnabledNext || !netClientActive)
                 {
                     if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG)
                     {
@@ -848,7 +803,7 @@ bool FlagItem::Update(float fDeltaTime)
                         if (mCarriedTimer < 0.0f)
                         {
                             mCarriedTimer = FLT_MAX;
-                            BroadcastMessage(0x8dbebf7f);
+                            BroadcastMessage(0x8dbebf7f /* "game.flag.carriedtoolong" */);
                             ResetFlag();
                         }
                     }
@@ -859,10 +814,14 @@ bool FlagItem::Update(float fDeltaTime)
                     if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG ||
                         sFlagGameplayType == FLAG_GAMEPLAY_2FLAG)
                     {
-                        BroadcastMessage(0x7e6537bc);
+                        BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
                     }
                 }
             }
+        }
+        else
+        {
+            ResetFlag();
         }
     }
 
@@ -882,7 +841,7 @@ bool FlagItem::Update(float fDeltaTime)
         ResetFlag();
         if (sFlagGameplayType == FLAG_GAMEPLAY_1FLAG || sFlagGameplayType == FLAG_GAMEPLAY_2FLAG)
         {
-            BroadcastMessage(0x7e6537bc);
+            BroadcastMessage(0x7e6537bc /* "game.flag.reset" */);
         }
     }
     CheckFloatingInSpace();
@@ -929,7 +888,11 @@ void FlagItem::Render(unsigned char ucLod, float fAlpha, unsigned int uiFlags)
 // FUNCTION: SWBF2 0x00525400
 void FlagItem::SetModel(const GameModel* pModel)
 {
-    if (mModel != pModel)
+    if (mModel == pModel)
+    {
+        EntityGeometry::SetModel(pModel);
+    }
+    else
     {
         for (unsigned int i = 0; i < mModel->mClothCount; ++i)
         {
@@ -950,10 +913,6 @@ void FlagItem::SetModel(const GameModel* pModel)
                 }
             }
         }
-    }
-    else
-    {
-        EntityGeometry::SetModel(pModel);
     }
     SetupCollisionGeometry();
 }

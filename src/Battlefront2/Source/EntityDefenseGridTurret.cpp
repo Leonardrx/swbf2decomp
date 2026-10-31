@@ -154,12 +154,10 @@ EntityClass* EntityDefenseGridTurretClass::Derive(unsigned int uHash)
 // FUNCTION: SWBF2 0x00497da0
 void EntityDefenseGridTurretClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xBD94B44E)
-    {
-        sscanf(pszValue, "%f", &mRespawnTime);
-    }
-    else
+    if (uProperty != 0xBD94B44E /* "RespawnTime" */)
     {
         EntityBuildingArmedDynamicClass::SetProperty(uProperty, pszValue);
+        return;
     }
+    sscanf(pszValue, "%f", &mRespawnTime);
 }

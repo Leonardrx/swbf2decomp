@@ -295,9 +295,10 @@ void ShieldEffect::Render(unsigned char ucViewport, float, unsigned int uiFlags)
         float fScale;
         if (m_bTurnOn)
         {
-            static float s_fInvPeak = 1.0f / 0.94f;
-            static float s_fInvSettle = 1.0f / (1.0f - 0.94f);
-            if (m_fTurnOnFactor < 0.94f)
+            const float fPeak = 0.94f;
+            static float s_fInvPeak = 1.0f / fPeak;
+            static float s_fInvSettle = 1.0f / (1.0f - fPeak);
+            if (m_fTurnOnFactor < fPeak)
             {
                 fScale = m_fTurnOnFactor * 1.06f * s_fInvPeak;
             }

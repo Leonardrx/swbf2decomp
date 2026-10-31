@@ -74,7 +74,10 @@ HUD::ElementGroupBase::ElementGroupBase(RedGroupElement& group, const char* cons
 HUD::ElementGroupBase::~ElementGroupBase()
 {
     RemoveAllElements();
-    mElementList.Clear();
+    while (mElementList.mTerminator.mNext != &mElementList.mTerminator)
+    {
+        mElementList.mTerminator.mNext->Remove();
+    }
 }
 
 // FUNCTION: SWBF2 0x0054e580
@@ -264,28 +267,25 @@ bool HUD::ElementGroupBase::ReadChild(PblConfig& config, PblConfig::Data& data,
                                       Factory::ItemCallback pCallback, void* const pUserData)
 {
     Item::Factory* pFactory = Item::Factory::FindByHashID(data.GetId());
-    if (!pFactory)
+    if (pFactory)
     {
-        return false;
+        const char* pName = data.GetNumArgs() ? data.GetStringArg(0) : "Unnamed";
+        Item* pItem = pFactory->CreateItem(pName, pCallback, pUserData);
+        if (pItem)
+        {
+            PblConfig scope(config.ReadNextScope(), true);
+            if (pFactory->GetType() == Item::Factory::type_Element)
+            {
+                HUD::Element* pElement = static_cast<HUD::Element*>(pItem);
+                AddElement(pElement);
+                mElementList.AddLast(&pElement->mGroupNode);
+                pElement->SetViewport(GetViewport());
+            }
+            pItem->Read(scope, pCallback, pUserData);
+            return true;
+        }
     }
-
-    const char* pName = data.GetNumArgs() ? data.GetStringArg(0) : "Unnamed";
-    Item* pItem = pFactory->CreateItem(pName, pCallback, pUserData);
-    if (!pItem)
-    {
-        return false;
-    }
-
-    PblConfig scope(config.ReadNextScope(), true);
-    if (pFactory->GetType() == Item::Factory::type_Element)
-    {
-        HUD::Element* pElement = static_cast<HUD::Element*>(pItem);
-        AddElement(pElement);
-        mElementList.AddLast(&pElement->mGroupNode);
-        pElement->SetViewport(GetViewport());
-    }
-    pItem->Read(scope, pCallback, pUserData);
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0054eb80
@@ -303,12 +303,18 @@ bool HUD::ElementGroupBase::ReadData(PblConfig& config, PblConfig::Data& data)
         if (uNumArgs > 2)
         {
             unsigned int uIndex = TranslateString(Factory::sHAlignStrings, 3, data.GetStringArg(2));
-            eHAlign = uIndex < 3 ? (HAlign)uIndex : hAlign_left;
+            if (uIndex < 3)
+            {
+                eHAlign = (HAlign)uIndex;
+            }
         }
         if (uNumArgs > 3)
         {
             unsigned int uIndex = TranslateString(Factory::sVAlignStrings, 3, data.GetStringArg(3));
-            eVAlign = uIndex < 3 ? (VAlign)uIndex : vAlign_top;
+            if (uIndex < 3)
+            {
+                eVAlign = (VAlign)uIndex;
+            }
         }
         if (uNumArgs > 4)
         {
@@ -451,25 +457,23 @@ void HUD::ElementGroupBase::EventPosition(const HUD::Event& event, void* const p
 // FUNCTION: SWBF2 0x0054f240
 void HUD::ElementGroupBase::EventScale(const HUD::Event& event, void* const pData)
 {
-    if (event.GetClass()->GetType() != EventClass::type_Vector3)
+    if (event.GetClass()->GetType() == EventClass::type_Vector3)
     {
-        return;
+        ElementGroupBase* pGroup = (ElementGroupBase*)pData;
+        const PblVector3 vScale = *event.GetData().vector3;
+        PblMatrix mMatrix = pGroup->mElement->GetMatrix();
+        PblVector3 vAxis;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[0]));
+        *reinterpret_cast<PblVector3*>(mMatrix.m[0]) = vAxis * vScale.x;
+        mMatrix.m[0][3] = 0.0f;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[1]));
+        *reinterpret_cast<PblVector3*>(mMatrix.m[1]) = vAxis * vScale.y;
+        mMatrix.m[1][3] = 0.0f;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(mMatrix.m[2]));
+        *reinterpret_cast<PblVector3*>(mMatrix.m[2]) = vAxis * vScale.z;
+        mMatrix.m[2][3] = 0.0f;
+        pGroup->mElement->SetMatrix(mMatrix);
     }
-
-    ElementGroupBase* pGroup = (ElementGroupBase*)pData;
-    const PblVector3 vScale = *event.GetData().vector3;
-    PblMatrix mMatrix = pGroup->mElement->GetMatrix();
-    const float afScale[3] = { vScale.x, vScale.y, vScale.z };
-    for (int i = 0; i < 3; ++i)
-    {
-        D3DXVECTOR3 vAxis;
-        D3DXVec3Normalize(&vAxis, (const D3DXVECTOR3*)mMatrix.m[i]);
-        mMatrix.m[i][0] = vAxis.x * afScale[i];
-        mMatrix.m[i][1] = vAxis.y * afScale[i];
-        mMatrix.m[i][2] = vAxis.z * afScale[i];
-        mMatrix.m[i][3] = 0.0f;
-    }
-    pGroup->mElement->SetMatrix(mMatrix);
 }
 
 // FUNCTION: SWBF2 0x0054f3c0
@@ -491,27 +495,25 @@ void HUD::ElementGroupBase::EventAlpha(const HUD::Event& event, void* const pDat
 // FUNCTION: SWBF2 0x0054f410
 void HUD::ElementGroupBase::EventRotation(const HUD::Event& event, void* const pData)
 {
-    if (event.GetClass()->GetType() != EventClass::type_Vector3)
+    if (event.GetClass()->GetType() == EventClass::type_Vector3)
     {
-        return;
+        ElementGroupBase* pGroup = (ElementGroupBase*)pData;
+        const PblVector3* pRotation = event.GetData().vector3;
+        const PblVector3 vPosition = pGroup->mElement->GetMatrix().GetTranslation();
+        const PblMatrix mCurrent = pGroup->mElement->GetMatrix();
+
+        const float fDegToRad = 0.017453292f;
+        PblMatrix mResult = gMatrixIdentity;
+        mResult.SetRotateX(pRotation->x * fDegToRad);
+        mResult.RotateY(pRotation->y * fDegToRad);
+        mResult.RotateZ(pRotation->z * fDegToRad);
+
+        const PblVector3& vX = mCurrent.GetXAxis();
+        const PblVector3& vY = mCurrent.GetYAxis();
+        const PblVector3& vZ = mCurrent.GetZAxis();
+        mResult.Scale(Length(vX), Length(vY), Length(vZ));
+
+        mResult.SetTranslation(vPosition);
+        pGroup->mElement->SetMatrix(mResult);
     }
-
-    ElementGroupBase* pGroup = (ElementGroupBase*)pData;
-    const PblVector3* pRotation = event.GetData().vector3;
-    const PblMatrix mCurrent = pGroup->mElement->GetMatrix();
-    const PblVector3 vPosition = mCurrent.GetTranslation();
-
-    const float fDegToRad = 0.017453292f;
-    PblMatrix mResult = gMatrixIdentity;
-    mResult.SetRotateX(pRotation->x * fDegToRad);
-    mResult.RotateY(pRotation->y * fDegToRad);
-    mResult.RotateZ(pRotation->z * fDegToRad);
-
-    const PblVector3& vX = mCurrent.GetXAxis();
-    const PblVector3& vY = mCurrent.GetYAxis();
-    const PblVector3& vZ = mCurrent.GetZAxis();
-    mResult.Scale(Length(vX), Length(vY), Length(vZ));
-
-    mResult.SetTranslation(vPosition);
-    pGroup->mElement->SetMatrix(mResult);
 }

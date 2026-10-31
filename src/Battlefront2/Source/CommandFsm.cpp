@@ -51,7 +51,9 @@ void CommandFsm::ApplyNextCommand()
 // FUNCTION: SWBF2 0x00478750
 bool CommandFsm::IsNewCommand()
 {
-    return (mCommandDone && mCmdCount > 0) || mForceCommand;
+    bool bNew = mCommandDone && mCmdCount > 0;
+    bNew |= mForceCommand;
+    return bNew;
 }
 
 // FUNCTION: SWBF2 0x00478810
@@ -98,8 +100,8 @@ void CommandFsm::QueueCommand(const CmdInfo& cmd)
 // FUNCTION: SWBF2 0x004788e0
 void CommandFsm::RemoveQueuedCommands(int what)
 {
-    int count = Min(mCmdCount, 5);
     int kept = 0;
+    int count = mCmdCount < 5 ? mCmdCount : 5;
     for (int i = 0; i < count; i++)
     {
         if (mCmdQueue[i].mWhat == 0)

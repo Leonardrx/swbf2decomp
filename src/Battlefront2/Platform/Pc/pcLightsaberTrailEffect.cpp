@@ -12,10 +12,18 @@ const RedColor Interpolate(const RedColor& a, const RedColor& b, float t);
 // FUNCTION: SWBF2 0x004213e0
 void LightsaberTrailEffect::_PlatformInit()
 {
-    m_pShader = pcRedShader::Create(
-        PblHash("LightBeam"),
-        RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED ? 0x1082 : 0x82,
-        0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED)
+    {
+        m_pShader = pcRedShader::Create(
+            0xE8651328u /* "LightBeam" */, 0x1082,
+            0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
+    else
+    {
+        m_pShader = pcRedShader::Create(
+            0xE8651328u /* "LightBeam" */, 0x82,
+            0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
 }
 
 // FUNCTION: SWBF2 0x00421440

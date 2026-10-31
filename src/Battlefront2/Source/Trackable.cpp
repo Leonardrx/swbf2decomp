@@ -55,7 +55,7 @@ public:
 namespace
 {
 
-    void* const* VTable(const void* pThis)
+    inline void* const* VTable(const void* pThis)
     {
         return *reinterpret_cast<void* const* const*>(pThis);
     }
@@ -66,13 +66,13 @@ namespace
         return reinterpret_cast<Fn>(VTable(pObject)[0])(pObject, uRtti);
     }
 
-    GameObject* GameObject_GetGameObject(GameObject* pObject)
+    inline GameObject* GameObject_GetGameObject(GameObject* pObject)
     {
         typedef GameObject*(__thiscall * Fn)(GameObject*);
         return reinterpret_cast<Fn>(VTable(pObject)[9])(pObject);
     }
 
-    const PblMatrix& GameObject_GetSmoothedMatrix(GameObject* pObject)
+    inline const PblMatrix& GameObject_GetSmoothedMatrix(GameObject* pObject)
     {
         typedef const PblMatrix&(__thiscall * Fn)(GameObject*);
         return reinterpret_cast<Fn>(VTable(pObject)[68])(pObject);
@@ -307,9 +307,7 @@ CameraTrackSetting::CameraTrackSetting()
     mCameraTrackOffset.x = 0.0f;
     mCameraTrackOffset.y = 0.0f;
     mCameraTrackOffset.z = 0.0f;
-    mCameraSafePoint.x = 0.0f;
-    mCameraSafePoint.y = 1.5f;
-    mCameraSafePoint.z = 0.0f;
+    mCameraTiltValue = 0.0f;
     mCameraMoveTensionL = 30.0f;
     mCameraMoveTensionR = 30.0f;
     mCameraMoveTensionU = 30.0f;
@@ -317,7 +315,9 @@ CameraTrackSetting::CameraTrackSetting()
     mCameraMoveTensionF = 30.0f;
     mCameraMoveTensionB = 30.0f;
     mCameraAimTension = 1000.0f;
-    mCameraTiltValue = 0.0f;
+    mCameraSafePoint.x = 0.0f;
+    mCameraSafePoint.y = 1.5f;
+    mCameraSafePoint.z = 0.0f;
 }
 
 // FUNCTION: SWBF2 0x00658b20
@@ -349,7 +349,8 @@ PblVector3 CameraTrackSetting::CalcCameraPoint(const PblMatrix& rMatrix, const P
 {
     PblVector3 vOffset;
     D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&mCameraTrackOffset), reinterpret_cast<const D3DXMATRIX*>(&rRotation));
-    PblVector3 vCenter = CalcCenterPoint(rMatrix);
+    PblVector3 vCenter;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&mCameraTrackCenter), reinterpret_cast<const D3DXMATRIX*>(&rMatrix));
     PblVector3 vPoint;
     vPoint.x = vOffset.x + vCenter.x;
     vPoint.y = vCenter.y + vOffset.y;
@@ -717,9 +718,7 @@ void CameraTrackSetting::SetupAmbientShift(PblMatrix& rMatrix, PblVector3& vShif
 
     PblVector3 vWorld;
     D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vShift), reinterpret_cast<const D3DXMATRIX*>(&rMatrix));
-    rMatrix.m[3][0] += vWorld.x;
-    rMatrix.m[3][1] += vWorld.y;
-    rMatrix.m[3][2] += vWorld.z;
+    rMatrix[3] = rMatrix[3] + vWorld;
     rMatrix.m[3][3] = 1.0f;
 }
 
@@ -752,9 +751,9 @@ void CameraTrackSetting::SetupAmbientShiftComponent(float& rShift, float& rTarge
         }
     }
 
-    if ((float)fabs(rTarget) > 0.0001f)
+    if ((float)fabs((double)rTarget) > 0.0001f)
     {
-        rShift += rSpeed * Sign(rTarget) * fDeltaTime;
+        rShift += rSpeed * (rTarget < 0.0f ? -1.0f : 1.0f) * fDeltaTime;
     }
     else
     {
@@ -772,16 +771,24 @@ bool CameraTrackSetting::SetProperty(unsigned int uProperty, const char* pszValu
     {
     case 0x41568C97:
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
-        mCameraEyePointOffset = PblVector3(fX, fY, fZ);
-        mCameraTrackCenter = PblVector3(fX, fY, fZ);
+        mCameraEyePointOffset.x = fX;
+        mCameraEyePointOffset.y = fY;
+        mCameraEyePointOffset.z = fZ;
+        mCameraTrackCenter.x = fX;
+        mCameraTrackCenter.y = fY;
+        mCameraTrackCenter.z = fZ;
         return true;
     case 0xE85D5895:
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
-        mCameraTrackCenter = PblVector3(fX, fY, fZ);
+        mCameraTrackCenter.x = fX;
+        mCameraTrackCenter.y = fY;
+        mCameraTrackCenter.z = fZ;
         return true;
     case 0xFD3D9507:
         sscanf(pszValue, "%f %f %f", &fX, &fY, &fZ);
-        mCameraTrackOffset = PblVector3(fX, fY, fZ);
+        mCameraTrackOffset.x = fX;
+        mCameraTrackOffset.y = fY;
+        mCameraTrackOffset.z = fZ;
         return true;
     case 0x21050BF6:
         if (sscanf(pszValue, "%f", &fX))
@@ -795,16 +802,16 @@ bool CameraTrackSetting::SetProperty(unsigned int uProperty, const char* pszValu
         }
         return true;
     case 0x88F1308A:
-        pA = &mCameraMoveTensionL;
         pB = &mCameraMoveTensionR;
+        pA = &mCameraMoveTensionL;
         break;
     case 0x89F1321D:
-        pA = &mCameraMoveTensionU;
         pB = &mCameraMoveTensionD;
+        pA = &mCameraMoveTensionU;
         break;
     case 0x86F12D64:
-        pA = &mCameraMoveTensionF;
         pB = &mCameraMoveTensionB;
+        pA = &mCameraMoveTensionF;
         break;
     case 0x5E3171CC:
         sscanf(pszValue, "%f", &mCameraAimTension);

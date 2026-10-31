@@ -41,10 +41,10 @@ void IFaceSoldierAnimator::SetUpperLowerAnimations(unsigned int uUpperAnimHash, 
 
 // FUNCTION: SWBF2 0x0056a240
 IFaceSoldierAnimator::IFaceSoldierAnimator(const Red3DModelAnimator* pAnimator)
+    : mLowerAnimHash(0),
+      mQueuedLowerAnim(0),
+      mZephyrAnimationLower(0)
 {
-    mLowerAnimHash = 0;
-    mQueuedLowerAnim = 0;
-    mZephyrAnimationLower = 0;
     for (int i = 0; i < 5; ++i)
     {
         mAnimBankHash[i] = pAnimator->mAnimBankHash[i];
@@ -101,7 +101,16 @@ void IFaceSoldierAnimator::Update(float fElapsed)
         mAnimationTime -= mAnimationTimeTotal;
         if (mQueuedAnim)
         {
-            SetUpperLowerAnimations(mQueuedAnim, mQueuedLowerAnim, 0.3f);
+            unsigned int uUpperAnimHash = mQueuedAnim;
+            unsigned int uLowerAnimHash = mQueuedLowerAnim;
+            Close();
+            mAnimHash = uUpperAnimHash;
+            mLowerAnimHash = uLowerAnimHash;
+            mQueuedAnim = 0;
+            mQueuedLowerAnim = 0;
+            mAnimTransitionTimeTotal = 0.3f;
+            mAnimTransitionTime = 0.0f;
+            Open();
             mQueuedLowerAnim = 0;
             mQueuedAnim = 0;
         }
@@ -128,21 +137,21 @@ RedPose* IFaceSoldierAnimator::UpdatePose()
         mZephyrPoseDynLower.SetFrameNum(RedRenderer::GetFrameNumber() % iNumFrames);
         mZephyrPoseDynLower.Update(0.0f);
     }
-    if (mAnimTransitionTimeTotal > 0.0f && mAnimTransitionTime < mAnimTransitionTimeTotal)
+    if (mAnimTransitionTimeTotal > 0.0f)
     {
-        mZephyrPoseStatic.Blend(mZephyrPoseDyn, mUpperBodyAnimMask, mAnimTransitionTime / mAnimTransitionTimeTotal);
-        mZephyrPoseStatic.Blend(mZephyrPoseDynLower, mLowerBodyAnimMask,
-                                mAnimTransitionTime / mAnimTransitionTimeTotal);
-    }
-    else
-    {
-        if (mAnimTransitionTimeTotal > 0.0f)
+        if (!(mAnimTransitionTime >= mAnimTransitionTimeTotal))
         {
-            mAnimTransitionTimeTotal = 0.0f;
+            mZephyrPoseStatic.Blend(mZephyrPoseDyn, mUpperBodyAnimMask,
+                                    mAnimTransitionTime / mAnimTransitionTimeTotal);
+            mZephyrPoseStatic.Blend(mZephyrPoseDynLower, mLowerBodyAnimMask,
+                                    mAnimTransitionTime / mAnimTransitionTimeTotal);
+            mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);
+            return &mPose;
         }
-        mZephyrPoseStatic.Set(mZephyrPoseDyn, mUpperBodyAnimMask, true);
-        mZephyrPoseStatic.Set(mZephyrPoseDynLower, mLowerBodyAnimMask, true);
+        mAnimTransitionTimeTotal = 0.0f;
     }
+    mZephyrPoseStatic.Set(mZephyrPoseDyn, mUpperBodyAnimMask, true);
+    mZephyrPoseStatic.Set(mZephyrPoseDynLower, mLowerBodyAnimMask, true);
     mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);
     return &mPose;
 }

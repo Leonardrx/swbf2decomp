@@ -142,15 +142,15 @@ void HUD::ElementGroupPlayer::PlayerIndexChanged()
 // FUNCTION: SWBF2 0x0054f910
 bool HUD::ElementMap::BitmapGroup::SetProperty(const unsigned int uHashID, const void* const pValue)
 {
-    if (!HUD::ElementBitmapBase::SetProperty(uHashID, pValue))
+    if (HUD::ElementBitmapBase::SetProperty(uHashID, pValue))
     {
-        return false;
+        if (mMap && mMap->GetMode() == mMapMode)
+        {
+            CopyToBitmaps(mBitmaps, mNumBitmaps, 0, false);
+        }
+        return true;
     }
-    if (mMap && mMap->GetMode() == mMapMode)
-    {
-        CopyToBitmaps(mBitmaps, mNumBitmaps, 0, false);
-    }
-    return true;
+    return false;
 }
 
 // SYNTHETIC: SWBF2 0x0054f9f0
@@ -580,16 +580,14 @@ void HUD::ElementMap::PostReadSetup()
     for (unsigned int i = 0; i < mode_MAX; ++i)
     {
         PblMatrix matrix = gMatrixIdentity;
-        matrix.m[3][0] = mPosition[i].x;
-        matrix.m[3][1] = mPosition[i].y;
-        matrix.m[3][2] = mPosition[i].z;
+        matrix[3] = mPosition[i];
         matrix.m[3][3] = 1.0f;
         mMatrix[i].SetMatrix(&matrix);
         mMatrix[i].ApplyRelativeMode(GetContainerFrameWidth(), GetContainerFrameHeight(),
                                      GetContainerViewWidth(), GetContainerViewHeight(),
                                      InScreenGroup());
         mMatrix[i].SetMatrix(0);
-        mPosition[i] = PblVector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
+        mPosition[i] = matrix[3];
         mBackdrop[i].RedInterfaceElement::Scale(1.0f, 1.0f / (0.75f / RedRenderer::GetScreenAspectRatio()));
     }
 
@@ -949,7 +947,7 @@ void HUD::ElementMap::UpdateBackdropTexCoords()
 {
     const Dim& dim = mDim[mMode];
     const Dim& large = mDim[mode_Large];
-    static_cast<RedBitmapElement&>(mBackdrop[mMode]).SetTexCoords(
+    mBackdrop[mMode].SetTexCoords(
         (dim.centerX - dim.radius - large.centerX) * large.scale + 0.5f,
         (dim.centerZ - dim.radius - large.centerZ) * large.scale + 0.5f,
         (dim.centerX + dim.radius - large.centerX) * large.scale + 0.5f,
@@ -1242,8 +1240,7 @@ static inline float Length2EstXZ(float fX, float fZ)
 bool HUD::ElementMap::IsInRadarRange(const Controllable* pPlayer, TargetManager::Target& target,
                                      const PblVector3& vDelta, float fDistance) const
 {
-    const EntityClass* pClass =
-        static_cast<const Trackable*>(pPlayer)->GetGameObject()->GetEntityClass();
+    const EntityClass* pClass = pPlayer->GetGameObject()->GetEntityClass();
 
     if (!((GameObject*)target.actor)->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) &&
         !((GameObject*)target.actor)->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
@@ -1276,7 +1273,11 @@ bool HUD::ElementMap::IsInRadarRange(const Controllable* pPlayer, TargetManager:
     const float fDot = vDelta.x * pPlayer->mEyeDir.x + vDelta.z * pPlayer->mEyeDir.z;
     const float fEye = Length2EstXZ(pPlayer->mEyeDir.x, pPlayer->mEyeDir.z);
     const float fDelta = Length2EstXZ(vDelta.x, vDelta.z);
-    return fDot / (fDelta * fEye) > pClass->mMapParams.mViewConeCosine;
+    if (fDot / (fDelta * fEye) > pClass->mMapParams.mViewConeCosine)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00553b30
@@ -1291,12 +1292,11 @@ float HUD::ElementMap::CalcFireIndication(TargetManager::Target& target, float f
     const PblList<Controllable>& list = ((GameObject*)target.actor)->GetControllableList();
     for (PblList<Controllable>::Itor it = list.Begin(); (Controllable*)it; ++it)
     {
-        Controllable* pControllable = it;
-        const int iCount = pControllable->GetWeaponCount();
+        const int iCount = ((Controllable*)it)->GetWeaponCount();
         for (int i = 0; i < iCount && fScale == 0.0f; ++i)
         {
-            Weapon* pWeapon = pControllable->GetWeaponPtr(i);
-            if (pWeapon && (pWeapon->mState == Weapon::FIRE || pWeapon->mState == Weapon::FIRE2))
+            Weapon* pWeapon = ((Controllable*)it)->GetWeaponPtr(i);
+            if (pWeapon && (unsigned int)(pWeapon->mState - Weapon::FIRE) <= (unsigned int)(Weapon::FIRE2 - Weapon::FIRE))
             {
                 const float fFire = 1.0f - pWeapon->mStateTimer / pWeapon->mStateLimit;
                 if (!(fScale > fFire))
@@ -1604,33 +1604,37 @@ void HUD::ElementMap::RefreshMapDependancy()
 
     const GameEvents::PlayerEvents& events = GameEvents::gPlayerEvents[mPlayerIndex];
     const bool bEnabled = mEnableState == enableState_Enabling || mEnableState == enableState_Enabled;
-    if (bEnabled && mMode != mode_Small)
-    {
-        HUD::Event(events.objectiveListEnable, true).Send();
-    }
-    else
-    {
-        HUD::Event(events.objectiveListDisable, true).Send();
-    }
+    HUD::Event listEvent(bEnabled && mMode != mode_Small ? events.objectiveListEnable : events.objectiveListDisable, true);
+    listEvent.Send();
 
     if (bEnabled)
     {
         switch (mMode)
         {
         case mode_Small:
-            HUD::Event(events.mapSpawnLargeDisable, true).Send();
+        {
+            HUD::Event smallEvent(events.mapSpawnLargeDisable, true);
+            smallEvent.Send();
             break;
+        }
         case mode_Spawn:
-            HUD::Event(events.mapSpawn, true).Send();
+        {
+            HUD::Event spawnEvent(events.mapSpawn, true);
+            spawnEvent.Send();
+        }
 
         case mode_Large:
-            HUD::Event(events.mapSpawnLarge, true).Send();
+        {
+            HUD::Event largeEvent(events.mapSpawnLarge, true);
+            largeEvent.Send();
             break;
+        }
         }
     }
     else
     {
-        HUD::Event(events.mapSpawnLargeDisable, true).Send();
+        HUD::Event disableEvent(events.mapSpawnLargeDisable, true);
+        disableEvent.Send();
     }
 }
 
@@ -1647,7 +1651,8 @@ void HUD::ElementMap::SetMode(Mode eMode)
         UpdateEnableState(enableState_Enabling);
         if (mPlayerIndex >= 0)
         {
-            HUD::Event(GameEvents::gPlayerEvents[mPlayerIndex].mapEnable, true).Send();
+            HUD::Event enableEvent(GameEvents::gPlayerEvents[mPlayerIndex].mapEnable, true);
+            enableEvent.Send();
         }
     }
 
@@ -1662,9 +1667,7 @@ void HUD::ElementMap::SetMode(Mode eMode)
     }
 
     RedGroupElement::SetPosition(mPosition[eMode]);
-    mGroupMatrix.m[3][0] = mPosition[mMode].x;
-    mGroupMatrix.m[3][1] = mPosition[mMode].y;
-    mGroupMatrix.m[3][2] = mPosition[mMode].z;
+    mGroupMatrix[3] = mPosition[mMode];
     mGroupMatrix.m[3][3] = 1.0f;
     EnableModeElements(true);
 
@@ -1756,11 +1759,11 @@ CommandPost* HUD::ElementMap::GetPost(float fX, float fY, CommandPost* pExcluded
             continue;
         }
         GameObject* pObject = post.actor->mObject;
-        if (pObject->mTeam != iTeam)
+        if (pObject->mTeam != iTeam || !mPost[i].m_pHotSpot)
         {
             continue;
         }
-        if (mPost[i].TestHotSpot(fX, fY) && post.actor != pExcludedPost)
+        if (mPost[i].m_pHotSpot->IsPointInside(fX, fY) && pExcludedPost != post.actor)
         {
             return post.actor;
         }
@@ -1803,16 +1806,13 @@ bool HUD::ElementMap::GetProperty(const unsigned int uHashID, void* pValue)
 bool HUD::ElementMap::SetProperty(const unsigned int uHashID, const void* pValue)
 {
     PblMatrix matrix = gMatrixIdentity;
-    matrix.m[3][0] = mPosition[mMode].x;
-    matrix.m[3][1] = mPosition[mMode].y;
-    matrix.m[3][2] = mPosition[mMode].z;
+    matrix[3] = mPosition[mMode];
     matrix.m[3][3] = 1.0f;
     HUD::Element::mMatrix.SetMatrix(&matrix);
     HUD::Element::mMatrix.ApplyScale();
     HUD::Element::mMatrix.SetMatrix(0);
     RedGroupElement::SetMatrix(matrix);
 
-    bool bResult = true;
     switch (uHashID)
     {
     case kEventToggleMapModeHash:
@@ -1894,22 +1894,22 @@ bool HUD::ElementMap::SetProperty(const unsigned int uHashID, const void* pValue
         sNorth = *(const float*)pValue;
         break;
     case kPositionHash:
-        bResult = ElementGroupPlayer::SetProperty(kPositionHash, pValue);
-        if (bResult)
+        if (!ElementGroupPlayer::SetProperty(kPositionHash, pValue))
         {
-            mPosition[mMode] = *(const PblVector3*)pValue;
+            return false;
         }
+        mPosition[mMode] = *(const PblVector3*)pValue;
         break;
     default:
-        bResult = ElementGroupPlayer::SetProperty(uHashID, pValue);
+        if (!ElementGroupPlayer::SetProperty(uHashID, pValue))
+        {
+            return false;
+        }
         break;
     }
 
-    if (bResult)
-    {
-        mGroupMatrix = RedGroupElement::m_mLocal;
-    }
-    return bResult;
+    mGroupMatrix = RedGroupElement::m_mLocal;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x00555290
@@ -2035,25 +2035,23 @@ void HUD::ElementMap::EventToggleMapMode(const HUD::Event& event, void* const pD
         return;
     }
 
+    const int iPlayerIndex = pMap->mPlayerIndex;
     const bool wasEnabled = pMap->IsEnabled();
     if (wasEnabled)
     {
         Mode nextMode = (Mode)(pMap->mMode + 1);
-        if (nextMode == mode_Spawn)
+        if (nextMode == mode_Spawn && pMap->mAllowToggleOff)
         {
-            if (pMap->mAllowToggleOff)
-            {
-                pMap->SetMode(mode_Small);
-                pMap->UpdateEnableState(enableState_Disabling);
-                pMap->RefreshMapDependancy();
-            }
-            else
-            {
-                pMap->SetMode(mode_Small);
-            }
+            pMap->SetMode(mode_Small);
+            pMap->UpdateEnableState(enableState_Disabling);
+            pMap->RefreshMapDependancy();
         }
         else
         {
+            if (nextMode == mode_Spawn)
+            {
+                nextMode = mode_Small;
+            }
             pMap->SetMode(nextMode);
         }
     }
@@ -2063,11 +2061,18 @@ void HUD::ElementMap::EventToggleMapMode(const HUD::Event& event, void* const pD
     }
 
     pMap->Update(0.001f);
-    if (pMap->IsEnabled() != wasEnabled)
+    if (pMap->IsEnabled())
     {
-        HUD::Event(pMap->IsEnabled()
-            ? GameEvents::gPlayerEvents[pMap->mPlayerIndex].mapEnable
-            : GameEvents::gPlayerEvents[pMap->mPlayerIndex].mapDisable, true).Send();
+        if (!wasEnabled)
+        {
+            HUD::Event mapEvent(GameEvents::gPlayerEvents[iPlayerIndex].mapEnable, true);
+            mapEvent.Send();
+        }
+    }
+    else if (wasEnabled)
+    {
+        HUD::Event mapEvent(GameEvents::gPlayerEvents[iPlayerIndex].mapDisable, true);
+        mapEvent.Send();
     }
 }
 

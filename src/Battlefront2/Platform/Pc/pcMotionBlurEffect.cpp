@@ -18,7 +18,7 @@ static pcClearShader* s_pClearShader;
 void MotionBlurEffect::PlatformInit()
 {
     s_pClearShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x403, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "clear" */, 0x403, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
 }
 
 // FUNCTION: SWBF2 0x00423c00

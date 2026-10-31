@@ -148,12 +148,12 @@ void EntityFormation::DestroyAll()
 bool EntityFormation::ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
                                         PathObject object, PathObjectType type, void* pUserData)
 {
-    if (data.GetId() == 0xC1E3FA81u)
+    if (data.GetId() != 0xC1E3FA81u /* "RootIsSlot" */)
     {
-        ((EntityFormation*)object.path)->mRootIsSlot = data.GetFloatArg(0) > 0.0f;
-        return true;
+        return RedPath::ReadPropertyScope(config, data, object, type, pUserData);
     }
-    return RedPath::ReadPropertyScope(config, data, object, type, pUserData);
+    ((EntityFormation*)object.path)->mRootIsSlot = data.GetFloatArg(0) > 0.0f;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x004b9e60

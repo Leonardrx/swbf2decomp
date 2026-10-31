@@ -77,10 +77,7 @@ AsteroidClass::AsteroidClass(AsteroidClass* pBase, unsigned int uHash)
     mMaxOmega = pBase->mMaxOmega;
     mCollidable = pBase->mCollidable;
     mNumChildren = pBase->mNumChildren;
-    for (int i = 0; i < 10; ++i)
-    {
-        mChildren[i] = pBase->mChildren[i];
-    }
+    memcpy(mChildren, pBase->mChildren, sizeof(mChildren));
     mExplosionBreak = pBase->mExplosionBreak;
     mExplosionDestruct = pBase->mExplosionDestruct;
     mLODClass = 1;
@@ -345,17 +342,18 @@ Asteroid::Asteroid(AsteroidClass* pClass, const EntityDesc& desc)
     : GameObject(pClass, desc, COLL_ASTEROID, &pClass->mModel->_mLodData)
 {
     mClass = pClass;
-    Activate();
+    GameObject* pObject = this;
+    pObject->Activate();
 
     const float fOmega =
-        (mClass->mMaxOmega - mClass->mMinOmega) * PblRandom::GetGlobalFloat() + mClass->mMinOmega;
+        (mClass->mMaxOmega - mClass->mMinOmega) * PblRandom::_Global.GetFloat() + mClass->mMinOmega;
     const PblVector3 vAxis = PblRandom::GetGlobalVector3();
     mOmega = PblVector3(vAxis.x * fOmega, vAxis.y * fOmega, vAxis.z * fOmega);
 
     const float fSpeed =
-        (mClass->mMaxSpeed - mClass->mMinSpeed) * PblRandom::GetGlobalFloat() + mClass->mMinSpeed;
-    mMass = 10.0f;
+        (mClass->mMaxSpeed - mClass->mMinSpeed) * PblRandom::_Global.GetFloat() + mClass->mMinSpeed;
     mVelocity = PblVector3(mMatrix.m[2][0] * fSpeed, mMatrix.m[2][1] * fSpeed, mMatrix.m[2][2] * fSpeed);
+    mMass = 10.0f;
     NetGame::Created(this);
 }
 
@@ -589,7 +587,8 @@ void Asteroid::Render(unsigned char ucLod, float fDist, unsigned int uMask)
     const PblMatrix& mRender = GetSmoothedMatrix();
     const PblMatrix mInverse = mRender.GetInverseFast();
     SetupShadow(this, mModel, ucLod, uMask, 0);
-    mModel->Render(ucLod, fDist, &mRender, 0, RedColor::WHITE, uMask & ~0x10u, 0);
+    uMask &= ~0x10u;
+    mModel->Render(ucLod, fDist, &mRender, 0, RedColor::WHITE, uMask, 0);
 }
 
 // FUNCTION: SWBF2 0x00445350

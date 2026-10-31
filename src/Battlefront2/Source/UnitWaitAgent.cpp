@@ -37,10 +37,12 @@ UnitWaitAgent::UnitWaitAgent(UnitController* pCtrl)
 // FUNCTION: SWBF2 0x0066b3e0
 void UnitWaitAgent::EnterState()
 {
-    if (mCurState == 2)
+    switch (mCurState)
     {
+    case 2:
         mTargetTimer = GameLoop::GetMissionTime();
         SetNewSearchHeading();
+        break;
     }
 }
 

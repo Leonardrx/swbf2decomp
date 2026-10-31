@@ -147,14 +147,14 @@ void AttackPatterns::GeneratePath()
 // FUNCTION: SWBF2 0x006678b0
 void AttackPatterns::DoFlyStrafe()
 {
-    const GameObject* pTarget = GetAttackHelper()->GetTarget();
+    const GameObject& rTarget = *GetAttackHelper()->GetTarget();
     PblVector3 vPos = GetMe()->GetMatrix().GetTranslation();
-    PblVector3 vTarget = (static_cast<const CollisionObject*>(pTarget)->GetMatrix()).GetTranslation();
+    PblVector3 vTarget = static_cast<const CollisionObject&>(rTarget).GetMatrix().GetTranslation();
     PblVector3 vToTarget;
     vToTarget.x = vTarget.x - vPos.x;
     vToTarget.y = vTarget.y - vPos.y;
     vToTarget.z = vTarget.z - vPos.z;
-    PblVector3 vFront = GetFront(GetMe()->GetMatrix());
+    PblVector3 vFront = GetMe()->GetMatrix().GetZAxis();
 
     if (vFront.y * vToTarget.y + vFront.x * vToTarget.x + vFront.z * vToTarget.z > 0.5f)
     {

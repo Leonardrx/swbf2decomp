@@ -126,9 +126,17 @@ bool VehicleManager::sIsFull(const GameObject* pObject)
     for (PblList<Controllable>::Itor it(pObject->GetControllableList()); (Controllable*)it; ++it)
     {
         const Controllable* pSeat = it;
-        if (pSeat->IsPilotable() && !pSeat->GetPilot() && !pSeat->IsSelfPilotable())
+        PilotType type = pSeat->mPilotType;
+        if (type != PILOT_VEHICLE && type != PILOT_VEHICLESELF)
         {
-            return false;
+            continue;
+        }
+        if (type == PILOT_SELF || (type == PILOT_VEHICLESELF && pSeat->mPilot == pSeat) || !pSeat->mPilot)
+        {
+            if (type != PILOT_SELF && type != PILOT_VEHICLESELF)
+            {
+                return false;
+            }
         }
     }
     return true;
@@ -150,26 +158,22 @@ int VehicleManager::sGameObjSortByDistance(const void* pA, const void* pB)
 
     if (sGameObjSortFlagPriority)
     {
-        const Controllable* pControllableA = GetControllable(pObjectA);
-        if (pControllableA && pControllableA->mCharacter && CarriedFlag(pControllableA->mCharacter))
+        if (pObjectA->GetControllable() && pObjectA->GetControllable()->mCharacter &&
+            pObjectA->GetControllable()->mCharacter->mCarriedFlagPtr)
         {
             return 1;
         }
-        const Controllable* pControllableB = GetControllable(pObjectB);
-        if (pControllableB && pControllableB->mCharacter && CarriedFlag(pControllableB->mCharacter))
+        if (pObjectB->GetControllable() && pObjectB->GetControllable()->mCharacter &&
+            pObjectB->GetControllable()->mCharacter->mCarriedFlagPtr)
         {
             return -1;
         }
     }
 
-    const PblVector3& posA = GameObjectPosition(pObjectA);
-    float fDistA = (posA.x - sGameObjSortFrom.x) * (posA.x - sGameObjSortFrom.x) +
-                   (posA.y - sGameObjSortFrom.y) * (posA.y - sGameObjSortFrom.y) +
-                   (posA.z - sGameObjSortFrom.z) * (posA.z - sGameObjSortFrom.z);
-    const PblVector3& posB = GameObjectPosition(pObjectB);
-    float fDistB = (posB.x - sGameObjSortFrom.x) * (posB.x - sGameObjSortFrom.x) +
-                   (posB.y - sGameObjSortFrom.y) * (posB.y - sGameObjSortFrom.y) +
-                   (posB.z - sGameObjSortFrom.z) * (posB.z - sGameObjSortFrom.z);
+    const PblVector3 vDeltaA = GameObjectPosition(pObjectA) - sGameObjSortFrom;
+    float fDistA = SquaredLength(vDeltaA);
+    const PblVector3 vDeltaB = GameObjectPosition(pObjectB) - sGameObjSortFrom;
+    float fDistB = SquaredLength(vDeltaB);
     if (fDistB > fDistA)
     {
         return -1;
@@ -281,13 +285,14 @@ void VehicleManager::Update()
                 continue;
             }
 
-            for (PblList<Controllable>::Itor it(pOther->GetControllableList()); (Controllable*)it; ++it)
+            const PblList<Controllable>& seats = pOther->GetControllableList();
+            for (PblList<Controllable>::Itor it(seats); (Controllable*)it != (Controllable*)seats.End(); ++it)
             {
                 Controllable* pSeat = it;
                 const ControllableClass* pClass = pSeat->GetControllableClass();
                 Controller* pController = pSeat->mCtrl;
                 Character* pCharacter = pSeat->mCharacter;
-                if (pCharacter && pCharacter->GetVehicleBlockTime() > GameLoop::GetMissionTime())
+                if (pCharacter && GameLoop::GetMissionTime() < pCharacter->GetVehicleBlockTime())
                 {
                     continue;
                 }

@@ -92,19 +92,17 @@ void NameDisplay::Init()
     for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
     {
         unsigned int hView = CameraManager::sInstance->m_hView[i];
-        NameDisplayThread* pThread = sNameDisplayThread[i];
-        pThread->ActivateThread(0, PER_FRAME);
+        sNameDisplayThread[i]->ActivateThread(0, PER_FRAME);
         for (int j = 0; j < 64; ++j)
         {
-            RedScreenGroupElement* pGroup = &sNameDisplayThread[i]->mPlayerNames[j];
-            pGroup->Enable(false);
-            pGroup->AddElement(&sNameDisplayThread[i]->mPlayerNamesText[j]);
-            RedTextElement* pText = &sNameDisplayThread[i]->mPlayerNamesText[j];
-            pText->SetFont(RedFont::GAMEFONT_TINY);
-            pText->SetIntercharacterSpacing(0);
+            sNameDisplayThread[i]->mPlayerNames[j].Enable(false);
+            sNameDisplayThread[i]->mPlayerNames[j].AddElement(&sNameDisplayThread[i]->mPlayerNamesText[j]);
+            sNameDisplayThread[i]->mPlayerNamesText[j].SetFont(RedFont::GAMEFONT_TINY);
+            sNameDisplayThread[i]->mPlayerNamesText[j].SetIntercharacterSpacing(0);
 
-            pText->m_eStyle = RedGlyphCacheElement::TEXT_STYLE_SHADOW;
-            pText->SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER, RedTextElement::TEXT_VALIGN_BOTTOM);
+            sNameDisplayThread[i]->mPlayerNamesText[j].m_eStyle = RedGlyphCacheElement::TEXT_STYLE_SHADOW;
+            sNameDisplayThread[i]->mPlayerNamesText[j].SetTextAlign(RedTextElement::TEXT_HALIGN_CENTER,
+                                                                    RedTextElement::TEXT_VALIGN_BOTTOM);
             FLRenderer::AddInterfaceElement(hView, &sNameDisplayThread[i]->mPlayerNames[j],
                                             RedInterfaceScreen::CENTER, RedInterfaceScreen::CENTER,
                                             false);

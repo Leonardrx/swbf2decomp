@@ -163,15 +163,18 @@ void LockOnManager::SetDisplayIconsOnEverything(bool bEverything)
 // FUNCTION: SWBF2 0x0057d8f0
 void LockOnManager::CreateAll()
 {
-    sTargetLockSound.SetID(0x6a942216u, false, false);
-    for (unsigned int i = 0; i < CameraManager::Instance()->GetNumCameras(); i++)
+    sTargetLockSound.SetID(0x6a942216u /* "shell_menu_accept" */, false, false);
+    const unsigned int uNumCameras = CameraManager::Instance()->GetNumCameras();
+    for (unsigned int i = 0; i < uNumCameras; i++)
     {
         new LockOnManager(i);
     }
-    for (unsigned int i = 0; i < 32; i++)
+    LockOnManager::Target* pTarget = sTargetCommon;
+    for (int n = 32; n != 0; --n, ++pTarget)
     {
-        sTargetCommon[i].obj = 0;
-        sTargetCommon[i].teamMask = 0;
+        pTarget->obj.mObject = 0;
+        pTarget->obj.mSavedHandleId = 0;
+        pTarget->teamMask = 0;
     }
 }
 
@@ -527,8 +530,8 @@ void LockOnManager::RemoveTargetLock()
         Target& target = mTargetPlayer[i];
         if (target.obj == (GameObject*)mLockedObj)
         {
-            target.SetObj(0, 0);
             pInfo = &mTargetPlayerInfo[i];
+            target.SetObj(0, 0);
             pInfo->Clean();
             break;
         }
@@ -562,19 +565,18 @@ bool LockOnManager::IsGameObjectTargeted(const GameObject* const pObject)
 // FUNCTION: SWBF2 0x0057dbd0
 bool LockOnManager::IsGameObjectTargetedAll(const GameObject* const pObject)
 {
-    if (!pObject)
+    if (pObject)
     {
-        return false;
-    }
-    if (FindTargetByGameObject(sTargetCommon, 32, pObject))
-    {
-        return true;
-    }
-    for (unsigned int i = 0; i < 4; ++i)
-    {
-        if (sLockOnManagers[i] && sLockOnManagers[i]->IsGameObjectTargeted(pObject))
+        if (FindTargetByGameObject(sTargetCommon, 32, pObject))
         {
             return true;
+        }
+        for (unsigned int i = 0; i < 4; ++i)
+        {
+            if (sLockOnManagers[i] && sLockOnManagers[i]->IsGameObjectTargeted(pObject))
+            {
+                return true;
+            }
         }
     }
     return false;
@@ -1205,13 +1207,22 @@ bool LockOnManager::TargetHistory::Check(GameObject* const pObject) const
 void LockOnManager::Target::InitPlayer(GameObject* const initObj, unsigned int initTeamMask,
                                        TargetInfo& targetInfo, bool isFriendly)
 {
+    GameObjectClass* pClass = initObj ? static_cast<GameObjectClass*>(initObj->mEntityClass) : 0;
     obj = initObj;
     teamMask = initTeamMask;
     timer = 0.0f;
-    GameObjectClass* pClass = initObj ? static_cast<GameObjectClass*>(initObj->mEntityClass) : 0;
-    maxDistTrack = pClass ? pClass->mLockOnMaxTrackDist : 200000.0f;
-    maxDist = pClass ? pClass->mLockOnMaxDist : 500.0f;
-    minDist = pClass ? pClass->mLockOnMinDist : 100.0f;
+    if (pClass)
+    {
+        maxDistTrack = pClass->mLockOnMaxTrackDist;
+        minDist = pClass->mLockOnMinDist;
+        maxDist = pClass->mLockOnMaxDist;
+    }
+    else
+    {
+        maxDistTrack = 200000.0f;
+        minDist = 100.0f;
+        maxDist = 500.0f;
+    }
     targetInfo.mVisibilityChecked = false;
     targetInfo.mVisible = false;
     targetInfo.mPositionValid = true;
@@ -1259,8 +1270,8 @@ void LockOnManager::RemoveTargetCommon(GameObject* const pActor, unsigned int uT
         {
             continue;
         }
-        teamMaskLeft &= ~turnOff;
         target.teamMask &= ~turnOff;
+        teamMaskLeft &= ~turnOff;
         if (!target.teamMask)
         {
             target.SetObj(0, 0);

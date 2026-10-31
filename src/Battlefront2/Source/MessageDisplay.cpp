@@ -75,9 +75,12 @@ void MessageDisplay::AddKillMessage(const Character* pVictim, const Character* p
 // FUNCTION: SWBF2 0x005a38e0
 void MessageDisplay::Create()
 {
-    for (int i = 0; i < DISPLAY_END; ++i)
+    for (int iView = 0; iView < 1; ++iView)
     {
-        sInstance[0][i] = new MessageDisplay((DISPLAY_TYPE)i);
+        for (int i = 0; i < DISPLAY_END; ++i)
+        {
+            sInstance[iView][i] = new MessageDisplay((DISPLAY_TYPE)i);
+        }
     }
 }
 
@@ -131,9 +134,10 @@ void MessageDisplay::GetInfo(unsigned int& uViewport, DISPLAY_TYPE& eType) const
 // FUNCTION: SWBF2 0x005a3be0
 void MessageDisplay::EnableViewport(unsigned int uiViewport, bool bEnable)
 {
-    for (int i = 0; i < DISPLAY_END; ++i)
+    MessageDisplay** ppDisplay = sInstance[0];
+    for (int i = 0; i < DISPLAY_END; ++i, ++ppDisplay)
     {
-        MessageDisplay* pDisplay = sInstance[0][i];
+        MessageDisplay* pDisplay = *ppDisplay;
         if (pDisplay)
         {
             unsigned int uViewport;
@@ -150,12 +154,13 @@ void MessageDisplay::EnableViewport(unsigned int uiViewport, bool bEnable)
 // FUNCTION: SWBF2 0x005a3920
 void MessageDisplay::Destroy()
 {
-    for (int i = 0; i < DISPLAY_END; ++i)
+    MessageDisplay** ppDisplay = sInstance[0];
+    for (int i = 0; i < DISPLAY_END; ++i, ++ppDisplay)
     {
-        if (sInstance[0][i])
+        if (*ppDisplay)
         {
-            delete sInstance[0][i];
-            sInstance[0][i] = 0;
+            delete *ppDisplay;
+            *ppDisplay = 0;
         }
     }
 }

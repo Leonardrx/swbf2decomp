@@ -15,9 +15,7 @@ public:
 // FUNCTION: SWBF2 0x0062bf80
 PblVector3 PropObject::GetPos()
 {
-
-    const float fScale = -16384.0f;
-    return PblVector3(gVectorUnitY.x * fScale, gVectorUnitY.y * fScale, gVectorUnitY.z * fScale);
+    return gVectorUnitY * -16384.0f;
 }
 
 // FUNCTION: SWBF2 0x0062bfd0

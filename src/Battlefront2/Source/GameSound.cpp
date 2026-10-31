@@ -135,15 +135,18 @@ bool GameSound::CanPlay() const
     {
         return false;
     }
-    if (GameState::GetState() == 0x11E1FC01)
+    if (GameState::GetState() != 0x11E1FC01)
     {
-        return true;
+        if (GameLoop::IsGameOver() && mType == type_soundStream)
+        {
+            return false;
+        }
+        if (!NetGame::IsOnceClientTurn())
+        {
+            return false;
+        }
     }
-    if (GameLoop::IsGameOver() && mType == type_soundStream)
-    {
-        return false;
-    }
-    return NetGame::IsOnceClientTurn();
+    return true;
 }
 
 // FUNCTION: SWBF2 0x00538010
@@ -174,11 +177,12 @@ void GameSound::Play(const PblVector3* pPos, const PblVector3* pVel, bool bArg3,
         }
         case type_soundLayered:
         {
+            const Snd::SoundLayered::Properties* pProps =
+                (const Snd::SoundLayered::Properties*)mProps;
             Snd::Source3D source3D;
             source3D.SetPosition(pPos);
             source3D.SetVelocity(pVel);
-            Snd::SoundLayered::Play(&source3D,
-                                    (const Snd::SoundLayered::Properties*)mProps);
+            Snd::SoundLayered::Play(&source3D, pProps);
             return;
         }
         case type_soundStream:
@@ -215,6 +219,8 @@ void GameSound::Play(const PblVector3* pPos, const PblVector3* pVel, bool bArg3,
 // FUNCTION: SWBF2 0x005381c0
 void GameSound::SetID(const char* pName, bool, bool bDeferred)
 {
+    char buffer[512];
+    char* pModifier = buffer;
     mProps = 0;
     mType = type_invalid;
     if (!pName || !strlen(pName))
@@ -222,10 +228,8 @@ void GameSound::SetID(const char* pName, bool, bool bDeferred)
         return;
     }
 
-    char buffer[512];
     strcpy(buffer, pName);
-    char* pModifier = buffer;
-    while (*pModifier && *pModifier != ' ')
+    while (*pModifier != ' ' && *pModifier)
     {
         ++pModifier;
     }
@@ -476,8 +480,9 @@ void GameSoundControllable::Update(const GameSound* pSound, const PblVector3* pP
         }
     }
 
-    if (Snd::VoiceVirtual* pVoice = GetVoiceVirtual())
+    if (mVoiceVirtualHandle)
     {
+        Snd::VoiceVirtual* pVoice = Snd::Sound::VoiceVirtualHandleToVoiceVirtual(mVoiceVirtualHandle);
         if (pPos)
         {
             pVoice->SetPosition(pPos);

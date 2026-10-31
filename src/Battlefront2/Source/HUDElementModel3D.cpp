@@ -198,7 +198,6 @@ void HUD::ElementModel3D::Read(PblConfig& config, Factory::ItemCallback, void* c
 {
     unsigned int uNumMeshInfo = 0;
     MeshInfo aMeshInfo[256];
-    MeshInfo* pNext = aMeshInfo;
     while (!config.IsDone())
     {
         PblConfig::Data data = config.ReadNextData();
@@ -206,8 +205,7 @@ void HUD::ElementModel3D::Read(PblConfig& config, Factory::ItemCallback, void* c
         {
             if (data.GetId() == kMeshInfoHash)
             {
-                ++uNumMeshInfo;
-                MeshInfo* pMeshInfo = pNext++;
+                MeshInfo* pMeshInfo = &aMeshInfo[uNumMeshInfo++];
                 pMeshInfo->SetMeshName(data.GetStringArg(0));
                 PblConfig scope(config.ReadNextScope(), true);
                 pMeshInfo->Read(scope, InScreenGroup());
@@ -341,13 +339,8 @@ bool HUD::ElementModel3D::GetProperty(const unsigned int uHashID, void* const pV
         switch (uHashID)
         {
         case kPositionHash:
-        {
-            const PblMatrix& matrix = pMeshInfo->GetMatrix();
-            pfValue[0] = matrix.m[3][0];
-            pfValue[1] = matrix.m[3][1];
-            pfValue[2] = matrix.m[3][2];
+            *(PblVector3*)pValue = pMeshInfo->GetMatrix().GetTranslation();
             return true;
-        }
         case kRotationHash:
             *(PblVector3*)pValue = pMeshInfo->GetMatrixInfo().GetRotation();
             return true;
@@ -468,8 +461,8 @@ bool HUD::ElementModel3D::ReadData(PblConfig& config, PblConfig::Data& data)
         if (pModel3D)
         {
             mMeshInfo = pModel3D->mMeshInfo;
-            mInheritedMeshInfo = true;
             mNumMeshInfo = pModel3D->mNumMeshInfo;
+            mInheritedMeshInfo = true;
         }
         return true;
     }
@@ -519,9 +512,11 @@ void HUD::ElementModel3D::WriteData(HUD::File& file, unsigned int uTabs)
             file.WriteStringf("MeshInfo(\"%s\")\n", mMeshInfo[i].GetMeshName());
             file.WriteTabs(uTabs);
             file.WriteString("{\n");
+            ++uTabs;
             mMeshInfo[i].Write(file, GetContainerFrameWidth(), GetContainerFrameHeight(),
-                               GetContainerViewWidth(), GetContainerViewHeight(), uTabs + 1,
+                               GetContainerViewWidth(), GetContainerViewHeight(), uTabs,
                                InScreenGroup());
+            --uTabs;
             file.WriteTabs(uTabs);
             file.WriteString("}\n\n");
         }

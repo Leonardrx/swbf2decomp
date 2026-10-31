@@ -146,7 +146,7 @@ SoundDebugDisplay::SoundDebugDisplay()
         fY += 15.0f;
     }
 
-    FLRenderer::AddInterfaceElement(&mGroupElement, 0.0f, 0.0f, true);
+    FLRenderer::AddInterfaceElement(&mGroupElement, RedInterfaceScreen::LEFT, RedInterfaceScreen::TOP, true);
     Clear();
 }
 
@@ -170,7 +170,7 @@ void SoundDebugDisplay::Init()
 bool SoundDebugDisplay::Update(float fDeltaTime)
 {
     Clear();
-    if (fDeltaTime == 0.0f)
+    if (0.0f == fDeltaTime)
     {
         return true;
     }
@@ -251,9 +251,8 @@ void SoundDebugDisplay::Printf(const char* pcFormat, ...)
             }
         }
 
-        RedTextElement* pText = &mTextElement[mCursorPosY];
-        pText->SetText(acBuffer, true);
-        pText->Enable(true);
+        mTextElement[mCursorPosY].SetText(acBuffer, true);
+        mTextElement[mCursorPosY].Enable(true);
         ++mCursorPosY;
     }
 
@@ -304,42 +303,29 @@ void SoundDebugDisplay::DisplayVirtualVoices(Snd::VoiceVirtualManager* pManager)
     }
 
     const PblListDoubleSorted& list = pManager->mActiveList;
+    PblListDoubleSorted::Itor itor(list);
     Printf("voice, pri., dist., 3d gain, play pos., min, max, roll");
 
-    for (PblListDouble::Node* pLink = list.mTerminator.mNext; pLink != &list.mTerminator;
-         pLink = pLink->mNext)
+    PblListDoubleSorted::Node* pNode;
+    for (; (pNode = itor.GetNode(&list)) != list.GetTerminator(); ++itor)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
-        if (pNode == list.GetTerminator())
-        {
-            break;
-        }
-
         Snd::VoiceVirtual* pVoice =
             (Snd::VoiceVirtual*)((char*)pNode - offsetof(Snd::VoiceVirtual, mNode));
 
         float fGain;
         pVoice->Snd::Source3D::CalculateGain(fGain);
 
-        if (mMode == mode_Sounds)
-        {
-            if (pVoice->mCustomFlags == 0)
-            {
-                continue;
-            }
-        }
-        else if (mSampleID != 0 &&
-                 (pVoice->mSample == 0 || pVoice->mSample->mHashID != mSampleID))
+        if ((mMode == mode_Sounds && pVoice->mCustomFlags == 0) ||
+            (mMode != mode_Sounds && mSampleID != 0 &&
+             (pVoice->mSample == 0 || pVoice->mSample->mHashID != mSampleID)))
         {
             continue;
         }
 
-        const Snd::Source3D::Properties& props = *pVoice;
         Printf("0x%08x, %.02f, %.02f, %.02f, 0x%08x, %.02f, %.02f, %.02f",
-               pVoice->mVoice, pNode->mSortValue, pVoice->mDistanceLength, fGain,
-               pVoice->mPlaybackPosition, props.mMinDistance, props.mMaxDistance,
-               props.mRollOffFactor);
+               pVoice->mVoice, pVoice->mNode.mSortValue, pVoice->mDistanceLength, fGain,
+               pVoice->mPlaybackPosition, pVoice->mMinDistance, pVoice->mMaxDistance,
+               pVoice->mRollOffFactor);
     }
 }
 
@@ -438,27 +424,21 @@ void SoundDebugDisplay::DisplayMusicInfo()
     Printf("Active  , Cur. PS, Des. PS, Pos., Inact., Play, Pri.");
 
     const PblListDoubleSorted& list = Music::sMusicActive;
-    for (PblListDouble::Node* pLink = list.mTerminator.mNext; pLink != &list.mTerminator;
-         pLink = pLink->mNext)
+    PblListDoubleSorted::Itor itor(list);
+    PblListDoubleSorted::Node* pNode;
+    for (; (pNode = itor.GetNode(&list)) != list.GetTerminator(); ++itor)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
-        if (pNode == list.GetTerminator())
-        {
-            break;
-        }
-
         Music* pMusic = (Music*)((char*)pNode - offsetof(Music, mNode));
 
-        float fPlaybackTimeLeft = pMusic->mMinPlaybackTime - pMusic->mPlaybackTime;
-        if (!(fPlaybackTimeLeft > 0.0f))
-        {
-            fPlaybackTimeLeft = 0.0f;
-        }
         float fInactiveTimeLeft = pMusic->GetInactiveTimeLeft();
         if (!(fInactiveTimeLeft > 0.0f))
         {
             fInactiveTimeLeft = 0.0f;
+        }
+        float fPlaybackTimeLeft = pMusic->mMinPlaybackTime - pMusic->mPlaybackTime;
+        if (!(fPlaybackTimeLeft > 0.0f))
+        {
+            fPlaybackTimeLeft = 0.0f;
         }
 
         Printf("0x%08x, %s, %s, 0x%08x, %02.02f, %02.02f, %02.02f", pMusic->mHashID,
@@ -476,16 +456,16 @@ const char* SoundDebugDisplay::GetMusicPlayStateString(unsigned int uiPlayState)
     case Music::playState_invalid:
     case Music::playState_paused:
         return "Paused ";
-    case Music::playState_starting:
-        return "Starting";
-    case Music::playState_playing:
-        return "Playing";
-    case Music::playState_stopping:
-        return "Stopping";
-    case Music::playState_stopped:
-        return "Stopped ";
     case Music::playState_pausing:
         return "Pausing";
+    case Music::playState_playing:
+        return "Playing";
+    case Music::playState_starting:
+        return "Starting";
+    case Music::playState_stopped:
+        return "Stopped ";
+    case Music::playState_stopping:
+        return "Stopping";
     }
     return "";
 }
@@ -497,10 +477,10 @@ const char* SoundDebugDisplay::GetPlayStateStringShort(unsigned int uiPlayState)
     {
     case Snd::SourceTransport::playState_playing:
         return "ply";
-    case Snd::SourceTransport::playState_pausing:
-        return "psg";
     case Snd::SourceTransport::playState_paused:
         return "psd";
+    case Snd::SourceTransport::playState_pausing:
+        return "psg";
     case Snd::SourceTransport::playState_stopped:
         return "stp";
     }
@@ -510,7 +490,8 @@ const char* SoundDebugDisplay::GetPlayStateStringShort(unsigned int uiPlayState)
 // FUNCTION: SWBF2 0x0064b3d0
 void SoundDebugDisplay::DisplayStreamInfo()
 {
-    Snd::StreamBase::Info* pInfo = Snd::StreamBase::Info::Find(mStreamID);
+    const unsigned int uiStreamID = mStreamID;
+    Snd::StreamBase::Info* pInfo = Snd::StreamBase::Info::Find(uiStreamID);
     if (pInfo)
     {
         DisplayVirtualVoices(pInfo->GetStreamManager());

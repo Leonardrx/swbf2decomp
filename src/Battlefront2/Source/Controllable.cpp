@@ -33,27 +33,27 @@ public:
 
 // FUNCTION: SWBF2 0x00484730
 ControllableClass::ControllableClass()
+    : mLocalNameID(0),
+      mPilotParentNodeHash(0),
+      mPilotOffsetMatrix(gMatrixIdentity),
+      mPilotAnimation(SoldierAnimationBank::INVALID_ANIMATION),
+      mAnimatedPilotNodeFlag(false),
+      mPilotDeathType(PILOTDEATH_FALL),
+      mPilotType(PILOT_VEHICLE),
+      mIsPilotExposed(true),
+      mIsPilotAnimation9Pose(false),
+      mCanCapturePosts(false),
+      mCanEnterVehicles(false)
 {
     mCombatInterrupts = true;
     mIgnoreHintNodes = false;
     mShakeScale = 1.0f;
     mBobPath.numPoints = 0;
     mCockpitTension = 0.0f;
-    mLocalNameID = 0;
-    mForceMode = 0;
-    mThirdPersonFOV = mFirstPersonFOV = GetDefaultFOV();
-    mPilotParentNodeHash = 0;
-    mPilotOffsetMatrix = gMatrixIdentity;
-    mPilotAnimation = SoldierAnimationBank::INVALID_ANIMATION;
-    mAnimatedPilotNodeFlag = false;
-    mPilotDeathType = PILOTDEATH_FALL;
-    mPilotType = PILOT_VEHICLE;
-    mIsPilotExposed = true;
-    mIsPilotAnimation9Pose = false;
-    mCanCapturePosts = false;
-    mCanEnterVehicles = false;
     mControlsUnit = false;
     mAnimatesUnitAsTurret = false;
+    mForceMode = 0;
+    mFirstPersonFOV = mThirdPersonFOV = GetDefaultFOV();
 }
 
 UnitController* UnitControllerPtr(Controller* pController);
@@ -122,12 +122,8 @@ Controllable::Controllable(ControllableClass* pClass, int iPlayerId)
 // FUNCTION: SWBF2 0x004837c0
 void Controllable::ClearControllable()
 {
-    for (int i = 0; i < 2; ++i)
-    {
-        mReticuleTarget[i].mObject = 0;
-        mReticuleTarget[i].mSavedHandleId = 0;
-        mReticuleAffiliation[i] = 0;
-    }
+    memset(mReticuleTarget, 0, sizeof(mReticuleTarget));
+    memset(mReticuleAffiliation, 0, sizeof(mReticuleAffiliation));
 
     mControlMove = 0.0f;
     mControlStrafe = 0.0f;
@@ -139,11 +135,10 @@ void Controllable::ClearControllable()
         mTriggerControlSwitch[i].Clear();
         mControlFire[i].Clear();
     }
-    mWpnChannel = 0;
     mControlReload.Clear();
+    mControlSprint.Clear();
     mControlJump.Clear();
     mControlCrouch.Clear();
-    mControlSprint.Clear();
     mControlUse.Clear();
     mControlZoom.Clear();
     mControlView.Clear();
@@ -156,6 +151,7 @@ void Controllable::ClearControllable()
     mControlStrafeRight.Clear();
 
     mWpnDistFactor = 1.0f;
+    mWpnChannel = 0;
     mAnimNameId = 0;
     mTurnBuildup = 0.0f;
     mPitchBuildup = 0.0f;
@@ -201,16 +197,15 @@ Controllable* Controllable::GetEnteredRemoteOrVehicleIfNotMe()
     {
         return 0;
     }
-    Controllable* pEntered = mCharacter->mRemote;
-    if (!pEntered)
+    if (mCharacter->mRemote)
     {
-        pEntered = mCharacter->mVehicle;
-        if (!pEntered)
-        {
-            return 0;
-        }
+        return mCharacter->mRemote != this ? mCharacter->mRemote : 0;
     }
-    return pEntered != this ? pEntered : 0;
+    if (mCharacter->mVehicle)
+    {
+        return mCharacter->mVehicle != this ? mCharacter->mVehicle : 0;
+    }
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00483a40
@@ -370,17 +365,13 @@ void Controllable::ReleaseController()
 // FUNCTION: SWBF2 0x00483ef0
 void Controllable::SetIndirectControl(bool bIndirect)
 {
-    Thread& rThread = mAIThread;
-    if (!mIndirectControlFlag)
+    if (!mIndirectControlFlag && bIndirect)
     {
-        if (bIndirect)
-        {
-            rThread.ActivateThread(10, PER_TURN);
-        }
+        mAIThread.ActivateThread(10, PER_TURN);
     }
-    else if (!bIndirect)
+    else if (mIndirectControlFlag && !bIndirect)
     {
-        rThread.DeactivateThread();
+        mAIThread.DeactivateThread();
     }
     mIndirectControlFlag = bIndirect;
 }
@@ -629,7 +620,7 @@ void Controllable::SetTargetLockedObj(GameObject* pObject)
         return;
     }
 
-    if (mTargetLockedObj != pObject)
+    if (pObject != mTargetLockedObj)
     {
         mTargetLockedObj = pObject;
     }
@@ -658,10 +649,9 @@ void Controllable::SetTargetLockedObj(GameObject* pObject)
             unsigned int uChangedTurn = pManager->mLockedObjChangedTurn;
             int iGrace = netTurnsPerSecond / 2;
             unsigned int uTurn = NetGame::GetClientAckedTurnNumber();
-            if (uChangedTurn + Max(iGrace, 5) >= uTurn)
+            if (uChangedTurn + (iGrace > 5 ? iGrace : 5) >= uTurn)
             {
-                mTargetLockedObj.mObject = pLocked;
-                mTargetLockedObj.mSavedHandleId = pLocked ? GameObjectHandleId(pLocked) : 0;
+                mTargetLockedObj = pLocked;
                 return;
             }
         }
@@ -947,13 +937,15 @@ const Aimer* Controllable::GetAimer(int) const
 // FUNCTION: SWBF2 0x00484660
 void Controllable::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
 {
-    if (mPilot)
+    Controllable* pPilot = mPilot;
+    if (pPilot)
     {
-        const PblMatrix& mPilotMatrix = mPilot->GetMatrix();
-        const PblMatrix mInverse = static_cast<EntitySoldier*>(mPilot)->mLastVehicleMatrix.GetInverseFast();
-        PblMatrix mRelative;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mRelative), reinterpret_cast<const D3DXMATRIX*>(&mPilotMatrix), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+        const PblMatrix& mPilotMatrix = pPilot->GetMatrix();
+        const PblMatrix mInverse = static_cast<EntitySoldier*>(pPilot)->mLastVehicleMatrix.GetInverseFast();
         PblMatrix mResult;
+        PblMatrix mRelative;
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mResult), reinterpret_cast<const D3DXMATRIX*>(&mPilotMatrix), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+        mRelative = mResult;
         D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mResult), reinterpret_cast<const D3DXMATRIX*>(&mRelative), reinterpret_cast<const D3DXMATRIX*>(&mIn));
         mOut = mResult;
     }

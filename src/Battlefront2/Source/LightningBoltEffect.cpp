@@ -316,7 +316,7 @@ bool LightningBoltEffectObject::UpdateBolt(float fDeltaTime)
 
     if (mGameObject && GetControllable(mGameObject) && GetControllable(mGameObject)->GetAimer(0))
     {
-        PblVector3 vFirePos = GetControllable(mGameObject)->GetAimer(0)->mFirePos;
+        PblVector3 vFirePos = mGameObject->GetControllable()->GetAimer(0)->mFirePos;
         AttachEffectToVector(&vFirePos, false);
     }
 

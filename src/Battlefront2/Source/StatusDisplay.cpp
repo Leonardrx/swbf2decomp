@@ -26,7 +26,7 @@ void AddInterfaceElement(unsigned int hView, RedScreenGroupElement* pElement, fl
 RedInterfaceScreen* GetInterfaceView(int iView);
 }
 
-static bool IsFlyerAutoCorrecting(const Controllable* pControllable)
+static inline bool IsFlyerAutoCorrecting(const Controllable* pControllable)
 {
     return static_cast<const EntityFlyer*>(pControllable)->mFlyerAutoCorrectingToStayInBattlefield;
 }
@@ -69,7 +69,7 @@ float SquadCommandGroup::sFadeSpeed = 0.5f;
 
 const float OutOfBoundsGroup::sOmegaSquared = 500.0f;
 
-static void CountHostCall()
+static inline void CountHostCall()
 {
     if (NetGame::IsEnabled() && !NetGame::IsClient())
     {
@@ -162,21 +162,24 @@ void DamageArrowGroup::SetDirection(const PblVector3& vDir)
 {
     const float fDiff = vDir.z - vDir.x;
     int iArrow;
-    if (vDir.x + vDir.z < 0.0f)
+    if (vDir.x + vDir.z >= 0.0f)
     {
-        if (fDiff < 0.0f)
+        if (fDiff >= 0.0f)
         {
-            return;
+            iArrow = (vDir.y >= 0.0f) * 2 + 1;
         }
-        iArrow = 2;
+        else
+        {
+            iArrow = 0;
+        }
     }
-    else if (fDiff < 0.0f)
+    else if (fDiff >= 0.0f)
     {
-        iArrow = 0;
+        iArrow = 2;
     }
     else
     {
-        iArrow = (vDir.y >= 0.0f) * 2 + 1;
+        return;
     }
     Arrow& arrow = mArrows[iArrow];
     arrow.mGroup.Enable(true);
@@ -355,7 +358,7 @@ void OutOfBoundsGroup::Update(float fDeltaTime)
     {
         Enable(true);
         Visible(true);
-        mAlpha = 255.0f;
+        mAlpha = 254.0f;
         mDAlpha = 0.0f;
 
         GameObject* pObject = pControllable->GetGameObject();

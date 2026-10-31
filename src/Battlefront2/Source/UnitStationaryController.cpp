@@ -47,6 +47,12 @@ void UnitStationaryController::ApplyNextState()
 {
     switch (GetCurCmd()->GetCommand())
     {
+    case CMD_COMBAT:
+        SetNextState(STATE_COMBAT);
+        break;
+    case CMD_UNBOARD:
+        SetNextState(STATE_UNBOARD);
+        break;
     case CMD_WAIT:
     case CMD_CAPTURECP:
     case CMD_CTFOFFENSE:
@@ -54,12 +60,6 @@ void UnitStationaryController::ApplyNextState()
     case CMD_DEFEND:
     case CMD_DESTROY:
         SetNextState(STATE_WAIT);
-        break;
-    case CMD_COMBAT:
-        SetNextState(STATE_COMBAT);
-        break;
-    case CMD_UNBOARD:
-        SetNextState(STATE_UNBOARD);
         break;
     }
 }

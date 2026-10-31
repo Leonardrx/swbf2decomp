@@ -67,9 +67,10 @@ float sClientDeltaTime;
 // FUNCTION: SWBF2 0x00573f60
 LightsaberTrail::LightsaberTrail(const LightsaberTrailClass* pClass)
     : m_pClass(const_cast<LightsaberTrailClass*>(pClass))
-    , m_vPosPrev(3.402823466e+38f, 3.402823466e+38f, 3.402823466e+38f)
-    , m_vDirPrev(3.402823466e+38f, 3.402823466e+38f, 3.402823466e+38f)
 {
+    const PblVector3 vFar(3.402823466e+38f, 3.402823466e+38f, 3.402823466e+38f);
+    m_vDirPrev = vFar;
+    m_vPosPrev = vFar;
     m_bTrailOn = false;
     m_bTrailWasOn = false;
     m_bEffectActive = true;
@@ -114,16 +115,14 @@ void LightsaberTrail::RemoveFromRenderList()
 void LightsaberTrail::UpdatedWorldMatrix()
 {
     const float fDeltaTime = GameLoop::sClientDeltaTime;
+    const D3DXMATRIX* pWorld = reinterpret_cast<const D3DXMATRIX*>(&m_mWorldMatrix);
     if (fDeltaTime > 0.0f)
     {
         PblVector3 vPos, vDir;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&m_pClass->m_vOffsetPos), reinterpret_cast<const D3DXMATRIX*>(&m_mWorldMatrix));
-        D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&m_pClass->m_vOffsetDir), reinterpret_cast<const D3DXMATRIX*>(&m_mWorldMatrix));
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&m_pClass->m_vOffsetPos), pWorld);
+        D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&m_pClass->m_vOffsetDir), pWorld);
 
-        const float dx = vPos.x - m_vPosPrev.x;
-        const float dy = vPos.y - m_vPosPrev.y;
-        const float dz = vPos.z - m_vPosPrev.z;
-        if (dx * dx + dy * dy + dz * dz > 100.0f)
+        if (SquaredLength(vPos - m_vPosPrev) > 100.0f)
         {
             m_vPosPrev = vPos;
             m_vDirPrev = vDir;
@@ -283,11 +282,11 @@ void LightsaberTrail::_AddSample(float fTime, const PblVector3& vPos, const PblV
 // FUNCTION: SWBF2 0x00574b70
 float LightsaberTrail::GetLastTime() const
 {
-    if (m_uiNumSamples)
+    if (!m_uiNumSamples)
     {
-        return m_afTime[(m_uiSampleNext + MAX_SAMPLES_PER_TRAIL - 1) % MAX_SAMPLES_PER_TRAIL];
+        return -3.402823466e+38f;
     }
-    return -3.402823466e+38f;
+    return m_afTime[(m_uiSampleNext + MAX_SAMPLES_PER_TRAIL - 1) % MAX_SAMPLES_PER_TRAIL];
 }
 
 // FUNCTION: SWBF2 0x00574bb0
@@ -299,6 +298,9 @@ unsigned int LightsaberTrail::GetTotalNumSteps(float fMaxTimeStep, float fMaxDis
     {
         return 0;
     }
+    const unsigned char uiFirst = m_uiSampleFirst;
+    unsigned int uiStepCount = 1;
+    float fPreviousTime = m_afTime[uiFirst];
     if (pSteps)
     {
         pSteps[0] = 1;
@@ -308,11 +310,9 @@ unsigned int LightsaberTrail::GetTotalNumSteps(float fMaxTimeStep, float fMaxDis
         *pTotalDistance = 0.0f;
     }
 
-    unsigned int uiStepCount = 1;
-    float fPreviousTime = m_afTime[m_uiSampleFirst];
     for (unsigned char i = 1; i < uiCount; ++i)
     {
-        const unsigned char uiIndex = static_cast<unsigned char>((m_uiSampleFirst + i) % MAX_SAMPLES_PER_TRAIL);
+        const unsigned char uiIndex = (uiFirst + i) % MAX_SAMPLES_PER_TRAIL;
         const float fDistance = m_afDist[uiIndex];
         unsigned int uiSteps = 1;
         if (fDistance > 0.0f)
@@ -384,16 +384,17 @@ void LightsaberTrail::_SetSample(float fTime) const
     if (LightsaberTrail::s_uiSample == LightsaberTrail::s_uiSamplePrev || m_afTime[LightsaberTrail::s_uiSamplePrev] > fTime)
     {
         LightsaberTrail::s_uiSamplePrev = m_uiSampleFirst;
-        uiEnd = (LightsaberTrail::s_uiSample + 1) & 7;
+        uiEnd = (LightsaberTrail::s_uiSample + 1) % MAX_SAMPLES_PER_TRAIL;
         LightsaberTrail::s_uiSample = uiEnd;
         LightsaberTrail::s_fDeltaTimeInv = 1.0f / (m_afTime[uiEnd] - m_afTime[LightsaberTrail::s_uiSamplePrev]);
     }
     if (fTime > m_afTime[uiEnd])
     {
+        const unsigned char uiSampleNext = m_uiSampleNext;
         do
         {
-            const unsigned char uiNext = (uiEnd + 1) & 7;
-            if (uiNext == m_uiSampleNext)
+            const unsigned char uiNext = (uiEnd + 1) % MAX_SAMPLES_PER_TRAIL;
+            if (uiNext == uiSampleNext)
             {
                 break;
             }

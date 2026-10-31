@@ -105,11 +105,12 @@ EntityGeometry::EntityGeometry(EntityGeometryClass* pClass, const EntityDesc& de
         fRadius = pClass->mPotentialCollisionRadius;
     }
     SetCollisionRadius(fRadius);
+    Set2DCollisionRadius(fRadius);
     RecalculateAABB();
 
     const PblBox& box = mModel->_mModel->_TotalBoundingBox;
-    float fDimY = box._vMax.y - box._vMin.y;
     float fDimX = box._vMax.x - box._vMin.x;
+    float fDimY = box._vMax.y - box._vMin.y;
     float fDimZ = box._vMax.z - box._vMin.z;
     SetMass(fDimY * fDimX * fDimZ + 0.0001f);
 
@@ -191,7 +192,7 @@ void EntityGeometry::SetProperty(unsigned int uProperty, const char* pszValue)
         }
         else if (IsInCollisionList())
         {
-            CollisionManager::RemoveBody(this);
+            RemoveFromCollisionManager();
         }
         break;
     }
@@ -212,11 +213,11 @@ void EntityGeometry::BuildEffects()
 // FUNCTION: SWBF2 0x004ba6a0
 float EntityGeometry::GetSmallestCollisionDim() const
 {
-    if (mModel)
+    if (!mModel)
     {
-        return mSmallestCollisionDim;
+        return GetCollisionRadius() * 2.0f;
     }
-    return GetCollisionRadius() * 2.0f;
+    return mSmallestCollisionDim;
 }
 
 // FUNCTION: SWBF2 0x004ba6f0
@@ -250,8 +251,7 @@ PblVector3 EntityGeometry::GetTargetPoint(const PblVector3& vPos, const PblVecto
         (D3DXVECTOR3*)&vOffset,
         (const D3DXVECTOR3*)&static_cast<EntityGeometryClass*>(mEntityClass)->GetTargetPointOffset(),
         (const D3DXMATRIX*)&GetMatrix());
-    const PblVector3& vCenter = GetCollisionCenter();
-    return PblVector3(vCenter.x + vOffset.x, vCenter.y + vOffset.y, vCenter.z + vOffset.z);
+    return GetCollisionCenter() + vOffset;
 }
 
 // FUNCTION: SWBF2 0x004ba870
@@ -348,9 +348,10 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
 // FUNCTION: SWBF2 0x004bb700
 void EntityGeometry::SetupLightingState(unsigned int& uFlags)
 {
+    float fRadius = GetCollisionRadius();
     PblSphere sphere;
     sphere.SetCenter(GetCollisionCenter());
-    sphere.SetRadius(GetCollisionRadius());
+    sphere.SetRadius(fRadius);
     RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, (uFlags & 0x80) != 0, false, false));
     uFlags |= 0x80000000;
 }
@@ -362,20 +363,14 @@ EntityGeometryClass::EntityGeometryClass(unsigned int uHash)
     _fPriorityMod = 1.0f;
     mModel = 0;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkAttachPoints[i] = 0;
-    }
+    memset(mChunkAttachPoints, 0, sizeof(mChunkAttachPoints));
 
     mLODClass = 1;
     mHitLocations = 0;
     mNumHitLocations = 0;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkDescriptors[i] = 0;
-        mFullChunkCollisions[i] = 0;
-    }
+    memset(mChunkDescriptors, 0, sizeof(mChunkDescriptors));
+    memset(mFullChunkCollisions, 0, sizeof(mFullChunkCollisions));
 
     for (int i = 0; i < 10; ++i)
     {
@@ -399,38 +394,33 @@ void ChunkDescriptor::Init()
 {
     mMatrix.Reset();
 
-    mVelocity.x = 0.0f;
-    mVelocity.y = 0.0f;
     mVelocity.z = 0.0f;
+    mVelocity.y = 0.0f;
+    mVelocity.x = 0.0f;
     mModel = 0;
     mPrimitive = 0;
     mMaxTerrainCollisions = 0;
     mTerrainImpactEffect = 0;
     mPhysicsType = 0;
-    mOmega.x = 0.0f;
-    mOmega.y = 0.0f;
     mOmega.z = 0.0f;
-    mGravity.x = 0.0f;
-    mGravity.y = -9.8f;
-    mGravity.z = 0.0f;
+    mOmega.y = 0.0f;
+    mOmega.x = 0.0f;
     mFullCollisionModel = 0;
     mCoefficientOfRestitution = 0.0f;
     mCoefficientOfFriction = 0.0f;
     mSimpleFrictionConstant = 0.0f;
     mMinDeathCollisionSpeed = 0.0f;
     mForceZeroYAxisVelocity = false;
-    mMaxStaticLifetime = -1.0f;
-    for (int i = 0; i < 3; i++)
-    {
-        mTrailEffect[i] = 0;
-        mSmokeEffect[i] = 0;
-        mTrailAttachPoints[i] = 0;
-        mSmokeAttachPoints[i] = 0;
-    }
+    memset(mTrailEffect, 0, sizeof(mTrailEffect));
+    memset(mSmokeEffect, 0, sizeof(mSmokeEffect));
+    memset(mTrailAttachPoints, 0, sizeof(mTrailAttachPoints));
+    memset(mSmokeAttachPoints, 0, sizeof(mSmokeAttachPoints));
+    mGravity = PblVector3(0.0f, -9.8f, 0.0f);
     mNoBuildingCollisions = false;
     mKeepSoldierCollisions = false;
     mLinearDamping = 0.0f;
     mAngularDamping = 0.0f;
+    mMaxStaticLifetime = -1.0f;
 }
 
 // ChunkDescriptor::ChunkDescriptor(const ChunkDescriptor&)
@@ -1002,11 +992,7 @@ int EntityGeometryClass::GetNumChunks()
 bool EntityGeometryClass::AddBuildingCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sStaticCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1014,8 +1000,13 @@ bool EntityGeometryClass::AddBuildingCollision(const char* pszValue)
             return false;
         }
         sStaticCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_STATIC, CollisionMask(sStaticCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_STATIC, CollisionMask(sStaticCollisionMask));
+    else
+    {
+        sStaticCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_STATIC, CollisionMask(sStaticCollisionMask));
+    }
     return true;
 }
 
@@ -1023,11 +1014,7 @@ bool EntityGeometryClass::AddBuildingCollision(const char* pszValue)
 bool EntityGeometryClass::AddVehicleCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sRigidCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1035,8 +1022,13 @@ bool EntityGeometryClass::AddVehicleCollision(const char* pszValue)
             return false;
         }
         sRigidCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(sRigidCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(sRigidCollisionMask));
+    else
+    {
+        sRigidCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(sRigidCollisionMask));
+    }
     return true;
 }
 
@@ -1044,11 +1036,7 @@ bool EntityGeometryClass::AddVehicleCollision(const char* pszValue)
 bool EntityGeometryClass::AddTerrainCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sTerrainCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1056,8 +1044,13 @@ bool EntityGeometryClass::AddTerrainCollision(const char* pszValue)
             return false;
         }
         sTerrainCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_TERRAIN, CollisionMask(sTerrainCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_TERRAIN, CollisionMask(sTerrainCollisionMask));
+    else
+    {
+        sTerrainCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_TERRAIN, CollisionMask(sTerrainCollisionMask));
+    }
     return true;
 }
 
@@ -1065,11 +1058,7 @@ bool EntityGeometryClass::AddTerrainCollision(const char* pszValue)
 bool EntityGeometryClass::AddOrdnanceCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sOrdnanceCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1077,8 +1066,13 @@ bool EntityGeometryClass::AddOrdnanceCollision(const char* pszValue)
             return false;
         }
         sOrdnanceCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_ORDNANCE, CollisionMask(sOrdnanceCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_ORDNANCE, CollisionMask(sOrdnanceCollisionMask));
+    else
+    {
+        sOrdnanceCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_ORDNANCE, CollisionMask(sOrdnanceCollisionMask));
+    }
     return true;
 }
 
@@ -1086,11 +1080,7 @@ bool EntityGeometryClass::AddOrdnanceCollision(const char* pszValue)
 bool EntityGeometryClass::AddSoldierCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sSoftCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1098,8 +1088,13 @@ bool EntityGeometryClass::AddSoldierCollision(const char* pszValue)
             return false;
         }
         sSoftCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(sSoftCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(sSoftCollisionMask));
+    else
+    {
+        sSoftCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(sSoftCollisionMask));
+    }
     return true;
 }
 
@@ -1107,11 +1102,7 @@ bool EntityGeometryClass::AddSoldierCollision(const char* pszValue)
 bool EntityGeometryClass::AddTargetableCollision(const char* pszValue)
 {
     unsigned int uName = PblHash(pszValue);
-    if (uName == 0xada7afdb || uName == 0x5c6e1222)
-    {
-        sTargetableCollisionMask = 0;
-    }
-    else
+    if (uName != 0xada7afdb /* "none" */ && uName != 0x5c6e1222 /* "clear" */)
     {
         int iMaskId = mCollisionModel.GetMaskId(uName);
         if (iMaskId < 0)
@@ -1119,21 +1110,27 @@ bool EntityGeometryClass::AddTargetableCollision(const char* pszValue)
             return false;
         }
         sTargetableCollisionMask |= 1 << iMaskId;
+        mCollisionModel.SetCollisionMask(COLL_TARGETABLE, CollisionMask(sTargetableCollisionMask));
     }
-    mCollisionModel.SetCollisionMask(COLL_TARGETABLE, CollisionMask(sTargetableCollisionMask));
+    else
+    {
+        sTargetableCollisionMask = 0;
+        mCollisionModel.SetCollisionMask(COLL_TARGETABLE, CollisionMask(sTargetableCollisionMask));
+    }
     return true;
 }
 
 // FUNCTION: SWBF2 0x004920e0
 void EntityGeometry::SetPosition(const PblVector3& vPos)
 {
-    mMatrix[3] = vPos;
-    mMatrix.m[3][3] = 1.0f;
+    PblMatrix& rMatrix = mMatrix;
+    rMatrix[3] = vPos;
+    rMatrix.m[3][3] = 1.0f;
 
     PblVector3 vCenter;
     D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter,
                            (const D3DXVECTOR3*)&mModel->_mModel->_BoundingSphere.GetCenter(),
-                           (const D3DXMATRIX*)&mMatrix);
+                           (const D3DXMATRIX*)&rMatrix);
     SetCollisionCenter(vCenter);
     RecalculateAABB();
     SetRenderPos(GetCollisionCenter());

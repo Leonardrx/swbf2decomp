@@ -49,7 +49,7 @@ void VehicleEngineClass::Boost::operator delete(void* p)
     smFreeList.Free(p);
 }
 
-void* VehicleEngineClass::Boost::operator new(unsigned int)
+inline void* VehicleEngineClass::Boost::operator new(unsigned int)
 {
     return smFreeList.Alloc();
 }
@@ -57,19 +57,9 @@ void* VehicleEngineClass::Boost::operator new(unsigned int)
 // FUNCTION: SWBF2 0x0066cad0
 bool VehicleEngine::UpdateEnabled()
 {
-    if (!NetGame::IsEnabled())
-    {
-        return true;
-    }
-    if (NetGame::IsDedicated())
-    {
-        return false;
-    }
-    if (NetGame::OnClient() || NetGame::IsOneWorld())
-    {
-        return netIsLocalTurn;
-    }
-    return false;
+    return !NetGame::IsEnabled() ||
+           (!NetGame::IsDedicated() && (NetGame::IsClient() || NetGame::IsOneWorld()) &&
+            netIsLocalTurn);
 }
 
 // FUNCTION: SWBF2 0x0066cb20
@@ -86,7 +76,7 @@ VehicleEngine::VehicleEngine(VehicleEngineClass* pClass)
         int iHeap = GameSoundEngine::GetHeap();
         for (unsigned int i = 0; i < 12; ++i)
         {
-            mParams |= pProps->QueryParameter(sParamIDs[i]) ? (unsigned short)(1 << i) : 0;
+            mParams |= pProps->QueryParameter(sParamIDs[i]) ? (1 << i) : 0;
         }
         GameSoundEngine::SetHeap(GameMemory::RunTimeHeap);
         mEngine.SetProperties(pProps);
@@ -466,9 +456,8 @@ void VehicleEngine::Collision(const VehicleEngineClass* pClass, const PblVector3
 // FUNCTION: SWBF2 0x0066d5c0
 VehicleEngineClass::Boost::Boost(int iID, float fSpeedThreshold, bool bPositiveAcceleration,
                                  PblListSingle& list)
+    : mPositiveAcceleration(bPositiveAcceleration != 0), mSpeedThreshold(fSpeedThreshold)
 {
-    mSpeedThreshold = fSpeedThreshold;
-    mPositiveAcceleration = bPositiveAcceleration;
     mBoost.SetID((unsigned int)iID, false, false);
     list.AddLast(&mLink);
     sGlobalList.AddLast(&mGlobalLink);
@@ -477,9 +466,8 @@ VehicleEngineClass::Boost::Boost(int iID, float fSpeedThreshold, bool bPositiveA
 // FUNCTION: SWBF2 0x0066d660
 VehicleEngineClass::Boost::Boost(const char* pName, float fSpeedThreshold,
                                  bool bPositiveAcceleration, PblListSingle& list)
+    : mPositiveAcceleration(bPositiveAcceleration != 0), mSpeedThreshold(fSpeedThreshold)
 {
-    mSpeedThreshold = fSpeedThreshold;
-    mPositiveAcceleration = bPositiveAcceleration;
     mBoost.SetID(pName, false, false);
     list.AddLast(&mLink);
     sGlobalList.AddLast(&mGlobalLink);
@@ -543,10 +531,10 @@ VehicleEngineClass::VehicleEngineClass(const VehicleEngineClass* pBase)
     mCockpit3rdPerson = pBase->mCockpit3rdPerson;
     mProximityMin = pBase->mProximityMin;
     mProximityMax = pBase->mProximityMax;
-    for (PblListSingle::Node* pNode = pBase->mBoostList.mHead.mNext;
-         pNode != &pBase->mBoostList.mHead; pNode = pNode->mNext)
+    for (PblListSingle::Itor it(pBase->mBoostList);
+         it.GetNode() != pBase->mBoostList.GetTerminator(); ++it)
     {
-        ((Boost*)pNode)->Duplicate(mBoostList);
+        ((Boost*)it.GetNode()->GetObjectA(&pBase->mBoostList, 0))->Duplicate(mBoostList);
     }
 }
 
@@ -612,18 +600,18 @@ void VehicleEngineClass::UpdateBoost(float fSpeed, float fPrevSpeed,
                                      const PblVector3* const pPos,
                                      const PblVector3* const pVel) const
 {
-    for (const PblListSingle::Node* pNode = mBoostList.mHead.mNext; pNode != &mBoostList.mHead;
-         pNode = pNode->mNext)
+    for (PblListSingle::Itor it(mBoostList); it.GetNode() != mBoostList.GetTerminator(); ++it)
     {
-        ((const Boost*)pNode)->Update(fSpeed, fPrevSpeed, controller, sound, pPos, pVel);
+        ((const Boost*)it.GetNode()->GetObjectA(&mBoostList, 0))
+            ->Update(fSpeed, fPrevSpeed, controller, sound, pPos, pVel);
     }
     controller.Update(&sound, pPos, pVel);
 }
 
 // FUNCTION: SWBF2 0x0066d850
 VehicleEngineClass::VehicleEngineClass()
+    : mTurnOffTime(3.0f)
 {
-    mTurnOffTime = 3.0f;
     mProximityMin = 60.0f;
     mProximityMax = 500.0f;
 }

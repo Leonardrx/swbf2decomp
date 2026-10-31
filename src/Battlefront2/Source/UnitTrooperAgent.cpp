@@ -145,7 +145,7 @@ void UnitTrooperAgent::EnterState()
             SetNextState(STATE_Goto);
             SquadCommands::SquadCommandOrder order(
                 SquadCommands::SC_FOLLOW, mCtrl->mOwner->mCharacter,
-                PblHandle<GameObject>(static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject()));
+                PblHandle<GameObject>(mCtrl->mOwner->GetGameObject()));
             SquadCommands::AIShoutOrder(order, 0.0f);
         }
         break;
@@ -167,7 +167,7 @@ void UnitTrooperAgent::EnterState()
         break;
 
     case STATE_Patrol:
-        if (mRepairHelper.CheckForRecipientAndInit())
+        if (mRepairHelper.CheckForRecipientAndInit() == true)
         {
             SetNextState(STATE_Aid);
         }
@@ -185,7 +185,7 @@ void UnitTrooperAgent::ExitState()
     switch (mCurState)
     {
     case STATE_Convoy:
-        ReserveManager::UnreserveReserver(static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject(), RT_FORMATION);
+        ReserveManager::UnreserveReserver(mCtrl->mOwner->GetGameObject(), RT_FORMATION);
         break;
     case STATE_Patrol:
         mPatrolHelper.HELPERClean();
@@ -202,7 +202,7 @@ void UnitTrooperAgent::ExitState()
 // FUNCTION: SWBF2 0x0066a7a0
 bool UnitTrooperAgent::CheckForVehicleConvoy()
 {
-    GameObject* pMe = static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject();
+    GameObject* pMe = mCtrl->mOwner->GetGameObject();
     if (!pMe->IsRtti(EntitySoldier::rttiHashEntitySoldier))
     {
         return false;

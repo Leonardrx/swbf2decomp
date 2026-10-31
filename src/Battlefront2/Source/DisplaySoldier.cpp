@@ -55,7 +55,9 @@ SoldierElement::SoldierElement()
     mMatrix.Reset();
     mIsSetup = false;
     mID = reinterpret_cast<EntitySoldier*>(this);
-    mGroundNormal = PblVector3(0.0f, 1.0f, 0.0f);
+    mGroundNormal.x = 0.0f;
+    mGroundNormal.y = 1.0f;
+    mGroundNormal.z = 0.0f;
     memset(mClothPiece, 0, sizeof(mClothPiece));
     mTentacles = 0;
     Reset();
@@ -79,7 +81,7 @@ bool SoldierElement::Setup()
         return false;
     }
 
-    if (mClass->m_numTentacles && !TentacleSimulator::sMemoryPool.IsFull())
+    if (mClass->m_numTentacles > 0 && !TentacleSimulator::sMemoryPool.IsFull())
     {
         if (mTentacles)
         {
@@ -170,9 +172,12 @@ void SoldierElement::SetSelected(bool bSelected)
         mRandomActionTimer -= fDeltaTime;
         if (mRandomActionTimer < 0.0f)
         {
-            bool bRoot4 = mWeaponClass[mWeaponIndex] &&
-                          SoldierAnimationBank::GetWeaponRoot((SoldierAnimationBank::WEAPON)
-                              mWeaponClass[mWeaponIndex]->mSoldierAnimationWeapon) == 4;
+            bool bRoot4 = false;
+            if (mWeaponClass[mWeaponIndex])
+            {
+                bRoot4 = SoldierAnimationBank::GetWeaponRoot((SoldierAnimationBank::WEAPON)
+                             mWeaponClass[mWeaponIndex]->mSoldierAnimationWeapon) == 4;
+            }
             if (!bRoot4 && mSoldierAnimator)
             {
                 mSoldierAnimator->SetWeaponState(4, 0.0f, false, false);
@@ -371,10 +376,7 @@ SoldierElement::~SoldierElement()
     {
         delete mClothPiece[i];
     }
-    for (int i = 0; i < 8; ++i)
-    {
-        mClothPiece[i] = 0;
-    }
+    memset(mClothPiece, 0, sizeof(mClothPiece));
     if (mTentacles)
     {
         delete mTentacles;

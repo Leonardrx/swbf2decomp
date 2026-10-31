@@ -75,9 +75,9 @@ void TeamAssistManager::DeleteRest(TeamAssist* pAssist)
 {
     while (pAssist)
     {
-        TeamAssist* pNext = pAssist->mNext;
-        delete pAssist;
-        pAssist = pNext;
+        TeamAssist* pCurrent = pAssist;
+        pAssist = pAssist->mNext;
+        delete pCurrent;
     }
 }
 
@@ -135,7 +135,7 @@ TeamAssist::TeamAssist(TeamAssist* pNext, int type, Character* pRequestor, float
         mTeamMask = 1 << pRequestor->mTeamNumber;
         TargetManager::AddMarker(mRequestor, 0, sMarkerTexture[type], 5.0f, mTeamMask, sColorHash, false, true, true, 0.0f);
         AI::VOHelper::Play((AI::VOType)(AI::VOT_TA_First + type), mRequestor, 0,
-                           static_cast<CollisionObject*>(mRequestor)->GetPosition(), 0.0f);
+                           mRequestor->GetPosition(), 0.0f);
     }
 }
 

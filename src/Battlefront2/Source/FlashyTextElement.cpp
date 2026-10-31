@@ -25,7 +25,15 @@ FlashyTextManager sFlashyTextManagerInstance;
 // FUNCTION: SWBF2 0x005269b0
 void FlashyTextManager::Init(bool bMission)
 {
-    sFlashyTextManagerInstance.ActivateThread(0, bMission ? PER_FRAME : PER_TURN);
+    Thread* pThread = &sFlashyTextManagerInstance;
+    if (bMission)
+    {
+        pThread->ActivateThread(0, PER_FRAME);
+    }
+    else
+    {
+        pThread->ActivateThread(0, PER_TURN);
+    }
 }
 
 // GLOBAL: SWBF2 0x007e6670
@@ -132,11 +140,9 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
         }
 
         RedColor bgColor = color;
-        if (mHashMid != 0x83245ab6 && m_eStyle != TEXT_STYLE_SELECTED)
+        if (mHashMid != 0x83245ab6 /* "headerbuttonmid" */ && m_eStyle != TEXT_STYLE_SELECTED)
         {
-            bgColor.b = 0x96;
-            bgColor.g = 0x96;
-            bgColor.r = 0x96;
+            bgColor = RedColor(0x96, 0x96, 0x96, color.a);
         }
 
         float fY1 = fHeight + fY;
@@ -186,7 +192,7 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
             fCursor = mTime / cStateTimes[FLASHY_STATE_CURSOR];
         }
         float fX = (fRight - fLeft) * fCursor + fLeft;
-        RenderBitmap(mContext, color, 0xe336320f, fX, fTop, (fBottom - fTop) + fX, fBottom);
+        RenderBitmap(mContext, color, 0xe336320f /* "Cursor" */, fX, fTop, (fBottom - fTop) + fX, fBottom);
     }
 
     if (mState >= FLASHY_STATE_EXPAND)
@@ -198,9 +204,9 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
         }
 
         PblMatrix mScaled = mContext;
-        mScaled.m[1][0] = mContext.m[1][0] * fScale;
-        mScaled.m[1][1] = mContext.m[1][1] * fScale;
-        mScaled.m[1][2] = mContext.m[1][2] * fScale;
+        mScaled.m[1][0] *= fScale;
+        mScaled.m[1][1] *= fScale;
+        mScaled.m[1][2] *= fScale;
         mScaled.m[1][3] = 0.0f;
         mScaled.m[3][1] = mContext.m[3][1] - (1.0f - fScale) * 0.5f * (fBottom - fTop);
 
@@ -218,10 +224,7 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
             {
                 fGreen = 255.0f;
             }
-            textColor.b = 100;
-            textColor.g = (unsigned char)(int)fGreen;
-            textColor.r = 0xff;
-            textColor.a = 0xff;
+            textColor = RedColor(0xff, (unsigned char)(int)fGreen, 100, 0xff);
         }
 
         RedTextElement::RenderUsingContext(mScaled, fade * textColor * color);
@@ -242,8 +245,8 @@ void FlashyTextElement::StartFlashiness()
 // FUNCTION: SWBF2 0x005268e0
 bool FlashyTextElement::UpdateFlashiness(float fDeltaTime)
 {
-    cStateTimes[FLASHY_STATE_DELAY] = mTimeDelay;
     mTime += fDeltaTime;
+    cStateTimes[FLASHY_STATE_DELAY] = mTimeDelay;
     if (mTime >= cStateTimes[mState])
     {
         do

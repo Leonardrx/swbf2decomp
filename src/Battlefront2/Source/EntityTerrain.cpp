@@ -61,8 +61,8 @@ float EntityTerrain::RayHit(const PblVector3& vStart, const PblVector3& vDir, fl
     if (fHit < 1.0f && pNormal)
     {
         float fDist = fHit * fLength;
-        *pNormal = RedTerrain::GetInterpolatedNormal(vStart.x + vDir.x * fDist,
-                                                     vStart.z + fDist * vDir.z);
+        PblVector3 vHit = vStart + vDir * fDist;
+        *pNormal = RedTerrain::GetInterpolatedNormal(vHit.x, vHit.z);
         if (pMaterial)
         {
             *pMaterial = 0;

@@ -389,15 +389,15 @@ const CollisionResult* CollisionModel::CollideTerrain(CollisionObject* pObject, 
         }
 
         PblMatrix world = mBody[i]->GetWorldMatrix(matrix, pPose);
-        bool bHit = mBody[i]->CollideTerrain(world, sCollisionResult.mSeparationNormal, sCollisionResult.mOverlap,
-                                             sCollisionResult.mCollisionPosition);
-        pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
-        if (bHit)
+        if (mBody[i]->CollideTerrain(world, sCollisionResult.mSeparationNormal, sCollisionResult.mOverlap,
+                                     sCollisionResult.mCollisionPosition))
         {
+            pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
             sCollisionResult.mColliderId = i;
             sCollisionResult.mReceiverId = 0;
             return &sCollisionResult;
         }
+        pObject->SetTerrainHeight(i, -sCollisionResult.mOverlap);
     }
     return NULL;
 }
@@ -555,7 +555,7 @@ int CollisionModel::GetTargetBodyID(const PblVector3& vPos, const PblVector3& vD
 PblVector3 CollisionModel::GetTargetPoint(const PblVector3& vPos, const PblVector3& vDir, const PblMatrix& matrix,
                                           const RedPose* pPose) const
 {
-    PblVector3 vPoint = Translation(matrix);
+    PblVector3 vPoint = matrix.GetTranslation();
     float fBest = 0.0f;
     for (int i = 0; i < mNumBodies; ++i)
     {
@@ -572,7 +572,7 @@ PblVector3 CollisionModel::GetTargetPoint(const PblVector3& vPos, const PblVecto
         float fDot = vDir.y * vTo.y + vDir.x * vTo.x + vDir.z * vTo.z;
         if (fDot > fBest)
         {
-            vPoint = Translation(world);
+            vPoint = world.GetTranslation();
             fBest = fDot;
         }
     }

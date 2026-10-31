@@ -64,7 +64,8 @@ void FoleyFX::ReadChunk(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (!Read(child, child._pFile->Read32()))
+        const unsigned int uChunkID = child._pFile->Read32();
+        if (!Read(child, uChunkID))
         {
             break;
         }
@@ -74,14 +75,13 @@ void FoleyFX::ReadChunk(PblFileChunk& chunk)
 // FUNCTION: SWBF2 0x0052c1a0
 bool FoleyFX::Read(PblFileChunk& chunk, unsigned int uChunkID)
 {
-    if (uChunkID == 0x8d39bde6)
+    switch (uChunkID)
     {
+    case 0x8d39bde6: /* "name" */
         chunk._pFile->Read8();
         mID = chunk._pFile->Read32();
         return true;
-    }
-    if (uChunkID == 0xab3e0bff)
-    {
+    case 0xab3e0bff: /* "Class" */
         chunk._pFile->Read8();
         mClass = chunk._pFile->Read32();
         return true;
@@ -100,7 +100,6 @@ void FoleyFX::Load(PblFileChunk& chunk)
             continue;
         }
 
-        FoleyFX* pFX;
         switch ((unsigned int)child._pFile->Read32())
         {
         case 0xa1c9cbc5:
@@ -111,19 +110,29 @@ void FoleyFX::Load(PblFileChunk& chunk)
             continue;
         }
         case 0xd098618c:
-            pFX = new FoleyFXSoldier;
-            break;
+        {
+            FoleyFX* pFX = new FoleyFXSoldier;
+            child = chunk.ReadNextChild();
+            pFX->ReadChunk(child);
+            continue;
+        }
         case 0x5e9b9948:
-            pFX = new FoleyFXWalker;
-            break;
+        {
+            FoleyFX* pFX = new FoleyFXWalker;
+            child = chunk.ReadNextChild();
+            pFX->ReadChunk(child);
+            continue;
+        }
         case 0xfd545f86:
-            pFX = new FoleyFXImpact;
-            break;
+        {
+            FoleyFX* pFX = new FoleyFXImpact;
+            child = chunk.ReadNextChild();
+            pFX->ReadChunk(child);
+            continue;
+        }
         default:
             continue;
         }
-        child = chunk.ReadNextChild();
-        pFX->ReadChunk(child);
     }
 }
 

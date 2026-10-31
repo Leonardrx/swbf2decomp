@@ -116,45 +116,46 @@ void AttackHelper::SetTargetInfo(GameObject const* pTarget, PblVector3 const& vP
 // FUNCTION: SWBF2 0x00447b90
 bool AttackHelper::UpdateTarget()
 {
-    const AI::UnitThreatManager& threats =
-        mAgent->mCtrl->mThreatManager;
-    const GameObject* pVisible = threats.GetVisibleObject();
-    const GameObject* pOldTarget = GetTarget();
+    const GameObject* pVisible = mAgent->mCtrl->mThreatManager.GetVisibleObject();
+    const GameObject* pOldTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     const GameObject* pTarget = pOldTarget;
     if (pTarget && !GetMe()->GetGameObject()->IsMyEnemy(pTarget))
     {
         SetTarget(pVisible);
-        pTarget = GetTarget();
+        pTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     }
     if (!pTarget || pTarget != pVisible)
     {
         SetTarget(pVisible);
-        pTarget = GetTarget();
+        pTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     }
     if (pTarget && pTarget == pVisible)
     {
-        SetTargetInfo(pTarget, threats.GetVisibleObjectPos());
+        SetTargetInfo(pTarget, mAgent->mCtrl->mThreatManager.GetVisibleObjectPos());
     }
     else
     {
         mTargetVisible = false;
     }
-    return pOldTarget != GetTarget();
+    return pOldTarget != AIUtil::GetAlivePtr(mTargetHandle, false);
 }
 
 // FUNCTION: SWBF2 0x00447c50
 void AttackHelper::Aim()
 {
-    const GameObject* pTarget = GetTarget();
+    const GameObject* pTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     if (GetVisibleTarget())
     {
-        LowLevelOf(GetMe()->mCtrl).SetTarget(pTarget);
+        AILowLevel& lowLevel = LowLevelOf(GetMe()->mCtrl);
+        lowLevel.SetTarget(pTarget);
         return;
     }
-    LowLevelOf(GetMe()->mCtrl).SetTarget(0);
+    AILowLevel& lowLevelClear = LowLevelOf(GetMe()->mCtrl);
+    lowLevelClear.SetTarget(0);
     if (pTarget)
     {
-        LowLevelOf(GetMe()->mCtrl).SetAimPoint(mLastKnownTargetPos);
+        AILowLevel& lowLevelAim = LowLevelOf(GetMe()->mCtrl);
+        lowLevelAim.SetAimPoint(mLastKnownTargetPos);
     }
 }
 
@@ -163,7 +164,7 @@ void AttackHelper::Fire()
 {
     bool bImmediate = false;
     bool bUponAim = false;
-    const GameObject* pTarget = GetTarget();
+    const GameObject* pTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     if (pTarget)
     {
         if (mTargetVisible)
@@ -174,29 +175,27 @@ void AttackHelper::Fire()
         else
         {
             const Aimer* pAimer = GetMe()->GetCurAimer();
-            PblVector3 vLead = mLastKnownTargetPos;
+            PblVector3 vLead;
+            vLead = mLastKnownTargetPos;
             if (pAimer)
             {
                 pAimer->GetLeadPos(mLastKnownTargetPos, gVectorZero, &vLead);
             }
-            if (CombatUtil::TestWpnConstraintsPos(GetMe(), vLead, mLastKnownTargetPos) && TargetIsHiding() &&
-                AIUtil::CanSeePosition(GetMe(), mLastKnownTargetPos, pTarget))
+            if (CombatUtil::TestWpnConstraintsPos(GetMe(), vLead, mLastKnownTargetPos) && TargetIsHiding())
             {
-                bImmediate = true;
+                bImmediate = AIUtil::CanSeePosition(GetMe(), mLastKnownTargetPos, pTarget) ? true : false;
             }
         }
     }
-    LowLevelOf(GetMe()->mCtrl).SetFireRequest(bImmediate, bUponAim);
+    AILowLevel& lowLevel = LowLevelOf(GetMe()->mCtrl);
+    lowLevel.SetFireRequest(bImmediate, bUponAim);
 }
 
 // FUNCTION: SWBF2 0x00447da0
 bool AttackHelper::TargetIsHiding() const
 {
-    PblVector3 vPos = AIUtil::GetHisVisionTargetPos(GetMe(), GetTarget());
-    float fX = mLastKnownTargetPos.x - vPos.x;
-    float fY = mLastKnownTargetPos.y - vPos.y;
-    float fZ = mLastKnownTargetPos.z - vPos.z;
-    return 9.0f > fX * fX + fY * fY + fZ * fZ;
+    PblVector3 vPos = AIUtil::GetHisVisionTargetPos(GetMe(), AIUtil::GetAlivePtr(mTargetHandle, false));
+    return SquaredLength(mLastKnownTargetPos - vPos) < 9.0f;
 }
 
 // FUNCTION: SWBF2 0x00447e10
@@ -206,7 +205,7 @@ void AttackHelper::SelectBestWeapon()
     {
         return;
     }
-    const GameObject* pTarget = GetTarget();
+    const GameObject* pTarget = AIUtil::GetAlivePtr(mTargetHandle, false);
     if (!pTarget)
     {
         return;
@@ -338,80 +337,87 @@ extern const unsigned char kBase64DecodeValue[128] = {
 int __cdecl DecodeBase64(unsigned char* pOutput, unsigned int uiOutputCapacity, unsigned int* pOutputSize,
                        const unsigned char* pSource, unsigned int uiSourceSize)
 {
-    unsigned int uiPadding = 0;
+    // First pass: validate the input and count the output bytes.
+    unsigned int i;
     unsigned int uiValid = 0;
-    unsigned int i = 0;
-    while (i < uiSourceSize)
+    unsigned int uiPadding = 0;
+    for (i = 0; i < uiSourceSize; ++i)
     {
+        // Skip spaces before checking for an end of line.
         unsigned int uiSpaces = 0;
         while (i < uiSourceSize && pSource[i] == ' ')
         {
             ++i;
             ++uiSpaces;
         }
+
+        // Spaces at the end of the buffer are fine.
         if (i == uiSourceSize)
         {
             break;
         }
 
-        const unsigned char c = pSource[i];
-        if (c != '\n' && !(c == '\r' && i + 1 < uiSourceSize && pSource[i + 1] == '\n'))
+        if (uiSourceSize - i >= 2 && pSource[i] == '\r' && pSource[i + 1] == '\n')
         {
-            if (uiSpaces)
-            {
-                return -44;
-            }
-            if (c == '=' && ++uiPadding > 2)
-            {
-                return -44;
-            }
-            if (c > 0x7f)
-            {
-                return -44;
-            }
-            const unsigned char digit = kBase64DecodeValue[c];
-            if (digit == 127 || (digit < 64 && uiPadding))
-            {
-                return -44;
-            }
-            ++uiValid;
+            continue;
         }
-        ++i;
+        if (pSource[i] == '\n')
+        {
+            continue;
+        }
+
+        // A space inside a line is an error.
+        if (uiSpaces != 0)
+        {
+            return -44;
+        }
+        if (pSource[i] == '=' && ++uiPadding > 2)
+        {
+            return -44;
+        }
+        if (pSource[i] > 127 || kBase64DecodeValue[pSource[i]] == 127)
+        {
+            return -44;
+        }
+        if (kBase64DecodeValue[pSource[i]] < 64 && uiPadding != 0)
+        {
+            return -44;
+        }
+        ++uiValid;
     }
 
-    if (!uiValid)
+    if (uiValid == 0)
     {
         *pOutputSize = 0;
         return 0;
     }
 
-    const unsigned int uiNeeded = ((6 * uiValid + 7) >> 3) - uiPadding;
+    const unsigned int uiNeeded = ((uiValid * 6 + 7) >> 3) - uiPadding;
     if (!pOutput || uiNeeded > uiOutputCapacity)
     {
         *pOutputSize = uiNeeded;
         return -42;
     }
 
+    // Second pass: decode four characters at a time into three bytes.
     unsigned char* pWrite = pOutput;
-    unsigned int quartet = 0;
-    unsigned int nQuartet = 0;
     unsigned int nBytes = 3;
-    for (unsigned int j = 0; j < i; ++j)
+    unsigned int nQuartet = 0;
+    unsigned int quartet = 0;
+    for (; i > 0; --i, ++pSource)
     {
-        const unsigned char c = pSource[j];
-        if (c == '\r' || c == '\n' || c == ' ')
+        if (*pSource == '\r' || *pSource == '\n' || *pSource == ' ')
         {
             continue;
         }
-        const unsigned char digit = kBase64DecodeValue[c];
-        if (digit == 64)
-        {
-            --nBytes;
-        }
-        quartet = (quartet << 6) | (digit & 63);
+
+        nBytes -= (kBase64DecodeValue[*pSource] == 64);
+        quartet = (quartet << 6) | (kBase64DecodeValue[*pSource] & 63);
+
         if (++nQuartet == 4)
         {
-            if (nBytes)
+            nQuartet = 0;
+            if (nBytes > 0)
             {
                 *pWrite++ = (unsigned char)(quartet >> 16);
             }
@@ -423,7 +429,6 @@ int __cdecl DecodeBase64(unsigned char* pOutput, unsigned int uiOutputCapacity, 
             {
                 *pWrite++ = (unsigned char)quartet;
             }
-            nQuartet = 0;
         }
     }
     *pOutputSize = (unsigned int)(pWrite - pOutput);

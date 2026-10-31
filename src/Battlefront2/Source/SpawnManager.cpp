@@ -30,14 +30,14 @@ SpawnManager* SpawnManager::sClientInstance;
 // FUNCTION: SWBF2 0x0064e070
 void SpawnManager::CreateClient()
 {
-    if (NetGame::IsOneWorld())
+    if (!NetGame::IsOneWorld())
     {
-        sHostInstance->DeactivateThread();
-        sHostInstance->ActivateThread(0, PER_LOCAL_TURN);
+        sClientInstance = new SpawnManager;
     }
     else
     {
-        sClientInstance = new SpawnManager;
+        sHostInstance->DeactivateThread();
+        sHostInstance->ActivateThread(0, PER_LOCAL_TURN);
     }
 }
 
@@ -96,7 +96,7 @@ static inline int GetTeam(const GameObject* pObject)
     return pObject->GetTeam();
 }
 
-static int GetAllyCount(const CommandPost* pPost)
+static inline int GetAllyCount(const CommandPost* pPost)
 {
     return pPost->mAllyCount;
 }
@@ -125,15 +125,12 @@ void SpawnManager::Create()
 // FUNCTION: SWBF2 0x0064e1a0
 SpawnManager::SpawnManager()
 {
-    for (int i = 0; i < 8; ++i)
-    {
-        mMaxUnitCount[i] = 0;
-        mCurrentUnitCount[i] = 0;
-    }
+    memset(mMaxUnitCount, 0, sizeof(mMaxUnitCount));
+    memset(mCurrentUnitCount, 0, sizeof(mCurrentUnitCount));
     mAllyUnitCount = 0;
     for (int iTeam = 0; iTeam < 8; ++iTeam)
     {
-        if (iTeam == 1 || iTeam == 2)
+        if (iTeam >= 1 && iTeam <= 2)
         {
             SetSpawnDelay(15.0f, 0.5f, iTeam);
         }
@@ -213,9 +210,9 @@ void SpawnManager::AddPlayerCharacter(int iTeam, int iPlayer)
 int SpawnManager::GetTotalCharacterCount()
 {
     int iCount = mMaxUnitCount[1] + mMaxUnitCount[2];
-    if (NetGame::IsEnabled() && netPlayerLimit + 2 * netNumBots > iCount)
+    if (NetGame::IsEnabled() && 2 * netNumBots + netPlayerLimit > iCount)
     {
-        iCount = netPlayerLimit + 2 * netNumBots;
+        iCount = 2 * netNumBots + netPlayerLimit;
     }
     iCount += mMaxUnitCount[0] + mMaxUnitCount[3] + mMaxUnitCount[4] + mMaxUnitCount[5] +
               mMaxUnitCount[6] + mMaxUnitCount[7];
@@ -358,13 +355,10 @@ bool SpawnManager::Update(float fDeltaTime)
         CommandPost* pPost = NetGame::ConvertCP(*itor);
         if (pPost && Team::sTeams[GetTeam(pPost->GetGameObject())]->mAffiliation[3] > 0)
         {
-            mAllyUnitCount += GetAllyCount(pPost);
+            mAllyUnitCount += pPost->mAllyCount;
         }
     }
-    if (mAllyUnitCount > mMaxUnitCount[3])
-    {
-        mAllyUnitCount = mMaxUnitCount[3];
-    }
+    mAllyUnitCount = mAllyUnitCount < mMaxUnitCount[3] ? mAllyUnitCount : mMaxUnitCount[3];
 
     bool bPreGame = NetGame::IsPreGame();
     for (int i = 0; i < 8; ++i)
@@ -372,17 +366,17 @@ bool SpawnManager::Update(float fDeltaTime)
         mCycleTimer[i] -= fDeltaTime;
         if (mCycleTimer[i] <= 0.0f)
         {
-            if (bPreGame)
-            {
-                mCycleTimer[i] += 0.5f;
-            }
-            else
+            if (!bPreGame)
             {
                 mCycleTimer[i] += mCycleDelay[i];
                 if (gAttractMode && mCycleIndex[i] < 3)
                 {
                     mCycleTimer[i] = 1.0f;
                 }
+            }
+            else
+            {
+                mCycleTimer[i] += 0.5f;
             }
             ++mCycleIndex[i];
             mSlotTimer[i] = mSlotDelay[i];
@@ -425,18 +419,14 @@ CommandPost* SpawnManager::Request(CommandPost* pPost, int iTeam)
     }
 
     float fBestDistSq = FLT_MAX;
-    const float* pPos = pPost->GetMatrix().m[3];
+    const PblVector3& vPos = pPost->GetMatrix().GetTranslation();
     CommandPost* pBest = 0;
     for (CommandPostItor itor = CommandPostManager::Instance()->GetItor(); itor; ++itor)
     {
         CommandPost* pOther = NetGame::ConvertCP(*itor);
         if (pOther && pOther->CanTeamSpawnHere(iTeam))
         {
-            const float* pOtherPos = pOther->GetMatrix().m[3];
-            float fX = pOtherPos[0] - pPos[0];
-            float fY = pOtherPos[1] - pPos[1];
-            float fZ = pOtherPos[2] - pPos[2];
-            float fDistSq = fX * fX + fY * fY + fZ * fZ;
+            float fDistSq = SquaredLength(pOther->GetMatrix().GetTranslation() - vPos);
             if (fDistSq < fBestDistSq)
             {
                 fBestDistSq = fDistSq;

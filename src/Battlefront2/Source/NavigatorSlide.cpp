@@ -52,7 +52,7 @@ namespace
         return static_cast<const CollisionObject&>(*pObj).GetMatrix();
     }
 
-    const PblVector3& GameObjectGetVelocity(const GameObject* pObj)
+    inline const PblVector3& GameObjectGetVelocity(const GameObject* pObj)
     {
         return pObj->GetVelocity();
     }
@@ -152,19 +152,7 @@ bool NavigatorSlide::IsEqual(AILowLevel* pOwner, const PblVector3& globalDest)
 bool NavigatorSlide::IsEqual(AILowLevel* pOwner, const GameObject* pSlideObj, float fOffset,
                              bool bUseAttackHelper)
 {
-    if (mOwner != pOwner)
-    {
-        return false;
-    }
-
-    if (mSlideObj.mObject &&
-        mSlideObj.mObject->mHandleId != mSlideObj.mSavedHandleId)
-    {
-        mSlideObj.mObject = 0;
-        mSlideObj.mSavedHandleId = 0;
-    }
-
-    return mSlideObj.mObject == pSlideObj && mOffset == fOffset &&
+    return mOwner == pOwner && mSlideObj == pSlideObj && mOffset == fOffset &&
            mUseAttackHelper == bUseAttackHelper && mCurState != 100;
 }
 
@@ -280,12 +268,15 @@ void NavigatorSlide::NextInfantrySlidePos(const PblVector3& dest)
                                                     AIUtil::GetAIType(pObj), &pIgnore, 1);
     if (mBounceAtLocalDest)
     {
-        PblVector3 delta(slideDest.x - pos.x, slideDest.y - pos.y, slideDest.z - pos.z);
-        if (delta.x * delta.x + delta.y * delta.y + delta.z * delta.z > 0.1f)
+        const float dx = slideDest.x - pos.x;
+        const float dy = slideDest.y - pos.y;
+        const float dz = slideDest.z - pos.z;
+        if (dx * dx + dy * dy + dz * dz > 0.1f)
         {
+            PblVector3 delta(dx, dy, dz);
             PblVector3 dir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&dir), reinterpret_cast<const D3DXVECTOR3*>(&delta));
-            if (delta.x * delta.x + delta.y * delta.y + delta.z * delta.z > 1.0f)
+            if (dx * dx + dy * dy + dz * dz > 1.0f)
             {
                 slideDest = PblVector3(slideDest.x - dir.x, slideDest.y - dir.y, slideDest.z - dir.z);
             }
@@ -340,8 +331,8 @@ void NavigatorSlide::UpdateInfantrySlideObject()
             const GameObject* pTarget = mOwner->mOwner->GetAttackHelperVisibleTarget();
             if (pTarget)
             {
-                const PblVector3& vel = GameObjectGetVelocity(pTarget);
-                dest.x += vel.x;
+                const PblVector3& vel = pTarget->GetVelocity();
+                dest.x = vel.x + dest.x;
                 dest.y += vel.y;
                 dest.z += vel.z;
             }
@@ -374,9 +365,11 @@ bool NavigatorSlide::GetObjectSlideToPosition(PblVector3* pPos) const
     const PblVector3& myPos = GetMatrix().GetTranslation();
     PblVector3 dir(myPos.x - pPos->x, myPos.y - pPos->y, myPos.z - pPos->z);
     PblVector3 normal = AIUtil::GetSafeNormalXZ(dir);
-    pPos->x += normal.x * mOffset;
-    pPos->y += normal.y * mOffset;
-    pPos->z += normal.z * mOffset;
+    const float fOffset = mOffset;
+    const PblVector3 delta(normal.x * fOffset, normal.y * fOffset, normal.z * fOffset);
+    pPos->x += delta.x;
+    pPos->y += delta.y;
+    pPos->z += delta.z;
     return true;
 }
 

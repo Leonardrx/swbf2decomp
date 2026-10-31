@@ -245,7 +245,7 @@ bool AIPath::SmoothCorners(float fCornerDist, float fRadius, int eProhibit)
 unsigned char PathManager::GetPathPriority(const PblVector3& aSrc, const PblVector3& aDest)
 {
     float lengthSqXZ = SquaredLengthXZ(aSrc - aDest);
-    return lengthSqXZ < 2500.0f ? 0 : 1;
+    return !(lengthSqXZ < 2500.0f);
 }
 
 namespace PathManager
@@ -256,9 +256,14 @@ PathRequest::PathRequest(UnitController* pUnit, const PblVector3& vStart, const 
                          float fRadius, int eProhibit, unsigned char uPriority,
                          const ConnectivityArc*  ,
                          const Obstacle** ppIgnore, int iIgnoreCount)
-    : mUnit(pUnit), mStart(vStart), mGoal(vGoal), mRadius(fRadius), mProhibit(eProhibit),
-      mPriority(uPriority), mObstacleCount(iIgnoreCount)
 {
+    mUnit = pUnit;
+    mStart = vStart;
+    mGoal = vGoal;
+    mRadius = fRadius;
+    mProhibit = eProhibit;
+    mPriority = uPriority;
+    mObstacleCount = iIgnoreCount;
     memcpy(mObstacles, ppIgnore, sizeof(const Obstacle*) * iIgnoreCount);
 }
 
@@ -289,19 +294,20 @@ void Reset()
 // FUNCTION: SWBF2 0x006148e0
 void RemovePathRequest(UnitController* pCtrl)
 {
-    if (sCurRequest && sCurRequest->mUnit == pCtrl)
+    if (sCurRequest && pCtrl == sCurRequest->mUnit)
     {
         PathFinder::CancelPathFind();
         PathRequest::sMemoryPool.Free(sCurRequest);
         sCurRequest = 0;
     }
 
-    for (PblList<PathRequest>::Itor it(*sRequests); it != sRequests->End(); ++it)
+    PblList<PathRequest>& requests = *sRequests;
+    for (PblList<PathRequest>::Itor it(requests); it; ++it)
     {
         PathRequest* pReq = it;
-        if (pReq->mUnit == pCtrl)
+        if (pCtrl == pReq->mUnit)
         {
-            sRequests->Remove(&pReq->mNode);
+            requests.Remove(&pReq->mNode);
             PathRequest::sMemoryPool.Free(pReq);
             return;
         }
@@ -336,7 +342,7 @@ bool RequestPath(UnitController* pUnit, const PblVector3& vStart, const PblVecto
                  const ConnectivityArc* pArc, const Obstacle** ppIgnore, int iIgnoreCount)
 {
     AILowLevel* pLow = &pUnit->mLowLevel;
-    unsigned char uPriorityPlusDepth = (unsigned char)(pLow->GetPathQueueDepth() + uPriority);
+    uPriority += pLow->GetPathQueueDepth();
     RemovePathRequest(pUnit);
 
     if (pLow->GetPathQueueDepth() <= 4
@@ -360,20 +366,15 @@ bool RequestPath(UnitController* pUnit, const PblVector3& vStart, const PblVecto
         return false;
     }
 
-    if ((unsigned int)PathRequest::sMemoryPool.mUsed >= PathRequest::sMemoryPool.mCount)
+    if ((unsigned int)PathRequest::sMemoryPool.mUsed < PathRequest::sMemoryPool.mCount)
     {
-        return false;
+        void* pMem = PathRequest::sMemoryPool.Allocate(sizeof(PathRequest));
+        PathRequest* pReq = new (pMem) PathRequest(pUnit, vStart, vGoal, fRadius, eProhibit,
+                                                   uPriority, pArc, ppIgnore, iIgnoreCount);
+        sRequests->AddLast(&pReq->mNode, pReq);
+        return true;
     }
-
-    void* pMem = PathRequest::sMemoryPool.Allocate(sizeof(PathRequest));
-    if (!pMem)
-    {
-        return false;
-    }
-    PathRequest* pReq = new (pMem) PathRequest(pUnit, vStart, vGoal, fRadius, eProhibit,
-                                               uPriorityPlusDepth, pArc, ppIgnore, iIgnoreCount);
-    sRequests->AddLast(&pReq->mNode, pReq);
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00614bb0
@@ -382,9 +383,8 @@ PathRequest* GetNextPathRequest()
     for (unsigned char uPriority = 0; uPriority < 5; ++uPriority)
     {
         PblList<PathRequest>::Itor it(*sRequests);
-        while (it != sRequests->End())
+        while (PathRequest* pReq = it)
         {
-            PathRequest* pReq = it;
             ++it;
             if (pReq->mPriority == uPriority)
             {
@@ -445,9 +445,10 @@ void Update(float fDeltaTime)
             {
                 AIPath* pPath = PathFinder::GetPathResult();
                 UnitController* pUnit = sCurRequest->mUnit.mObject;
-                bool bValid = sCurRequest->mUnit == pUnit;
-                if (!bValid)
+                if (pUnit && pUnit->mHandleId != sCurRequest->mUnit.mSavedHandleId)
                 {
+                    sCurRequest->mUnit.mObject = 0;
+                    sCurRequest->mUnit.mSavedHandleId = 0;
                     pUnit = 0;
                 }
                 if (pUnit)

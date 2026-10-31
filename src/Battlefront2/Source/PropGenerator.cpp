@@ -285,10 +285,7 @@ float PropGenerator::CalcDistScore_(const PropCluster* pCluster, const PblVector
         {
             continue;
         }
-        float dx = vPos.x - m_amCamera[iCam].m[3][0];
-        float dy = vPos.y - m_amCamera[iCam].m[3][1];
-        float dz = vPos.z - m_amCamera[iCam].m[3][2];
-        float fDist = dx * dx + dy * dy + dz * dz;
+        float fDist = SquaredLength(vPos - m_amCamera[iCam].GetTranslation());
         if (fDist < fBest)
         {
             fBest = fDist;
@@ -711,18 +708,23 @@ void PropGenerator::Read(PblFileChunk& chunk)
         const unsigned int uiHash = child._pFile->Read32();
         child._pFile->Read8();
 
-        if (uiHash == 0x07a640f6)
+        switch (uiHash)
         {
-            PropLayer& layer = mPropLayers[(int)child._pFile->ReadFloat()];
-            layer.Clear();
+        case 0x07a640f6: /* "Layer" */
+        {
+            const int iLayer = (int)child._pFile->ReadFloat();
+            mPropLayers[iLayer].Clear();
             PblFileChunk layerChunk = chunk.ReadNextChild();
-            layer.Read(layerChunk);
+            mPropLayers[iLayer].Read(layerChunk);
             mLoaded = true;
+            break;
         }
-        else if (uiHash == 0x40b06ff7)
+        case 0x40b06ff7: /* "TreeLine" */
         {
             PblFileChunk treeLineChunk = chunk.ReadNextChild();
             TreeLine::CreateTreeLine(treeLineChunk);
+            break;
+        }
         }
     }
 
@@ -804,21 +806,22 @@ void PropGenerator::AddObjectsFromClusterIndex(int iClusterIndex, int iLayer, Pb
         return;
     }
 
-    const int x = iClusterIndex % mClusterMapWidth;
     const int z = iClusterIndex / mClusterMapWidth;
+    const int x = iClusterIndex - z * mClusterMapWidth;
     SetRandSeed(iClusterIndex + z * 2 + iLayer);
-    PropLayer& layer = mPropLayers[iLayer];
-    for (int cz = z * 2; cz < z * 2 + 2; cz++)
+    int cz = z * 2;
+    for (int nz = 2; nz > 0; nz--, cz++)
     {
-        for (int cx = x * 2; cx < x * 2 + 2; cx++)
+        int cx = x * 2;
+        for (int nx = 2; nx > 0; nx--, cx++)
         {
             if (!((GetLayers(cx, cz) >> iLayer) & 1))
             {
                 continue;
             }
-            for (int i = 0; i < layer.mObjectsPerCell; i++)
+            for (int i = 0; i < mPropLayers[iLayer].mObjectsPerCell; i++)
             {
-                PropObject* pObject = layer.CreateObject(cx, cz, mLayerMapWidth >> 1, 0.0f);
+                PropObject* pObject = mPropLayers[iLayer].CreateObject(cx, cz, mLayerMapWidth >> 1, 0.0f);
                 if (pObject)
                 {
                     objects.AddLast(&pObject->mNode, pObject);
@@ -831,12 +834,14 @@ void PropGenerator::AddObjectsFromClusterIndex(int iClusterIndex, int iLayer, Pb
 // FUNCTION: SWBF2 0x0062b5d0
 void PropClusterInfo::Setup(int x, int z)
 {
+    const int iBaseX = x * 2;
+    const int iBaseZ = z * 2;
     mLayerInfo = 0;
     for (int i = 0; i < 2; i++)
     {
         for (int j = 0; j < 2; j++)
         {
-            mLayerInfo |= PropGenerator::GetLayers(x * 2 + i, z * 2 + j);
+            mLayerInfo |= PropGenerator::GetLayers(iBaseX + i, iBaseZ + j);
         }
     }
     mOwner = mLayerInfo ? 0 : 0xff;
@@ -878,17 +883,13 @@ const PropObject* PropGenerator::FindPropObject(const PblVector3& vPos, bool bPa
         {
             continue;
         }
-        const PblVector3& vCenter = pCluster->GetRenderPos();
-        float dx = vPos.x - vCenter.x;
-        float dy = vPos.y - vCenter.y;
-        float dz = vPos.z - vCenter.z;
-        if (dx * dx + dy * dy + dz * dz < 900.0f)
+        if (SquaredLength(vPos - pCluster->GetRenderPos()) < 900.0f)
         {
             const PropObjectMesh* pObject =
                 static_cast<const PropObjectMesh*>(pCluster->FindPropObject(vPos, bParam));
             if (pObject)
             {
-                float fVis = pObject->mModel->mAIVisFactorCrouch + pObject->mModel->mAIVisFactorStand;
+                float fVis = pObject->mModel->mAIVisFactorStand + pObject->mModel->mAIVisFactorCrouch;
                 if (fVis < fBestVis)
                 {
                     fBestVis = fVis;

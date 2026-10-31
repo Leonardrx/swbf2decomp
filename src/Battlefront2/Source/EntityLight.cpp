@@ -62,13 +62,12 @@ PblHashTable<EntityLightClass, 32> EntityLightClass::sLightClassTable;
 EntityLight* EntityLightClass::Build(unsigned int uLightOdfNameHash)
 {
     EntityDesc desc;
-    desc.mMatrix = gMatrixIdentity;
     EntityLightClass* pClass = EntityLightClass::sLightClassTable.Find(uLightOdfNameHash);
-    if (!pClass)
+    if (pClass)
     {
-        return 0;
+        return (EntityLight*)pClass->Build(desc);
     }
-    return (EntityLight*)pClass->Build(desc);
+    return 0;
 }
 
 // SYNTHETIC: SWBF2 0x0042d060
@@ -645,7 +644,7 @@ EntityLight::EntityLight(const EntityLightClass* pClass, const EntityDesc& desc)
     _fLightFlickerIntensity = 1.0f;
     _lightClass = const_cast<EntityLightClass*>(pClass);
 
-    m_uiAttachFlags |= UPDATE_REQUIRED;
+    static_cast<FLEffectObject*>(this)->m_uiAttachFlags |= UPDATE_REQUIRED;
     SetMatrix(desc.mMatrix);
     TurnOn();
 }
@@ -679,14 +678,16 @@ bool EntityLight::Update(float fDeltaTime)
         if ((pClass->_uiFlags & EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY) &&
             (RedRenderer::GetFrameNumber() & 1))
         {
+            float fNewRandom = PblRandom::GetGlobalFloat();
             pClass->_uiFlags &= ~EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY;
-            pClass->_fRandom = PblRandom::GetGlobalFloat();
+            pClass->_fRandom = fNewRandom;
         }
         else if (!(pClass->_uiFlags & EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY) &&
                  !(RedRenderer::GetFrameNumber() & 1))
         {
+            float fNewRandom = PblRandom::GetGlobalFloat();
             pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_UPDATEPARITY;
-            pClass->_fRandom = PblRandom::GetGlobalFloat();
+            pClass->_fRandom = fNewRandom;
         }
         fRandom = pClass->_fRandom;
     }
@@ -735,21 +736,20 @@ bool EntityLight::Update(float fDeltaTime)
         const float fPeriod = pClass->_fLightFlickerPeriodOn + pClass->_fLightFlickerPeriodOff;
         if (_fLightFlickerTimer > fPeriod)
         {
-            _fLightFlickerTimer = fmod(_fLightFlickerTimer, fPeriod);
+            _fLightFlickerTimer = fmod((double)_fLightFlickerTimer, (double)fPeriod);
         }
         const float fOn = pClass->_fLightFlickerPeriodOn;
-        const float fFade = pClass->_fLightFadePeriod;
         if (_fLightFlickerTimer > fOn)
         {
             _fLightFlickerIntensity = 0.0f;
         }
-        else if (_fLightFlickerTimer < fFade)
+        else if (_fLightFlickerTimer < pClass->_fLightFadePeriod)
         {
-            _fLightFlickerIntensity = _fLightFlickerTimer / fFade;
+            _fLightFlickerIntensity = _fLightFlickerTimer / pClass->_fLightFadePeriod;
         }
-        else if (_fLightFlickerTimer + fFade > fOn)
+        else if (pClass->_fLightFadePeriod + _fLightFlickerTimer > fOn)
         {
-            _fLightFlickerIntensity = (fOn - _fLightFlickerTimer) / fFade;
+            _fLightFlickerIntensity = (fOn - _fLightFlickerTimer) / pClass->_fLightFadePeriod;
         }
         else
         {
@@ -764,7 +764,7 @@ bool EntityLight::Update(float fDeltaTime)
         _fLightFlickerTimer += fDeltaTime;
         if (_fLightFlickerTimer > pClass->_fLightFlickerPeriodOn)
         {
-            _fLightFlickerTimer = fmod(_fLightFlickerTimer, pClass->_fLightFlickerPeriodOn);
+            _fLightFlickerTimer = fmod((double)_fLightFlickerTimer, (double)pClass->_fLightFlickerPeriodOn);
         }
         const float fHalf = pClass->_fLightFlickerPeriodOn * 0.5f;
         if (_fLightFlickerTimer > fHalf)
@@ -817,7 +817,7 @@ inline RedColorValue ToColorValue(const RedColor& c)
 // FUNCTION: SWBF2 0x004cd6f0
 void EntityLight::UpdateColor()
 {
-    if (m_bOn && _fLightFlickerIntensity > 0.0f)
+    if (m_bOn && !(_fLightFlickerIntensity <= 0.0f))
     {
         if (!_LightBeam.IsEffectActive())
         {
@@ -859,7 +859,8 @@ void EntityLight::UpdateColor()
     else if (_LightBeam.IsEffectActive())
     {
         _LightBeam.DeactivateEffect();
-        if (_light->m_uiFlags & RedLight::LIGHT_FLAG_ACTIVE)
+        bool bActive = ((_light->m_uiFlags >> 2) & 1) != 0;
+        if (bActive)
         {
             _light->Deactivate();
         }
@@ -1011,20 +1012,20 @@ EntityLightClass::EntityLightClass(unsigned int uHash)
     _fBeamWidthZ = 0.0f;
     _fBeamInitialWidthX = 1.0f;
     _fBeamInitialWidthZ = 1.0f;
-    _fBeamFadeFactor = 0.2f;
     _fBeamFadeLength = -1.0f;
-    _fBeamDrawDistance = 200.0f;
+    _fBeamFadeFactor = 0.2f;
     _fFlareIntensity = 0.0f;
     _fBeamIntensity = 1.0f;
-    _uiName = 0;
     _uiFlags = 0x40;
+    _uiName = 0;
     _eLightFlickerType = 0;
     _fLightFlickerPeriodOn = 0.0f;
     _fLightFlickerPeriodOff = 0.0f;
     _fLightFadePeriod = 1.0f;
     _fOmniRadius = 10.0f;
-    _fSpotInnerConeAngle = 1.5707964f * 0.5f;
-    _fSpotOuterConeAngle = 1.5707964f;
+    _fSpotInnerConeAngle = PblMath::fHalfPi * 0.5f;
+    _fSpotOuterConeAngle = PblMath::fHalfPi;
+    _fBeamDrawDistance = 200.0f;
     _fRandom = 0.0f;
     _fFrameRate = 0.0f;
     _uiNumFrames = 0;
@@ -1054,13 +1055,12 @@ EntityLightClass::EntityLightClass(EntityLightClass* pParent, unsigned int uHash
     _fBeamWidthZ = pParent->_fBeamWidthZ;
     _fBeamInitialWidthX = pParent->_fBeamInitialWidthX;
     _fBeamInitialWidthZ = pParent->_fBeamInitialWidthZ;
-    _fBeamFadeFactor = pParent->_fBeamFadeFactor;
     _fBeamFadeLength = pParent->_fBeamFadeLength;
-    _fBeamDrawDistance = pParent->_fBeamDrawDistance;
+    _fBeamFadeFactor = pParent->_fBeamFadeFactor;
     _fFlareIntensity = pParent->_fFlareIntensity;
     _fBeamIntensity = pParent->_fBeamIntensity;
-    _uiName = pParent->_uiName;
     _uiFlags = pParent->_uiFlags;
+    _uiName = pParent->_uiName;
     _eLightFlickerType = pParent->_eLightFlickerType;
     _fLightFlickerPeriodOn = pParent->_fLightFlickerPeriodOn;
     _fLightFlickerPeriodOff = pParent->_fLightFlickerPeriodOff;
@@ -1068,6 +1068,7 @@ EntityLightClass::EntityLightClass(EntityLightClass* pParent, unsigned int uHash
     _fOmniRadius = pParent->_fOmniRadius;
     _fSpotInnerConeAngle = pParent->_fSpotInnerConeAngle;
     _fSpotOuterConeAngle = pParent->_fSpotOuterConeAngle;
+    _fBeamDrawDistance = pParent->_fBeamDrawDistance;
     _fRandom = pParent->_fRandom;
     _fFrameRate = pParent->_fFrameRate;
     _uiNumFrames = pParent->_uiNumFrames;

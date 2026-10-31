@@ -183,37 +183,33 @@ bool CommandFlyer::IsLanded()
 // FUNCTION: SWBF2 0x00477f10
 Controllable* CommandFlyer::GetPassengerSlot(int)
 {
-    EntityFlyerClass* pClass = EntityFlyer::mClass;
-    if (!pClass->mPassengerSlotClass)
+    if (EntityFlyer::mClass->mPassengerSlotClass)
     {
-        return 0;
+        Controllable* pLast = 0;
+        for (int i = 0; i < EntityFlyer::mClass->mNumPassengerSlots; ++i)
+        {
+            PassengerSlot* pCraft = mPassengerSlots[i];
+            if (!pCraft)
+            {
+                continue;
+            }
+            Controllable* pThis = static_cast<Controllable*>(this);
+            Controllable* pCurrent = (pThis->mPilotType == PILOT_SELF ||
+                                     (pThis->mPilotType == PILOT_VEHICLESELF && pThis->mPilot == pThis))
+                                        ? 0 : pThis->mPilot;
+            if (pCurrent == static_cast<Controllable*>(pCraft) || pCraft->mPlayerId >= 0)
+            {
+                continue;
+            }
+            pLast = static_cast<Controllable*>(pCraft);
+            if (!static_cast<Trackable*>(pCraft)->GetControllable())
+            {
+                return static_cast<Controllable*>(pCraft);
+            }
+        }
+        return pLast;
     }
-
-    Controllable* pLast = 0;
-    const unsigned int uCount = pClass->mNumPassengerSlots;
-    for (unsigned int i = 0; i < uCount; ++i)
-    {
-        PassengerSlot* pCraft = mPassengerSlots[i];
-        if (!pCraft)
-        {
-            continue;
-        }
-        Controllable* pThis = static_cast<Controllable*>(this);
-        Controllable* pCurrent = (pThis->mPilotType == PILOT_SELF ||
-                                 (pThis->mPilotType == PILOT_VEHICLESELF && pThis->mPilot == pThis))
-                                    ? 0 : pThis->mPilot;
-        if (pCurrent == static_cast<Controllable*>(pCraft) ||
-            static_cast<Controllable*>(pCraft)->mPlayerId >= 0)
-        {
-            continue;
-        }
-        pLast = static_cast<Controllable*>(pCraft);
-        if (!static_cast<Trackable*>(pCraft)->GetControllable())
-        {
-            return pLast;
-        }
-    }
-    return pLast;
+    return 0;
 }
 
 
@@ -378,17 +374,20 @@ Character::Character()
     : mAssignedPost(0), mGoalNode(), mPlayerId(-1), mTeamNumber(0), mTeamPtr(0), mClassIndex(0),
       mClassPtr(0), mPost(0), mUnit(0), mVehicle(0), mRemote(0), mLastVehicleOrRemoteChangeTime(0.0f),
       mDelayTimer(0.0f), mSpawnCycle(0), mSpawnSlot(-1), mSpawnReady(true), mHeroFlag(false),
-      mVehicleBlockTime(-1.0f), mOutOfBoundsTimer(-1.0f), mCarriedFlagPtr(0), mCPHold(0),
-      mTakeoverChr(0)
+      mVehicleBlockTime(-1.0f), mOutOfBoundsTimer(-1.0f), mCarriedFlagPtr(0), mCPHold(0)
 {
     memset(mName, 0, sizeof(mName));
     memset(mRegularName, 0, sizeof(mRegularName));
     for (int i = 0; i < 3; ++i)
     {
         mObjectHitTimer[i] = 0.0f;
+    }
+    for (int i = 0; i < 3; ++i)
+    {
         mObjectHitMultiplier[i] = 1.0f;
     }
     mTakeoverFirstTime = true;
+    mTakeoverChr = 0;
     mMedalsMgr = new MedalsMgr(this);
 }
 
@@ -399,7 +398,10 @@ Character::~Character()
     {
         mGoalNode.GetList()->Remove(&mGoalNode);
     }
-    delete mMedalsMgr;
+    if (mMedalsMgr)
+    {
+        delete mMedalsMgr;
+    }
 }
 
 // FUNCTION: SWBF2 0x004508c0
@@ -793,15 +795,23 @@ void Character::SetSpawnReady(bool bReady)
 // FUNCTION: SWBF2 0x00451680
 bool Character::IsHero() const
 {
+    bool bHero = false;
     if (mHeroFlag)
     {
-        return true;
+        bHero = true;
     }
-    if (mUnit)
+    else if (!mUnit)
     {
-        return GetGameObjectClass(mUnit->GetGameObject())->mHeroFlag;
+        if (netHeroLastPlayerID[mTeamNumber] == mPlayerId && mPlayerId != -1)
+        {
+            bHero = true;
+        }
     }
-    return netHeroLastPlayerID[mTeamNumber] == mPlayerId && mPlayerId != -1;
+    else if (mUnit->GetGameObject()->GetGameObjectClass()->mHeroFlag)
+    {
+        bHero = true;
+    }
+    return bHero;
 }
 
 // FUNCTION: SWBF2 0x004516e0
@@ -935,7 +945,15 @@ void Character::ChangeClass(int iClassIndex)
 PlayerProfile::tProfile* Character::GetProfile() const
 {
     int iLocal = NetGame::GetJoystickIndex(mPlayerId);
-    if (iLocal >= 0 && iLocal < 1 && PlayerPrefs::mAllUserPrefs[iLocal].mJoystick >= 0)
+    if (iLocal < 0)
+    {
+        return 0;
+    }
+    if (iLocal >= 1)
+    {
+        return 0;
+    }
+    if (PlayerPrefs::mAllUserPrefs[iLocal].mJoystick >= 0)
     {
         return PlayerProfile::GetProfile(PlayerPrefs::mAllUserPrefs[iLocal].mJoystick);
     }
@@ -1123,7 +1141,12 @@ void Character::Spawn(const PblMatrix& mMatrix)
 // FUNCTION: SWBF2 0x00452280
 void Character::SetVehicle(Controllable* pVehicle)
 {
-    if (this - GetPtr(0) == 5)
+    Character* pFirst = 0;
+    if (sCharacters && sCharacterLimit > 0)
+    {
+        pFirst = sCharacters;
+    }
+    if (this - pFirst == 5)
     {
         ++gDebugCount;
     }
@@ -1141,20 +1164,19 @@ void Character::SetRemote(Controllable* pRemote)
 // FUNCTION: SWBF2 0x00452330
 bool Character::ChangeTeam(int iTeam)
 {
-    if (mHeroFlag || mTeamNumber == iTeam)
+    if (!mHeroFlag && mTeamNumber != iTeam)
     {
-        return false;
+        Team* pTeam = Team::sTeams[iTeam];
+        if (pTeam->mMemberCount < pTeam->GetMemberLimit())
+        {
+            mTeamPtr->RemoveMember(this);
+            mTeamNumber = iTeam;
+            mTeamPtr = pTeam;
+            pTeam->AddMember(this);
+            return true;
+        }
     }
-    Team* pTeam = Team::sTeams[iTeam];
-    if (pTeam->mMemberCount >= pTeam->GetMemberLimit())
-    {
-        return false;
-    }
-    mTeamPtr->RemoveMember(this);
-    mTeamNumber = iTeam;
-    mTeamPtr = pTeam;
-    pTeam->AddMember(this);
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004523a0
@@ -1234,12 +1256,13 @@ void Character::SelectSpawn(int iTeam, int iClass, CommandPost* pPost)
     SelectTeam(iTeam);
     SelectClass(iClass);
     SelectPost(pPost);
-    if (mPlayerId >= 0 && NetGame::IsEnabled())
+    int iPlayerId = mPlayerId;
+    if (iPlayerId >= 0 && NetGame::IsEnabled())
     {
-        NetGame::SetSpawning(mPlayerId, true);
+        NetGame::SetSpawning(iPlayerId, true);
         if (!NetGame::IsClient())
         {
-            NetGame::SetPlayerToSpectator(mPlayerId);
+            NetGame::SetPlayerToSpectator(iPlayerId);
         }
     }
 }
@@ -1398,19 +1421,32 @@ void Character::Respawn()
     mUnit = 0;
     SetVehicle(0);
     mCarriedFlagPtr = 0;
-    if (mPlayerId >= 0)
+    if (mPlayerId < 0)
+    {
+        AI::AIGoalManager::Instance()->ReassignIfNeeded(this);
+        int iClassIndex = mTeamPtr->PickRandomClassIndex(this);
+        SelectClass(iClassIndex);
+        if (iClassIndex >= 0)
+        {
+            SetSpawnReady(true);
+        }
+        else
+        {
+            SetSpawnReady(false);
+        }
+        SelectPost(SpawnManager::Instance()->RequestSpawnPoint(mPost, this));
+
+        CommandPost* pPost = mPost;
+        if (pPost)
+        {
+            pPost->GetGameObject();
+        }
+        mSpawnCycle = SpawnManager::Instance()->GetCycleIndex(mTeamNumber) + 1;
+    }
+    else
     {
         SetSpawnReady(false);
-        return;
     }
-    AI::AIGoalManager::Instance()->ReassignIfNeeded(this);
-    int iClassIndex = mTeamPtr->PickRandomClassIndex(this);
-    SelectClass(iClassIndex);
-    SetSpawnReady(iClassIndex >= 0);
-    SelectPost(SpawnManager::Instance()->RequestSpawnPoint(mPost, this));
-
-    PblValues::Record(mPost ? mPost->GetIndex() : 0, PVT_MOVES_HIGH);
-    mSpawnCycle = SpawnManager::Instance()->GetCycleIndex(mTeamNumber) + 1;
 }
 
 // FUNCTION: SWBF2 0x00453090
@@ -1450,18 +1486,15 @@ void Character::CheckOutOfBounds(float fDeltaTime)
             continue;
         }
 
-        EntityFlyer* pFlyer = 0;
-        if (pUnit->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
+        EntityFlyer* pFlyer = pUnit->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer)
+                            ? static_cast<EntityFlyer*>(pUnit) : 0;
+        if (pFlyer && pFlyer->mClass->mGuidedMissile)
         {
-            pFlyer = GetFlyer(pUnit);
-            if (pFlyer && GetFlyerClass(pFlyer)->mGuidedMissile)
-            {
-                bGuidedMissile = true;
-            }
+            bGuidedMissile = true;
         }
 
         if (!BoundaryManager::Instance()->IsOutOfBounds(pUnit->GetMatrix().GetTranslation()) &&
-            !(pFlyer && GetFlyerAutoCorrectingToStayInBattlefield(pFlyer)))
+            !(pFlyer && pFlyer->mFlyerAutoCorrectingToStayInBattlefield))
         {
             pUnits[i] = 0;
         }
@@ -1484,7 +1517,7 @@ void Character::CheckOutOfBounds(float fDeltaTime)
             {
                 if (pUnits[i])
                 {
-                    GetDamageable(pUnits[i]->GetGameObject())->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
+                    static_cast<Damageable&>(*pUnits[i]->GetGameObject()).InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
                 }
             }
         }
@@ -1517,9 +1550,9 @@ void Event<Character, DamageOwner>::Callback::Trigger(Character& item, DamageOwn
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->IsAlive();
+                if (!bAlive)
                 {
-                    pChild->Release();
                     break;
                 }
                 Callback* pNext = (Callback*)pChild->mSibling;
@@ -1530,6 +1563,10 @@ void Event<Character, DamageOwner>::Callback::Trigger(Character& item, DamageOwn
                 pChild->Trigger(item, param);
                 pChild->Release();
                 pChild = pNext;
+            }
+            if (pChild)
+            {
+                pChild->Release();
             }
         }
     }
@@ -1555,9 +1592,9 @@ void Event<Character, char>::Callback::Trigger(Character& item, char& param)
             pChild->AddRef();
             while (pChild)
             {
-                if (!pChild->IsAlive())
+                const bool bAlive = pChild->IsAlive();
+                if (!bAlive)
                 {
-                    pChild->Release();
                     break;
                 }
                 Callback* pNext = (Callback*)pChild->mSibling;
@@ -1568,6 +1605,10 @@ void Event<Character, char>::Callback::Trigger(Character& item, char& param)
                 pChild->Trigger(item, param);
                 pChild->Release();
                 pChild = pNext;
+            }
+            if (pChild)
+            {
+                pChild->Release();
             }
         }
     }
@@ -1591,7 +1632,14 @@ float Character::GetObjectHitMultiplier(int iAffiliation) const
 // FUNCTION: SWBF2 0x00452230
 void Character::SetUnit(Controllable* pUnit)
 {
-    Character* pBase = sCharacters && sCharacterLimit > 0 ? sCharacters : 0;
+    Character* pBase = 0;
+    if (sCharacters)
+    {
+        if (sCharacterLimit > 0)
+        {
+            pBase = sCharacters;
+        }
+    }
     if ((reinterpret_cast<char*>(this) - reinterpret_cast<char*>(pBase)) / 432 == -1)
     {
         ++gDebugCount;
@@ -1655,7 +1703,40 @@ void RemoveCharacterPilots(Character* pCharacter)
 // FUNCTION: SWBF2 0x00452dd0
 void Character::MakePlayer(int iTeam, const unsigned short* pName, int iPlayerId)
 {
-    RemoveCharacterPilots(this);
+    if (mVehicle)
+    {
+        mVehicle->SetPilot(0);
+        SetVehicle(0);
+    }
+    if (mRemote)
+    {
+        mRemote->SetPilot(0);
+        SetRemote(0);
+    }
+    Controllable* pUnit = mUnit;
+    if (pUnit)
+    {
+        if (netEnabledNext && netClientActive)
+        {
+            GameObject* pObject = pUnit->GetGameObject();
+            if (pObject)
+            {
+                NetGame::Unlink(pObject);
+            }
+            if (mUnit)
+            {
+                mUnit->SetCharacter(0);
+            }
+        }
+        else
+        {
+            SetUnit(0);
+            pUnit->SetPilot(0);
+            delete pUnit;
+        }
+        mUnit = 0;
+        --mTeamPtr->mMemberActive;
+    }
     SetName(pName);
     PblUnicode::ustrncpy(mRegularName, pName, 64);
     mPlayerId = iPlayerId;
@@ -1671,11 +1752,47 @@ void Character::MakePlayer(int iTeam, const unsigned short* pName, int iPlayerId
 // FUNCTION: SWBF2 0x00452f10
 void Character::MakeAI()
 {
-    RemoveCharacterPilots(this);
-    Character* pBase = Character::sCharacters && Character::sCharacterLimit > 0
-                     ? Character::sCharacters : 0;
-    const int iIndex = (reinterpret_cast<char*>(this) - reinterpret_cast<char*>(pBase)) / 432;
+    if (mVehicle)
+    {
+        mVehicle->SetPilot(0);
+        SetVehicle(0);
+    }
+    if (mRemote)
+    {
+        mRemote->SetPilot(0);
+        SetRemote(0);
+    }
+    Controllable* pUnit = mUnit;
+    if (pUnit)
+    {
+        if (netEnabledNext && netClientActive)
+        {
+            GameObject* pObject = pUnit->GetGameObject();
+            if (pObject)
+            {
+                NetGame::Unlink(pObject);
+            }
+            if (mUnit)
+            {
+                mUnit->SetCharacter(0);
+            }
+        }
+        else
+        {
+            SetUnit(0);
+            pUnit->SetPilot(0);
+            delete pUnit;
+        }
+        mUnit = 0;
+        --mTeamPtr->mMemberActive;
+    }
     mPlayerId = -1;
+    Character* pFirst = 0;
+    if (sCharacters && sCharacterLimit > 0)
+    {
+        pFirst = sCharacters;
+    }
+    const int iIndex = pFirst - this;
     ChangeTeam(2 - (iIndex & 1));
     mTeamPtr = Team::sTeams[mTeamNumber];
     unsigned short name[64];

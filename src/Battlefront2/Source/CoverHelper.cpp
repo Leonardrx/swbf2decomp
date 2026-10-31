@@ -57,16 +57,15 @@ void CoverHelper::HELPERClean()
 // FUNCTION: SWBF2 0x00486fb0
 void CoverHelper::ExitState()
 {
-    AttackHelper* pAttack = &mOwner->mAttackHelper;
     mStance = HEIGHT_STAND;
     switch (mCurState)
     {
     case STATE_GOTO:
     case STATE_COVERED:
-        pAttack->AllowEnemyUnseen(false);
+        GetAttackHelper(mOwner)->AllowEnemyUnseen(false);
         break;
     case STATE_STEP_OUT:
-        pAttack->ResetWaitDelay();
+        GetAttackHelper(mOwner)->ResetWaitDelay();
         break;
     }
 }
@@ -134,12 +133,15 @@ void CoverHelper::EnterState()
     switch (mCurState)
     {
     case STATE_GOTO:
+    {
         mHint->Reserve(GetMe()->GetGameObject());
-        GetCtrl()->GetLowLevel().SetNavigator_Goto(mHint->GetCollisionCenter(), NULL, false,
-                                                   (PblRandom::GetGlobalInt() & 1) != 0);
+        bool bFlag = (PblRandom::GetGlobalInt() & 1) != 0;
+        const PblVector3& vCenter = mHint->GetCollisionCenter();
+        GetCtrl()->GetLowLevel().SetNavigator_Goto(vCenter, NULL, false, bFlag);
         mStance = HEIGHT_STAND;
         GetAttackHelper(mOwner)->AllowEnemyUnseen(true);
         break;
+    }
     case STATE_COVERED:
     {
 
@@ -179,8 +181,9 @@ void CoverHelper::EnterState()
                          vZ.x * gVectorUnitY.y - vZ.y * gVectorUnitY.x);
         int iSide = mHint->GetRandomSidestep() == BaseHint::STEP_LEFT ? -1 : 1;
         float fDist = (float)iSide * 2.0f;
+        PblVector3 vOffset(vSide.x * fDist, vSide.y * fDist, vSide.z * fDist);
         const PblVector3& vHint = mHint->GetCollisionCenter();
-        PblVector3 vDest(vHint.x + vSide.x * fDist, vHint.y + vSide.y * fDist, vHint.z + vSide.z * fDist);
+        PblVector3 vDest(vHint.x + vOffset.x, vHint.y + vOffset.y, vHint.z + vOffset.z);
         GetCtrl()->GetLowLevel().SetNavigator_Goto(vDest, NULL, false, false);
         mStance = mHint->GetRandomSecondaryStance();
         mOwner->GetLowLevel().SetAlert();
@@ -308,8 +311,8 @@ void CoverHelper::UpdateState(float dt)
         if (GameLoop::GetMissionTime() > mTimer - 2.0f && !GetAttackHelper(mOwner)->GetVisibleTarget() &&
             (PblRandom::GetGlobalInt() & 3) == 1)
         {
-
-            mOwner->GetLowLevel().HeadLook_Glance(mHint->GetRandomSidestep() == BaseHint::STEP_LEFT, 0.2f,
+            bool bLeft = mHint->GetRandomSidestep() == BaseHint::STEP_LEFT;
+            mOwner->GetLowLevel().HeadLook_Glance(bLeft, 0.2f,
                                                   PblRandom::GetGlobalFloat() * 0.5f, 0.3f);
         }
         if (GameLoop::GetMissionTime() > mTimer)
@@ -357,27 +360,26 @@ ControllableHeight CoverHelper::HELPERGetHeight() const
 // FUNCTION: SWBF2 0x004874e0
 bool CoverHelper::HELPERFaceTarget() const
 {
-    if (mCurState != STATE_GOTO)
+    if (mCurState == STATE_GOTO)
     {
-        return true;
+        PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
+        PblVector3 vHint = mHint->GetCollisionCenter();
+        float dx = vHint.x - vMe.x;
+        float dz = vHint.z - vMe.z;
+        return !(dx * dx + dz * dz > 9.0f);
     }
-
-    PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
-    PblVector3 vHint = mHint->GetCollisionCenter();
-    float dx = vHint.x - vMe.x;
-    float dz = vHint.z - vMe.z;
-    return dx * dx + dz * dz <= 9.0f;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x004875b0
 float CoverHelper::GetMaxHintDist() const
 {
-    if (!GetMe()->GetCurWpn())
+    if (GetMe()->GetCurWpn())
     {
-        return 40.0f;
+        float fRange = CombatUtil::GetWeaponMaxRange(GetMe());
+        return fRange > 40.0f ? 40.0f : fRange;
     }
-    float fRange = CombatUtil::GetWeaponMaxRange(GetMe());
-    return fRange > 40.0f ? 40.0f : fRange;
+    return 40.0f;
 }
 
 // FUNCTION: SWBF2 0x004875f0
@@ -528,5 +530,8 @@ float CoverHelper::IsHintSuitable_Idle(const BaseHint* pHint) const
     float dx = vHint.x - vMe.x;
     float dy = vHint.y - vMe.y;
     float dz = vHint.z - vMe.z;
-    return dx * dx + dy * dy + dz * dz;
+    float fDistSq = dx * dx;
+    fDistSq += dy * dy;
+    fDistSq += dz * dz;
+    return fDistSq;
 }

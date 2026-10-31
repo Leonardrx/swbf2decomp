@@ -7,13 +7,18 @@ void Restrictor::RestrictMovement(PblVector3& vMovement)
 {
     for (int i = 0; i < mNumRestrictions; ++i)
     {
-        const PblVector3& vNormal = mRestrictions[i];
-        float fDot = vNormal.x * vMovement.x + vNormal.y * vMovement.y + vNormal.z * vMovement.z;
+        float fNx = mRestrictions[i].x;
+        float fNy = mRestrictions[i].y;
+        float fNz = mRestrictions[i].z;
+        float fX = vMovement.x;
+        float fY = vMovement.y;
+        float fZ = vMovement.z;
+        float fDot = fNx * fX + fNy * fY + fNz * fZ;
         if (fDot < 0.0f)
         {
-            vMovement.x = vMovement.x - vNormal.x * fDot;
-            vMovement.y = vMovement.y - vNormal.y * fDot;
-            vMovement.z = vMovement.z - vNormal.z * fDot;
+            vMovement.x = fX - fNx * fDot;
+            vMovement.y = fY - fNy * fDot;
+            vMovement.z = fZ - fNz * fDot;
         }
     }
 }

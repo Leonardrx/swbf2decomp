@@ -285,9 +285,9 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
 Aimer::Aimer(AimerClass* pClass, const Controllable* pOwner, const PblMatrix* pParentMatrix,
              RedPose* pPose, Aimer* pNextAimer)
 {
-    mParentMatrix = pParentMatrix;
     mClass = pClass;
     mOwner = pOwner;
+    mParentMatrix = pParentMatrix;
     mPose = pPose;
     mWithinLimitsFlag = true;
     mOffsetPos = pClass->mOffsetPos;
@@ -465,23 +465,23 @@ bool Aimer::UpdateFire(Aimer*& pNextAimer, bool bFire)
         pNextAimer = pAimer;
     }
 
-    if (mCurrentBarrel == iOldBarrel)
+    if (mCurrentBarrel != iOldBarrel)
     {
-        mPrevFirePos = PblVector3(0.0f, 0.0f, 0.0f);
+        const PblMatrix mMatrix = GetMatrix();
+        mPrevFirePos = mFirePos;
+        const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[mCurrentBarrel];
+        PblVector3 vOffset;
+        vOffset.x = barrel.mOffset.x + barrel.mFireOffset.x;
+        vOffset.y = barrel.mOffset.y + barrel.mFireOffset.y;
+        vOffset.z = barrel.mOffset.z + barrel.mFireOffset.z;
+        PblVector3 vPos;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+        mFirePos = vPos;
+        mPrevFirePos = mFirePos - mPrevFirePos;
         return bNext;
     }
 
-    const PblMatrix mMatrix = GetMatrix();
-    mPrevFirePos = mFirePos;
-    const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[mCurrentBarrel];
-    const PblVector3 vOffset(barrel.mOffset.x + barrel.mFireOffset.x,
-                             barrel.mOffset.y + barrel.mFireOffset.y,
-                             barrel.mOffset.z + barrel.mFireOffset.z);
-    PblVector3 vPos;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-    mFirePos = vPos;
-    mPrevFirePos = PblVector3(mFirePos.x - mPrevFirePos.x, mFirePos.y - mPrevFirePos.y,
-                              mFirePos.z - mPrevFirePos.z);
+    mPrevFirePos = PblVector3(0.0f, 0.0f, 0.0f);
     return bNext;
 }
 

@@ -64,23 +64,22 @@ void HUD::TransformNameMesh::NameMesh::Init(unsigned int uHashID, unsigned int u
 // FUNCTION: SWBF2 0x005674a0
 const RedModel* HUD::TransformNameMesh::NameMesh::GetMesh(const char* const)
 {
-    if (!mMeshIsID)
+    if (mMeshIsID)
     {
-        return mMesh.mesh;
+        RedModel* pMesh = RedModel::_HashTable.Find(mMesh.meshID);
+        if (pMesh)
+        {
+            mMeshIsID = false;
+            mMesh.mesh = pMesh;
+            return pMesh;
+        }
+        if (mName && mMeshName && !mDisplayedWarning)
+        {
+            mDisplayedWarning = true;
+        }
+        return 0;
     }
-
-    RedModel* pMesh = RedModel::_HashTable.Find(mMesh.meshID);
-    if (pMesh)
-    {
-        mMeshIsID = false;
-        mMesh.mesh = pMesh;
-        return pMesh;
-    }
-    if (mName && mMeshName && !mDisplayedWarning)
-    {
-        mDisplayedWarning = true;
-    }
-    return 0;
+    return mMesh.mesh;
 }
 
 // FUNCTION: SWBF2 0x00567500
@@ -262,7 +261,7 @@ HUD::TransformNameMesh* HUD::TransformNameMesh::FindByHashID(unsigned int uHashI
     {
         TransformNameMesh* pItem = (TransformNameMesh*)((char*)pNode -
             offsetof(TransformNameMesh, mTransformNameMeshNode));
-        if (pItem->GetNameHash() == uHashID)
+        if (uHashID == pItem->GetNameHash())
         {
             return pItem;
         }
@@ -321,6 +320,7 @@ void HUD::TransformNameMesh::EventInput(const HUD::Event& event, void* const pDa
     }
     if (pMesh)
     {
-        HUD::Event(pTransform->mEventClassOutput, pMesh).Send();
+        HUD::Event outEvent(pTransform->mEventClassOutput, pMesh);
+        outEvent.Send();
     }
 }

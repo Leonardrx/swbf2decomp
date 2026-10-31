@@ -54,8 +54,9 @@ void JetJumpHintHelper::EnterState()
     case STATE_JUMPING:
     {
         const PblVector3& vDir = mHint->GetZAxis();
+        const Controllable* pMe = GetMe();
         PblVector3 vOffset(vDir.x * 80.0f, vDir.y * 80.0f, vDir.z * 80.0f);
-        const PblMatrix& mMe = GetMe()->GetMatrix();
+        const PblMatrix& mMe = pMe->GetMatrix();
         PblVector3 vDest(mMe.m[3][0] + vOffset.x, mMe.m[3][1] + vOffset.y,
                          mMe.m[3][2] + vOffset.z);
         GetCtrl()->mLowLevel
@@ -70,11 +71,12 @@ void JetJumpHintHelper::EnterState()
 // FUNCTION: SWBF2 0x0056b150
 void JetJumpHintHelper::UpdateState(float dt)
 {
+    if (mCurState == 100)
+    {
+        return;
+    }
     switch (mCurState)
     {
-    case 100:
-        break;
-
     case STATE_GOTO:
         if (GetCtrl()->mLowLevel.IsAtDest())
         {
@@ -159,7 +161,7 @@ float JetJumpHintHelper::IsHintSuitable(const JetJumpHint* pHint) const
 {
     const PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
     const PblVector3 vHint = pHint->GetCollisionCenter();
-    const float fX = vHint.x - vMe.x;
     const float fZ = vHint.z - vMe.z;
+    const float fX = vHint.x - vMe.x;
     return fX * fX * 2.25f + fZ * fZ * 2.25f;
 }

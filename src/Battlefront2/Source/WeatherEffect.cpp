@@ -22,13 +22,13 @@ void PrecipitationEffect::RainShadowRegion::UpdateVisibility(const RedCamera* pC
     case type_cylinder:
         m_bVisible = pCamera->ClassifyBox(mMatrix, mSize) != RedCamera::VISIBILITY_NONE;
         break;
-    case type_plane:
-        m_bVisible = pCamera->ClassifyPlane(mMatrix.GetZAxis(), mSize.w)
-                     != RedCamera::VISIBILITY_NONE;
-        break;
     case type_box_aligned:
     case type_cylinder_yaligned:
         m_bVisible = pCamera->ClassifyAABox(mMatrix.GetTranslation(), mSize)
+                     != RedCamera::VISIBILITY_NONE;
+        break;
+    case type_plane:
+        m_bVisible = pCamera->ClassifyPlane(mMatrix.GetZAxis(), mSize.w)
                      != RedCamera::VISIBILITY_NONE;
         break;
     case type_cylinder_xaligned:
@@ -87,13 +87,14 @@ void WindEffect::Destroy()
 
 // FUNCTION: SWBF2 0x00692d50
 WindEffect::WindEffect()
-    : FLEffect(0x1414F107u, 3)
+    : FLEffect(0x1414F107u /* "Wind" */, 3)
 {
     Enable(false);
-    m_vBaseVelocity = PblVector3(0, 0, 0);
-    m_vVelocityTarget = PblVector3(0, 0, 0);
-    m_vVelocityPrevTarget = PblVector3(0, 0, 0);
-    m_vVelocity = PblVector3(0, 0, 0);
+    const PblVector3 vZero(0, 0, 0);
+    m_vBaseVelocity = vZero;
+    m_vVelocityTarget = vZero;
+    m_vVelocityPrevTarget = vZero;
+    m_vVelocity = vZero;
     m_fVelocityRange = 0.0f;
     m_fVelocityChangeRate = 0.0f;
     m_fTimer = 0.0f;
@@ -201,15 +202,12 @@ void FogCloudEffect::Destroy()
 
 // FUNCTION: SWBF2 0x006932d0
 FogCloudEffect::FogCloudEffect()
-    : FLEffect(0xC211031Cu, 3)
+    : FLEffect(0xC211031Cu /* "FogCloud" */, 3)
 {
     Enable(false);
     VELOCITY = PblVector3(0, 0, 0);
-    COLOR.b = 0xC0;
-    COLOR.g = 0xC0;
-    COLOR.r = 0xC0;
-    COLOR.a = 0xA0;
-    TEXTURE_HASH = 0xA7C73459u;
+    COLOR = RedColor(0xC0, 0xC0, 0xC0, 0xA0);
+    TEXTURE_HASH = 0xA7C73459u /* "fluffy" */;
     ROTATION_RATE = 0.1f;
     BOX_SIZE = 256.0f;
     BOX_SIZEINV = 1.0f / 256.0f;
@@ -342,14 +340,11 @@ void PrecipitationEffect::Create()
 
 // FUNCTION: SWBF2 0x00693720
 PrecipitationEffect::PrecipitationEffect()
-    : FLEffect(0x3F5E4CD0u, 3)
+    : FLEffect(0x3F5E4CD0u /* "Precipitation" */, 3)
     , RedRegionFactory("rainshadow")
 {
     Enable(false);
-    COLOR.b = 0xC0;
-    COLOR.g = 0xC0;
-    COLOR.r = 0xC0;
-    COLOR.a = 0xA0;
+    COLOR = RedColor(0xC0, 0xC0, 0xC0, 0xA0);
     BOX_SIZE = 5.0f;
     BOX_SIZEINV = 0.2f;
     RENDER_DISTANCE = 10.0f;

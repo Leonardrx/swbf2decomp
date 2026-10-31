@@ -123,26 +123,26 @@ void ScreenFilterEffect::Update(float)
     }
     else if (data.uiState == 2)
     {
-        if (fNow < data.fStopFadeInTime)
-        {
-            data.fIntensity = (fNow - data.fStartFadeInTime) / (data.fStopFadeInTime - data.fStartFadeInTime);
-        }
-        else
+        if (fNow >= data.fStopFadeInTime)
         {
             data.fIntensity = 1.0f;
             data.uiState = 1;
         }
+        else
+        {
+            data.fIntensity = (fNow - data.fStartFadeInTime) / (data.fStopFadeInTime - data.fStartFadeInTime);
+        }
     }
     else if (data.uiState == 4)
     {
-        if (fNow < data.fStopFadeOutTime)
-        {
-            data.fIntensity = 1.0f - (fNow - data.fStartFadeOutTime) / (data.fStopFadeOutTime - data.fStartFadeOutTime);
-        }
-        else
+        if (fNow >= data.fStopFadeOutTime)
         {
             data.fIntensity = 0.0f;
             data.uiState = 0;
+        }
+        else
+        {
+            data.fIntensity = 1.0f - (fNow - data.fStartFadeOutTime) / (data.fStopFadeOutTime - data.fStartFadeOutTime);
         }
     }
 }

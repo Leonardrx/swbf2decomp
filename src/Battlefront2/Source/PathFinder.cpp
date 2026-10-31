@@ -123,18 +123,18 @@ void Obstacle::UpdatePosition(const PblMatrix& rMatrix, float fOffsetX, float fO
     {
         SetEnabled(true);
         PblVector3 forward = AIUtil::GetSafeNormalXZ(rMatrix.GetZAxis());
-        float fPosX = rMatrix.m[3][0] + forward.x * fOffsetZ + -forward.z * fOffsetX;
-        float fPosZ = rMatrix.m[3][2] + forward.z * fOffsetZ + forward.x * fOffsetX;
-        float fDX = fPosX - mPosX;
-        float fDZ = fPosZ - mPosZ;
+        PblVector3 side(-forward.z, 0.0f, forward.x);
+        PblVector3 pos = rMatrix.GetTranslation() + forward * fOffsetZ + side * fOffsetX;
+        float fDX = pos.x - mPosX;
+        float fDZ = pos.z - mPosZ;
         PblVector3 zAxis = GetZAxis();
         if (fDX * fDX + fDZ * fDZ > 0.25f ||
             zAxis.x * forward.x + zAxis.y * forward.y + zAxis.z * forward.z < 0.99f)
         {
             mForwardX = forward.x;
             mForwardZ = forward.z;
-            mPosX = fPosX;
-            mPosZ = fPosZ;
+            mPosX = pos.x;
+            mPosZ = pos.z;
             PathFinder::MoveBarrier(this);
         }
     }
@@ -169,15 +169,20 @@ PblVector3 Obstacle::GetVertexXZ(int iVertex, float fRadius, float fPushOut) con
     PblVector3 x = GetXAxis() * (mSizeX + fRadius + fPushOut);
     PblVector3 z = GetZAxis() * (mSizeZ + fRadius + fPushOut);
 
-    switch (iVertex)
+    if (iVertex == 0)
     {
-    case 0:
         return (GetTranslation() + x + z);
-    case 1:
+    }
+    else if (iVertex == 1)
+    {
         return (GetTranslation() + x - z);
-    case 2:
+    }
+    else if (iVertex == 2)
+    {
         return (GetTranslation() - x - z);
-    default:
+    }
+    else
+    {
         return (GetTranslation() - x + z);
     }
 }
@@ -218,7 +223,8 @@ float GetDistanceSquaredFromLineSegment(const PblVector3& rEnd, const PblVector3
 float Obstacle::GetDistFromSideXZ(const PblVector3& rPos, float fRadius, int iSide,
                                   PblVector3& rClosest) const
 {
-    PblVector3 pos(rPos.x, 0.0f, rPos.z);
+    PblVector3 pos = rPos;
+    pos.y = 0.0f;
     int iNext = iSide < 3 ? iSide + 1 : 0;
     PblVector3 v0 = GetVertexXZ(iSide, fRadius, 0.0f);
     PblVector3 v1 = GetVertexXZ(iNext, fRadius, 0.0f);
@@ -446,26 +452,26 @@ void PathFinder::CreateGameObjectBarrier(Obstacle*& rpObstacle, GameObject* pObj
     {
         delete rpObstacle;
     }
-    CollisionObject* pCollision = pObject;
     if (fSizeX <= 0.0f)
     {
-        fSizeX = pCollision->m2dRadius;
+        fSizeX = pObject->m2dRadius;
     }
     if (fSizeZ <= 0.0f)
     {
-        fSizeZ = pCollision->m2dRadius;
+        fSizeZ = pObject->m2dRadius;
     }
     PblVector4 size;
     size.x = fSizeX;
     size.y = 0.0f;
     size.z = fSizeZ;
     size.w = 0.0f;
-    PblMatrix mat = pCollision->GetMatrix();
+    PblMatrix mat = pObject->GetMatrix();
     PblVector3 xAxis = AIUtil::GetSafeNormalXZ(mat.GetXAxis());
     PblVector3 zAxis = AIUtil::GetSafeNormalXZ(mat.GetZAxis());
-    mat.m[3][0] += zAxis.x * fOffsetZ + xAxis.x * fOffsetX;
-    mat.m[3][1] += zAxis.y * fOffsetZ + xAxis.y * fOffsetX;
-    mat.m[3][2] += zAxis.z * fOffsetZ + xAxis.z * fOffsetX;
+    PblVector3 offset = zAxis * fOffsetZ + xAxis * fOffsetX;
+    mat.m[3][0] += offset.x;
+    mat.m[3][1] += offset.y;
+    mat.m[3][2] += offset.z;
     rpObstacle = new Obstacle(mat, size, ~32, uName);
     sObstacles->Add(rpObstacle, rpObstacle->GetBoundingCircleCenter(),
                     rpObstacle->GetBoundingCircleRadius() * 2.0f);
@@ -562,11 +568,12 @@ bool PathFinder::PushValidPointCallback(const TreeGridObject* pObj, TreeGridCall
         {
             float fDist = (float)sqrt(fDistSq);
             const PblVector3& rSrc = pPush->mObsTest.mSrc;
+            PblVector3 dest(rSrc.x + pPush->mRayDir.x * fDist,
+                            rSrc.y + pPush->mRayDir.y * fDist,
+                            rSrc.z + pPush->mRayDir.z * fDist);
             ObstacleTest test;
             test.mSrc = rSrc;
-            test.mDest = PblVector3(rSrc.x + pPush->mRayDir.x * fDist,
-                                    rSrc.y + pPush->mRayDir.y * fDist,
-                                    rSrc.z + pPush->mRayDir.z * fDist);
+            test.mDest = dest;
             test.mBoundCenter = PblVector3((test.mSrc.x + test.mDest.x) * 0.5f,
                                            (test.mSrc.y + test.mDest.y) * 0.5f,
                                            (test.mSrc.z + test.mDest.z) * 0.5f);
@@ -589,17 +596,17 @@ bool PathFinder::PushValidPoint(const PblVector3& rSrc, PblVector3& rDest, PblVe
     PushValidPointData data;
     data.mObsTest.mSrc = rSrc;
     data.mObsTest.mDest = rDest;
-    data.mObsTest.mBoundCenter = PblVector3((rDest.x + rSrc.x) * 0.5f,
-                                            (rDest.y + rSrc.y) * 0.5f,
-                                            (rDest.z + rSrc.z) * 0.5f);
-    float fDX = data.mObsTest.mBoundCenter.x - rSrc.x;
-    float fDY = data.mObsTest.mBoundCenter.y - rSrc.y;
-    float fDZ = data.mObsTest.mBoundCenter.z - rSrc.z;
+    data.mObsTest.mBoundCenter = PblVector3((data.mObsTest.mDest.x + data.mObsTest.mSrc.x) * 0.5f,
+                                            (data.mObsTest.mDest.y + data.mObsTest.mSrc.y) * 0.5f,
+                                            (data.mObsTest.mDest.z + data.mObsTest.mSrc.z) * 0.5f);
+    float fDX = data.mObsTest.mBoundCenter.x - data.mObsTest.mSrc.x;
+    float fDY = data.mObsTest.mBoundCenter.y - data.mObsTest.mSrc.y;
+    float fDZ = data.mObsTest.mBoundCenter.z - data.mObsTest.mSrc.z;
     data.mObsTest.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
 
     PblVector3 dir(rDest.x - rSrc.x, rDest.y - rSrc.y, rDest.z - rSrc.z);
     PblVector3 dirN;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&dirN), reinterpret_cast<const D3DXVECTOR3*>(&dir));
+    D3DXVec3Normalize(&dirN, &dir);
     data.mRayDir = dirN;
     data.mRadius = fRadius;
     data.mProhibit = eProhibit;
@@ -637,7 +644,7 @@ bool PathFinder::GetClosestValidPoint(const PblVector3& rPos, PblVector3& rOut, 
                                       int eProhibit, const Obstacle** ppIgnore, int iIgnoreCnt)
 {
     const Obstacle* pHit = 0;
-    if (IsPointValid(rPos, fRadius, eProhibit, &pHit, ppIgnore, iIgnoreCnt))
+    if (IsPointValid(rPos, fRadius, eProhibit, &pHit, ppIgnore, iIgnoreCnt) == true)
     {
         return true;
     }
@@ -645,10 +652,10 @@ bool PathFinder::GetClosestValidPoint(const PblVector3& rPos, PblVector3& rOut, 
     const Obstacle* pObstacle = pHit;
     PblVector3 side[4];
     float fDistSq[4];
-    for (int i = 0; i < 4; i++)
-    {
-        fDistSq[i] = pObstacle->GetDistFromSideXZ(rPos, fRadius, i, side[i]);
-    }
+    fDistSq[0] = pObstacle->GetDistFromSideXZ(rPos, fRadius, 0, side[0]);
+    fDistSq[1] = pObstacle->GetDistFromSideXZ(rPos, fRadius, 1, side[1]);
+    fDistSq[2] = pObstacle->GetDistFromSideXZ(rPos, fRadius, 2, side[2]);
+    fDistSq[3] = pObstacle->GetDistFromSideXZ(rPos, fRadius, 3, side[3]);
 
     for (int iTry = 0; iTry < 4; iTry++)
     {
@@ -664,7 +671,7 @@ bool PathFinder::GetClosestValidPoint(const PblVector3& rPos, PblVector3& rOut, 
                 best = side[i];
             }
         }
-        if (IsPointValid(best, fRadius, eProhibit, &pHit, ppIgnore, iIgnoreCnt))
+        if (IsPointValid(best, fRadius, eProhibit, &pHit, ppIgnore, iIgnoreCnt) == true)
         {
             rOut.x = best.x;
             rOut.z = best.z;
@@ -714,7 +721,6 @@ bool PathFinder::FindClosestObstacleIntersection(const PblVector3& rSrc, const P
                    (rSrc.z < rDest.z ? rSrc.z : rDest.z) - fRadius);
     PblVector3 max((rSrc.x > rDest.x ? rSrc.x : rDest.x) + fRadius, FLT_MAX,
                    (rSrc.z > rDest.z ? rSrc.z : rDest.z) + fRadius);
-    // GLOBAL: SWBF2 0x01faac10
     static ObstacleData data;
     data.mLength = 0;
     sObstacles->CallbackOnRect(min, max, GenerateObstacleListCallback, &data);
@@ -722,11 +728,12 @@ bool PathFinder::FindClosestObstacleIntersection(const PblVector3& rSrc, const P
     ObstacleTest test;
     test.mSrc = rSrc;
     test.mDest = rDest;
-    test.mBoundCenter = PblVector3((rDest.x + rSrc.x) * 0.5f, (rDest.y + rSrc.y) * 0.5f,
-                                   (rDest.z + rSrc.z) * 0.5f);
-    float fDX = test.mBoundCenter.x - rSrc.x;
-    float fDY = test.mBoundCenter.y - rSrc.y;
-    float fDZ = test.mBoundCenter.z - rSrc.z;
+    test.mBoundCenter = PblVector3((test.mSrc.x + test.mDest.x) * 0.5f,
+                                   (test.mSrc.y + test.mDest.y) * 0.5f,
+                                   (test.mSrc.z + test.mDest.z) * 0.5f);
+    float fDX = test.mBoundCenter.x - test.mSrc.x;
+    float fDY = test.mBoundCenter.y - test.mSrc.y;
+    float fDZ = test.mBoundCenter.z - test.mSrc.z;
     test.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
 
     *pDistSq = FLT_MAX;
@@ -780,10 +787,10 @@ bool PathFinder::TrivialIntersectCallback(const TreeGridObject* pObj, TreeGridCa
             return true;
         }
     }
+    float fDistSq = FLT_MAX;
+    PblVector3 normal;
     if (pObstacle->Prohibits(pTrivial->mProhibit))
     {
-        float fDistSq = FLT_MAX;
-        PblVector3 normal;
         if (pObstacle->IntersectionNewer(pTrivial->mObsTest, pTrivial->mRadiusVehicle, &fDistSq, &normal, 0, 0))
         {
             pTrivial->hit = true;
@@ -820,17 +827,17 @@ bool PathFinder::TestTrivialStraightLineHit(const PblVector3& from, const PblVec
                    (to.z < from.z ? to.z : from.z) - fRadius);
     PblVector3 max((to.x > from.x ? to.x : from.x) + fRadius, FLT_MAX,
                    (to.z > from.z ? to.z : from.z) + fRadius);
-    // GLOBAL: SWBF2 0x01faabc0
     static TrivialIntersectData data;
 
     ObstacleTest test;
     test.mSrc = from;
     test.mDest = to;
-    test.mBoundCenter = PblVector3((to.x + from.x) * 0.5f, (to.y + from.y) * 0.5f,
-                                   (to.z + from.z) * 0.5f);
-    float fCX = test.mBoundCenter.x - from.x;
-    float fCY = test.mBoundCenter.y - from.y;
-    float fCZ = test.mBoundCenter.z - from.z;
+    test.mBoundCenter = PblVector3((test.mSrc.x + test.mDest.x) * 0.5f,
+                                   (test.mSrc.y + test.mDest.y) * 0.5f,
+                                   (test.mSrc.z + test.mDest.z) * 0.5f);
+    float fCX = test.mBoundCenter.x - test.mSrc.x;
+    float fCY = test.mBoundCenter.y - test.mSrc.y;
+    float fCZ = test.mBoundCenter.z - test.mSrc.z;
     test.mBoundRadius = sqrtf(fCX * fCX + fCY * fCY + fCZ * fCZ);
 
     data.mObsTest = test;
@@ -1057,31 +1064,31 @@ void PathFinder::CancelPathFind()
 // FUNCTION: SWBF2 0x00612440
 AIPath* PathFinder::GetPathResult()
 {
-    if (!sFoundDest)
+    if (sFoundDest)
     {
-        ++gPathResultFailureCount;
-        return 0;
+        AIPath* pPath = new AIPath;
+        if (pPath)
+        {
+            float fLastY = 0.0f;
+            for (const PathNode* pNode = sOpenList->Get(0); pNode; pNode = pNode->mParentNode)
+            {
+                PblVector3 vPos = pNode->GetPos();
+                if ((float)fabs((double)vPos.y) < EPSILON)
+                {
+                    vPos.y = fLastY;
+                }
+                else
+                {
+                    fLastY = vPos.y;
+                }
+                pPath->Prepend(vPos, 0);
+            }
+        }
+        return pPath;
     }
 
-    AIPath* pPath = new AIPath;
-    if (pPath)
-    {
-        float fLastY = 0.0f;
-        for (const PathNode* pNode = sOpenList->Get(0); pNode; pNode = pNode->mParentNode)
-        {
-            PblVector3 vPos = pNode->GetPos();
-            if (fabs(vPos.y) < EPSILON)
-            {
-                vPos.y = fLastY;
-            }
-            else
-            {
-                fLastY = vPos.y;
-            }
-            pPath->Prepend(vPos, 0);
-        }
-    }
-    return pPath;
+    ++gPathResultFailureCount;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00438690

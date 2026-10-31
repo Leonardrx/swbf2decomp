@@ -189,38 +189,32 @@ void UnitDeathmatchAgent::DoJetJumpStuff()
 
     EntitySoldier* pSoldier = static_cast<EntitySoldier*>(GetMe()->GetEntity());
     PblVector3 vJumpDir(0.0f, 0.0f, 0.0f);
-    if (pSoldier->mClass->mJetFuelRechargeRate <= 0.0f)
+    if (pSoldier->mClass->mJetFuelRechargeRate > 0.0f)
     {
-        return;
-    }
-
-    if (pSoldier->GetJetFuel() > pSoldier->mClass->GetJetFuelMinBorder())
-    {
-        if (mCtrl->GetLowLevel().mJetJumping)
+        if (pSoldier->GetJetFuel() > pSoldier->mClass->GetJetFuelMinBorder())
         {
-            return;
+            if (!mCtrl->GetLowLevel().mJetJumping)
+            {
+                if (GameLoop::GetMissionTime() > mNextJumpTime)
+                {
+                    mNextJumpTime += 5.0f;
+                    if (PblRandom::GetGlobalInt() & 1)
+                    {
+                        PblVector3 vStart = GetMe()->GetMatrix().GetTranslation();
+                        PblVector3 vEnd(vStart.x + vJumpDir.x, vStart.y + 40.0f, vStart.z + vJumpDir.z);
+                        const GameObject* pIgnore = GetMe()->GetGameObject();
+                        if (!CollisionManager::RayTest(vStart, vEnd, &pIgnore, 1, 0x9a))
+                        {
+                            mCtrl->GetLowLevel().SetJetJump(vJumpDir);
+                        }
+                    }
+                }
+            }
         }
-        if (GameLoop::GetMissionTime() <= mNextJumpTime)
+        else
         {
-            return;
+            mNextJumpTime = GameLoop::GetMissionTime() + 5.0f + PblRandom::GetGlobalFloat() * 10.0f;
         }
-        mNextJumpTime += 5.0f;
-        if (!(PblRandom::GetGlobalInt() & 1))
-        {
-            return;
-        }
-
-        PblVector3 vStart = GetMe()->GetMatrix().GetTranslation();
-        PblVector3 vEnd(vStart.x + vJumpDir.x, vStart.y + 40.0f, vStart.z + vJumpDir.z);
-        const GameObject* pIgnore = GetMe()->GetGameObject();
-        if (!CollisionManager::RayTest(vStart, vEnd, &pIgnore, 1, 0x9a))
-        {
-            mCtrl->GetLowLevel().SetJetJump(vJumpDir);
-        }
-    }
-    else
-    {
-        mNextJumpTime = GameLoop::GetMissionTime() + 5.0f + PblRandom::GetGlobalFloat() * 10.0f;
     }
 }
 

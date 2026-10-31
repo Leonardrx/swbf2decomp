@@ -137,13 +137,9 @@ void ControllerManager::RemoveController(Controller* pCtrl)
 // FUNCTION: SWBF2 0x004862f0
 void ControllerManager::RequestControllerUpdateASAP(UnitController* pCtrl)
 {
-    const float fUpdateTime = pCtrl->GetUpdateTime();
-    float fTime = GameLoop::GetMissionTime() + 0.0001f;
-    if (fTime > fUpdateTime)
-    {
-        fTime = fUpdateTime;
-    }
-    pCtrl->mNextUpdateTime = fTime;
+    const float fScheduledTime = pCtrl->mNextUpdateTime;
+    const float fSoon = GameLoop::GetMissionTime() + 0.0001f;
+    pCtrl->mNextUpdateTime = (fSoon > fScheduledTime) ? fScheduledTime : fSoon;
 
     PblOrderedList<UnitController, float>::Node* pNode = pCtrl->GetManagerNode();
     sAICtrls->Remove(pNode);
@@ -421,11 +417,12 @@ void ControllerManager::DoPeriodicUpdate(float fDeltaTime)
     UpdatePilotSelf();
     for (PblList<PlayerController>::Itor it(*sPlayerCtrls); it; ++it)
     {
-        UpdateControllerAudibles((PlayerController*)it);
+        UpdateControllerAudibles<PlayerController>(it);
         it->UpdateFreeSpace();
         UpdateCrowd(it);
         Controllable* pOwner = it->mOwner;
-        pOwner->mCharacter->mAdrenaline.Update(fDeltaTime, pOwner->GetGameObject());
+        Character* pCharacter = pOwner->mCharacter;
+        pCharacter->mAdrenaline.Update(fDeltaTime, pOwner->GetGameObject());
     }
     sUpdateFriendlyFire();
     AIDifficulty::UpdateAutoBalance();
@@ -495,10 +492,11 @@ void ControllerManager::LogVODeath(int iVictimTeam, int iKillerTeam, const PblVe
 {
     for (PblList<PlayerController>::Itor it(*sPlayerCtrls); (PlayerController*)it; ++it)
     {
-        Controllable* pOwner = it->mOwner;
-        if (pOwner && SquaredLength(pOwner->GetMatrix().GetTranslation() - vPos) < 625.0f)
+        PlayerController* pPlayer = it;
+        Controllable* pOwner = pPlayer->mOwner;
+        if (pOwner && SquaredLength(vPos - pOwner->GetMatrix().GetTranslation()) < 625.0f)
         {
-            it->LogVODeath(iVictimTeam, iKillerTeam);
+            pPlayer->LogVODeath(iVictimTeam, iKillerTeam);
         }
     }
 }

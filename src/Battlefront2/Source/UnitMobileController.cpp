@@ -43,6 +43,12 @@ void UnitMobileController::ApplyNextState()
     case CMD_UNBOARD:
         SetNextState(STATE_UNBOARD);
         break;
+    case CMD_SC_HOLD:
+        SetNextState(STATE_SC_HOLD);
+        break;
+    case CMD_SC_FOLLOW:
+        SetNextState(STATE_SC_FOLLOW);
+        break;
     case CMD_RANDOM:
         SetNextState(STATE_RANDOM);
         break;
@@ -60,12 +66,6 @@ void UnitMobileController::ApplyNextState()
         break;
     case CMD_DESTROY:
         SetNextState(STATE_DESTROY);
-        break;
-    case CMD_SC_FOLLOW:
-        SetNextState(STATE_SC_FOLLOW);
-        break;
-    case CMD_SC_HOLD:
-        SetNextState(STATE_SC_HOLD);
         break;
     }
 }

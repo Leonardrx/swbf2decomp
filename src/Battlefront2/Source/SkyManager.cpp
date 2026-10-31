@@ -164,34 +164,35 @@ void SkyManager::Read(PblFileChunk& chunk)
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
-        case 0x3780C8F9u:
+        case 0x3780C8F9u: /* "SunInfo" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             ReadSunInfo(scope);
             break;
         }
-        case 0x06C0D3E6u:
+        case 0x06C0D3E6u: /* "SkyInfo" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             ReadSkyInfo(scope);
             break;
         }
-        case 0x185AB6C2u:
+        case 0x185AB6C2u: /* "DomeInfo" */
         {
             PblConfig scope(config.ReadNextScope(), true);
-            if (SkyDome::sInstance)
+            SkyDome* pDome = SkyDome::sInstance;
+            if (pDome)
             {
-                SkyDome::sInstance->Read(scope);
+                pDome->Read(scope);
             }
             break;
         }
-        case 0xB7E0C3F5u:
+        case 0xB7E0C3F5u: /* "SkyObject" */
         {
             PblConfig scope(config.ReadNextScope(), true);
             SkyObjectManager::Load(scope);
             break;
         }
-        case 0xA99AEB4Fu:
+        case 0xA99AEB4Fu: /* "EnvTexture" */
         {
             PblHash hash(data.GetStringArg(0));
             break;

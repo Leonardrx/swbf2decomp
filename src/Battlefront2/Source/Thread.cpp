@@ -53,7 +53,7 @@ void ThreadGroup::AddBefore(ThreadGroup* pNext)
 void ThreadGroup::Remove()
 {
     mNext->mPrev = mPrev;
-    mPrev->mNext = mNext;
+    mNext->mPrev->mNext = mNext;
 }
 
 // FUNCTION: SWBF2 0x006574e0
@@ -114,18 +114,23 @@ Thread::~Thread()
 // FUNCTION: SWBF2 0x006576f0
 void Thread::ActivateThread(int iOrder, ThreadType eThreadType)
 {
-    ThreadGroup* pList = sTurnThreadList;
+    ThreadGroup* pTurnList = sTurnThreadList;
+    ThreadGroup* pGroup;
     if (eThreadType == PER_FRAME)
     {
-        pList = sFrameThreadList;
+        pGroup = sFrameThreadList;
     }
-    else if (NetGame::IsEnabled() && pList == &sClientTurnThreadList &&
+    else if (NetGame::IsEnabled() && pTurnList == &sClientTurnThreadList &&
              eThreadType != PER_TURN)
     {
-        pList = &sClientLocalTurnThreadList;
+        pGroup = &sClientLocalTurnThreadList;
+    }
+    else
+    {
+        pGroup = pTurnList;
     }
 
-    ThreadGroup* pGroup = pList->FindCreate(-iOrder);
+    pGroup = pGroup->FindCreate(-iOrder);
     pGroup->mThreads.Add(&mThreadListNode, this, (int)this);
 }
 

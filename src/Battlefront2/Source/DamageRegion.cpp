@@ -111,7 +111,7 @@ void DamageRegion::Create()
 // FUNCTION: SWBF2 0x0048a180
 void DamageRegion::Destroy()
 {
-    ClearList();
+    sList.RemoveAll();
     mUpdateThread = 0;
 }
 

@@ -41,11 +41,14 @@ MemoryPool ParticleTransformer::ColorTransformer::sMemoryPool("ParticleTransform
 
 // FUNCTION: SWBF2 0x0060ebc0
 ParticleTransformer::ParticleTransformer()
-    : mPositionTrans(0), mNumSizeTrans(0), mNumRotationTrans(0), mNumColorTrans(0)
 {
+    mPositionTrans = 0;
     mSizeTrans[0] = 0;
     mRotationTrans[0] = 0;
     mColorTrans[0] = 0;
+    mNumColorTrans = 0;
+    mNumRotationTrans = 0;
+    mNumSizeTrans = 0;
 }
 
 // FUNCTION: SWBF2 0x0060ec00
@@ -93,9 +96,7 @@ bool ParticleTransformer::Update(Particle& particle, float fDeltaTime) const
     }
     else
     {
-        particle.mPosition.x += particle.mVelocity.x * particle.mLifeTime;
-        particle.mPosition.y += particle.mVelocity.y * particle.mLifeTime;
-        particle.mPosition.z += particle.mVelocity.z * particle.mLifeTime;
+        particle.mPosition += particle.mVelocity * particle.mLifeTime;
     }
 
     for (int i = 0; i < mNumSizeTrans; ++i)
@@ -258,28 +259,29 @@ void ParticleTransformer::ColorTransformer::Update(RedColorValue& color, float f
     switch (mType)
     {
     case MOVE:
-    {
-        float r, g, b, a;
         if (fScale >= 1.0f)
         {
-            r = mR + color.r;
-            g = mG + color.g;
-            b = mB + color.b;
-            a = mA + color.a;
+            float r = mR + color.r;
+            color.r = r < 0.0f ? 0.0f : (r > 1.0f ? 1.0f : r);
+            float g = mG + color.g;
+            color.g = g < 0.0f ? 0.0f : (g > 1.0f ? 1.0f : g);
+            float b = mB + color.b;
+            color.b = b < 0.0f ? 0.0f : (b > 1.0f ? 1.0f : b);
+            float a = mA + color.a;
+            color.a = a < 0.0f ? 0.0f : (a > 1.0f ? 1.0f : a);
         }
         else
         {
-            r = mR * fScale + color.r;
-            g = mG * fScale + color.g;
-            b = mB * fScale + color.b;
-            a = mA * fScale + color.a;
+            float r = mR * fScale + color.r;
+            color.r = r < 0.0f ? 0.0f : (r > 1.0f ? 1.0f : r);
+            float g = mG * fScale + color.g;
+            color.g = g < 0.0f ? 0.0f : (g > 1.0f ? 1.0f : g);
+            float b = mB * fScale + color.b;
+            color.b = b < 0.0f ? 0.0f : (b > 1.0f ? 1.0f : b);
+            float a = mA * fScale + color.a;
+            color.a = a < 0.0f ? 0.0f : (a > 1.0f ? 1.0f : a);
         }
-        color.r = r < 0.0f ? 0.0f : (r > 1.0f ? 1.0f : r);
-        color.g = g < 0.0f ? 0.0f : (g > 1.0f ? 1.0f : g);
-        color.b = b < 0.0f ? 0.0f : (b > 1.0f ? 1.0f : b);
-        color.a = a < 0.0f ? 0.0f : (a > 1.0f ? 1.0f : a);
         break;
-    }
     case REACH:
         if (fScale >= 1.0f)
         {

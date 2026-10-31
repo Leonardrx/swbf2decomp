@@ -16,7 +16,7 @@ void DecalManager::PlatformRender(unsigned int uFlags) const
     for (PblList<DecalClass>::Itor itClass(m_decalClasses); itClass != m_decalClasses.End();
          ++itClass)
     {
-        if (!itClass->m_totalFrameVertices)
+        if (itClass->m_totalFrameVertices <= 0)
         {
             continue;
         }
@@ -35,7 +35,7 @@ void DecalManager::PlatformRender(unsigned int uFlags) const
         for (PblList<Decal>::Itor it(itClass->m_decals); it != itClass->m_decals.End(); ++it)
         {
             Decal* pDecal = it;
-            if (pDecal->visibility == RedCamera::VISIBILITY_NONE || !(pDecal->fadeVal > 0.0f))
+            if (pDecal->visibility == RedCamera::VISIBILITY_NONE || pDecal->fadeVal <= 0.0f)
             {
                 continue;
             }

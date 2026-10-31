@@ -161,6 +161,7 @@ float HUD::Event::GetDataFloat() const
     switch (mClass->GetType())
     {
     case EventClass::type_Int:
+        return (float)mData.intValue;
     case EventClass::type_Uint:
         return (float)mData.intValue;
     case EventClass::type_Float:

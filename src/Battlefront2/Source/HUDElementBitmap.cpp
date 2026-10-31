@@ -208,7 +208,9 @@ bool HUD::ElementBitmapBase::SetProperty(const unsigned int uHashID, const void*
 bool HUD::ElementBitmapBase::GetProperty(const unsigned int uHashID, void* const pValue)
 {
     RedBitmapElement* const pBitmap = (RedBitmapElement*)mElement;
-    if (uHashID == kTexCoordsHash)
+    switch (uHashID)
+    {
+    case kTexCoordsHash:
     {
         float afCoords[4];
         pBitmap->GetTexCoords(afCoords[0], afCoords[1], afCoords[2], afCoords[3]);
@@ -217,41 +219,36 @@ bool HUD::ElementBitmapBase::GetProperty(const unsigned int uHashID, void* const
         pCoords[1] = afCoords[1];
         pCoords[2] = afCoords[2];
         pCoords[3] = afCoords[3];
+        break;
     }
-    else if (uHashID == kRelativeWidthHeightHash)
-    {
+    case kRelativeWidthHeightHash:
         *(unsigned int*)pValue = mRelativeMode;
-    }
-    else if (uHashID == kBitmapHash)
-    {
+        break;
+    case kBitmapHash:
         *(const RedTexture**)pValue = pBitmap->GetTexture();
-    }
-    else if (uHashID == kBitmapHAlignHash)
-    {
+        break;
+    case kBitmapHAlignHash:
         *(unsigned int*)pValue = mHAlign;
-    }
-    else if (uHashID == kEventBitmapHash)
-    {
+        break;
+    case kEventBitmapHash:
         *(const char**)pValue = mEventBitmap.GetRegisteredClassName(false);
-    }
-    else if (uHashID == kBitmapVAlignHash)
-    {
+        break;
+    case kBitmapVAlignHash:
         *(unsigned int*)pValue = mVAlign;
-    }
-    else if (uHashID == kBitmapWidthHeightHash)
+        break;
+    case kBitmapWidthHeightHash:
     {
         float fLeft, fTop, fRight, fBottom;
         pBitmap->GetRect(fLeft, fTop, fRight, fBottom);
         float* pSize = (float*)pValue;
         pSize[0] = fRight - fLeft;
         pSize[1] = fBottom - fTop;
+        break;
     }
-    else if (uHashID == kBitmapStyleHash)
-    {
+    case kBitmapStyleHash:
         *(RedBitmapElement::BitmapStyleT*)pValue = pBitmap->GetStyle();
-    }
-    else
-    {
+        break;
+    default:
         return HUD::Element::GetProperty(uHashID, pValue);
     }
     return true;
@@ -278,13 +275,12 @@ HUD::ElementBitmapBase& HUD::ElementBitmapBase::operator=(const ElementBitmapBas
     const RedBitmapElement* pSource = (const RedBitmapElement*)rhs.mElement;
     RedBitmapElement* pDest = (RedBitmapElement*)mElement;
 
-    float fLeft, fTop, fRight, fBottom;
-    pSource->GetRect(fLeft, fTop, fRight, fBottom);
-    pDest->SetRect(fLeft, fTop, fRight, fBottom);
+    float fX0, fY0, fX1, fY1;
+    pSource->GetRect(fX0, fY0, fX1, fY1);
+    pDest->SetRect(fX0, fY0, fX1, fY1);
 
-    float fU0, fV0, fU1, fV1;
-    pSource->GetTexCoords(fU0, fV0, fU1, fV1);
-    pDest->SetTexCoords(fU0, fV0, fU1, fV1, false);
+    pSource->GetTexCoords(fX0, fY0, fX1, fY1);
+    pDest->SetTexCoords(fX0, fY0, fX1, fY1, false);
 
     pDest->SetStyle(pSource->GetStyle());
     pDest->SetTexture(pSource->GetTexture());
@@ -442,17 +438,16 @@ void HUD::ElementBitmapBase::WriteData(HUD::File& file, unsigned int uTabs)
 // FUNCTION: SWBF2 0x0054dbf0
 void HUD::ElementBitmapBase::EventBitmap(const HUD::Event& event, void* const pData)
 {
+    ElementBitmapBase* const pBase = (ElementBitmapBase*)pData;
     switch (event.GetClass()->GetType())
     {
-    case EventClass::type_Texture:
-        ((RedBitmapElement*)((ElementBitmapBase*)pData)->mElement)
-            ->SetTexture((const RedTexture*)event.GetData().texture);
-        EventChanged(event, pData);
-        break;
     case EventClass::type_Uint:
-        ((RedBitmapElement*)((ElementBitmapBase*)pData)->mElement)
-            ->SetTexture(event.GetData().uintValue);
-        EventChanged(event, pData);
+        ((RedBitmapElement*)pBase->mElement)->SetTexture(event.GetData().uintValue);
+        EventChanged(event, pBase);
+        break;
+    case EventClass::type_Texture:
+        ((RedBitmapElement*)pBase->mElement)->SetTexture((const RedTexture*)event.GetData().texture);
+        EventChanged(event, pBase);
         break;
     }
 }
@@ -547,19 +542,18 @@ bool HUD::ElementBitmapMasked::ReadData(PblConfig& config, PblConfig::Data& data
 {
     RedMaskedBitmapElement* pBitmap = (RedMaskedBitmapElement*)mElement;
     const unsigned int uId = data.GetId();
-    if (uId == kMaskTexCoordsHash)
+    switch (uId)
     {
+    case kMaskTexCoordsHash:
         pBitmap->SetMaskTexCoords(data.GetFloatArg(0), data.GetFloatArg(2), data.GetFloatArg(1),
                                   data.GetFloatArg(3));
-    }
-    else if (uId == kMaskHash)
-    {
+        break;
+    case kMaskHash:
         pBitmap->SetMaskTexture((unsigned int)PblHash(data.GetStringArg(0)));
         FreeName(&mMaskTextureName);
         CopyName(&mMaskTextureName, data.GetStringArg(0), 0);
-    }
-    else
-    {
+        break;
+    default:
         return HUD::ElementBitmapBase::ReadData(config, data);
     }
     return true;

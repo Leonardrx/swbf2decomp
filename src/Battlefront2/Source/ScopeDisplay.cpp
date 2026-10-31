@@ -118,14 +118,14 @@ void ScopeDisplay::Create()
 ScopeDisplay::ScopeDisplay()
 {
     mJoystickIndex = -1;
-    const unsigned int uHalfWidth = RedInterfaceScreen::GetScreenWidth() / 2;
-    const unsigned int uHalfHeight = RedInterfaceScreen::s_screenFull.m_uiHeightInPixels / 2;
+    const int iHalfWidth = RedInterfaceScreen::GetScreenWidth() / 2;
+    const int iHalfHeight = RedInterfaceScreen::s_screenFull.m_uiHeightInPixels / 2;
     sCanRender = true;
     mGroupWeaponScope.Enable(false);
     mGroupWeaponScope.SendToBack();
 
-    const float fX = (float)uHalfWidth;
-    const float fY = (float)uHalfHeight;
+    const float fX = (float)iHalfWidth;
+    const float fY = (float)iHalfHeight;
     mBitmapWeaponScope[0].SetRect(fX, fY, RedBitmapElement::BITMAP_HALIGN_RIGHT, RedBitmapElement::BITMAP_VALIGN_BOTTOM);
     mBitmapWeaponScope[0].SetTexCoords(0.0f, 0.0f, 1.0f, 1.0f, false);
     mGroupWeaponScope.AddElement(&mBitmapWeaponScope[0]);
@@ -160,7 +160,8 @@ void ScopeDisplay::Bind(unsigned int uJoystick)
 {
     mJoystickIndex = uJoystick;
     FLRenderer::AddInterfaceElement(CameraManager::sInstance->m_hView[uJoystick],
-                                    &mGroupWeaponScope, 0.5f, 0.5f, false);
+                                    &mGroupWeaponScope, RedInterfaceScreen::CENTER,
+                                    RedInterfaceScreen::CENTER, false);
     ActivateThread(0, PER_FRAME);
 }
 

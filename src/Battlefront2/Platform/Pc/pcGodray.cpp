@@ -20,9 +20,17 @@ void GodrayManager::PlatformInit()
         m_pShader->Release();
     }
 
+    unsigned int uiFormat;
+    if (RedRenderer::pcGetGeometryMode())
+    {
+        uiFormat = 0x9282;
+    }
+    else
+    {
+        uiFormat = 0x282;
+    }
     m_pShader = pcRedShader::Create(
-        PblHash("Particle"),
-        RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ? 0x9282 : 0x282,
+        0x8a8743bf /* "Particle" */, uiFormat,
         &m_uiTextureHash, 1, 0x10044, RedColor::WHITE, RedColor::BLACK, 32.0f);
 }
 

@@ -44,9 +44,9 @@ CollisionPrimitive::CollisionPrimitive()
 void CollisionPrimitive::SetSphere(float fRadius)
 {
     mType = SPHERE;
+    mHeight = fRadius * 2.0f;
     mRadius = fRadius;
     mMeshCollisionRadius = fRadius;
-    mHeight = fRadius * 2.0f;
 }
 
 // FUNCTION: SWBF2 0x004646d0
@@ -207,7 +207,7 @@ float CollisionPrimitive::RayHit(const PblMatrix& matrix, const PblVector3& vSta
 {
     if (fRadius > 0.0f)
     {
-        PblVector3 vS(vStart.x - vDir.x * fRadius, vStart.y - vDir.y * fRadius, vStart.z - vDir.z * fRadius);
+        PblVector3 vS = vStart - vDir * fRadius;
         switch (mType)
         {
         case SPHERE:
@@ -313,31 +313,24 @@ void CollisionPrimitive::LeaveClient()
 bool CollisionPrimitive::RayTest(const PblMatrix& matrix, const PblVector3& vStart,
                                  const PblVector3& vDir, float fLength)
 {
-    float fHit;
     switch (mType)
     {
     case SPHERE:
-        fHit = CollisionUtil::RayHitSphere(vStart, vDir, fLength, matrix.GetTranslation(), mRadius, 0);
-        break;
+        return CollisionUtil::RayHitSphere(vStart, vDir, fLength, matrix.GetTranslation(), mRadius, 0) < 1.0f;
     case BUBBLE:
     {
         PblVector3 vSize(mWidth, mHeight, mDepth);
-        fHit = CollisionUtil::RayHitBubble(vStart, vDir, fLength, matrix, vSize, 0);
-        break;
+        return CollisionUtil::RayHitBubble(vStart, vDir, fLength, matrix, vSize, 0) < 1.0f;
     }
     case BOX:
-        fHit = CollisionUtil::RayHitBox(vStart, vDir, fLength, matrix, mWidth, mDepth, mHeight, 0);
-        break;
+        return CollisionUtil::RayHitBox(vStart, vDir, fLength, matrix, mWidth, mDepth, mHeight, 0) < 1.0f;
     case AXIS_ALIGNED_CYLINDER:
-        fHit = CollisionUtil::RayHitAxisAlignedCylinder(vStart, vDir, fLength, matrix.GetTranslation(), mRadius, mHeight * 0.5f, 0);
-        break;
+        return CollisionUtil::RayHitAxisAlignedCylinder(vStart, vDir, fLength, matrix.GetTranslation(), mRadius, mHeight * 0.5f, 0) < 1.0f;
     case CYLINDER:
-        fHit = CollisionUtil::RayHitCylinder(vStart, vDir, fLength, matrix, mRadius, mHeight * 0.5f, 0);
-        break;
+        return CollisionUtil::RayHitCylinder(vStart, vDir, fLength, matrix, mRadius, mHeight * 0.5f, 0) < 1.0f;
     default:
         return false;
     }
-    return fHit < 1.0f;
 }
 
 // FUNCTION: SWBF2 0x0046c020
@@ -359,9 +352,7 @@ bool CollisionPrimitive::CollideSphere(const PblVector3&, const PblVector3&, con
     case AXIS_ALIGNED_CYLINDER:
     {
         PblMatrix aligned = gMatrixIdentity;
-        aligned.m[3][0] = matrix.m[3][0];
-        aligned.m[3][1] = matrix.m[3][1];
-        aligned.m[3][2] = matrix.m[3][2];
+        memcpy(aligned.m[3], matrix.m[3], 3 * sizeof(float));
         aligned.m[3][3] = 1.0f;
         return CollisionUtil::CollideCylinderSphere(aligned, mRadius, mHeight * 0.5f, vCenter, fRadius, vNormal, fDepth);
     }
@@ -388,9 +379,7 @@ bool CollisionPrimitive::CollideCylinder(const PblVector3& vVelocity, const PblV
     case AXIS_ALIGNED_CYLINDER:
     {
         PblMatrix aligned = gMatrixIdentity;
-        aligned.m[3][0] = matrix.m[3][0];
-        aligned.m[3][1] = matrix.m[3][1];
-        aligned.m[3][2] = matrix.m[3][2];
+        memcpy(aligned.m[3], matrix.m[3], 3 * sizeof(float));
         aligned.m[3][3] = 1.0f;
         return CollisionUtil::CollideCylinders(aligned, mRadius, mHeight * 0.5f, cylinderMatrix, fRadius, fHeight * 0.5f, vNormal,
                           fDepth);
@@ -425,7 +414,7 @@ bool CollisionPrimitive::CollideAACylinder(const PblVector3& vVelocity, const Pb
                                                  fRadius, fHeight * 0.5f, vNormal, fDepth);
     }
     case AXIS_ALIGNED_CYLINDER:
-        vNormal = PblVector3(vCenter.x - matrix.m[3][0], vCenter.y - matrix.m[3][1], vCenter.z - matrix.m[3][2]);
+        vNormal = vCenter - matrix.GetTranslation();
         return CollisionUtil::CollideAxisAlignedCylinders(vNormal, mRadius, fRadius, mHeight, fHeight, fDepth);
     case CYLINDER:
     {
@@ -454,9 +443,7 @@ bool CollisionPrimitive::CollideBox(const PblVector3& vVelocity, const PblVector
     case AXIS_ALIGNED_CYLINDER:
     {
         PblMatrix aligned = gMatrixIdentity;
-        aligned.m[3][0] = matrix.m[3][0];
-        aligned.m[3][1] = matrix.m[3][1];
-        aligned.m[3][2] = matrix.m[3][2];
+        memcpy(aligned.m[3], matrix.m[3], 3 * sizeof(float));
         aligned.m[3][3] = 1.0f;
         return CollisionUtil::CollideCylinderBox(vVelocity, aligned, mRadius, mHeight * 0.5f, otherVelocity,
                                                  boxMatrix, fWidth, fDepth, fHeight, vNormal, fPenetration);

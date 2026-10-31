@@ -66,9 +66,9 @@ TreeGrid::TreeGrid(const PblVector3& rMin, const PblVector3& rMax, float fMinSiz
     {
         mLayerData[i].mSize = mLayerData[i - 1].mSize * 0.5f;
         mLayerData[i].mSizePerMeter = 1.0f / mLayerData[i].mSize;
-        mLayerData[i].mGridSize = mLayerData[i - 1].mGridSize * 2;
-        mLayerData[i].mStartIndex = mLayerData[i - 1].mStartIndex
-                                  + mLayerData[i - 1].mGridSize * mLayerData[i - 1].mGridSize;
+        const int iPrevGridSize = mLayerData[i - 1].mGridSize;
+        mLayerData[i].mGridSize = iPrevGridSize * 2;
+        mLayerData[i].mStartIndex = mLayerData[i - 1].mStartIndex + iPrevGridSize * iPrevGridSize;
     }
 }
 
@@ -100,9 +100,8 @@ void TreeGrid::Add(TreeGridObject* pObj, const PblVector3& rPos, float fSize, fl
             ++iLevel;
         }
 
-        const TreeGridLayerData& rLayer = mLayerData[iLevel];
-        iCell = rLayer.mStartIndex + (int)(rLayer.mGridSize * fX)
-              + rLayer.mGridSize * (int)(rLayer.mGridSize * fZ);
+        iCell = mLayerData[iLevel].mStartIndex + (int)(mLayerData[iLevel].mGridSize * fX)
+              + mLayerData[iLevel].mGridSize * (int)(mLayerData[iLevel].mGridSize * fZ);
     }
 
     if (!mGrid[iCell])
@@ -159,9 +158,9 @@ bool TreeGrid::ProcessCellRect(int iCell, TreeGridCallback pCallback, TreeGridCa
     RedStack stack;
     TreeGridObject** ppHits = (TreeGridObject**)stack.Alloc(16 * sizeof(TreeGridObject*));
 
+    int iNumHits = 0;
     for (TreeGridStack* pStack = mGrid[iCell]; pStack; pStack = pStack->mNext)
     {
-        int iNumHits = 0;
         for (int i = 0; i < pStack->mStackSize; ++i)
         {
             if ((pStack->mData[0][i] & pData->mData[0])
@@ -178,6 +177,7 @@ bool TreeGrid::ProcessCellRect(int iCell, TreeGridCallback pCallback, TreeGridCa
                 return false;
             }
         }
+        iNumHits = 0;
     }
     return true;
 }
@@ -211,9 +211,9 @@ bool TreeGrid::ProcessCellSphere(int iCell, TreeGridCallback pCallback, TreeGrid
     RedStack stack;
     TreeGridObject** ppHits = (TreeGridObject**)stack.Alloc(16 * sizeof(TreeGridObject*));
 
+    int iNumHits = 0;
     for (TreeGridStack* pStack = mGrid[iCell]; pStack; pStack = pStack->mNext)
     {
-        int iNumHits = 0;
         for (int i = 0; i < pStack->mStackSize; ++i)
         {
             if ((pStack->mData[0][i] & pData->mData[0])
@@ -230,6 +230,7 @@ bool TreeGrid::ProcessCellSphere(int iCell, TreeGridCallback pCallback, TreeGrid
                 return false;
             }
         }
+        iNumHits = 0;
     }
     return true;
 }

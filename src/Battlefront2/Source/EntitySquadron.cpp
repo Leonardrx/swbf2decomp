@@ -33,7 +33,7 @@ bool EntitySquadronClass::SetProperty(unsigned int uProperty, const char* pszVal
         return true;
     default:
         return ODFPropertySet::SetProperty(sPropertySet, sizeof(sPropertySet) / sizeof(sPropertySet[0]),
-                                           this, uProperty, pszValue);
+                                           this, uProperty, pszValue) ? true : false;
     }
 }
 
@@ -43,8 +43,10 @@ EntitySquadron::EntitySquadron()
     , mFormationSlot(0)
     , mLeader(0)
     , mTime(0.0f)
-    , mOffset(0.0f, 0.0f, 0.0f)
 {
+    mOffset.z = 0.0f;
+    mOffset.y = 0.0f;
+    mOffset.x = 0.0f;
 }
 
 // FUNCTION: SWBF2 0x004fbea0
@@ -61,14 +63,13 @@ EntitySquadron::~EntitySquadron()
 bool EntitySquadron::CreateSquadron(unsigned int uFormation)
 {
     const EntityFormation* pFormation = GetEntitySquadronClass()->SelectFormation(uFormation);
-    if (!pFormation)
+    if (pFormation)
     {
-        return false;
+        mFormation = const_cast<EntityFormation*>(pFormation);
+        mLeader = this;
+        return AddToSquadron(this, mFormation->RootIsSlot() ? mFormation->GetRootIndex() : -1);
     }
-
-    mFormation = const_cast<EntityFormation*>(pFormation);
-    mLeader = this;
-    return AddToSquadron(this, mFormation->RootIsSlot() ? mFormation->GetRootIndex() : -1);
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004fbf80
@@ -133,8 +134,8 @@ void EntitySquadron::UpdatePosition(const EntitySquadronClass* const pClass, flo
         if (fSlideTime > mTime)
         {
             float fT = mTime / fSlideTime;
-            mTime += fElapsed;
             mOffset = Interpolate(mOffset, vSlot, fT);
+            mTime += fElapsed;
         }
         else
         {
@@ -358,12 +359,13 @@ bool EntitySquadronClass::FormationSupported(unsigned int uFormation) const
 const EntityFormation* EntitySquadronClass::SelectFormation(unsigned int uNumSlots) const
 {
     RedStack stack;
-    const EntityFormation** ppFormations = (const EntityFormation**)stack.Alloc(mNumFormations);
+    const unsigned int uNumFormations = mNumFormations;
+    const EntityFormation** ppFormations = (const EntityFormation**)stack.Alloc(uNumFormations);
     int iNumFound = 0;
-    for (unsigned int i = 0; i < mNumFormations; ++i)
+    for (unsigned int i = 0; i < uNumFormations; ++i)
     {
         const EntityFormation* pFormation = EntityFormation::Find(mFormations[i]);
-        if (pFormation && (unsigned int)pFormation->GetNumSlots() == uNumSlots)
+        if (pFormation && uNumSlots == (unsigned int)pFormation->GetNumSlots())
         {
             ppFormations[iNumFound++] = pFormation;
         }
@@ -373,7 +375,7 @@ const EntityFormation* EntitySquadronClass::SelectFormation(unsigned int uNumSlo
         return 0;
     }
 
-    float fIndex = PblRandom::GetGlobalFloat() * (float)iNumFound;
+    float fIndex = PblRandom::_Global.GetFloat() * (float)iNumFound;
     float fMax = (float)iNumFound - 1.0f;
     if (0.0f > fIndex)
     {

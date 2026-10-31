@@ -64,13 +64,13 @@ bool TriggerRegionManager::Create()
 // FUNCTION: SWBF2 0x0065cf60
 bool TriggerRegionManager::Destroy()
 {
-    if (!sInstance)
+    if (sInstance)
     {
-        return false;
+        delete sInstance;
+        sInstance = 0;
+        return true;
     }
-    delete sInstance;
-    sInstance = 0;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0065cf80
@@ -111,7 +111,7 @@ void TriggerRegionManager::TriggerDeath(GameObject* pObject)
     {
         return;
     }
-    GetDamageable(pObject)->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), false);
+    pObject->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), false);
 }
 
 // FUNCTION: SWBF2 0x0065d050
@@ -152,15 +152,18 @@ bool TriggerRegionManager::Update(float)
             switch (data.mType)
             {
             case TRIGGER_DEATH:
+                TriggerDeath(apObjects[j]);
+                break;
             case TRIGGER_SINK:
                 TriggerDeath(apObjects[j]);
                 break;
             case TRIGGER_LANDING:
                 if (((Entity*)apObjects[j])->IsRtti(EntityFlyer::rttiHashEntityFlyer))
                 {
-                    CollisionObject* pCollision = GetCollisionObject(apObjects[j]);
-                    ((EntityFlyer*)apObjects[j])->SetInLandingRegion(data.mRegion->GetIntersectionFactor(
-                        pCollision->GetCollisionCenter(), pCollision->GetCollisionRadius()));
+                    GameObject* pObject = apObjects[j];
+                    CollisionObject& rCollision = static_cast<CollisionObject&>(*pObject);
+                    ((EntityFlyer*)pObject)->SetInLandingRegion(data.mRegion->GetIntersectionFactor(
+                        rCollision.GetCollisionCenter(), rCollision.GetCollisionRadius()));
                 }
                 break;
             }
@@ -210,7 +213,9 @@ void TriggerRegionManager::AddRegion(const char* pcName, TriggerType eType)
     }
     if (pRegion->mType == PblRegion::type_plane && eType == TRIGGER_SINK)
     {
-        mSinkHeight = pRegion->mMatrix.m[3][1];
+        PblVector3 vPosition;
+        vPosition = pRegion->mMatrix.GetTranslation();
+        mSinkHeight = vPosition.y;
         return;
     }
     for (int i = 0; i < 32; ++i)
@@ -243,7 +248,7 @@ void TriggerRegionManager::RemoveRegion(const char* pcName)
 // FUNCTION: SWBF2 0x0065d3c0
 TriggerRegionManager::TriggerRegionData* TriggerRegionManager::GetTriggerRegionData(int iIndex)
 {
-    if ((unsigned int)iIndex < 32 && mTriggerRegions[iIndex].mRegion)
+    if ((unsigned int)iIndex <= 31 && mTriggerRegions[iIndex].mRegion)
     {
         return &mTriggerRegions[iIndex];
     }

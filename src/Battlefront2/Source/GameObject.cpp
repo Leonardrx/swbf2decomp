@@ -38,13 +38,13 @@ GameObjectClass::GameObjectClass(unsigned int uHash)
 {
     mAINoRepair = false;
     mHeroFlag = false;
-    mIsNeutralWhenEmpty = true;
     mAvailableForAnyTeam = false;
     mIsNotTargetableByPlayer = false;
     mbHideHealthBar = false;
 
     mHealthType = HEALTH_TYPE_PERSON;
     mHealthTypeForLockOn = NUM_HEALTH_TYPES;
+    mIsNeutralWhenEmpty = true;
     mMaxHealth = FLT_MAX;
     mAddHealth = 0.0f;
     mMaxShield = 0.0f;
@@ -52,11 +52,9 @@ GameObjectClass::GameObjectClass(unsigned int uHash)
     mPilotSkillRepairScale = 0.005f;
     mScanningRange = 0.0f;
     mTransmitRange = 0.0f;
-    mLockOnMinDist = 20.0f;
-    mLockOnMaxDist = 100.0f;
-    mLockOnMaxTrackDist = 200000.0f;
     mAIType = 1;
     mSwitchClassRadius = -1.0f;
+    mHoldForPlayer = false;
 
     memset(mDamageEffectClass, 0, sizeof(mDamageEffectClass));
 
@@ -64,10 +62,12 @@ GameObjectClass::GameObjectClass(unsigned int uHash)
     mVOUnitType = 0;
     mVORadius = 50.0f;
     mAICollisionRadius = 0.0f;
+    mLockOnMinDist = 20.0f;
+    mLockOnMaxDist = 100.0f;
+    mLockOnMaxTrackDist = 200000.0f;
     mPointsToUnlock = 0;
-    mDisabledEffect = 0xBB7E863Du;
+    mDisabledEffect = 0xBB7E863Du /* "com_sfx_hackedvehicle" */;
     mRadiusDamageSizeScale = 1.0f;
-    mHoldForPlayer = false;
 }
 
 // FUNCTION: SWBF2 0x005365a0
@@ -253,8 +253,8 @@ void GameObject::SetProperty(unsigned int uProperty, const char* pszValue)
 // FUNCTION: SWBF2 0x00535830
 void GameObject::SetTeam(int iTeam)
 {
-    bool bInList = GetCollisionObject() && GetCollisionObject()->IsInCollisionList();
-    bool bChanged = mTeam != iTeam && bInList;
+    bool bChanged = GetCollisionObject() && GetCollisionObject()->IsInCollisionList();
+    bChanged &= mTeam != iTeam;
     if (bChanged)
     {
         TeamManager::RemoveObject(this);
@@ -371,8 +371,9 @@ void GameObject::PlayDeathSound()
         mGameObjectAttachedSound.Stop(true);
     }
     const PblMatrix& matrix = GetMatrix();
+    const PblVector3& vVelocity = GetVelocity();
     mGameObjectAttachedSound.Play(&GetGameObjectClass()->mSoundDeath, &matrix.GetTranslation(),
-                                  &GetVelocity(), true);
+                                  &vVelocity, true);
 }
 
 // FUNCTION: SWBF2 0x00535be0
@@ -383,9 +384,17 @@ void GameObject::PlayHurtSound(bool bByCharacter)
         mGameObjectAttachedSound.Stop(true);
     }
     const PblMatrix& matrix = GetMatrix();
-    mGameObjectAttachedSound.Play(bByCharacter ? &GetGameObjectClass()->mSoundHurt
-                                               : &GetGameObjectClass()->mSoundHurtFall,
-                                  &matrix.GetTranslation(), &GetVelocity(), true);
+    const PblVector3& vVelocity = GetVelocity();
+    if (!bByCharacter)
+    {
+        mGameObjectAttachedSound.Play(&GetGameObjectClass()->mSoundHurtFall, &matrix.GetTranslation(),
+                                      &vVelocity, true);
+    }
+    else
+    {
+        mGameObjectAttachedSound.Play(&GetGameObjectClass()->mSoundHurt, &matrix.GetTranslation(),
+                                      &vVelocity, true);
+    }
 }
 
 // FUNCTION: SWBF2 0x00535c50
@@ -419,19 +428,20 @@ void GameObject::PlayDamageRegionSound(unsigned int uRegionId)
 // FUNCTION: SWBF2 0x00535cc0
 FlagItem* GameObject::GetCarriedFlagItem() const
 {
-    if (GetControllable() &&
-        (GetControllable()->IsPilotable() || GetControllable()->GetPilotType() == PILOT_SELF) &&
-        GetControllable()->GetCharacter() && GetControllable()->GetCharacter()->mCarriedFlagPtr)
+    if (GetControllable())
     {
-        return GetControllable()->GetCharacter()->mCarriedFlagPtr;
+        if ((GetControllable()->IsPilotable() || GetControllable()->GetPilotType() == PILOT_SELF) &&
+            GetControllable()->mCharacter && GetControllable()->mCharacter->mCarriedFlagPtr)
+        {
+            return GetControllable()->mCharacter->mCarriedFlagPtr;
+        }
     }
     for (PblList<Controllable>::Itor it(GetControllableList()); (Controllable*)it; ++it)
     {
-        Controllable* pControllable = it;
-        if ((pControllable->IsPilotable() || pControllable->GetPilotType() == PILOT_SELF) &&
-            pControllable->GetCharacter() && pControllable->GetCharacter()->mCarriedFlagPtr)
+        if ((it->IsPilotable() || it->GetPilotType() == PILOT_SELF) && it->mCharacter &&
+            it->mCharacter->mCarriedFlagPtr)
         {
-            return pControllable->GetCharacter()->mCarriedFlagPtr;
+            return it->mCharacter->mCarriedFlagPtr;
         }
     }
     return 0;
@@ -535,7 +545,14 @@ void GameObject::AwardVehicleKillPoints(int iVehicleType, bool bEmpty)
     }
     else if (iKillerType >= 1 && iKillerType <= 3)
     {
-        PlayerStats::PointsProcessTeam(iTeam, iKillerType > iVehicleType ? 9 : 6);
+        if (iKillerType > iVehicleType)
+        {
+            PlayerStats::PointsProcessTeam(iTeam, 9);
+        }
+        else
+        {
+            PlayerStats::PointsProcessTeam(iTeam, 6);
+        }
     }
     else
     {
@@ -767,10 +784,8 @@ extern bool netHeroesEnabled;
 // FUNCTION: SWBF2 0x005350d0
 GameObject::GameObject(GameObjectClass* pClass, const EntityDesc& desc, CollisionObjectType eType,
                        const RedLodData* pLodData)
-    : EntityGeometry(pClass, desc, eType, pLodData)
+    : EntityGeometry(pClass, desc, eType, pLodData), mNetUniqueId(-1), mPrevFoliageObj(0)
 {
-    mNetUniqueId = -1;
-    mPrevFoliageObj = 0;
     mCreatedTime = GameLoop::GetMissionTime();
     mTeam = 0;
     mPerceivedTeam = 0;

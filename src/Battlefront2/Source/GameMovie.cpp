@@ -221,7 +221,11 @@ void GameMovie::Stop()
 // FUNCTION: SWBF2 0x00534730
 bool GameMovie::IsOpen()
 {
-    return GameMovie::sUseMovies && GameMovie::sRedMovie && GameMovie::sRedMovie->IsOpen();
+    if (GameMovie::sUseMovies && GameMovie::sRedMovie)
+    {
+        return GameMovie::sRedMovie->IsOpen();
+    }
+    return false;
 }
 
 extern int g_InGameMoviePlayerFrame;
@@ -342,11 +346,10 @@ void GameMovie::Play(const char* const pcProperties, const char* const pcPropert
     {
         const RedMovie::Properties* pProperties =
             RedMovie::Properties::FindByHashID(PblHash(pcProperties));
-        const RedMovie::Properties* pPropertiesAtEnd = 0;
-        if (pcPropertiesAtEnd && strlen(pcPropertiesAtEnd))
-        {
-            pPropertiesAtEnd = RedMovie::Properties::FindByHashID(PblHash(pcPropertiesAtEnd));
-        }
+        const RedMovie::Properties* pPropertiesAtEnd =
+            (pcPropertiesAtEnd && strlen(pcPropertiesAtEnd))
+                ? RedMovie::Properties::FindByHashID(PblHash(pcPropertiesAtEnd))
+                : 0;
 
         if (pProperties)
         {
@@ -388,15 +391,11 @@ bool GameMovie::PropertiesPlaying(const char* const pcProperties, bool bCurrent)
 
     if (bCurrent)
     {
-        const RedMovie::Properties* const pCurrent = sRedMovie->GetProperties();
-        if (!pCurrent)
-        {
-            return false;
-        }
-        return pCurrent->GetHashID() == PblHash(pcProperties);
+        const RedMovie::Properties* pCurrent = sRedMovie->GetProperties();
+        return pCurrent ? pCurrent->GetHashID() == PblHash(pcProperties) : false;
     }
 
-    const RedMovie::Properties* const pProperties =
+    const RedMovie::Properties* pProperties =
         RedMovie::Properties::FindByHashID(PblHash(pcProperties));
     if (pProperties)
     {
@@ -428,9 +427,12 @@ void StopInGameMoviePlay()
 {
     if (g_InGameMoviePlayerState)
     {
-        LARGE_INTEGER liNow;
-        QueryPerformanceCounter(&liNow);
-        const float fElapsed = (float)(liNow.QuadPart - g_InGameMovieStartTime);
+        float fElapsed;
+        {
+            LARGE_INTEGER liNow;
+            QueryPerformanceCounter(&liNow);
+            fElapsed = (float)(liNow.QuadPart - g_InGameMovieStartTime);
+        }
         if (fElapsed / (float)PblTime::ticksPerSecond > g_MovieStopDelayTime)
         {
             g_InGameMoviePlayerState = 0;

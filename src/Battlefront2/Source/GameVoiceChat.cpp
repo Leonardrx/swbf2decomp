@@ -197,11 +197,11 @@ GameVoiceChat::Node* GameVoiceChat::GetEnabledNode(unsigned int uiEnabledIndex, 
     for (unsigned int i = 0; i < uiNumNodes; ++i)
     {
         GameVoiceChat::Node* pNode = (GameVoiceChat::Node*)GameVoiceChat::gNodes[i];
-        if (pNode->mNodeID == 0xFF)
+        if (pNode->GetID() == 0xFF)
         {
             continue;
         }
-        if (uiIndex == uiEnabledIndex)
+        if (uiEnabledIndex == uiIndex)
         {
             return pNode;
         }

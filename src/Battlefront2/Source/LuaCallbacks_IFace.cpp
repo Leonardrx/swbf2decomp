@@ -205,11 +205,10 @@ static void fnErrorBoxOk(bool)
 // FUNCTION: SWBF2 0x00617030
 bool ToggleInvincibilityCheat()
 {
-    if (netInShell ? netEnabled : netEnabledNext)
+    if (!(netInShell ? netEnabled : netEnabledNext))
     {
-        return GameLoop::gInvincible;
+        GameLoop::gInvincible = !GameLoop::gInvincible;
     }
-    GameLoop::gInvincible = !GameLoop::gInvincible;
     return GameLoop::gInvincible;
 }
 
@@ -257,22 +256,20 @@ extern bool gLowResModelsEnabled;
 // FUNCTION: SWBF2 0x00617070
 bool ToggleUnlimitedAmmoCheat()
 {
-    if (netInShell ? netEnabled : netEnabledNext)
+    if (!(netInShell ? netEnabled : netEnabledNext))
     {
-        return GameLoop::gUnlimitedAmmo;
+        GameLoop::gUnlimitedAmmo = !GameLoop::gUnlimitedAmmo;
     }
-    GameLoop::gUnlimitedAmmo = !GameLoop::gUnlimitedAmmo;
     return GameLoop::gUnlimitedAmmo;
 }
 
 // FUNCTION: SWBF2 0x006170b0
 bool ToggleLowResModelsCheat()
 {
-    if (netInShell ? netEnabled : netEnabledNext)
+    if (!(netInShell ? netEnabled : netEnabledNext))
     {
-        return gLowResModelsEnabled;
+        gLowResModelsEnabled = !gLowResModelsEnabled;
     }
-    gLowResModelsEnabled = !gLowResModelsEnabled;
     return gLowResModelsEnabled;
 }
 
@@ -349,19 +346,19 @@ RedMaskedBitmapElement::RedMaskedBitmapElement(const char* pcName)
     SetMaskTexCoords(0.0f, 1.0f, 0.0f, 1.0f);
 }
 
-void Red3DModelElement::SetAnimationBanks(const unsigned int* puBanks)
+inline void Red3DModelElement::SetAnimationBanks(const unsigned int* puBanks)
 {
     EnsureAnimatorExists();
     mAnimator->SetAnimationBanks(puBanks);
 }
 
-void Red3DModelElement::SetAnimationTime(float fTime)
+inline void Red3DModelElement::SetAnimationTime(float fTime)
 {
     EnsureAnimatorExists();
     mAnimator->SetAnimationTime(fTime);
 }
 
-void RedInterfaceScreen::GetDirectionalLight(int iIndex, PblVector3& vDirection, RedColorValue& color)
+inline void RedInterfaceScreen::GetDirectionalLight(int iIndex, PblVector3& vDirection, RedColorValue& color)
 {
     vDirection = s_directionalLight[iIndex].m_vDirection;
     color = s_directionalLight[iIndex].m_color;
@@ -692,15 +689,16 @@ bool Util_GetRedInterfaceElement(int iNumArgs, RedInterfaceElement*& pElement,
             return false;
         }
         pElement = (RedInterfaceElement*)lua_topointer(LuaHelper::mState, 1);
-        return pElement != 0;
     }
-
-    iArgStart = 1;
-    if (iTop < iNumArgs || (bExactArgs && iTop > iNumArgs + 1))
+    else
     {
-        return false;
+        iArgStart = 1;
+        if (iTop < iNumArgs || (bExactArgs && iTop > iNumArgs + 1))
+        {
+            return false;
+        }
+        pElement = pCurCreateObject;
     }
-    pElement = pCurCreateObject;
     return pElement != 0;
 }
 
@@ -722,15 +720,16 @@ bool Util_GetRedScreenGroupElement(int iNumArgs, RedScreenGroupElement*& pElemen
             return false;
         }
         pElement = pGroup;
-        return pElement != 0;
     }
-
-    iArgStart = 1;
-    if (iTop < iNumArgs || (bExactArgs && iTop > iNumArgs + 1))
+    else
     {
-        return false;
+        iArgStart = 1;
+        if (iTop < iNumArgs || (bExactArgs && iTop > iNumArgs + 1))
+        {
+            return false;
+        }
+        pElement = pCurCreateScreenGroup;
     }
-    pElement = pCurCreateScreenGroup;
     return pElement != 0;
 }
 
@@ -754,10 +753,13 @@ int ScriptCB_IFObj_SetPos(lua_State* L)
     }
     if (iNumArgs != 2 && lua_isnumber(LuaHelper::mState, iArg + 2))
     {
-        pElement->SetPosition(fX, fY, (float)luaL_checknumber(LuaHelper::mState, iArg + 2));
-        return 0;
+        float fZ = (float)luaL_checknumber(LuaHelper::mState, iArg + 2);
+        pElement->SetPosition(fX, fY, fZ);
     }
-    pElement->SetPosition(fX, fY);
+    else
+    {
+        pElement->SetPosition(fX, fY);
+    }
     return 0;
 }
 
@@ -782,7 +784,8 @@ int ScriptCB_IFObj_SetBasicRotation(lua_State* L)
     int iArg;
     if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && lua_isnumber(LuaHelper::mState, iArg))
     {
-        pElement->Rotate((float)luaL_checknumber(LuaHelper::mState, iArg));
+        float fAngle = (float)luaL_checknumber(LuaHelper::mState, iArg);
+        pElement->Rotate(fAngle);
     }
     return 0;
 }
@@ -792,14 +795,26 @@ int ScriptCB_IFObj_SetRelativeRotation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(3, pElement, iArg, true) && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1) && lua_isnumber(LuaHelper::mState, iArg + 2))
+    if (!Util_GetRedInterfaceElement(3, pElement, iArg, true))
     {
-        float fX = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        float fY = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
-        float fZ = (float)luaL_checknumber(LuaHelper::mState, iArg + 2);
-        pElement->Rotate(fX, fY, fZ);
+        return 0;
     }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    float fX = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    float fY = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
+    float fZ = (float)luaL_checknumber(LuaHelper::mState, iArg + 2);
+    pElement->Rotate(fX, fY, fZ);
     return 0;
 }
 
@@ -877,15 +892,17 @@ int ScriptCB_IFObj_SetColor(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(3, pElement, iArg, true) && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1) && lua_isnumber(LuaHelper::mState, iArg + 2))
+    if (!Util_GetRedInterfaceElement(3, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1)
+        && lua_isnumber(LuaHelper::mState, iArg + 2))
     {
         float fR = (float)luaL_checknumber(LuaHelper::mState, iArg);
         float fG = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
         float fB = (float)luaL_checknumber(LuaHelper::mState, iArg + 2);
-        pElement->m_color.r = (unsigned char)(int)fR;
-        pElement->m_color.g = (unsigned char)(int)fG;
-        pElement->m_color.b = (unsigned char)(int)fB;
+        pElement->SetColorOnly(RedColor((unsigned char)fR, (unsigned char)fG, (unsigned char)fB, 0));
     }
     return 0;
 }
@@ -911,14 +928,19 @@ int ScriptCB_IFObj_SetZOrder(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        int iZOrder = (int)(float)luaL_checknumber(LuaHelper::mState, iArg);
-        pElement->SetZOrder((unsigned char)iZOrder);
-        if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
-        {
-            pCurCreateScreenGroup->SetZOrder((unsigned char)iZOrder);
-        }
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    int iZOrder = (int)(float)luaL_checknumber(LuaHelper::mState, iArg);
+    pElement->SetZOrder((unsigned char)iZOrder);
+    if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
+    {
+        pCurCreateScreenGroup->SetZOrder((unsigned char)iZOrder);
     }
     return 0;
 }
@@ -932,7 +954,7 @@ int ScriptCB_IFObj_GetZOrder(lua_State* L)
     {
         return 0;
     }
-    lua_pushnumber(LuaHelper::mState, (lua_Number)pElement->m_zorder);
+    lua_pushnumber(LuaHelper::mState, (lua_Number)(int)pElement->m_zorder);
     return 1;
 }
 
@@ -941,13 +963,14 @@ int ScriptCB_IFObj_BringToFront(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(0, pElement, iArg, true) && pElement)
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement)
     {
-        pElement->BringToFront();
-        if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
-        {
-            pCurCreateScreenGroup->BringToFront();
-        }
+        return 0;
+    }
+    pElement->BringToFront();
+    if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
+    {
+        pCurCreateScreenGroup->BringToFront();
     }
     return 0;
 }
@@ -957,13 +980,14 @@ int ScriptCB_IFObj_SendToBack(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(0, pElement, iArg, true) && pElement)
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement)
     {
-        pElement->SendToBack();
-        if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
-        {
-            pCurCreateScreenGroup->SendToBack();
-        }
+        return 0;
+    }
+    pElement->SendToBack();
+    if (pElement == pCurCreateObject && pCurCreateScreenGroup && pCurCreateScreenGroup != pCurCreateObject)
+    {
+        pCurCreateScreenGroup->SendToBack();
     }
     return 0;
 }
@@ -973,11 +997,13 @@ int ScriptCB_IFObj_Enable(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(0, pElement, iArg, true) && pElement
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement
+        || !lua_isnumber(LuaHelper::mState, iArg))
     {
-        pElement->Enable((int)(float)luaL_checknumber(LuaHelper::mState, iArg) != 0);
+        return 0;
     }
+    float fEnable = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    pElement->Enable((int)fEnable != 0);
     return 0;
 }
 
@@ -1014,7 +1040,8 @@ int ScriptCB_IFObj_SetVis(lua_State* L)
     int iArg;
     if (Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        pElement->Enable(lua_toboolean(LuaHelper::mState, iArg) != 0);
+        bool bEnable = lua_toboolean(LuaHelper::mState, iArg) != 0;
+        pElement->Enable(bEnable);
     }
     return 0;
 }
@@ -1026,7 +1053,8 @@ int ScriptCB_IFObj_SetEnabled(lua_State* L)
     int iArg;
     if (Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        pElement->Visible(lua_toboolean(LuaHelper::mState, iArg) != 0);
+        bool bVisible = lua_toboolean(LuaHelper::mState, iArg) != 0;
+        pElement->Visible(bVisible);
     }
     return 0;
 }
@@ -1049,13 +1077,22 @@ int ScriptCB_IFObj_SetWidthHeight(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(2, pElement, iArg, true) && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1))
+    if (!Util_GetRedInterfaceElement(2, pElement, iArg, true))
     {
-        float fWidth = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        float fHeight = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
-        pElement->Scale(fWidth, fHeight);
+        return 0;
     }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    int iHeightArg = iArg + 1;
+    if (!lua_isnumber(LuaHelper::mState, iHeightArg))
+    {
+        return 0;
+    }
+    float fWidth = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    float fHeight = (float)luaL_checknumber(LuaHelper::mState, iHeightArg);
+    pElement->Scale(fWidth, fHeight);
     return 0;
 }
 
@@ -1123,7 +1160,9 @@ int ScriptCB_IFObj_TestHotSpot(lua_State* L)
     if (pElement)
     {
         GUIInputs* pInputs = FLInputManager::s_instance.GetPlayerGuiInputs(0);
-        bHit = pElement->TestHotSpot((float)pInputs->mMouseCoords.mPosX, (float)pInputs->mMouseCoords.mPosY);
+        bHit = pElement->m_pHotSpot
+               && pElement->m_pHotSpot->IsPointInside((float)pInputs->mMouseCoords.mPosX,
+                                                      (float)pInputs->mMouseCoords.mPosY);
     }
     lua_pushboolean(LuaHelper::mState, bHit);
     return 1;
@@ -1152,7 +1191,8 @@ int ScriptCB_IFObj_CreateHotSpot(lua_State* L)
     }
     else if (iTop == 2)
     {
-        pElement->CreateHotSpot((float)luaL_checknumber(LuaHelper::mState, 2));
+        float fRadius = (float)luaL_checknumber(LuaHelper::mState, 2);
+        pElement->CreateHotSpot(fRadius);
     }
     else if (iTop == 3)
     {
@@ -1264,8 +1304,11 @@ int ScriptCB_IFText_SetUString(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText()) && lua_isstring(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if ((pElement->IsText() || pElement->IsFlashyText()) && lua_isstring(LuaHelper::mState, iArg))
     {
         const unsigned short* pusText = (const unsigned short*)luaL_checklstring(LuaHelper::mState, iArg, 0);
         ((RedTextElement*)pElement)->SetText(pusText, true);
@@ -1291,8 +1334,11 @@ int ScriptCB_IFText_SetFont(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText()) && lua_isstring(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if ((pElement->IsText() || pElement->IsFlashyText()) && lua_isstring(LuaHelper::mState, iArg))
     {
         ((RedTextElement*)pElement)->SetFont(luaL_checklstring(LuaHelper::mState, iArg, 0));
     }
@@ -1373,14 +1419,25 @@ int ScriptCB_IFText_SetTextScale(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(2, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText()) && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1))
+    if (!Util_GetRedInterfaceElement(2, pElement, iArg, true))
     {
-        float fScaleX = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        float fScaleY = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
-        ((RedTextElement*)pElement)->SetTextScale(fScaleX, fScaleY);
+        return 0;
     }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    float fScaleX = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    float fScaleY = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
+    ((RedTextElement*)pElement)->SetTextScale(fScaleX, fScaleY);
     return 0;
 }
 
@@ -1462,14 +1519,25 @@ int ScriptCB_IFText_SetTextBox(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(2, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText()) && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1))
+    if (!Util_GetRedInterfaceElement(2, pElement, iArg, true))
     {
-        int iWidth = (int)(float)luaL_checknumber(LuaHelper::mState, iArg);
-        int iHeight = (int)(float)luaL_checknumber(LuaHelper::mState, iArg + 1);
-        ((RedTextElement*)pElement)->SetTextBox(iWidth, iHeight);
+        return 0;
     }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    int iWidth = (int)(float)luaL_checknumber(LuaHelper::mState, iArg);
+    int iHeight = (int)(float)luaL_checknumber(LuaHelper::mState, iArg + 1);
+    ((RedTextElement*)pElement)->SetTextBox(iWidth, iHeight);
     return 0;
 }
 
@@ -1529,16 +1597,30 @@ int ScriptCB_IFFlashyText_Setup(lua_State* L)
         pFlashy->mTimeDelay = (float)luaL_checknumber(LuaHelper::mState, iArg);
     }
     ++iArg;
-    pFlashy->mFlipped = lua_toboolean(LuaHelper::mState, iArg) != 0;
+    if (!lua_toboolean(LuaHelper::mState, iArg))
+    {
+        pFlashy->mFlipped = 0;
+    }
+    else
+    {
+        pFlashy->mFlipped = 1;
+    }
     ++iArg;
     if (lua_isnumber(LuaHelper::mState, iArg))
     {
-        pFlashy->mWidth = (unsigned short)(int)luaL_checknumber(LuaHelper::mState, iArg);
+        pFlashy->mWidth = (unsigned short)luaL_checknumber(LuaHelper::mState, iArg);
     }
     ++iArg;
     if (iArg < lua_gettop(LuaHelper::mState))
     {
-        pFlashy->mXFlipped = lua_toboolean(LuaHelper::mState, iArg) != 0;
+        if (!lua_toboolean(LuaHelper::mState, iArg))
+        {
+            pFlashy->mXFlipped = 0;
+        }
+        else
+        {
+            pFlashy->mXFlipped = 1;
+        }
         ++iArg;
         if (iArg < lua_gettop(LuaHelper::mState) && lua_isnumber(LuaHelper::mState, iArg))
         {
@@ -1597,7 +1679,11 @@ int ScriptCB_IFFlashyText_SetBackground(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(3, pElement, iArg, true) || !pElement->IsFlashyText())
+    if (!Util_GetRedInterfaceElement(3, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsFlashyText())
     {
         return 0;
     }
@@ -1628,7 +1714,11 @@ int ScriptCB_IFFlashyText_SetBackgroundSize(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(4, pElement, iArg, true) || !pElement->IsFlashyText())
+    if (!Util_GetRedInterfaceElement(4, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsFlashyText())
     {
         return 0;
     }
@@ -1656,8 +1746,8 @@ int ScriptCB_IFFlashyText_SetBackgroundSize(lua_State* L)
     {
         fExpandY = (float)luaL_checknumber(LuaHelper::mState, iArg);
     }
-    ((FlashyTextElement*)pElement)->SetBackgroundSize((char)(int)fOffsetX, (char)(int)fOffsetY,
-                                                      (char)(int)fExpandX, (char)(int)fExpandY);
+    ((FlashyTextElement*)pElement)->SetBackgroundSize((unsigned char)(int)fOffsetX, (unsigned char)(int)fOffsetY,
+                                                      (unsigned char)(int)fExpandX, (unsigned char)(int)fExpandY);
     return 0;
 }
 
@@ -1666,9 +1756,14 @@ int ScriptCB_IFFlashyText_SetBackgroundRightJustify(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsFlashyText())
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        ((FlashyTextElement*)pElement)->mRightJustifyBG = lua_toboolean(LuaHelper::mState, iArg) != 0;
+        return 0;
+    }
+    if (pElement->IsFlashyText())
+    {
+        bool bRightJustify = lua_toboolean(LuaHelper::mState, iArg) != 0;
+        ((FlashyTextElement*)pElement)->mRightJustifyBG = bRightJustify;
     }
     return 0;
 }
@@ -1678,7 +1773,11 @@ int ScriptCB_IFFlashyText_StartFlashiness(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(0, pElement, iArg, true) && pElement->IsFlashyText())
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (pElement->IsFlashyText())
     {
         ((FlashyTextElement*)pElement)->StartFlashiness();
     }
@@ -1705,16 +1804,35 @@ int ScriptCB_IFImage_SetRect(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(4, pElement, iArg, true) && pElement->IsBitmap()
-        && lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1)
-        && lua_isnumber(LuaHelper::mState, iArg + 2) && LuaHelper::IsNumber(iArg + 3))
+    if (!Util_GetRedInterfaceElement(4, pElement, iArg, true))
     {
-        float fLeft = LuaHelper::GetFloat(iArg);
-        float fTop = LuaHelper::GetFloat(iArg + 1);
-        float fRight = LuaHelper::GetFloat(iArg + 2);
-        float fBottom = LuaHelper::GetFloat(iArg + 3);
-        ((RedBitmapElement*)pElement)->SetRect(fLeft, fTop, fRight, fBottom);
+        return 0;
     }
+    if (!pElement->IsBitmap())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    if (!LuaHelper::IsNumber(iArg + 3))
+    {
+        return 0;
+    }
+    float fLeft = LuaHelper::GetFloat(iArg);
+    float fTop = LuaHelper::GetFloat(iArg + 1);
+    float fRight = LuaHelper::GetFloat(iArg + 2);
+    float fBottom = LuaHelper::GetFloat(iArg + 3);
+    ((RedBitmapElement*)pElement)->SetRect(fLeft, fTop, fRight, fBottom);
     return 0;
 }
 
@@ -1723,17 +1841,36 @@ int ScriptCB_IFImage_SetTexCoords(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(4, pElement, iArg, false) && pElement->IsBitmap()
-        && lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1)
-        && lua_isnumber(LuaHelper::mState, iArg + 2) && LuaHelper::IsNumber(iArg + 3))
+    if (!Util_GetRedInterfaceElement(4, pElement, iArg, false))
     {
-        float fU0 = LuaHelper::GetFloat(iArg);
-        float fV0 = LuaHelper::GetFloat(iArg + 1);
-        float fU1 = LuaHelper::GetFloat(iArg + 2);
-        float fV1 = LuaHelper::GetFloat(iArg + 3);
-        bool bSwap = LuaHelper::GetBool(iArg + 4);
-        ((RedBitmapElement*)pElement)->SetTexCoords(fU0, fV0, fU1, fV1, bSwap);
+        return 0;
     }
+    if (!pElement->IsBitmap())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    if (!LuaHelper::IsNumber(iArg + 3))
+    {
+        return 0;
+    }
+    float fU0 = LuaHelper::GetFloat(iArg);
+    float fV0 = LuaHelper::GetFloat(iArg + 1);
+    float fU1 = LuaHelper::GetFloat(iArg + 2);
+    float fV1 = LuaHelper::GetFloat(iArg + 3);
+    bool bSwap = LuaHelper::GetBool(iArg + 4);
+    ((RedBitmapElement*)pElement)->SetTexCoords(fU0, fV0, fU1, fV1, bSwap);
     return 0;
 }
 
@@ -1742,8 +1879,11 @@ int ScriptCB_IFBorder_SetTexture(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsBorderElement()
-        && lua_isstring(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (pElement->IsBorderElement() && lua_isstring(LuaHelper::mState, iArg))
     {
         ((RedBorderElement*)pElement)->SetTextureHash(PblHash(luaL_checklstring(LuaHelper::mState, iArg, 0)));
     }
@@ -1800,14 +1940,22 @@ int ScriptCB_IFModel_SetScale(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        float fScale = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        if (fScale > 0.0f)
-        {
-            ((Red3DModelElement*)pElement)->SetDepth(0.0045f / fScale);
-        }
+        return 0;
+    }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    float fScale = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    if (fScale > 0.0f)
+    {
+        ((Red3DModelElement*)pElement)->SetDepth(0.0045f / fScale);
     }
     return 0;
 }
@@ -1817,16 +1965,35 @@ int ScriptCB_IFModel_SetRotation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(4, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1)
-        && lua_isnumber(LuaHelper::mState, iArg + 2) && LuaHelper::IsNumber(iArg + 3))
+    if (!Util_GetRedInterfaceElement(4, pElement, iArg, true))
     {
-        const float fS = LuaHelper::GetFloat(iArg);
-        const float fX = LuaHelper::GetFloat(iArg + 1);
-        const float fY = LuaHelper::GetFloat(iArg + 2);
-        const float fZ = LuaHelper::GetFloat(iArg + 3);
-        ((Red3DModelElement*)pElement)->m_rotation = PblQuaternion(fS, fX, fY, fZ);
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    if (!LuaHelper::IsNumber(iArg + 3))
+    {
+        return 0;
+    }
+    const float fS = LuaHelper::GetFloat(iArg);
+    const float fX = LuaHelper::GetFloat(iArg + 1);
+    const float fY = LuaHelper::GetFloat(iArg + 2);
+    const float fZ = LuaHelper::GetFloat(iArg + 3);
+    ((Red3DModelElement*)pElement)->m_rotation = PblQuaternion(fS, fX, fY, fZ);
     return 0;
 }
 
@@ -1835,15 +2002,30 @@ int ScriptCB_IFModel_SetTranslation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(3, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1)
-        && lua_isnumber(LuaHelper::mState, iArg + 2))
+    if (!Util_GetRedInterfaceElement(3, pElement, iArg, true))
     {
-        float fX = LuaHelper::GetFloat(iArg);
-        float fY = LuaHelper::GetFloat(iArg + 1);
-        float fZ = LuaHelper::GetFloat(iArg + 2);
-        ((Red3DModelElement*)pElement)->m_translation = PblVector3(fX, fY, fZ);
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    float fX = LuaHelper::GetFloat(iArg);
+    float fY = LuaHelper::GetFloat(iArg + 1);
+    float fZ = LuaHelper::GetFloat(iArg + 2);
+    ((Red3DModelElement*)pElement)->m_translation = PblVector3(fX, fY, fZ);
     return 0;
 }
 
@@ -1852,8 +2034,11 @@ int ScriptCB_IFModel_SetDepth(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (pElement->IsModel() && lua_isnumber(LuaHelper::mState, iArg))
     {
         ((Red3DModelElement*)pElement)->SetDepth((float)luaL_checknumber(LuaHelper::mState, iArg));
     }
@@ -1865,11 +2050,19 @@ int ScriptCB_IFModel_SetOmegaY(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        ((Red3DModelElement*)pElement)->SetOmegaY((float)luaL_checknumber(LuaHelper::mState, iArg));
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    ((Red3DModelElement*)pElement)->SetOmegaY((float)luaL_checknumber(LuaHelper::mState, iArg));
     return 0;
 }
 
@@ -1878,12 +2071,20 @@ int ScriptCB_IFModel_SetLighting(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        float fEnable = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        ((Red3DModelElement*)pElement)->EnableLighting((int)fEnable != 0);
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    float fEnable = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    ((Red3DModelElement*)pElement)->EnableLighting((int)fEnable != 0);
     return 0;
 }
 
@@ -1946,13 +2147,29 @@ int ScriptCB_IFObj_SetScreenPosition(lua_State* L)
 {
     RedScreenGroupElement* pGroup;
     int iArg;
-    if (Util_GetRedScreenGroupElement(2, pGroup, iArg, true) && pGroup && pGroup->IsScreenGroup()
-        && lua_isnumber(LuaHelper::mState, iArg) && lua_isnumber(LuaHelper::mState, iArg + 1))
+    if (!Util_GetRedScreenGroupElement(2, pGroup, iArg, true))
     {
-        float fX = LuaHelper::GetFloat(iArg);
-        float fY = LuaHelper::GetFloat(iArg + 1);
-        pGroup->SetScreenRelativePos(fX, fY);
+        return 0;
     }
+    if (!pGroup)
+    {
+        return 0;
+    }
+    if (!pGroup->IsScreenGroup())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    float fX = LuaHelper::GetFloat(iArg);
+    float fY = LuaHelper::GetFloat(iArg + 1);
+    pGroup->SetScreenRelativePos(fX, fY);
     return 0;
 }
 
@@ -1961,11 +2178,20 @@ int ScriptCB_IFObj_SetUseSafezone(lua_State* L)
 {
     RedScreenGroupElement* pGroup;
     int iArg;
-    if (Util_GetRedScreenGroupElement(1, pGroup, iArg, true) && pGroup && pGroup->IsScreenGroup()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedScreenGroupElement(1, pGroup, iArg, true))
     {
-        pGroup->SetUseSafezone((float)luaL_checknumber(LuaHelper::mState, iArg) >= 0.1f);
+        return 0;
     }
+    if (!pGroup || !pGroup->IsScreenGroup())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    float fUseSafezone = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    pGroup->SetUseSafezone(fUseSafezone >= 0.1f);
     return 0;
 }
 
@@ -2112,7 +2338,8 @@ int ScriptCB_OpenPopup(lua_State* L)
 {
     if (lua_gettop(LuaHelper::mState) == 1 && lua_isstring(LuaHelper::mState, 1))
     {
-        GuiManager::Instance()->OpenPopup(luaL_checklstring(LuaHelper::mState, 1, 0));
+        const char* pcPopup = luaL_checklstring(LuaHelper::mState, 1, 0);
+        GuiManager::Instance()->OpenPopup(pcPopup);
     }
     return 0;
 }
@@ -2134,8 +2361,9 @@ int ScriptCB_IsPopupOpen(lua_State* L)
 // FUNCTION: SWBF2 0x00585560
 int ScriptCB_OpenMovie(lua_State* L)
 {
-    GameMovie::Open(luaL_checklstring(LuaHelper::mState, 1, 0), luaL_checklstring(LuaHelper::mState, 2, 0),
-                    GameMemory::RunTimeHeap, GameMemory::RunTimeHeap);
+    const char* pcSecond = luaL_checklstring(LuaHelper::mState, 2, 0);
+    const char* pcFirst = luaL_checklstring(LuaHelper::mState, 1, 0);
+    GameMovie::Open(pcFirst, pcSecond, GameMemory::RunTimeHeap, GameMemory::RunTimeHeap);
     return 0;
 }
 
@@ -2152,12 +2380,13 @@ int ScriptCB_PlayMovie(lua_State* L)
     const char* pcAtEnd = strlen(luaL_checklstring(LuaHelper::mState, 3, 0))
                               ? luaL_checklstring(LuaHelper::mState, 3, 0)
                               : 0;
+    float fFlag = (float)luaL_checknumber(LuaHelper::mState, 2);
     GameMovie::Play(luaL_checklstring(LuaHelper::mState, 1, 0), pcAtEnd,
                     LuaHelper::GetInt(4),
                     LuaHelper::GetInt(5),
                     LuaHelper::GetInt(6),
                     LuaHelper::GetInt(7),
-                    (int)(float)luaL_checknumber(LuaHelper::mState, 2) > 0);
+                    (int)fFlag > 0);
     return 0;
 }
 
@@ -2580,11 +2809,11 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
 // FUNCTION: SWBF2 0x005876e0
 unsigned int GetButtonName(int iButton)
 {
-    if ((unsigned int)iButton >= 76)
+    if (iButton >= 0 && iButton < 76)
     {
-        return 0;
+        return sIndexToButtonName[iButton];
     }
-    return sIndexToButtonName[iButton];
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x005876f0
@@ -2779,9 +3008,11 @@ int ScriptCB_IFText_SetIntercharacterSpacing(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText())
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if ((pElement->IsText() || pElement->IsFlashyText()) && lua_isnumber(LuaHelper::mState, iArg))
     {
         float fSpacing = (float)luaL_checknumber(LuaHelper::mState, iArg);
         static_cast<RedTextElement*>(pElement)->SetIntercharacterSpacing((int)fSpacing);
@@ -2794,8 +3025,11 @@ int ScriptCB_IFText_GetIntercharacterSpacing(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true)
-        || (!pElement->IsText() && !pElement->IsFlashyText()))
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
     {
         return 0;
     }
@@ -2808,8 +3042,11 @@ int ScriptCB_IFText_GetTextBox(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true)
-        || (!pElement->IsText() && !pElement->IsFlashyText()))
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
     {
         return 0;
     }
@@ -2825,12 +3062,18 @@ int ScriptCB_IFText_SetLeading(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && (pElement->IsText() || pElement->IsFlashyText())
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
+    {
+        return 0;
+    }
+    if (lua_isnumber(LuaHelper::mState, iArg))
     {
         static_cast<RedTextElement*>(pElement)->m_leading =
-            (short)LuaHelper::GetInt(iArg);
+            (short)(int)luaL_checknumber(LuaHelper::mState, iArg);
     }
     return 0;
 }
@@ -2840,8 +3083,11 @@ int ScriptCB_IFText_GetLeading(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        || (!pElement->IsText() && !pElement->IsFlashyText()))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsText() && !pElement->IsFlashyText())
     {
         return 0;
     }
@@ -2892,8 +3138,11 @@ int ScriptCB_IFMaskImage_SetMaskTexture(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && pElement->IsMaskedBitmap() && lua_isstring(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (pElement->IsMaskedBitmap() && lua_isstring(LuaHelper::mState, iArg))
     {
         static_cast<RedMaskedBitmapElement*>(pElement)->SetMaskTexture(
             PblHash(luaL_checkstring(LuaHelper::mState, iArg)));
@@ -2906,19 +3155,35 @@ int ScriptCB_IFMaskImage_SetMaskTexCoords(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(4, pElement, iArg, true)
-        && pElement->IsMaskedBitmap()
-        && lua_isnumber(LuaHelper::mState, iArg)
-        && lua_isnumber(LuaHelper::mState, iArg + 1)
-        && lua_isnumber(LuaHelper::mState, iArg + 2)
-        && LuaHelper::IsNumber(iArg + 3))
+    if (!Util_GetRedInterfaceElement(4, pElement, iArg, true))
     {
-        float fU0 = LuaHelper::GetFloat(iArg);
-        float fV0 = LuaHelper::GetFloat(iArg + 1);
-        float fU1 = LuaHelper::GetFloat(iArg + 2);
-        float fV1 = LuaHelper::GetFloat(iArg + 3);
-        static_cast<RedBitmapElement*>(pElement)->SetTexCoords(fU0, fV0, fU1, fV1, false);
+        return 0;
     }
+    if (!pElement->IsMaskedBitmap())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg + 2))
+    {
+        return 0;
+    }
+    if (!LuaHelper::IsNumber(iArg + 3))
+    {
+        return 0;
+    }
+    float fU0 = LuaHelper::GetFloat(iArg);
+    float fV0 = LuaHelper::GetFloat(iArg + 1);
+    float fU1 = LuaHelper::GetFloat(iArg + 2);
+    float fV1 = LuaHelper::GetFloat(iArg + 3);
+    static_cast<RedBitmapElement*>(pElement)->SetTexCoords(fU0, fV0, fU1, fV1, false);
     return 0;
 }
 
@@ -2946,7 +3211,11 @@ int ScriptCB_IFModel_GetScale(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement->IsModel())
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsModel())
     {
         return 0;
     }
@@ -2976,11 +3245,16 @@ int ScriptCB_IFModel_GetTranslation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement->IsModel())
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
     {
         return 0;
     }
-    const PblVector3 rTranslation = static_cast<Red3DModelElement*>(pElement)->m_translation;
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    PblVector3 rTranslation;
+    rTranslation = static_cast<Red3DModelElement*>(pElement)->m_translation;
     lua_pushnumber(LuaHelper::mState, rTranslation.x);
     lua_pushnumber(LuaHelper::mState, rTranslation.y);
     lua_pushnumber(LuaHelper::mState, rTranslation.z);
@@ -2992,7 +3266,11 @@ int ScriptCB_IFModel_GetDepth(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true) || !pElement->IsModel())
+    if (!Util_GetRedInterfaceElement(0, pElement, iArg, true))
+    {
+        return 0;
+    }
+    if (!pElement->IsModel())
     {
         return 0;
     }
@@ -3005,12 +3283,20 @@ int ScriptCB_IFModel_SetAnimationLooping(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && pElement->IsModel() && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        float fLoop = (float)luaL_checknumber(LuaHelper::mState, iArg);
-        static_cast<Red3DModelElement*>(pElement)->mAnimator->mLooping = (int)fLoop != 0;
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    float fLoop = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    static_cast<Red3DModelElement*>(pElement)->mAnimator->mLooping = (int)fLoop != 0;
     return 0;
 }
 
@@ -3019,12 +3305,20 @@ int ScriptCB_IFModel_UpdateAnimation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true)
-        && pElement->IsModel() && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        static_cast<Red3DModelElement*>(pElement)->mAnimator->Update(
-            (float)luaL_checknumber(LuaHelper::mState, iArg));
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    float fElapsed = (float)luaL_checknumber(LuaHelper::mState, iArg);
+    static_cast<Red3DModelElement*>(pElement)->mAnimator->Update(fElapsed);
     return 0;
 }
 
@@ -3033,19 +3327,28 @@ int ScriptCB_IFModel_AttachModel(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(2, pElement, iArg, true)
-        && pElement->IsModel()
-        && lua_type(LuaHelper::mState, iArg) == LUA_TLIGHTUSERDATA
-        && lua_isstring(LuaHelper::mState, iArg + 1))
+    if (!Util_GetRedInterfaceElement(2, pElement, iArg, true))
     {
-        Red3DModelElement* pAttached = static_cast<Red3DModelElement*>(
-            const_cast<void*>(lua_topointer(LuaHelper::mState, iArg)));
-        Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
-        pModel->m_AttachedObj = pAttached;
-        pModel->m_uiHardpointHash = PblTEMPHash(
-            luaL_checkstring(LuaHelper::mState, iArg + 1));
-        pAttached->m_bAmAttached = true;
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (lua_type(LuaHelper::mState, iArg) != LUA_TLIGHTUSERDATA)
+    {
+        return 0;
+    }
+    if (!lua_isstring(LuaHelper::mState, iArg + 1))
+    {
+        return 0;
+    }
+    Red3DModelElement* pAttached = static_cast<Red3DModelElement*>(
+        const_cast<void*>(lua_topointer(LuaHelper::mState, iArg)));
+    Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
+    pModel->m_AttachedObj = pAttached;
+    pModel->m_uiHardpointHash = PblTEMPHash(luaL_checkstring(LuaHelper::mState, iArg + 1));
+    pAttached->m_bAmAttached = true;
     return 0;
 }
 
@@ -3066,8 +3369,20 @@ int ScriptCB_IsEnableLeaderBoard(lua_State* L)
 // FUNCTION: SWBF2 0x00586610
 int ScriptCB_LeaderBoardDownloadDone(lua_State* L)
 {
-    int iState = StatsManager::GetState();
-    int iResult = iState == 0 || iState == 6 ? -1 : iState == 2 ? 1 : 0;
+    int iResult;
+    switch (StatsManager::GetState())
+    {
+    case 0:
+    case 6:
+        iResult = -1;
+        break;
+    case 2:
+        iResult = 1;
+        break;
+    default:
+        iResult = 0;
+        break;
+    }
     lua_pushnumber(LuaHelper::mState, (float)iResult);
     return 1;
 }
@@ -3083,8 +3398,20 @@ int ScriptCB_SetLeaderBoardID(lua_State* L)
 // FUNCTION: SWBF2 0x005867a0
 int ScriptCB_EnumerateLeaderBoardDone(lua_State* L)
 {
-    int iState = StatsManager::GetState();
-    int iResult = iState == 0 || iState == 6 ? -1 : iState == 2 ? 1 : 0;
+    int iResult;
+    switch (StatsManager::GetState())
+    {
+    case 0:
+    case 6:
+        iResult = -1;
+        break;
+    case 2:
+        iResult = 1;
+        break;
+    default:
+        iResult = 0;
+        break;
+    }
     lua_pushnumber(LuaHelper::mState, (float)iResult);
     return 1;
 }
@@ -3114,13 +3441,15 @@ int ScriptCB_GetErrorLevel(lua_State* L)
 // FUNCTION: SWBF2 0x00588250
 int ScriptCB_ShowLoadDisplay(lua_State* L)
 {
-    if (lua_toboolean(LuaHelper::mState, 1))
+    int iBegin = lua_toboolean(LuaHelper::mState, 1);
+    LoadDisplay* pDisplay = LoadDisplay::sInstance;
+    if (iBegin)
     {
-        LoadDisplay::sInstance->Begin();
+        pDisplay->Begin();
     }
     else
     {
-        LoadDisplay::sInstance->End();
+        pDisplay->End();
     }
     return 0;
 }
@@ -3138,7 +3467,7 @@ int ScriptCB_IsFileExist(lua_State* L)
         const char* pcName = luaL_checkstring(LuaHelper::mState, 1);
         char acFileName[256];
         LoadUtil::MakeFullName(pcName, LoadUtil::FILE_TYPE_NONE, acFileName, sizeof(acFileName), false);
-        lua_pushnumber(LuaHelper::mState, PblFile::Exists(acFileName) ? 1.0 : 0.0);
+        lua_pushnumber(LuaHelper::mState, PblFile::Exists(acFileName) ? 1.0f : 0.0f);
     }
     return 1;
 }
@@ -3146,7 +3475,11 @@ int ScriptCB_IsFileExist(lua_State* L)
 // FUNCTION: SWBF2 0x005853d0
 int ScriptCB_IsScreenInStack(lua_State* L)
 {
-    if (lua_gettop(LuaHelper::mState) != 1 || !lua_isstring(LuaHelper::mState, 1))
+    if (lua_gettop(LuaHelper::mState) != 1)
+    {
+        return 0;
+    }
+    if (!lua_isstring(LuaHelper::mState, 1))
     {
         return 0;
     }
@@ -3188,9 +3521,9 @@ int ScriptCB_OpenErrorBox(lua_State* L)
         && lua_isnumber(LuaHelper::mState, 1)
         && lua_isstring(LuaHelper::mState, 2))
     {
-        float fSeverity = (float)luaL_checknumber(LuaHelper::mState, 1);
+        GuiManager::eErrorSeverity eSeverity = (GuiManager::eErrorSeverity)(int)(float)luaL_checknumber(LuaHelper::mState, 1);
         const char* pcMessage = luaL_checkstring(LuaHelper::mState, 2);
-        GuiManager::Instance()->OpenError((GuiManager::eErrorSeverity)(int)fSeverity,
+        GuiManager::Instance()->OpenError(eSeverity,
             reinterpret_cast<const unsigned short*>(pcMessage), 0, fnErrorBoxOk);
     }
     return 0;
@@ -3278,33 +3611,33 @@ int ScriptCB_IFModel_SetAnimation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(2, pElement, iArg, true) || !pElement->IsModel())
+    if (Util_GetRedInterfaceElement(2, pElement, iArg, true) && pElement->IsModel())
     {
-        return 0;
-    }
-    Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
+        Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
 
-    float fTransitionTime = 0.0f;
-    if (lua_isnumber(LuaHelper::mState, iArg + 1))
-    {
-        fTransitionTime = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
-    }
+        float fTransitionTime = 0.0f;
+        if (lua_isnumber(LuaHelper::mState, iArg + 1))
+        {
+            fTransitionTime = (float)luaL_checknumber(LuaHelper::mState, iArg + 1);
+        }
 
-    if (lua_isstring(LuaHelper::mState, iArg))
-    {
-        const char* pcAnim = luaL_checklstring(LuaHelper::mState, iArg, 0);
-        GetNormalAnimator(pModel)->SetAnimation(PblTEMPHash(pcAnim), fTransitionTime);
-    }
-    else if (lua_type(LuaHelper::mState, iArg) == LUA_TTABLE)
-    {
-        char acUpper[80];
-        char acLower[80];
-        lua_pushvalue(LuaHelper::mState, iArg);
-        LuaHelper::TableReadVal("upper", acUpper, sizeof(acUpper), false);
-        LuaHelper::TableReadVal("lower", acLower, sizeof(acLower), false);
-        lua_settop(LuaHelper::mState, -2);
-        GetIFaceSoldierAnimator(pModel)->SetUpperLowerAnimations(PblTEMPHash(acUpper), PblTEMPHash(acLower),
-                                                                 fTransitionTime);
+        if (lua_isstring(LuaHelper::mState, iArg))
+        {
+            const char* pcAnim = luaL_checklstring(LuaHelper::mState, iArg, 0);
+            Red3DModelAnimator* pAnimator = GetNormalAnimator(pModel);
+            pAnimator->SetAnimation(PblTEMPHash(pcAnim), fTransitionTime);
+        }
+        else if (lua_type(LuaHelper::mState, iArg) == LUA_TTABLE)
+        {
+            char acUpper[80];
+            char acLower[80];
+            lua_pushvalue(LuaHelper::mState, iArg);
+            LuaHelper::TableReadVal("upper", acUpper, sizeof(acUpper), false);
+            LuaHelper::TableReadVal("lower", acLower, sizeof(acLower), false);
+            lua_settop(LuaHelper::mState, -2);
+            IFaceSoldierAnimator* pAnimator = GetIFaceSoldierAnimator(pModel);
+            pAnimator->SetUpperLowerAnimations(PblTEMPHash(acUpper), PblTEMPHash(acLower), fTransitionTime);
+        }
     }
     return 0;
 }
@@ -3314,25 +3647,25 @@ int ScriptCB_IFModel_QueueAnimation(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true) || !pElement->IsModel())
+    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel())
     {
-        return 0;
-    }
-    Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
+        Red3DModelElement* pModel = static_cast<Red3DModelElement*>(pElement);
 
-    if (lua_isstring(LuaHelper::mState, iArg))
-    {
-        pModel->QueueAnimation(PblTEMPHash(luaL_checklstring(LuaHelper::mState, iArg, 0)));
-    }
-    else if (lua_type(LuaHelper::mState, iArg) == LUA_TTABLE)
-    {
-        char acUpper[80];
-        char acLower[80];
-        lua_pushvalue(LuaHelper::mState, iArg);
-        LuaHelper::TableReadVal("upper", acUpper, sizeof(acUpper), false);
-        LuaHelper::TableReadVal("lower", acLower, sizeof(acLower), false);
-        lua_settop(LuaHelper::mState, -2);
-        GetIFaceSoldierAnimator(pModel)->QueueUpperLowerAnimations(PblTEMPHash(acUpper), PblTEMPHash(acLower));
+        if (lua_isstring(LuaHelper::mState, iArg))
+        {
+            pModel->QueueAnimation(PblTEMPHash(luaL_checklstring(LuaHelper::mState, iArg, 0)));
+        }
+        else if (lua_type(LuaHelper::mState, iArg) == LUA_TTABLE)
+        {
+            char acUpper[80];
+            char acLower[80];
+            lua_pushvalue(LuaHelper::mState, iArg);
+            LuaHelper::TableReadVal("upper", acUpper, sizeof(acUpper), false);
+            LuaHelper::TableReadVal("lower", acLower, sizeof(acLower), false);
+            lua_settop(LuaHelper::mState, -2);
+            IFaceSoldierAnimator* pAnimator = GetIFaceSoldierAnimator(pModel);
+            pAnimator->QueueUpperLowerAnimations(PblTEMPHash(acUpper), PblTEMPHash(acLower));
+        }
     }
     return 0;
 }
@@ -3349,7 +3682,7 @@ int ScriptCB_IFModel_SetAnimationBanks(lua_State* L)
 
     memset(sAnimationBankHashes, 0, sizeof(sAnimationBankHashes));
     int iNumArgs = lua_gettop(LuaHelper::mState);
-    for (int i = 0; iArg <= iNumArgs; ++iArg, ++i)
+    for (int i = 0; iArg < iNumArgs + 1; ++iArg, ++i)
     {
         if (i >= 5)
         {
@@ -3366,12 +3699,19 @@ int ScriptCB_IFModel_SetAnimationTime(lua_State* L)
 {
     RedInterfaceElement* pElement;
     int iArg;
-    if (Util_GetRedInterfaceElement(1, pElement, iArg, true) && pElement->IsModel()
-        && lua_isnumber(LuaHelper::mState, iArg))
+    if (!Util_GetRedInterfaceElement(1, pElement, iArg, true))
     {
-        static_cast<Red3DModelElement*>(pElement)->SetAnimationTime(
-            (float)luaL_checknumber(LuaHelper::mState, iArg));
+        return 0;
     }
+    if (!pElement->IsModel())
+    {
+        return 0;
+    }
+    if (!lua_isnumber(LuaHelper::mState, iArg))
+    {
+        return 0;
+    }
+    static_cast<Red3DModelElement*>(pElement)->SetAnimationTime((float)luaL_checknumber(LuaHelper::mState, iArg));
     return 0;
 }
 
@@ -3406,6 +3746,11 @@ int ScriptCB_PlayInGameMovie(lua_State* L)
     {
     case eLANG_FRENCH: pcFile = "ingamefr.mvs"; break;
     case eLANG_GERMAN: pcFile = "ingamegr.mvs"; break;
+    case eLANG_ENGLISH:
+    case eLANG_SPANISH:
+    case eLANG_ITALIAN:
+    case eLANG_JAPANESE:
+    case eLANG_UK: pcFile = "ingame.mvs"; break;
     default: pcFile = "ingame.mvs"; break;
     }
     GameMovie::StartInGameMoviePlay(pcFile, luaL_checklstring(LuaHelper::mState, 2, 0));

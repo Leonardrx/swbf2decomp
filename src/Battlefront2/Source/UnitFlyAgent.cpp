@@ -212,27 +212,27 @@ const char* UnitFlyAgent::NFINAL_GetStateString(int iState) const
 // FUNCTION: SWBF2 0x00667460
 const EntityFlyer* UnitFlyAgent::GetFlyer() const
 {
-    if (!mCtrl->mOwner)
+    if (mCtrl->mOwner)
     {
-        return 0;
+        return static_cast<const EntityFlyer*>(mCtrl->mOwner);
     }
-    return static_cast<const EntityFlyer*>(mCtrl->mOwner);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00667480
 EntityFlyer* UnitFlyAgent::GetFlyer()
 {
-    if (!mCtrl->mOwner)
+    if (mCtrl->mOwner)
     {
-        return 0;
+        return static_cast<EntityFlyer*>(mCtrl->mOwner);
     }
-    return static_cast<EntityFlyer*>(mCtrl->mOwner);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00666e80
 bool UnitFlyAgent::IsTransport() const
 {
-    const GameObject* pResult = static_cast<const Trackable*>(mCtrl->mOwner)->GetGameObject();
+    const GameObject* pResult = GetMe()->GetGameObject();
     return pResult->GetGameObjectClass()->GetVehicleType() == 5;
 }
 
@@ -249,28 +249,23 @@ float UnitFlyAgent::GetUpdateRate() const
 // FUNCTION: SWBF2 0x00666ea0
 bool UnitFlyAgent::IsNearLandingPt()
 {
-    if (GameLoop::GetMissionTime() <= mNextHintCheckTime)
+    if (GameLoop::GetMissionTime() > mNextHintCheckTime)
     {
-        return false;
+        mNextHintCheckTime = GameLoop::GetMissionTime() + 3.0f;
+        mHint = 0;
+
+        const PblMatrix& mat = mCtrl->mOwner->GetMatrix();
+        const BaseHint* candidates[1];
+        const int iCount = HintManager::RequestLandHints(mCtrl, mat.GetTranslation(), 80, 1, candidates,
+                                                         mGotoNonOwnedCP);
+        if (iCount > 0)
+        {
+            mHint = const_cast<BaseHint*>(candidates[AIUtil::GetRandomInt(0, iCount - 1)]);
+            mHint->Reserve(mCtrl->mOwner->GetGameObject());
+            return true;
+        }
     }
-
-    mHint = 0;
-    mNextHintCheckTime = GameLoop::GetMissionTime() + 3.0f;
-
-    const PblMatrix& mat = mCtrl->mOwner->GetMatrix();
-    const float* pPos = reinterpret_cast<const float*>(&mat) + 12;
-
-    const BaseHint* candidates[1];
-    const int iCount = HintManager::RequestLandHints(mCtrl, *reinterpret_cast<const PblVector3*>(pPos), 80, 1,
-                                                     candidates, mGotoNonOwnedCP);
-    if (iCount <= 0)
-    {
-        return false;
-    }
-
-    mHint = const_cast<BaseHint*>(candidates[AIUtil::GetRandomInt(0, iCount - 1)]);
-    mHint->Reserve(static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject());
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00666d00
@@ -440,9 +435,10 @@ bool UnitFlyAgent::IsNearATAT()
 // FUNCTION: SWBF2 0x006673b0
 bool UnitFlyAgent::IsRoofOverhead() const
 {
-    const PblVector3 vStart = mCtrl->mOwner->GetMatrix().GetTranslation();
+    PblVector3 vStart;
+    vStart = mCtrl->mOwner->GetMatrix().GetTranslation();
     const PblVector3 vEnd(vStart.x + 0.0f, vStart.y + 100.0f, vStart.z + 0.0f);
-    const GameObject* pIgnore = static_cast<const Trackable*>(mCtrl->mOwner)->GetGameObject();
+    const GameObject* pIgnore = GetMe()->GetGameObject();
     return CollisionManager::RayTest(vStart, vEnd, &pIgnore, 1, 0x9a);
 }
 

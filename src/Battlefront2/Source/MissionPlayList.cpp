@@ -59,56 +59,63 @@ void MissionPlayList::SetEntry(char const* pcLuaFile, unsigned char uSide, unsig
                                unsigned int uiTeam2Hash, int iTickets1, int iTickets2)
 {
     strlcpy(sPlaylist[sPlaylistCount].mLuaFile, pcLuaFile, sizeof(sPlaylist[0].mLuaFile));
-    PlaylistEntry& entry = sPlaylist[sPlaylistCount++];
-    entry.mSide = uSide;
-    entry.mTeam1Hash = uiTeam1Hash;
-    entry.mTeam2Hash = uiTeam2Hash;
-    entry.mTickets1 = iTickets1;
-    entry.mTickets2 = iTickets2;
+    sPlaylist[sPlaylistCount].mSide = uSide;
+    sPlaylist[sPlaylistCount].mTeam1Hash = uiTeam1Hash;
+    sPlaylist[sPlaylistCount].mTeam2Hash = uiTeam2Hash;
+    sPlaylist[sPlaylistCount].mTickets1 = iTickets1;
+    sPlaylist[sPlaylistCount].mTickets2 = iTickets2;
+    ++sPlaylistCount;
 }
 
 // FUNCTION: SWBF2 0x005a44c0
 bool MissionPlayList::AddEntry(char const* pcLuaFile, unsigned char uSide, char const* pcTeam1,
                                char const* pcTeam2, int iTickets1, int iTickets2)
 {
-    if (sPlaylistCount >= 256)
+    if (sPlaylistCount < 256)
     {
-        return false;
-    }
-
-    unsigned int uiTeam1Hash = pcTeam1 ? (unsigned int)PblHash(pcTeam1) : 0;
-    unsigned int uiTeam2Hash = pcTeam2 ? (unsigned int)PblHash(pcTeam2) : 0;
-    SetEntry(pcLuaFile, uSide, uiTeam1Hash, uiTeam2Hash, iTickets1, iTickets2);
-
-    int iEra = -1;
-    unsigned int uLen = strlen(pcLuaFile) - 1;
-    for (unsigned int i = 0; i < uLen; ++i)
-    {
-        if (isdigit(pcLuaFile[i]) && isalpha(pcLuaFile[i + 1]))
+        unsigned int uiTeam1Hash = 0;
+        if (pcTeam1)
         {
-            char c = pcLuaFile[i + 1] | 0x20;
-            if (c == 'c')
+            uiTeam1Hash = PblHash(pcTeam1);
+        }
+        unsigned int uiTeam2Hash = 0;
+        if (pcTeam2)
+        {
+            uiTeam2Hash = PblHash(pcTeam2);
+        }
+        SetEntry(pcLuaFile, uSide, uiTeam1Hash, uiTeam2Hash, iTickets1, iTickets2);
+
+        int iEra = -1;
+        unsigned int uLen = strlen(pcLuaFile) - 1;
+        for (unsigned int i = 0; i < uLen; ++i)
+        {
+            if (isdigit(pcLuaFile[i]) && isalpha(pcLuaFile[i + 1]))
             {
-                iEra = 0;
-                break;
-            }
-            if (c == 'g')
-            {
-                iEra = 1;
-                break;
+                char c = pcLuaFile[i + 1] | 0x20;
+                if (c == 'c')
+                {
+                    iEra = 0;
+                    break;
+                }
+                if (c == 'g')
+                {
+                    iEra = 1;
+                    break;
+                }
             }
         }
-    }
 
-    if (sEras == -1 || sEras == iEra)
-    {
-        sEras = iEra;
+        if (sEras == -1 || sEras == iEra)
+        {
+            sEras = iEra;
+        }
+        else
+        {
+            sEras = 2;
+        }
+        return true;
     }
-    else
-    {
-        sEras = 2;
-    }
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x005a45b0
@@ -149,14 +156,17 @@ bool MissionPlayList::PeekNextEntry(char const*& pcLuaFile, unsigned int& uiTeam
 {
     if (sPlaylistPosn >= sPlaylistCount)
     {
-        if (!sbLoopForever)
+        if (sbLoopForever)
+        {
+            sPlaylistPosn = 0;
+            if (sbRandomize)
+            {
+                RandomizeOrder();
+            }
+        }
+        else
         {
             return false;
-        }
-        sPlaylistPosn = 0;
-        if (sbRandomize)
-        {
-            RandomizeOrder();
         }
     }
     pcLuaFile = sPlaylist[sPlaylistPosn].mLuaFile;
@@ -182,14 +192,11 @@ bool MissionPlayList::SelectNextEntry()
     }
     GameLoop::SetNextMission(sPlaylist[sPlaylistPosn].mLuaFile);
 
-    const PlaylistEntry& entry = sPlaylist[sPlaylistPosn];
-    if (GameLoop::mbHistoricalRules)
-    {
-        PlayerPrefs::mAllUserPrefs[1].mTeamNum = entry.mSide;
-    }
-    PlayerPrefs::mAllUserPrefs[0].mTeamNum = entry.mSide;
-    sTeam1Hash = entry.mTeam1Hash;
-    sTeam2Hash = entry.mTeam2Hash;
+    const int iSide = sPlaylist[sPlaylistPosn].mSide;
+    PlayerPrefs::mAllUserPrefs[1].mTeamNum = GameLoop::mbHistoricalRules ? iSide : PlayerPrefs::mAllUserPrefs[1].mTeamNum;
+    PlayerPrefs::mAllUserPrefs[0].mTeamNum = iSide;
+    sTeam1Hash = sPlaylist[sPlaylistPosn].mTeam1Hash;
+    sTeam2Hash = sPlaylist[sPlaylistPosn].mTeam2Hash;
     PushToLua();
     ++sPlaylistPosn;
     return true;
@@ -302,7 +309,8 @@ void MissionPlayList::AddEntry(char const* pcLuaFile, int iTickets1, int iTicket
 // FUNCTION: SWBF2 0x005a4ba0
 bool MissionPlayList::DropEntry(char const* pcLuaFile)
 {
-    if (sPlaylistCount <= 1)
+    const int iOldCount = sPlaylistCount;
+    if (iOldCount <= 1)
     {
         return false;
     }
@@ -311,9 +319,9 @@ bool MissionPlayList::DropEntry(char const* pcLuaFile)
     if (pcLuaFile)
     {
         int iEntry = iDrop;
-        for (int i = 0; i < sPlaylistCount; ++i, ++iEntry)
+        for (int i = 0; i < iOldCount; ++i, ++iEntry)
         {
-            if (iEntry >= sPlaylistCount)
+            if (iEntry >= iOldCount)
             {
                 iEntry = 0;
             }
@@ -329,9 +337,9 @@ bool MissionPlayList::DropEntry(char const* pcLuaFile)
     }
 
     int iCount = sPlaylistCount - 1;
-    if (iDrop < iCount)
+    for (int i = iDrop; i < iCount; ++i)
     {
-        memcpy(&sPlaylist[iDrop], &sPlaylist[iDrop + 1], (iCount - iDrop) * sizeof(PlaylistEntry));
+        sPlaylist[i] = sPlaylist[i + 1];
     }
     sPlaylistCount = iCount;
     if (sPlaylistPosn > iCount)
@@ -349,11 +357,13 @@ bool MissionPlayList::NextEntry(char const* pcLuaFile)
         return false;
     }
 
+    const int iCount = sPlaylistCount;
     int iFound = -1;
+    int i = 0;
     int iEntry = GetCurrentEntry();
-    for (int i = 0; i < sPlaylistCount; ++i, ++iEntry)
+    for (; i < iCount; ++i, ++iEntry)
     {
-        if (iEntry >= sPlaylistCount)
+        if (iEntry >= iCount)
         {
             iEntry = 0;
         }
@@ -387,20 +397,20 @@ void MissionPlayListStepBack()
 unsigned int MissionPlayList::GetFirstMission()
 {
     mFindIndex = 0;
-    if (mFindIndex > sPlaylistCount)
+    if (mFindIndex <= sPlaylistCount)
     {
-        return 0;
+        return PblHash(sPlaylist[mFindIndex].mLuaFile);
     }
-    return PblHash(sPlaylist[mFindIndex].mLuaFile);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x005a4a50
 unsigned int MissionPlayList::GetNextMission()
 {
     ++mFindIndex;
-    if (mFindIndex > sPlaylistCount)
+    if (mFindIndex <= sPlaylistCount)
     {
-        return 0;
+        return PblHash(sPlaylist[mFindIndex].mLuaFile);
     }
-    return PblHash(sPlaylist[mFindIndex].mLuaFile);
+    return 0;
 }

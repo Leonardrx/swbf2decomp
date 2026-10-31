@@ -131,10 +131,14 @@ void AI::ConquestGoal::sAssign(Character* pChr, const CommandPost* pPost)
 // FUNCTION: SWBF2 0x00482d10
 void AI::ConquestGoal::sIssueCmd(Character* pChr, const CommandPost* pPost)
 {
-    if (pChr->GetControllable() && pChr->GetControllable()->mCtrl)
+    if (pChr->GetControllable())
     {
-        UnitCaptureCPInfo info(pPost);
-        UnitControllerPtr(pChr->GetControllable()->mCtrl)->ForceCommand(info);
+        Controller* pCtrl = pChr->GetControllable()->mCtrl;
+        if (pCtrl)
+        {
+            UnitCaptureCPInfo info(pPost);
+            UnitControllerPtr(pCtrl)->ForceCommand(info);
+        }
     }
     pChr->SetAssignedCP(pPost);
 }
@@ -237,14 +241,22 @@ const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandP
 bool AI::ConquestGoal::sIsPilotingVehicle(Character* pChr)
 {
     const Controllable* pVehicle = pChr->mVehicle;
-    return pVehicle && pVehicle->GetGameObject()->GetControllable() == pVehicle;
+    if (pVehicle)
+    {
+        return pVehicle->GetGameObject()->GetControllable() == pVehicle;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004830a0
 bool AI::ConquestGoal::sIsPassenger(Character* pChr)
 {
     const Controllable* pVehicle = pChr->mVehicle;
-    return pVehicle && pVehicle->GetGameObject()->GetControllable() != pVehicle;
+    if (pVehicle)
+    {
+        return pVehicle->GetGameObject()->GetControllable() != pVehicle;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004830d0

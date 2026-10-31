@@ -53,7 +53,7 @@ namespace
 // FUNCTION: SWBF2 0x005ac930
 PblVector3 GetSineRandomOffsetXZ(const GameObject* pObj, const int i)
 {
-    const PblVector3& pos = GameObjectPosition(pObj);
+    const PblVector3& pos = pObj->GetPosition();
     const float fPhase = pos.x * 0.2f + pos.y * 0.2f + pos.z * 0.2f;
 
     PblRandom rand(((unsigned int)pObj + i * 1009) ^ 0xC71C2830);
@@ -99,9 +99,10 @@ NavigatorFollowTarget* NavigatorFollowTargetPtr(Navigator* pNavigator)
 NavigatorFollowTarget::NavigatorFollowTarget(AILowLevel* pOwner, const GameObject* pTarget,
                                              const Obstacle** ppIgnore, int iIgnoreCnt,
                                              const PblVector3& followOffset)
-    : NavigatorGraphFollower(pOwner, GameObjectPosition(pTarget), ppIgnore, iIgnoreCnt, false),
-      mFollowTarget(pTarget), mFollowOffset(followOffset)
+    : NavigatorGraphFollower(pOwner, pTarget->GetPosition(), ppIgnore, iIgnoreCnt, false)
+    , mFollowTarget(pTarget)
 {
+    mFollowOffset = followOffset;
     mGraphFollower = 0;
     mCrumbHead = 0;
     mCrumbTail = 0;
@@ -117,7 +118,7 @@ NavigatorFollowTarget::~NavigatorFollowTarget()
 bool NavigatorFollowTarget::IsEqual(AILowLevel* pOwner, const GameObject* pTarget,
                                     const PblVector3& followOffset)
 {
-    return mOwner == pOwner && HandleObject(mFollowTarget) == pTarget &&
+    return mOwner == pOwner && mFollowTarget == pTarget &&
            !(mFollowOffset != followOffset) && mCurState != 100;
 }
 
@@ -129,7 +130,7 @@ void NavigatorFollowTarget::EnterState()
         return;
     }
 
-    if (!HandleObject(mFollowTarget))
+    if (!mFollowTarget)
     {
         SetNextState(100);
         return;
@@ -139,7 +140,7 @@ void NavigatorFollowTarget::EnterState()
     {
         mCrumbHead = 1;
         mCrumbTail = 0;
-        const PblVector3& vTarget = GameObjectPosition(HandleObject(mFollowTarget));
+        const PblVector3& vTarget = mFollowTarget->GetPosition();
         mCrumbBuffer[0] = vTarget;
         mCrumbBuffer[1] = vTarget;
         mGlobalDest = mCrumbBuffer[0];
@@ -149,12 +150,11 @@ void NavigatorFollowTarget::EnterState()
             return;
         }
 
-        const PblVector3& vMyPos = GameObjectPosition(GetGameObject());
-        const float dx = vMyPos.x - mGlobalDest.x;
-        const float dy = vMyPos.y - mGlobalDest.y;
-        const float dz = vMyPos.z - mGlobalDest.z;
+        const PblVector3& vMyPos = GetGameObject()->GetPosition();
         if (!ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1) ||
-            (dx * dx + dy * dy + dz * dz < 10000.0f &&
+            ((vMyPos.x - mGlobalDest.x) * (vMyPos.x - mGlobalDest.x) +
+             (vMyPos.y - mGlobalDest.y) * (vMyPos.y - mGlobalDest.y) +
+             (vMyPos.z - mGlobalDest.z) * (vMyPos.z - mGlobalDest.z) < 10000.0f &&
              !PathFinder::TestTrivialStraightLineHit(vMyPos, mGlobalDest, GetMyRadius(), GetMyProhibit(),
                                                      mIgnore, mIgnoreCnt, false)))
         {
@@ -179,14 +179,16 @@ void NavigatorFollowTarget::EnterState()
 // FUNCTION: SWBF2 0x005ac8f0
 void NavigatorFollowTarget::ExitState()
 {
-    if (mCurState == STATE_PATHING)
+    switch (mCurState)
     {
+    case STATE_PATHING:
         PathManager::RemovePathRequest(mOwner->mOwner);
         if (mGraphFollower)
         {
             delete mGraphFollower;
         }
         mGraphFollower = 0;
+        break;
     }
 }
 
@@ -275,8 +277,8 @@ void NavigatorFollowTarget::UpdateTarget()
 // FUNCTION: SWBF2 0x005acd60
 bool NavigatorFollowTarget::LookForCrumbs()
 {
-    bool bCheckLOS = false;
     const PblVector3& vMyPos = GetMatrix().GetTranslation();
+    bool bCheckLOS = false;
     const float fTime = GameLoop::GetMissionTime();
     if (fTime > mLastShortcutCheck + 2.0f)
     {
@@ -285,39 +287,32 @@ bool NavigatorFollowTarget::LookForCrumbs()
     }
 
     int i = mCrumbHead;
-    for (;;)
+    do
     {
-        const float dx = mCrumbBuffer[i].x - vMyPos.x;
-        const float dz = mCrumbBuffer[i].z - vMyPos.z;
+        const PblVector3& vCrumb = mCrumbBuffer[i];
+        const float dz = vCrumb.z - vMyPos.z;
+        const float dx = vCrumb.x - vMyPos.x;
         const float fDistSq = dx * dx + dz * dz;
-        if (fDistSq < 4.0f)
+        if (fDistSq < 4.0f ||
+            (bCheckLOS && fDistSq < 900.0f &&
+             !PathFinder::TestTrivialStraightLineHit(vMyPos, vCrumb, GetMyRadius(), GetMyProhibit(),
+                                                     mIgnore, mIgnoreCnt, false)))
         {
-            break;
-        }
-        if (bCheckLOS && fDistSq < 900.0f &&
-            !PathFinder::TestTrivialStraightLineHit(vMyPos, mCrumbBuffer[i], GetMyRadius(), GetMyProhibit(),
-                                                    mIgnore, mIgnoreCnt, false))
-        {
-            break;
+            if (i == mCrumbHead)
+            {
+                i = (i > 0) ? i - 1 : NUM_CRUMBS - 1;
+            }
+            mCrumbTail = i;
+            if (mCurState != STATE_FOLLOWCRUMBS)
+            {
+                SetNextState(STATE_FOLLOWCRUMBS);
+            }
+            return true;
         }
 
         i = (i > 0) ? i - 1 : NUM_CRUMBS - 1;
-        if (i == mCrumbTail)
-        {
-            return false;
-        }
-    }
-
-    if (i == mCrumbHead)
-    {
-        i = (i > 0) ? i - 1 : NUM_CRUMBS - 1;
-    }
-    mCrumbTail = i;
-    if (mCurState != STATE_FOLLOWCRUMBS)
-    {
-        SetNextState(STATE_FOLLOWCRUMBS);
-    }
-    return true;
+    } while (i != mCrumbTail);
+    return false;
 }
 
 // FUNCTION: SWBF2 0x005ace90
@@ -337,21 +332,19 @@ void NavigatorFollowTarget::UpdateFollowCrumbs()
     EntitySoldier* pMe = mOwner->mOwner->mOwner->GetGameObject()->IsRtti(EntitySoldier::rttiHashEntitySoldier)
                              ? (EntitySoldier*)mOwner->mOwner->mOwner->GetGameObject()
                              : 0;
-    const EntitySoldier* pHim = HandleObject(mFollowTarget)->IsRtti(EntitySoldier::rttiHashEntitySoldier)
-                                    ? (const EntitySoldier*)HandleObject(mFollowTarget)
+    const EntitySoldier* pHim = mFollowTarget->IsRtti(EntitySoldier::rttiHashEntitySoldier)
+                                    ? (const EntitySoldier*)(const GameObject*)mFollowTarget
                                     : 0;
 
     if (iNext == mCrumbHead && pMe && pHim && pMe->mClass->mJetFuelRechargeRate > 0.0f)
     {
         if (pHim->mState == SoldierState::JET_HOVER && pMe->mClass->mJetTypeHover)
         {
-            mOwner->mDoJetJump = true;
-            mOwner->mAIJetJumpDir = PblVector3(0.0f, 0.0f, 0.0f);
+            mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
         }
         if (pHim->mState == SoldierState::JET_JUMP && !pMe->mClass->mJetTypeHover)
         {
-            mOwner->mDoJetJump = true;
-            mOwner->mAIJetJumpDir = PblVector3(0.0f, 0.0f, 0.0f);
+            mOwner->SetJetJump(PblVector3(0.0f, 0.0f, 0.0f));
         }
     }
 
@@ -377,7 +370,8 @@ void NavigatorFollowTarget::UpdateFollowCrumbs()
 
     delete mPathFollower;
     mPathFollower = 0;
-    mPathFollower = new PathFollower(mOwner->mOwner, GetMatrix().GetTranslation(), vCrumb,
+    const PblVector3& vStart = GetMatrix().GetTranslation();
+    mPathFollower = new PathFollower(mOwner->mOwner, vStart, vCrumb,
                                      (const Obstacle**)mIgnore, mIgnoreCnt, false);
 }
 

@@ -121,29 +121,35 @@ HUD::ElementBarSegmented::~ElementBarSegmented()
 // FUNCTION: SWBF2 0x0054bf90
 bool HUD::ElementBarSegmented::SetProperty(const unsigned int uHashID, const void* const pValue)
 {
+    bool bResult;
     switch (uHashID)
     {
     case kNumSegments:
         SetupSegments(*(const unsigned int*)pValue);
+        bResult = true;
         break;
     case kCircular:
         mCircular = *(const bool*)pValue;
+        bResult = true;
         break;
     case kAngleStart:
         mAngleStart = *(const float*)pValue * 0.017453292f;
+        bResult = true;
         break;
     case kAngleEnd:
         mAngleEnd = *(const float*)pValue * 0.017453292f;
+        bResult = true;
         break;
     default:
-        if (!HUD::ElementGroupBase::SetProperty(uHashID, pValue) &&
-            !HUD::ElementBar::SetProperty(uHashID, pValue))
-        {
-            return false;
-        }
+        bResult = HUD::ElementGroupBase::SetProperty(uHashID, pValue) ||
+                  HUD::ElementBar::SetProperty(uHashID, pValue);
+        break;
     }
-    SetValue(mValue);
-    return true;
+    if (bResult)
+    {
+        SetValue(mValue);
+    }
+    return bResult;
 }
 
 // SYNTHETIC: SWBF2 0x0054cacc

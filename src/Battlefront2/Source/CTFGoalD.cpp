@@ -83,7 +83,7 @@ AI::CTFGoalD::CTFGoalD(unsigned char uTeam, float fWeight, const GoalTarget& tar
 // FUNCTION: SWBF2 0x00488190
 void AI::CTFGoalD::Assign(Character* pChr)
 {
-    if (!static_cast<const GameObject*>(mFlag) || !pChr || !pChr->GetControllable())
+    if (!mFlag || !pChr || !pChr->GetControllable())
     {
         return;
     }
@@ -94,10 +94,11 @@ void AI::CTFGoalD::Assign(Character* pChr)
         return;
     }
 
-    GoalTarget target(RegionPosition(FlagHomeRegion(static_cast<const GameObject*>(mFlag))));
+    GoalTarget target(RegionPosition(FlagHomeRegion(mFlag)));
     if (pCtrl->GetRandomSeed() % 2 == 1)
     {
-        target = GoalTarget(static_cast<const GameObject*>(mFlag));
+        target = GoalTarget(mFlag);
     }
-    pCtrl->ForceCommand(UnitGoalAgentInfo(CMD_DEFEND, &target));
+    UnitGoalAgentInfo command(CMD_DEFEND, &target);
+    pCtrl->ForceCommand(command);
 }

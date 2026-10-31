@@ -487,7 +487,9 @@ const Combo::State& Combo::State::operator=(const State& other)
         {
             break;
         }
-        *pAttack = *other.GetAttack(i);
+        const Attack& source = other.m_aAttack[i];
+        memcpy(pAttack->m_auiPackedData, source.m_auiPackedData, sizeof(pAttack->m_auiPackedData));
+        pAttack->m_aDamageSample = source.m_aDamageSample;
     }
     return *this;
 }
@@ -513,24 +515,26 @@ const Combo& Combo::operator=(const Combo& other)
             bDeepCopy = true;
         }
     }
-    if (!bDeepCopy)
+    if (bDeepCopy)
+    {
+        m_uiNumStates = 0;
+        m_aState = 0;
+        for (unsigned int i = 0; i < other.GetNumStates(); ++i)
+        {
+            State* pState = AddState(other.GetState(i)->m_uiNameHash);
+            if (!pState)
+            {
+                break;
+            }
+            *pState = *other.GetState(i);
+        }
+    }
+    else
     {
         m_aState = other.m_aState;
         m_pCatchState = other.m_pCatchState;
         m_pTakeKneeState = other.m_pTakeKneeState;
         m_uiNumStates = other.m_uiNumStates;
-        return *this;
-    }
-    m_uiNumStates = 0;
-    m_aState = 0;
-    for (unsigned int i = 0; i < other.GetNumStates(); ++i)
-    {
-        State* pState = AddState(other.GetState(i)->m_uiNameHash);
-        if (!pState)
-        {
-            break;
-        }
-        *pState = *other.GetState(i);
     }
     return *this;
 }
@@ -984,9 +988,14 @@ bool Combo::Condition::TestVelocity(float fX, float fY, float fZ) const
 {
     if (m_uiVelocityYCnd)
     {
-        float fRef = GetVelocityYRef();
-        if (!m_bVelocityYSigned)
+        float fRef;
+        if (m_bVelocityYSigned)
         {
+            fRef = GetVelocityYRef();
+        }
+        else
+        {
+            fRef = GetVelocityYRef();
             fY *= fY;
             fRef *= fRef;
         }
@@ -1057,7 +1066,7 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
-        case 0x3e693899:
+        case 0x3e693899: /* "TimeEnd" */
             if (data.GetNumArgs())
             {
                 float fTime = data.GetFloatArg(0);
@@ -1071,13 +1080,13 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
                     }
                     switch (PblHash(data.GetStringArg(i)))
                     {
-                    case 0x3a7dcd06:
+                    case 0x3a7dcd06: /* "SyncIfOvertime" */
                         bSyncIfOvertime = true;
                         break;
-                    case 0x7b71324f:
+                    case 0x7b71324f: /* "Frames" */
                         fTime *= ANIM_FRAME_SPEED;
                         break;
-                    case 0xfa9122ba:
+                    case 0xfa9122ba: /* "FromEnd" */
                         bFromEnd = true;
                         break;
                     }
@@ -1086,57 +1095,57 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
             }
             break;
 
-        case 0x2be29e1f:
+        case 0x2be29e1f: /* "VelocityYAbs" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 SetVelocityY(data.GetFloatArg(1), false, data.GetStringArg(0)[0] == '<');
             }
             break;
 
-        case 0x29cc5095:
+        case 0x29cc5095: /* "Energy" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 SetEnergy(data.GetFloatArg(1), data.GetStringArg(0)[0] == '<');
             }
             break;
 
-        case 0x43b27471:
+        case 0x43b27471: /* "Button" */
             if (data.GetNumArgs() && data.IsStringArg(0))
             {
                 unsigned int eButton = 0;
                 unsigned int eAction = 0;
                 switch (PblHash(data.GetStringArg(0)))
                 {
-                case 0x8eab16d9: eButton = 1; break;
-                case 0xa70c98dd: eButton = 2; break;
-                case 0xa73f5c0d: eButton = 3; break;
-                case 0x76f15155: eButton = 4; break;
-                case 0x4e4fa58b: eButton = 5; break;
-                case 0xed7cdd8c: eButton = 6; break;
-                case 0x986b9eb6: eButton = 7; break;
+                case 0x8eab16d9: /* "Fire" */ eButton = 1; break;
+                case 0xa70c98dd: /* "FireSecondary" */ eButton = 2; break;
+                case 0xa73f5c0d: /* "Jump" */ eButton = 3; break;
+                case 0x76f15155: /* "Sprint" */ eButton = 4; break;
+                case 0x4e4fa58b: /* "Crouch" */ eButton = 5; break;
+                case 0xed7cdd8c: /* "Reload" */ eButton = 6; break;
+                case 0x986b9eb6: /* "FireBoth" */ eButton = 7; break;
                 }
                 if (data.GetNumArgs() > 1 && data.IsStringArg(1))
                 {
                     switch (PblHash(data.GetStringArg(1)))
                     {
-                    case 0xaaf74aa2: eAction = 1; break;
-                    case 0xadc649b8: eAction = 2; break;
-                    case 0x389c8f75: eAction = 3; break;
-                    case 0x46d056a1: eAction = 4; break;
-                    case 0x486aebad: eAction = 5; break;
-                    case 0x0c1f28db: eAction = 6; break;
-                    case 0x25bef6e8: eAction = 7; break;
-                    case 0x43430b20: eAction = 8; break;
-                    case 0x1036ae7e: eAction = 9; break;
-                    case 0x3db9b915: eAction = 10; break;
+                    case 0xaaf74aa2: /* "Tap" */ eAction = 1; break;
+                    case 0xadc649b8: /* "Hold" */ eAction = 2; break;
+                    case 0x389c8f75: /* "HoldRelease" */ eAction = 3; break;
+                    case 0x46d056a1: /* "TapPress" */ eAction = 4; break;
+                    case 0x486aebad: /* "DoubleTap" */ eAction = 5; break;
+                    case 0x0c1f28db: /* "TapHold" */ eAction = 6; break;
+                    case 0x25bef6e8: /* "TapHoldRelease" */ eAction = 7; break;
+                    case 0x43430b20: /* "Up" */ eAction = 8; break;
+                    case 0x1036ae7e: /* "Release" */ eAction = 9; break;
+                    case 0x3db9b915: /* "Down" */ eAction = 10; break;
                     }
                 }
                 SetButton(eButton, eAction);
             }
             break;
 
-        case 0xbfd3c98c:
-        case 0x802b3931:
+        case 0xbfd3c98c: /* "ButtonsPressed" */
+        case 0x802b3931: /* "ButtonsReleased" */
             if (data.GetNumArgs() && data.IsStringArg(0))
             {
                 unsigned int uiButtons = 0;
@@ -1144,23 +1153,23 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
                 {
                     switch (PblHash(data.GetStringArg(0)))
                     {
-                    case 0x8eab16d9: uiButtons |= 0x02; break;
-                    case 0x19d9d4a0: uiButtons &= ~0x02; break;
-                    case 0xa70c98dd: uiButtons |= 0x04; break;
-                    case 0x01850be2: uiButtons &= ~0x04; break;
-                    case 0xa73f5c0d: uiButtons |= 0x08; break;
-                    case 0x2739df58: uiButtons &= ~0x08; break;
-                    case 0x76f15155: uiButtons |= 0x10; break;
-                    case 0x6e55a4e0: uiButtons &= ~0x10; break;
-                    case 0x4e4fa58b: uiButtons |= 0x20; break;
-                    case 0x4f92add2: uiButtons &= ~0x20; break;
-                    case 0xed7cdd8c: uiButtons |= 0x40; break;
-                    case 0x53a68851: uiButtons &= ~0x40; break;
-                    case 0x2c29f04d:
-                    case 0x13254bc4: uiButtons |= 0x3f; break;
+                    case 0x8eab16d9: /* "Fire" */ uiButtons |= 0x02; break;
+                    case 0x19d9d4a0: /* "!Fire" */ uiButtons &= ~0x02; break;
+                    case 0xa70c98dd: /* "FireSecondary" */ uiButtons |= 0x04; break;
+                    case 0x01850be2: /* "!FireSecondary" */ uiButtons &= ~0x04; break;
+                    case 0xa73f5c0d: /* "Jump" */ uiButtons |= 0x08; break;
+                    case 0x2739df58: /* "!Jump" */ uiButtons &= ~0x08; break;
+                    case 0x76f15155: /* "Sprint" */ uiButtons |= 0x10; break;
+                    case 0x6e55a4e0: /* "!Sprint" */ uiButtons &= ~0x10; break;
+                    case 0x4e4fa58b: /* "Crouch" */ uiButtons |= 0x20; break;
+                    case 0x4f92add2: /* "!Crouch" */ uiButtons &= ~0x20; break;
+                    case 0xed7cdd8c: /* "Reload" */ uiButtons |= 0x40; break;
+                    case 0x53a68851: /* "!Reload" */ uiButtons &= ~0x40; break;
+                    case 0x2c29f04d: /* "Any" */
+                    case 0x13254bc4: /* "All" */ uiButtons |= 0x3f; break;
                     }
                 }
-                if (data.GetId() == 0xbfd3c98c)
+                if (data.GetId() == 0xbfd3c98c /* "ButtonsPressed" */)
                 {
                     SetInputButtonsPressed(uiButtons);
                 }
@@ -1171,26 +1180,26 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
             }
             break;
 
-        case 0x70a3cdf2:
+        case 0x70a3cdf2: /* "ThrustAngle" */
             if (data.GetNumArgs() >= 2 && data.IsFloatArg(0) && data.IsFloatArg(1))
             {
                 SetInputDir(data.GetFloatArg(0), data.GetFloatArg(1));
             }
             break;
 
-        case 0x82a306b7:
+        case 0x82a306b7: /* "VelocityXZAngle" */
             if (data.GetNumArgs() >= 2 && data.IsFloatArg(0) && data.IsFloatArg(1))
             {
                 SetVelocityXZDir(data.GetFloatArg(0), data.GetFloatArg(1));
             }
             break;
 
-        case 0x8f04cb51:
+        case 0x8f04cb51: /* "TimeInPosture" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 float fTime = data.GetFloatArg(1);
                 if (data.GetNumArgs() >= 3 && data.IsStringArg(2) &&
-                    PblHash(data.GetStringArg(2)) == 0x7b71324f)
+                    PblHash(data.GetStringArg(2)) == 0x7b71324f /* "Frames" */)
                 {
                     fTime *= ANIM_FRAME_SPEED;
                 }
@@ -1198,14 +1207,14 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
             }
             break;
 
-        case 0xb7c88a11:
+        case 0xb7c88a11: /* "VelocityY" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 SetVelocityY(data.GetFloatArg(1), true, data.GetStringArg(0)[0] == '<');
             }
             break;
 
-        case 0xc44b98e8:
+        case 0xc44b98e8: /* "TimeStart" */
             if (data.GetNumArgs())
             {
                 float fTime = data.GetFloatArg(0);
@@ -1218,10 +1227,10 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
                     }
                     switch (PblHash(data.GetStringArg(i)))
                     {
-                    case 0x7b71324f:
+                    case 0x7b71324f: /* "Frames" */
                         fTime *= ANIM_FRAME_SPEED;
                         break;
-                    case 0xfa9122ba:
+                    case 0xfa9122ba: /* "FromEnd" */
                         bFromEnd = true;
                         break;
                     }
@@ -1230,18 +1239,18 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
             }
             break;
 
-        case 0xc1ae1e4c:
+        case 0xc1ae1e4c: /* "VelocityXZ" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 SetVelocityXZMag(data.GetFloatArg(1), data.GetStringArg(0)[0] == '<');
             }
             break;
 
-        case 0xc9648178:
+        case 0xc9648178: /* "Break" */
         {
             float fTime = data.GetNumArgs() ? data.GetFloatArg(0) : 0.0f;
             if (data.GetNumArgs() >= 2 && data.IsStringArg(1) &&
-                PblHash(data.GetStringArg(1)) == 0x7b71324f)
+                PblHash(data.GetStringArg(1)) == 0x7b71324f /* "Frames" */)
             {
                 fTime *= ANIM_FRAME_SPEED;
             }
@@ -1249,14 +1258,14 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
             break;
         }
 
-        case 0xd0624e33:
+        case 0xd0624e33: /* "Thrust" */
             if (data.GetNumArgs() >= 2 && data.IsStringArg(0) && data.IsFloatArg(1))
             {
                 SetInputMag(data.GetFloatArg(1), data.GetStringArg(0)[0] == '<');
             }
             break;
 
-        case 0xf0f686cb:
+        case 0xf0f686cb: /* "Posture" */
             if (data.GetNumArgs() && data.IsStringArg(0))
             {
                 unsigned int uiStates = 0;
@@ -1268,20 +1277,20 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
                     }
                     switch (PblHash(data.GetStringArg(i)))
                     {
-                    case 0x75493323: uiStates |= 0x01; break;
-                    case 0xb837312c: uiStates &= ~0x01; break;
-                    case 0x4e4fa58b: uiStates |= 0x02; break;
-                    case 0x4f92add2: uiStates &= ~0x02; break;
-                    case 0x76f15155: uiStates |= 0x08; break;
-                    case 0x6e55a4e0: uiStates &= ~0x08; break;
-                    case 0xa73f5c0d: uiStates |= 0x10; break;
-                    case 0x2739df58: uiStates &= ~0x10; break;
-                    case 0x16ff3d1e: uiStates |= 0x20; break;
-                    case 0xa8bfb92f: uiStates &= ~0x20; break;
-                    case 0xd7e330f4: uiStates |= 0x40; break;
-                    case 0x7a24b7d3: uiStates &= ~0x40; break;
-                    case 0x2c29f04d:
-                    case 0x13254bc4: uiStates |= 0x7f; break;
+                    case 0x75493323: /* "Stand" */ uiStates |= 0x01; break;
+                    case 0xb837312c: /* "!Stand" */ uiStates &= ~0x01; break;
+                    case 0x4e4fa58b: /* "Crouch" */ uiStates |= 0x02; break;
+                    case 0x4f92add2: /* "!Crouch" */ uiStates &= ~0x02; break;
+                    case 0x76f15155: /* "Sprint" */ uiStates |= 0x08; break;
+                    case 0x6e55a4e0: /* "!Sprint" */ uiStates &= ~0x08; break;
+                    case 0xa73f5c0d: /* "Jump" */ uiStates |= 0x10; break;
+                    case 0x2739df58: /* "!Jump" */ uiStates &= ~0x10; break;
+                    case 0x16ff3d1e: /* "Roll" */ uiStates |= 0x20; break;
+                    case 0xa8bfb92f: /* "!Roll" */ uiStates &= ~0x20; break;
+                    case 0xd7e330f4: /* "Jet" */ uiStates |= 0x40; break;
+                    case 0x7a24b7d3: /* "!Jet" */ uiStates &= ~0x40; break;
+                    case 0x2c29f04d: /* "Any" */
+                    case 0x13254bc4: /* "All" */ uiStates |= 0x7f; break;
                     }
                 }
                 SetSoldierStates(uiStates);
@@ -2596,25 +2605,26 @@ unsigned int Combo::_GetDeflectButton() const
         return 0;
     }
 
-    const State* pIdleState = &m_aState[0];
+    const State& idle = m_aState[0];
     const Transition* pTransition = 0;
-    for (unsigned int i = 0; i < pIdleState->GetNumTransitions(); ++i)
+    for (unsigned int i = 0; i < idle.m_uiNumTransitions; ++i)
     {
-        pTransition = pIdleState->GetTransition(i);
+        pTransition = &idle.m_aTransition[i];
         if (pTransition->m_uiTargetState == uiState)
         {
             break;
         }
     }
-    if (pTransition)
+    if (!pTransition)
     {
-        for (unsigned int i = 0; i < pTransition->GetNumConditions(); ++i)
+        return 0;
+    }
+    for (unsigned int i = 0; i < pTransition->m_uiNumConditions; ++i)
+    {
+        unsigned int uiButton = pTransition->m_aCondition[i].m_uiButton;
+        if (uiButton)
         {
-            Condition::BUTTON eButton = pTransition->GetCondition(i)->GetButton();
-            if (eButton != Condition::BUTTON_NONE)
-            {
-                return eButton;
-            }
+            return uiButton;
         }
     }
     return 0;

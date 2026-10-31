@@ -41,9 +41,11 @@ UnitHoldAgent::UnitHoldAgent(UnitController* pCtrl)
 // FUNCTION: SWBF2 0x00668e00
 void UnitHoldAgent::EnterState()
 {
-    if (mCurState == 2)
+    switch (mCurState)
     {
+    case 2:
         SetNewSearchHeading();
+        break;
     }
 }
 
@@ -132,11 +134,13 @@ bool UnitHoldAgent::ShouldQueueCurCmd(const UnitCmdInfo& cmd) const
 // FUNCTION: SWBF2 0x00669150
 int UnitHoldAgent::EventHandler(AI::EventInfo* pInfo)
 {
-    if (pInfo->mType == AI::EVT_EmptyVehicle)
+    switch (pInfo->mType)
     {
+    case AI::EVT_EmptyVehicle:
         return 0;
+    default:
+        return UnitAgent::EventHandler(pInfo);
     }
-    return UnitAgent::EventHandler(pInfo);
 }
 
 // FUNCTION: SWBF2 0x00669170

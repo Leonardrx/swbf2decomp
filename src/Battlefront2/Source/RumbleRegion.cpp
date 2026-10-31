@@ -210,7 +210,11 @@ void* RumbleRegionManager::CreateRegion(RedRegionDesc& desc, const char* pcName)
     pRegion->mCurRumbleID = PblHash(rumbleName);
     pRegion->mEffectHash = PblHash(effectName);
     pRegion->m_pREClass = RumbleEffectClass::FindRumbleEffectClass(pRegion->mCurRumbleID);
-    if (!pRegion->m_pREClass || sRegions.IsFull())
+    if (!pRegion->m_pREClass)
+    {
+        return 0;
+    }
+    if (sRegions.IsFull())
     {
         return 0;
     }

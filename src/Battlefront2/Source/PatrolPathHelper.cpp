@@ -59,10 +59,7 @@ bool PatrolPathHelper::CheckForPatrolPathsAndInit()
         }
 
         const PblVector3* pStart = pPath->GetPointPosition(0);
-        float dx = pStart->x - vPos.x;
-        float dy = pStart->y - vPos.y;
-        float dz = pStart->z - vPos.z;
-        float fDistSq = dx * dx + dy * dy + dz * dz;
+        float fDistSq = SquaredLength(*pStart - vPos);
         if (fDistSq < fBestDistSq)
         {
             paths[0] = pPath;
@@ -137,10 +134,7 @@ void PatrolPathHelper::UpdateState(float dt)
         {
             const PblVector3& vPos = GetMe()->GetMatrix().GetTranslation();
             const PblVector3* pStart = mPatrolPath->GetPointPosition(0);
-            float dx = vPos.x - pStart->x;
-            float dy = vPos.y - pStart->y;
-            float dz = vPos.z - pStart->z;
-            if (dx * dx + dy * dy + dz * dz < 1.0f)
+            if (SquaredLength(vPos - *pStart) < 1.0f)
             {
                 SetNextState(STATE_RunPath);
             }
@@ -170,23 +164,25 @@ void PatrolPathHelper::DoNodeActions(const PblVector3& vPos)
     {
         return;
     }
+    int iNode = -1;
     for (int i = 0; i < mPatrolPath->GetNumPoints(); ++i)
     {
         const PblVector3* pPoint = mPatrolPath->GetPointPosition(i);
-        const float dx = vPos.x - pPoint->x;
-        const float dy = vPos.y - pPoint->y;
-        const float dz = vPos.z - pPoint->z;
-        if (!(0.0001f > dx * dx + dy * dy + dz * dz))
+        if (0.0001f > SquaredLength(vPos - *pPoint))
         {
-            continue;
+            iNode = i;
+            break;
         }
-        const AI::PatrolPath::NodeProperties& props = mPatrolPath->GetNodeProperties(i);
-        float fWait = AIUtil::GetRandomFloat(props.mWaitMin, props.mWaitMax);
-        if (fWait > 0.0f)
-        {
-            LowLevel(GetCtrl()).Navigator_Wait(fWait);
-        }
-        break;
+    }
+    if (iNode < 0)
+    {
+        return;
+    }
+    const AI::PatrolPath::NodeProperties& props = mPatrolPath->GetNodeProperties(iNode);
+    float fWait = AIUtil::GetRandomFloat(props.mWaitMin, props.mWaitMax);
+    if (fWait > 0.0f)
+    {
+        LowLevel(GetCtrl()).Navigator_Wait(fWait);
     }
 }
 

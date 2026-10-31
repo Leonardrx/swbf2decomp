@@ -130,21 +130,15 @@ SpaceAssault::~SpaceAssault()
 // FUNCTION: SWBF2 0x0064bb10
 bool SpaceAssault::IsCriticalSystem(GameObject* pObject) const
 {
-    if (!mbEnabled)
+    if (mbEnabled && NetGame::IsEnabled() && NetGame::IsHost())
     {
-        return false;
-    }
-    if (!NetGame::IsEnabled() || !NetGame::IsHost())
-    {
-        return false;
-    }
-
-    for (int i = 0; i < mNumCriticalSystems; ++i)
-    {
-        GameObject* pSystem = mCriticalSystems[i].pGameObject;
-        if (pSystem && pSystem == pObject)
+        for (int i = 0; i < mNumCriticalSystems; ++i)
         {
-            return true;
+            GameObject* pSystem = mCriticalSystems[i].pGameObject;
+            if (pSystem && pSystem == pObject)
+            {
+                return true;
+            }
         }
     }
     return false;
@@ -153,21 +147,15 @@ bool SpaceAssault::IsCriticalSystem(GameObject* pObject) const
 // FUNCTION: SWBF2 0x0064bb90
 unsigned int SpaceAssault::GetIsAliveTurnNumber(GameObject* pObject) const
 {
-    if (!mbEnabled)
+    if (mbEnabled && NetGame::IsEnabled() && NetGame::IsHost())
     {
-        return 0;
-    }
-    if (!NetGame::IsEnabled() || !NetGame::IsHost())
-    {
-        return 0;
-    }
-
-    for (int i = 0; i < mNumCriticalSystems; ++i)
-    {
-        GameObject* pSystem = mCriticalSystems[i].pGameObject;
-        if (pSystem && pSystem == pObject)
+        for (int i = 0; i < mNumCriticalSystems; ++i)
         {
-            return mCriticalSystems[i].isAliveTurnNumber;
+            GameObject* pSystem = mCriticalSystems[i].pGameObject;
+            if (pSystem && pSystem == pObject)
+            {
+                return mCriticalSystems[i].isAliveTurnNumber;
+            }
         }
     }
     return 0;
@@ -397,12 +385,12 @@ void SpaceAssault::LinkCriticalSystems(unsigned int* const pNameHashIds, int iCo
     {
         CriticalSystemData* pNext = FindCriticalSystemData(pNameHashIds[i]);
         pPrev->pNextLinkedSystem = pNext;
-        if (!pNext)
+        pPrev = pNext;
+        if (!pPrev)
         {
             return;
         }
-        pNext->bShowMarker = false;
-        pPrev = pNext;
+        pPrev->bShowMarker = false;
     }
     pPrev->pNextLinkedSystem = 0;
 }
@@ -425,10 +413,10 @@ short SpaceAssault::GetPointValue(unsigned int uNameHashId, Character* pCharacte
         }
     }
 
-    EntityEx* pEntity = EntityEx::Find(uNameHashId);
+    EntityEx* pEntity = EntityEx::mIdMap.Find(uNameHashId);
     if (pEntity && GetTeam(pEntity->GetGameObject()) == pCharacter->mTeamNumber)
     {
-        return -value;
+        value = -value;
     }
     return value;
 }
@@ -664,9 +652,9 @@ GameObject* SpaceAssault::GetRandomCritSys(const Team* pTeam, float fBias) const
 // FUNCTION: SWBF2 0x0064cd20
 RedColor SpaceAssault::CalcDamageColor(float fHealth)
 {
-    if (fHealth <= 0.5f)
+    if (fHealth > 0.5f)
     {
-        return Interpolate(RedColor::RED, RedColor::YELLOW, fHealth * 2.0f);
+        return Interpolate(RedColor::YELLOW, RedColor::GREEN, (fHealth - 0.5f) * 2.0f);
     }
-    return Interpolate(RedColor::YELLOW, RedColor::GREEN, (fHealth - 0.5f) * 2.0f);
+    return Interpolate(RedColor::RED, RedColor::YELLOW, fHealth * 2.0f);
 }

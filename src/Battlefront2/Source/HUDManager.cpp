@@ -153,7 +153,7 @@ bool HUD::Manager::ConfigFile::ReadData(PblConfig& config, PblConfig::Data& data
 {
     switch (data.GetId())
     {
-    case 0x70e37eec:
+    case 0x70e37eec: /* "SplitMode" */
     {
         int iNumArgs = data.GetNumArgs();
         if (iNumArgs < 0)
@@ -165,7 +165,7 @@ bool HUD::Manager::ConfigFile::ReadData(PblConfig& config, PblConfig::Data& data
             iNumArgs = 2;
         }
         mNumSupportedSplitModes = 0;
-        for (int i = 0; i < iNumArgs; ++i)
+        for (unsigned int i = 0; i < iNumArgs; ++i)
         {
 
             const char* pName = (const char*)data.m_auiArgs + data.m_auiArgs[i];
@@ -177,7 +177,7 @@ bool HUD::Manager::ConfigFile::ReadData(PblConfig& config, PblConfig::Data& data
         }
         return true;
     }
-    case 0xaa56e310:
+    case 0xaa56e310: /* "Viewports" */
     {
         int iNumArgs = data.GetNumArgs();
         if (iNumArgs < 0)
@@ -189,13 +189,13 @@ bool HUD::Manager::ConfigFile::ReadData(PblConfig& config, PblConfig::Data& data
             iNumArgs = 4;
         }
         mNumSupportedViewPorts = 0;
-        for (int i = 0; i < iNumArgs; ++i)
+        for (unsigned int i = 0; i < iNumArgs; ++i)
         {
             mSupportedViewPorts[mNumSupportedViewPorts++] = (unsigned int)data.GetFloatArg(i);
         }
         return true;
     }
-    case 0xf5dc47f6:
+    case 0xf5dc47f6: /* "Widescreen" */
         mWidescreen = data.GetFloatArg(0) != 0.0f;
         mWidescreenSet = true;
         return true;
@@ -356,10 +356,11 @@ void HUD::Manager::Close()
     unsigned int uNumViews = CameraManager::Instance()->m_iNumCam;
     for (unsigned int i = 0; i < uNumViews; ++i)
     {
-        HUD::gScreenGroup[i + 1].Enable(false);
-        FLRenderer::RemoveInterfaceElement(i, &HUD::gScreenGroup[i + 1]);
-        HUD::gScreenGroupEdit[i + 1].Enable(false);
-        FLRenderer::RemoveInterfaceElement(i, &HUD::gScreenGroupEdit[i + 1]);
+        const unsigned int uGroup = i + 1;
+        HUD::gScreenGroup[uGroup].Enable(false);
+        FLRenderer::RemoveInterfaceElement(i, &HUD::gScreenGroup[uGroup]);
+        HUD::gScreenGroupEdit[uGroup].Enable(false);
+        FLRenderer::RemoveInterfaceElement(i, &HUD::gScreenGroupEdit[uGroup]);
     }
 
     delete[] HUD::gScreenGroup;

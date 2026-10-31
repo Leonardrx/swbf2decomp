@@ -98,14 +98,14 @@ bool CollisionObject::CheckForCollision(CollisionObject* pOther, Restrictor* pRe
     {
         return bCollided;
     }
-    if (mParent == pOther || pOther->mParent == this)
+    if (mParent == pOther || this == pOther->mParent)
     {
         return false;
     }
 
     CollisionObjectType eThisType = (CollisionObjectType)GetObjectData(0);
-    CollisionObjectType eOtherType = (CollisionObjectType)pOther->GetObjectData(0);
-    CollisionObjectType eOrigOtherType = eOtherType;
+    CollisionObjectType eOrigOtherType = (CollisionObjectType)pOther->GetObjectData(0);
+    CollisionObjectType eOtherType = eOrigOtherType;
 
     if (mCollisionModel->mIsFlyerFlag)
     {
@@ -154,7 +154,7 @@ bool CollisionObject::CheckForCollision(CollisionObject* pOther, Restrictor* pRe
     for (;;)
     {
         bool bHit;
-        if (GetObjectData(0) == COLL_SOFT && !mCollisionModel->mIsFlyerFlag)
+        if (GetCollisionType() == COLL_SOFT && !mCollisionModel->mIsFlyerFlag)
         {
             bHit = mCollisionModel->CheckForCollision_SSSC(this, pOther, pRestrictor, pOptInfo);
         }
@@ -178,9 +178,7 @@ bool CollisionObject::CheckForCollision(CollisionObject* pOther, Restrictor* pRe
         unsigned char uId = result.mColliderId;
         result.mColliderId = result.mReceiverId;
         result.mReceiverId = uId;
-        result.mSeparationNormal.x = -result.mSeparationNormal.x;
-        result.mSeparationNormal.y = -result.mSeparationNormal.y;
-        result.mSeparationNormal.z = -result.mSeparationNormal.z;
+        result.mSeparationNormal = -result.mSeparationNormal;
         pOther->CollisionCallback(&result, this, pRestrictor);
 
         if (pOptInfo && mCollisionModel)
@@ -246,8 +244,10 @@ void CollisionObject::RecalculateAABB()
 {
     const PblVector3& vCenter = GetCollisionCenter();
     float fRadius = GetCollisionRadius();
-    mAABB._vMin = PblVector3(vCenter.x - fRadius, vCenter.y - fRadius, vCenter.z - fRadius);
-    mAABB._vMax = PblVector3(vCenter.x + fRadius, vCenter.y + fRadius, vCenter.z + fRadius);
+    const PblVector3 vMax(vCenter.x + fRadius, vCenter.y + fRadius, vCenter.z + fRadius);
+    const PblVector3 vMin(vCenter.x - fRadius, vCenter.y - fRadius, vCenter.z - fRadius);
+    mAABB._vMin = vMin;
+    mAABB._vMax = vMax;
 }
 
 // FUNCTION: SWBF2 0x00463bf0

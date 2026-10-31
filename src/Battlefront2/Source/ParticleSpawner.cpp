@@ -110,9 +110,7 @@ void ParticleSpawner::SetupParticle(Particle& particle, const PblMatrix& mat, un
     particle.mVelocity = v;
 
     const float fInherit = mInheritVelocityFactor.GetValue(rand) + fInheritVelocity;
-    particle.mVelocity.x += vVelocity.x * fInherit;
-    particle.mVelocity.y += vVelocity.y * fInherit;
-    particle.mVelocity.z += vVelocity.z * fInherit;
+    particle.mVelocity += vVelocity * fInherit;
     particle.mSize[0] *= fSize;
     particle.mUseHSV = mUseHSV;
     particle.mLifeTime = fAge;

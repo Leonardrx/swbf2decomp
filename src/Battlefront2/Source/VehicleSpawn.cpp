@@ -112,12 +112,9 @@ VehicleSpawn::VehicleSpawn(VehicleSpawnClass* pClass, const EntityDesc& desc)
       mCycleTimer(0.0f)
 {
     VehicleTracker::AddMemoryPoolCount(mSpawnCount);
-    for (int i = 0; i < 8; ++i)
-    {
-        mSpawnClass[i] = 0;
-        mFlyerClass[i] = 0;
-        mUseCarrier[i] = false;
-    }
+    memset(mSpawnClass, 0, sizeof(mSpawnClass));
+    memset(mFlyerClass, 0, sizeof(mFlyerClass));
+    memset(mUseCarrier, 0, sizeof(mUseCarrier));
     ActivateThread(0, PER_LOCAL_TURN);
     sVehicleSpawnList.AddLast(&m_ListNode, this);
 }
@@ -172,7 +169,7 @@ void VehicleSpawn::SetProperty(unsigned int uProperty, const char* pszValue)
     {
         Team* pTeam = Team::GetPtr(iTeam);
         int iSide = pTeam->GetSide();
-        if ((iTeam == 1 || iTeam == 2) && SpawnManager::Instance()->IsHistorical())
+        if (((unsigned int)(iTeam - 1) <= 1) && SpawnManager::Instance()->IsHistorical())
         {
             iSide = Team::side_MAX;
         }
@@ -207,10 +204,7 @@ void VehicleSpawn::gCalcBeginLandPos(const EntityFlyerClass& flyerClass, PblMatr
                              fTime * -0.5f * flyerClass.mMinFlyerSpeed);
     PblVector3 vPos;
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(pMatrix));
-    pMatrix->m[3][0] = vPos.x;
-    pMatrix->m[3][1] = vPos.y;
-    pMatrix->m[3][2] = vPos.z;
-    pMatrix->m[3][3] = 1.0f;
+    pMatrix->SetTranslation(vPos);
 }
 
 static bool IsCurrentlySelfPiloted(const Controllable* pControllable)

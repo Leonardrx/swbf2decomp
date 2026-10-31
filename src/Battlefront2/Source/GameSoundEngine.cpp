@@ -165,12 +165,7 @@ namespace GameSoundEngine
 bool __cdecl UseKmixer()
 {
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
-    if (!pProfile)
-    {
-        return false;
-    }
-
-    return (unsigned char)(pProfile->mSoundOptions.mPlaybackMode - 1) > 3;
+    return pProfile && (unsigned char)(pProfile->mSoundOptions.mPlaybackMode - 1) > 3;
 }
 }
 
@@ -193,15 +188,9 @@ bool Init(unsigned int uiFlags, bool bEnable)
     Snd::Globals::smTempFree = free;
     Snd::Globals::smWarningFunction = PrintDebugString;
 
-    if (g_bNoSound)
+    if (!g_bNoSound)
     {
-
-        gSoundIsOpen = Snd::Engine::Open(0, Snd::Engine::mixConfig_Disabled, true, 100.0f,
-                                         true, 48000, 32, 0, 0);
-    }
-    else
-    {
-        bool bUseKmixer = GameSoundEngine::UseKmixer();
+        bool bSoftwareMixing = !GameSoundEngine::UseKmixer();
 
         unsigned long* pulWindowsSpeakerConfig =
             (gWindowsSpeakerConfig != 0) ? 0 : &gWindowsSpeakerConfig;
@@ -210,7 +199,7 @@ bool Init(unsigned int uiFlags, bool bEnable)
             (uiFlags != 0) ? (Snd::Engine::MixConfig)uiFlags : Snd::Engine::mixConfig_Software;
 
         gSoundIsOpen = Snd::Engine::Open(hGlobalWnd, eMixConfig, bEnable, GameSoundEngine::gSoftMixerBufferSizeMs,
-                                         !bUseKmixer, (unsigned int)GameSoundEngine::gSamplerate,
+                                         bSoftwareMixing, (unsigned int)GameSoundEngine::gSamplerate,
                                          (unsigned int)GameSoundEngine::gMaxVoices,
                                          pulWindowsSpeakerConfig, 0);
 
@@ -245,6 +234,11 @@ bool Init(unsigned int uiFlags, bool bEnable)
             pProfile->mSoundOptions.mPlaybackMode =
                 (unsigned char)Snd::EngineBase::smSpeakerConfig;
         }
+    }
+    else
+    {
+        gSoundIsOpen = Snd::Engine::Open(0, Snd::Engine::mixConfig_Disabled, true, 100.0f,
+                                         true, 48000, 32, 0, 0);
     }
 
     bool bSoundWorking = (Snd::Engine::GetMixConfig() != Snd::Engine::mixConfig_Disabled);
@@ -313,85 +307,90 @@ bool Open(float fSeconds, bool bSoundWorking)
 
     sVoiceChatHeap = GameMemory::ApplicationHeap;
     int iOldHeap = RedSetCurrentHeap(GameMemory::ApplicationHeap);
+    bool bResult = false;
 
-    if (!GameVoiceChat::gTransport.Open(0x32, 1))
+    if (GameVoiceChat::gTransport.Open(0x32, 1))
     {
-        RedSetCurrentHeap(iOldHeap);
-        return false;
-    }
-
-    if (!VoiceChat::Node::OpenStatic(&GameVoiceChat::gTransport, fSeconds, 1000.0f, 1000.0f))
-    {
-        GameVoiceChat::gTransport.Close();
-        RedSetCurrentHeap(iOldHeap);
-        return false;
-    }
-
-    unsigned int uiNodes = (unsigned int)GameVoiceChat::GetNumNodes();
-    bool bAllOpen = true;
-
-    for (unsigned int i = 0; i < uiNodes; ++i)
-    {
-        sVoiceChatEncoders[i] = new ((GameVoiceChat::Encoder*)sEncoderStorage + i) GameVoiceChat::Encoder;
-        sVoiceChatDecoders[i] = new ((GameVoiceChat::Decoder*)sDecoderStorage + i) GameVoiceChat::Decoder;
-        GameVoiceChat::gNodes[i] = new ((GameVoiceChat::Node*)sNodeStorage + i)
-            GameVoiceChat::Node((GameVoiceChat::Encoder*)sVoiceChatEncoders[i],
-                                (GameVoiceChat::Decoder*)sVoiceChatDecoders[i]);
-    }
-
-    GameVoiceChat::gPlayerChange = true;
-
-    VoiceChat::Transport::Method cMethod(
-        (VoiceChat::Transport::Method::Type)(netVoiceMode ? netVoiceMode : 2), 0x32);
-    cMethod.SetNumRelayNodes(cMethod.CalculateOptimalRelayNodes(0x32));
-    GameVoiceChat::gTransport.SetMethod(cMethod, true);
-
-    if (bSoundWorking)
-    {
-        unsigned int i;
-
-        for (i = 0; i < uiNodes && bAllOpen; ++i)
+        if (VoiceChat::Node::OpenStatic(&GameVoiceChat::gTransport, fSeconds, 1000.0f, 1000.0f))
         {
-            bAllOpen = (bAllOpen && ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C));
-        }
+            unsigned int uiNodes = (unsigned int)GameVoiceChat::GetNumNodes();
+            bool bAllOpen = true;
 
-        if (!bAllOpen)
-        {
-
-            for (i = 0; i < uiNodes; ++i)
+            for (unsigned int i = 0; i < uiNodes; ++i)
             {
-                if (((VoiceChat::Node*)GameVoiceChat::gNodes[i])->IsOpen())
+                sVoiceChatEncoders[i] = new ((GameVoiceChat::Encoder*)sEncoderStorage + i) GameVoiceChat::Encoder;
+                sVoiceChatDecoders[i] = new ((GameVoiceChat::Decoder*)sDecoderStorage + i) GameVoiceChat::Decoder;
+                GameVoiceChat::gNodes[i] = new ((GameVoiceChat::Node*)sNodeStorage + i)
+                    GameVoiceChat::Node((GameVoiceChat::Encoder*)sVoiceChatEncoders[i],
+                                        (GameVoiceChat::Decoder*)sVoiceChatDecoders[i]);
+            }
+
+            GameVoiceChat::gPlayerChange = true;
+
+            VoiceChat::Transport::Method cMethod(
+                (VoiceChat::Transport::Method::Type)(netVoiceMode ? netVoiceMode : 2), 0x32);
+            cMethod.SetNumRelayNodes(cMethod.CalculateOptimalRelayNodes(0x32));
+            GameVoiceChat::gTransport.SetMethod(cMethod, true);
+
+            if (bSoundWorking)
+            {
+                unsigned int i;
+
+                for (i = 0; i < uiNodes; ++i)
                 {
-                    ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Close();
+                    if (bAllOpen)
+                    {
+                        bAllOpen &= ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Open(0xFF, 0xFF, 0x0C);
+                    }
+                }
+
+                if (!bAllOpen)
+                {
+
+                    for (i = 0; i < uiNodes; ++i)
+                    {
+                        if (((VoiceChat::Node*)GameVoiceChat::gNodes[i])->IsOpen())
+                        {
+                            ((VoiceChat::Node*)GameVoiceChat::gNodes[i])->Close();
+                        }
+                    }
+
+                    for (i = 0; i < uiNodes; ++i)
+                    {
+                        ((GameVoiceChat::Encoder*)sVoiceChatEncoders[i])->~Encoder();
+
+                        ((GameVoiceChat::Decoder*)sVoiceChatDecoders[i])->~Decoder();
+
+                        sVoiceChatEncoders[i] = 0;
+                        sVoiceChatDecoders[i] = 0;
+                        GameVoiceChat::gNodes[i] = 0;
+                    }
+
+                    VoiceChat::Node::CloseStatic();
+                    GameVoiceChat::gTransport.Close();
+                }
+                else
+                {
+                    for (i = 0; i < uiNodes; ++i)
+                    {
+                        ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetSendMask(GameVoiceChat::Transport::mask_TeamFriend, true, false);
+                        ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetReceiveMask(GameVoiceChat::Transport::mask_Everyone, true, false);
+                    }
+                    bResult = true;
                 }
             }
-
-            for (i = 0; i < uiNodes; ++i)
+            else
             {
-                ((GameVoiceChat::Encoder*)sVoiceChatEncoders[i])->~Encoder();
-
-                ((GameVoiceChat::Decoder*)sVoiceChatDecoders[i])->~Decoder();
-
-                sVoiceChatEncoders[i] = 0;
-                sVoiceChatDecoders[i] = 0;
-                GameVoiceChat::gNodes[i] = 0;
+                bResult = true;
             }
-
-            VoiceChat::Node::CloseStatic();
-            GameVoiceChat::gTransport.Close();
-            RedSetCurrentHeap(iOldHeap);
-            return false;
         }
-
-        for (i = 0; i < uiNodes; ++i)
+        else
         {
-            ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetSendMask(GameVoiceChat::Transport::mask_TeamFriend, true, false);
-            ((GameVoiceChat::Node*)GameVoiceChat::gNodes[i])->SetReceiveMask(GameVoiceChat::Transport::mask_Everyone, true, false);
+            GameVoiceChat::gTransport.Close();
         }
     }
-
     RedSetCurrentHeap(iOldHeap);
-    return true;
+    return bResult;
 }
 }
 
@@ -501,34 +500,24 @@ void Destroy()
 // FUNCTION: SWBF2 0x00538bb0
 bool ChangeMixConfig(unsigned int uiFlags, bool bEnable)
 {
-    if (GameState::GetState() != 0x11E1FC01)
+    if (GameState::GetState() == 0x11E1FC01)
     {
-        return false;
-    }
-
-    if (uiFlags == 2)
-    {
-        if (!GameSoundEngine::sHwMixingSupported && !GameSoundEngine::UseKmixer())
+        if (uiFlags != 2 ||
+            ((GameSoundEngine::sHwMixingSupported || GameSoundEngine::UseKmixer()) &&
+             (!bEnable || GameSoundEngine::sHwEffectsSupported)))
         {
-            return false;
-        }
-        if (bEnable && !GameSoundEngine::sHwEffectsSupported)
-        {
-            return false;
+            Term(false);
+            if (Init(uiFlags, bEnable))
+            {
+                unsigned int auiChunks[2] = { 0x5E262256, 0x5F646E73 };
+                Snd::EngineBase::smListeners[0].Enable(true);
+                LoadUtil::ReadDataFileOnHeap("core.lvl", -1, auiChunks, 2, 0, 0, 0);
+                gMixConfigChanged = true;
+                return true;
+            }
         }
     }
-
-    Term(false);
-    if (!Init(uiFlags, bEnable))
-    {
-        return false;
-    }
-
-    unsigned int auiChunks[2] = { 0x5E262256, 0x5F646E73 };
-    Snd::EngineBase::smListeners[0].Enable(true);
-    LoadUtil::ReadDataFileOnHeap("core.lvl", -1, auiChunks, 2, 0, 0, 0);
-    gMixConfigChanged = true;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00538c60

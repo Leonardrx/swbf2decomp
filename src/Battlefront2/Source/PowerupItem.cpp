@@ -12,12 +12,9 @@
 PowerupItemClass::PowerupItemClass(unsigned int uHash)
     : EntityItemClass(uHash)
 {
-    for (int i = 0; i < 8; i++)
-    {
-        mAddHealth[i] = 0.0f;
-        mAddAmmo[i] = 0.0f;
-        mAddEnergy[i] = 0.0f;
-    }
+    memset(mAddHealth, 0, sizeof(mAddHealth));
+    memset(mAddAmmo, 0, sizeof(mAddAmmo));
+    memset(mAddEnergy, 0, sizeof(mAddEnergy));
     mBuffOffenseTimer = 0.0f;
     mBuffOffenseMult = 0.0f;
     mBuffDefenseTimer = 0.0f;
@@ -52,12 +49,9 @@ const char PowerupItemClass::rttiNamePowerupItemClass[] = "PowerupItemClass";
 PowerupItemClass::PowerupItemClass(PowerupItemClass* pBase, unsigned int uHash)
     : EntityItemClass(pBase, uHash)
 {
-    for (int i = 0; i < 8; i++)
-    {
-        mAddHealth[i] = pBase->mAddHealth[i];
-        mAddAmmo[i] = pBase->mAddAmmo[i];
-        mAddEnergy[i] = pBase->mAddEnergy[i];
-    }
+    memcpy(mAddHealth, pBase->mAddHealth, sizeof(mAddHealth));
+    memcpy(mAddAmmo, pBase->mAddAmmo, sizeof(mAddAmmo));
+    memcpy(mAddEnergy, pBase->mAddEnergy, sizeof(mAddEnergy));
     mBuffOffenseTimer = pBase->mBuffOffenseTimer;
     mBuffOffenseMult = pBase->mBuffOffenseMult;
     mBuffDefenseTimer = pBase->mBuffDefenseTimer;
@@ -280,21 +274,20 @@ PowerupItem::~PowerupItem()
 // FUNCTION: SWBF2 0x00623a60
 bool PowerupItem::Update(float fDeltaTime)
 {
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -500.0f)
+    const PblVector3* pPos = (const PblVector3*)mMatrix.m[3];
+    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && pPos->y < -500.0f)
     {
         Kill();
         return false;
     }
 
-    const PowerupItemClass* pClass = static_cast<const PowerupItemClass*>(mClass);
-    const PblVector3* pPos = (const PblVector3*)mMatrix.m[3];
     if (mAmbientSound.GetPlaying())
     {
-        mAmbientSound.Update(&pClass->mAmbientSound, pPos, &mVelocity);
+        mAmbientSound.Update(&static_cast<const PowerupItemClass*>(mClass)->mAmbientSound, pPos, &mVelocity);
     }
     else
     {
-        mAmbientSound.Play(&pClass->mAmbientSound, pPos, &mVelocity, true);
+        mAmbientSound.Play(&static_cast<const PowerupItemClass*>(mClass)->mAmbientSound, pPos, &mVelocity, true);
     }
     return EntityItem::Update(fDeltaTime);
 }
@@ -317,10 +310,10 @@ bool PowerupItem::CollisionCallback(const CollisionResult* pResult, CollisionObj
             bool bUsed = PowerupUtility::ApplyBuff(pObject, pClass->mBuffOffenseTimer, pClass->mBuffOffenseMult,
                                                    pClass->mBuffDefenseTimer, pClass->mBuffDefenseMult,
                                                    pClass->mBuffHealthTimer, pClass->mBuffHealthRate,
-                                                   pClass->mDebuffDamageTimer, pClass->mDebuffDamageRate);
-            bUsed |= PowerupUtility::ApplyHealth(pObject, fHealth, 0, false);
-            bUsed |= PowerupUtility::ApplyAmmo(pObject, fAmmo, true);
-            bUsed |= PowerupUtility::ApplyEnergy(pObject, fEnergy);
+                                                   pClass->mDebuffDamageTimer, pClass->mDebuffDamageRate) |
+                         PowerupUtility::ApplyHealth(pObject, fHealth, 0, false) |
+                         PowerupUtility::ApplyAmmo(pObject, fAmmo, true) |
+                         PowerupUtility::ApplyEnergy(pObject, fEnergy);
             if (bUsed)
             {
                 const PblVector3& vPos = GetPosition();

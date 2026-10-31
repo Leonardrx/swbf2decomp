@@ -37,18 +37,22 @@ void LuaScriptFactory::_Read(PblFileChunk& chunk)
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        if (child._iId == 0x454D414Eu)
+        switch (child._iId)
         {
+        case 0x454D414Eu:
             child.ReadString(acName, 256);
             mNameHash = PblHash(acName);
-        }
-        else if (child._iId == 0x59444F42u)
+            break;
+
+        case 0x59444F42u:
         {
             const int iSize = child.GetSize();
             mData = (char*)RedAllocFromHeap(GameMemory::RunTimeHeap, iSize + 1, 1);
             child._pFile->ReadData(mData, iSize);
             sScriptMemUsage += iSize;
             mDataLen = iSize;
+            break;
+        }
         }
     }
 }
@@ -92,7 +96,7 @@ LuaScript::LuaScript()
 // FUNCTION: SWBF2 0x005a1b90
 unsigned int LuaScript::LoadScript(const char* pcName)
 {
-    char acChunkName[260];
+    char acChunkName[256];
     strlcpy(acChunkName, pcName, 256);
     strlcat(acChunkName, ".lua", 256);
 
@@ -102,16 +106,15 @@ unsigned int LuaScript::LoadScript(const char* pcName)
     }
 
     LuaScriptFactory* pFactory = LuaScriptFactory::_GlobalList.Find(PblHash(pcName));
-    if (!pFactory)
+    if (pFactory)
     {
-        return 0;
+        unsigned int uiResult = lua_dobuffer(LuaHelper::mState, pFactory->mData,
+                                             pFactory->mDataLen, acChunkName);
+        pFactory->Purge();
+        lua_setgcthreshold(LuaHelper::mState, lua_getgccount(LuaHelper::mState));
+        return uiResult;
     }
-
-    unsigned int uiResult = lua_dobuffer(LuaHelper::mState, pFactory->mData,
-                                         pFactory->mDataLen, acChunkName);
-    pFactory->Purge();
-    lua_setgcthreshold(LuaHelper::mState, lua_getgccount(LuaHelper::mState));
-    return uiResult;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x005a1ad0
@@ -138,7 +141,7 @@ void LuaScriptFactory::Cleanup()
 // FUNCTION: SWBF2 0x005a1950
 void LuaScriptFactory::PurgeUnused()
 {
-    for (PblList<LuaScriptFactory>::Itor it(_GlobalList); (LuaScriptFactory*)it != 0; ++it)
+    for (PblList<LuaScriptFactory>::Itor it(_GlobalList); (LuaScriptFactory*)it != (LuaScriptFactory*)_GlobalList.End(); ++it)
     {
         if (it->mData)
         {

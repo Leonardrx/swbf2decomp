@@ -127,10 +127,10 @@ UnitFollowAgent::UnitFollowAgent(UnitController* pCtrl, PblHandle<GameObject con
     , mCoverHelper(this)
     , mCombatHelper(this)
 {
-    mTarget = hTarget;
     mTightFollowMode = bTightFollow;
+    mTarget = hTarget;
     mCurState = 1;
-    mNextState = bTightFollow ? 2 : 5;
+    mNextState = mTightFollowMode ? 2 : 5;
 }
 
 // FUNCTION: SWBF2 0x00668070
@@ -146,8 +146,7 @@ float UnitFollowAgent::GetUpdateRate() const
 {
     if (mCurState == 4)
     {
-
-        return 0.4f;
+        return mCombatHelper.GetUpdateRate();
     }
     return UnitAgent::GetUpdateRate();
 }

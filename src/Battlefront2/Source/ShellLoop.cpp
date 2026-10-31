@@ -284,7 +284,7 @@ int ShellLoop::Update(float fDeltaTime)
     SaveGameManager::Update(sDeltaTime);
     if (ScreenTransition::sInstance)
     {
-        ScreenTransition::sInstance->Update(sDeltaTime);
+        ScreenTransition::sInstance->ScreenTransition::Update(sDeltaTime);
     }
     Thread::UpdateAll(sDeltaTime, false, false);
     Thread::UpdateAll(sDeltaTime, true, false);
@@ -354,7 +354,10 @@ bool ShellLoop::GetNetCableErrorOnEnter()
 int ShellLoop::Cleanup()
 {
     GameMovie::Close();
-    delete ShellLoop::ifScript;
+    if (ShellLoop::ifScript)
+    {
+        delete ShellLoop::ifScript;
+    }
     ShellLoop::ifScript = 0;
     gGamespyAutoConnectAddr[0] = 0;
     ShellLoop::mbNetCableErrorOnEnter = false;

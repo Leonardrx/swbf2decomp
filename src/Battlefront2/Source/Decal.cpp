@@ -114,32 +114,31 @@ void DecalManager::Update(float fDeltaTime)
     for (PblList<DecalClass>::Itor itClass(m_decalClasses); itClass != m_decalClasses.End();
          ++itClass)
     {
-        DecalClass* pClass = itClass;
-        PblList<Decal>::Itor it(pClass->m_decals);
-        while (it != pClass->m_decals.End())
+        PblList<Decal>::Itor it(itClass->m_decals);
+        while (it != itClass->m_decals.End())
         {
             Decal* pDecal = it;
             ++it;
 
             pDecal->fTime += fDeltaTime;
-            if (pClass->m_fadeInTime > 0.0f && pDecal->fTime < pClass->m_fadeInTime)
+            if (itClass->m_fadeInTime > 0.0f && pDecal->fTime < itClass->m_fadeInTime)
             {
                 pDecal->color.a =
-                    (unsigned char)(int)(pDecal->fTime / pClass->m_fadeInTime * 255.0f);
+                    (unsigned char)(int)(pDecal->fTime / itClass->m_fadeInTime * 255.0f);
             }
-            else if (pDecal->fTime > pClass->m_lifeTime)
+            else if (pDecal->fTime > itClass->m_lifeTime)
             {
-                pClass->m_decals.Remove(pDecal);
+                itClass->m_decals.Remove(pDecal);
                 delete pDecal;
                 --m_numDecals;
             }
             else
             {
-                float fRemaining = pClass->m_lifeTime - pDecal->fTime;
-                if (fRemaining < pClass->m_fadeOutTime)
+                float fRemaining = itClass->m_lifeTime - pDecal->fTime;
+                if (fRemaining < itClass->m_fadeOutTime)
                 {
                     pDecal->color.a =
-                        (unsigned char)(int)(fRemaining / pClass->m_fadeOutTime * 255.0f);
+                        (unsigned char)(int)(fRemaining / itClass->m_fadeOutTime * 255.0f);
                 }
             }
         }
@@ -219,14 +218,12 @@ DecalClass::DecalClass(PblConfig& config)
     unsigned int auTextures[2];
     auTextures[0] = m_textureHash;
     auTextures[1] = IsBumped() ? m_bumpTextureHash : 0;
-    if (IsBumped() && RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED)
+    const bool bUseShader = !(IsBumped() && RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED);
+    m_pShader = bUseShader ? pcRedShader::Create(0xDE15F6AEu /* "Decal" */, 0x282, auTextures, 2, 0x10004,
+                                                 RedColor::WHITE, RedColor::BLACK, 32.0f)
+                           : 0;
+    if (bUseShader)
     {
-        m_pShader = 0;
-    }
-    else
-    {
-        m_pShader = pcRedShader::Create(0xDE15F6AEu, 0x282, auTextures, 2, 0x10004,
-                                        RedColor::WHITE, RedColor::BLACK, 32.0f);
         DecalManager::s_pInstance->AddClass(this);
     }
 }

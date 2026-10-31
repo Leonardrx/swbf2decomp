@@ -196,6 +196,7 @@ bool AI::PatrolPath::Read(PblConfig& config)
 // FUNCTION: SWBF2 0x00615dc0
 int AI::PatrolPath::RequestPatrolPaths(const PblVector3& pos, float fRadius, int iMax, PatrolPath** ppPaths)
 {
+    const float fRadiusSq = fRadius * fRadius;
     int iCount = 0;
     for (PblList<PatrolPath>::Itor it = sList.Begin(); it != sList.End(); ++it)
     {
@@ -204,10 +205,7 @@ int AI::PatrolPath::RequestPatrolPaths(const PblVector3& pos, float fRadius, int
         {
             continue;
         }
-        float fX = pos.x - pPoint->x;
-        float fY = pos.y - pPoint->y;
-        float fZ = pos.z - pPoint->z;
-        if (fRadius * fRadius > fX * fX + fY * fY + fZ * fZ)
+        if (fRadiusSq > SquaredLength(pos - *pPoint))
         {
             ppPaths[iCount++] = it;
             if (iCount >= iMax)

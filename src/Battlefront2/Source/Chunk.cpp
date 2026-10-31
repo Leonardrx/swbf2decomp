@@ -115,7 +115,8 @@ void Chunk::ClearAll()
     mOmega.z = 0.0f;
     mOmega.y = 0.0f;
     mOmega.x = 0.0f;
-    mGravity = PblVector3(0.0f, -9.8f, 0.0f);
+    static const PblVector3 vGravity(0.0f, -9.8f, 0.0f);
+    mGravity = vGravity;
     mMaxTerrainCollisions = 0;
     mNumTerrainCollisions = 0;
     mTerrainImpactEffect = 0;
@@ -327,18 +328,21 @@ void Chunk::CreateTrailEmitters()
             continue;
         }
 
-        const PblMatrix* pAttach = NULL;
         if (mTrailAttachPoints[i])
         {
             RedPose pose;
             mModel->GetRedModel(0)->SetupPose(pose);
-            pAttach = pose.Find(mTrailAttachPoints[i]);
+            const PblMatrix* pAttach = pose.Find(mTrailAttachPoints[i]);
             if (pAttach)
             {
                 pEffect->AttachEffectToMatrix(&mMatrix, *pAttach, true);
             }
+            else
+            {
+                pEffect->AttachEffectToMatrix(&mCollisionMatrix, true);
+            }
         }
-        if (!pAttach)
+        else
         {
             pEffect->AttachEffectToMatrix(&mCollisionMatrix, true);
         }
@@ -367,18 +371,21 @@ void Chunk::CreateSmokeEmitters()
             continue;
         }
 
-        const PblMatrix* pAttach = NULL;
         if (mSmokeAttachPoints[i])
         {
             RedPose pose;
             mModel->GetRedModel(0)->SetupPose(pose);
-            pAttach = pose.Find(mSmokeAttachPoints[i]);
+            const PblMatrix* pAttach = pose.Find(mSmokeAttachPoints[i]);
             if (pAttach)
             {
                 pEffect->AttachEffectToMatrix(&mMatrix, *pAttach, true);
             }
+            else
+            {
+                pEffect->AttachEffectToMatrix(&mMatrix, true);
+            }
         }
-        if (!pAttach)
+        else
         {
             pEffect->AttachEffectToMatrix(&mMatrix, true);
         }
@@ -645,7 +652,13 @@ bool Chunk::DoSimpleRigidCollision(const CollisionResult* pResult, CollisionObje
         if (mSimpleFrictionConstant > 0.0f)
         {
 
-            PblVector3 vTangent = CrossProduct(vNormal, CrossProduct(mVelocity, vNormal));
+            PblVector3 vTangent(
+                vNormal.y * (mVelocity.x * vNormal.y - mVelocity.y * vNormal.x) -
+                    vNormal.z * (mVelocity.z * vNormal.x - mVelocity.x * vNormal.z),
+                vNormal.z * (mVelocity.y * vNormal.z - mVelocity.z * vNormal.y) -
+                    vNormal.x * (mVelocity.x * vNormal.y - mVelocity.y * vNormal.x),
+                vNormal.x * (mVelocity.z * vNormal.x - mVelocity.x * vNormal.z) -
+                    vNormal.y * (mVelocity.y * vNormal.z - mVelocity.z * vNormal.y));
             D3DXVec3Normalize((D3DXVECTOR3*)&vTangent, (const D3DXVECTOR3*)&vTangent);
             const float fSlip = (mVelocity.x * vTangent.x + mVelocity.y * vTangent.y +
                                  mVelocity.z * vTangent.z) * mSimpleFrictionConstant * mOneOverMass;
@@ -667,7 +680,7 @@ bool Chunk::DoSimpleRigidCollision(const CollisionResult* pResult, CollisionObje
             {
                 float fOmega = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                       mVelocity.z * mVelocity.z) / fRadius;
-                if (CrossProduct(vAxis, mVelocity).y > 0.0f)
+                if (vAxis.z * mVelocity.x - vAxis.x * mVelocity.z > 0.0f)
                 {
                     fOmega = -fOmega;
                 }
@@ -947,11 +960,12 @@ bool ChunkCluster::Update(float fDeltaTime)
     bool bMoved = false;
     for (int i = 0; i < 10; i++)
     {
-        if (mChunks[i].IsMoving())
+        const bool bChunkMoving = mChunks[i].IsMoving();
+        mChunks[i].Update(fDeltaTime);
+        if (bChunkMoving)
         {
             bMoved = true;
         }
-        mChunks[i].Update(fDeltaTime);
     }
     if (bMoved)
     {
@@ -982,9 +996,11 @@ void ChunkCluster::Render(unsigned char ucViewport, float fDist, unsigned int ui
         RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
         if (!pLight->IsShadowCaster())
         {
-            pLight = RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster()
-                         ? RedLight::GetGlobalDirectionalLight(1)
-                         : NULL;
+            pLight = RedLight::GetGlobalDirectionalLight(1);
+            if (!pLight->IsShadowCaster())
+            {
+                pLight = NULL;
+            }
         }
         float fLength;
         if (pLight)
@@ -992,7 +1008,8 @@ void ChunkCluster::Render(unsigned char ucViewport, float fDist, unsigned int ui
             const PblVector3& vDir = pLight->m_vDirection;
             float fMinLength = _Sphere.w * -2.0f / vDir.y;
             uiFlags |= 0x10000;
-            PblVector3 vStart(_Sphere.x, _Sphere.w + _Sphere.y, _Sphere.z);
+            PblVector3 vStart = _Sphere;
+            vStart.y = _Sphere.w + vStart.y;
             const GameObject* pIgnore = NULL;
             CollisionObject* pHit;
             fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pIgnore, 1, 0x90, false) * 50.0f;
@@ -1069,19 +1086,19 @@ ChunkClusterManager* ChunkClusterManager::sHostInstance;
 // FUNCTION: SWBF2 0x004586a0
 bool ChunkClusterManager::CreateClient(bool bDeactivate)
 {
-    if (NetGame::IsOneWorld())
-    {
-        sClientInstance = 0;
-        sHostInstance->DeactivateThread();
-        sHostInstance->ActivateThread(-10, PER_LOCAL_TURN);
-    }
-    else
+    if (!NetGame::IsOneWorld())
     {
         sClientInstance = new ChunkClusterManager;
         if (bDeactivate)
         {
             sClientInstance->DeactivateThread();
         }
+    }
+    else
+    {
+        sClientInstance = 0;
+        sHostInstance->DeactivateThread();
+        sHostInstance->ActivateThread(-10, PER_LOCAL_TURN);
     }
     return true;
 }
@@ -1125,8 +1142,8 @@ ChunkClusterManager::ChunkClusterManager()
         mChunkClusters[i].mID = -1;
         for (unsigned char j = 0; j < 10; j++)
         {
-            mChunkClusters[i].mChunks[j].mID = j;
             mChunkClusters[i].mChunks[j].mParentCluster = &mChunkClusters[i];
+            mChunkClusters[i].mChunks[j].mID = j;
         }
     }
 }
@@ -1154,14 +1171,14 @@ bool ChunkClusterManager::Create()
 // FUNCTION: SWBF2 0x00458660
 bool ChunkClusterManager::Destroy()
 {
-    if (!sInstance)
+    if (sInstance)
     {
-        return false;
+        delete sHostInstance;
+        sHostInstance = 0;
+        sInstance = 0;
+        return true;
     }
-    delete sHostInstance;
-    sHostInstance = 0;
-    sInstance = 0;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00458800
@@ -1172,7 +1189,14 @@ ChunkCluster* ChunkClusterManager::GetFreeCluster(bool bArg)
         if (!sInstance->mChunkClusters[i].IsValid())
         {
             ChunkCluster* pCluster = &sInstance->mChunkClusters[i];
-            pCluster->mID = bArg ? i : -1;
+            if (bArg)
+            {
+                pCluster->mID = i;
+            }
+            else
+            {
+                pCluster->mID = -1;
+            }
             pCluster->Activate();
             return &sInstance->mChunkClusters[i];
         }
@@ -1198,12 +1222,19 @@ ChunkCluster* ChunkClusterManager::GetFreeCluster(bool bArg)
         }
     }
     sInstance->mChunkClusters[i].ClearChunks();
+    ChunkCluster* pCluster = &sInstance->mChunkClusters[i];
     if (++sInstance->mOldestChunkCluster >= 8)
     {
         sInstance->mOldestChunkCluster = 0;
     }
-    ChunkCluster* pCluster = &sInstance->mChunkClusters[i];
-    pCluster->mID = bArg ? i : -1;
+    if (bArg)
+    {
+        pCluster->mID = i;
+    }
+    else
+    {
+        pCluster->mID = -1;
+    }
     pCluster->Activate();
     return pCluster;
 }
@@ -1211,25 +1242,24 @@ ChunkCluster* ChunkClusterManager::GetFreeCluster(bool bArg)
 // FUNCTION: SWBF2 0x004587b0
 ChunkCluster* ChunkClusterManager::GetClusterByID(unsigned char ucID, bool bArg)
 {
-    if (ucID >= 8)
+    if (ucID < 8)
     {
-        return 0;
-    }
-    for (int i = 0; i < 8; ++i)
-    {
-        if (sInstance->mChunkClusters[i].mID == ucID)
+        for (int i = 0; i < 8; ++i)
         {
-            return &sInstance->mChunkClusters[i];
+            if (sInstance->mChunkClusters[i].mID == ucID)
+            {
+                return &sInstance->mChunkClusters[i];
+            }
         }
-    }
-    if (bArg)
-    {
-        ChunkCluster* pCluster = GetFreeCluster(true);
-        if (pCluster)
+        if (bArg)
         {
-            pCluster->mID = ucID;
+            ChunkCluster* pCluster = GetFreeCluster(true);
+            if (pCluster)
+            {
+                pCluster->mID = ucID;
+                return pCluster;
+            }
         }
-        return pCluster;
     }
     return 0;
 }

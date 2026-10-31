@@ -54,6 +54,7 @@ void ChatMessageDisplay::Init()
     mTextElementPrompt.SetText(RedLocalizeDB::Find(0x3DFA66F3, false), true);
 
     sCanRender = true;
+    unsigned char ucFontHeight = mTextElement.m_pFont->m_uiHeight;
     sDisable = false;
 
     mMessageGroup.Enable(true);
@@ -64,7 +65,7 @@ void ChatMessageDisplay::Init()
     mBitmapBackground.SetPosition(-3.0f, -13.0f);
     RedColor white = { 0xff, 0xff, 0xff, 0xff };
     mBitmapBackground.SetColor(white);
-    mBitmapBackground.SetRect(fScreenWidth + 6.0f, (float)mTextElement.m_pFont->m_uiHeight + 6.0f,
+    mBitmapBackground.SetRect(fScreenWidth + 6.0f, (float)ucFontHeight + 6.0f,
                               RedBitmapElement::BitmapHAlignT(0),
                               RedBitmapElement::BitmapVAlignT(0));
     mBitmapBackground.m_color.a = 0xa0;
@@ -85,7 +86,7 @@ void ChatMessageDisplay::Init()
     mTextElement.SetZOrder(0);
     mMessageGroup.AddElement(&mTextElement);
 
-    FLRenderer::AddInterfaceElement(&mMessageGroup, 0.0f, 0.0f, true);
+    FLRenderer::AddInterfaceElement(&mMessageGroup, RedInterfaceScreen::LEFT, RedInterfaceScreen::TOP, true);
 }
 
 // FUNCTION: SWBF2 0x00454ac0
@@ -156,6 +157,7 @@ bool ChatMessageDisplay::Update(float fDeltaTime)
 // FUNCTION: SWBF2 0x00454d60
 void ChatMessageDisplay::AddMessage(const unsigned short* pusText, RedColor color)
 {
-    mTextElement.SetColor(color);
-    mTextElement.SetText(pusText, true);
+    RedTextElement& text = mTextElement;
+    text.SetColor(color);
+    text.SetText(pusText, true);
 }

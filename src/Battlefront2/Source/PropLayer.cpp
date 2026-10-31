@@ -44,18 +44,9 @@ void PropLayer::Read(PblFileChunk& chunk)
         const unsigned int uiHash = child._pFile->Read32();
         child._pFile->Read8();
 
-        if (uiHash == 0xa100bebc)
+        switch (uiHash)
         {
-            PropModelMesh* pModel = new PropModelMesh;
-            PblFileChunk modelChunk = chunk.ReadNextChild();
-            pModel->Read(modelChunk);
-            if (pModel->mMaxDist > mMaxDistance)
-            {
-                mMaxDistance = pModel->mMaxDist;
-            }
-            mModels[mNumModels++] = pModel;
-        }
-        else if (uiHash == 0xdbe276e9)
+        case 0xdbe276e9:
         {
             const float fSpread = child._pFile->ReadFloat();
             mSpreadFactor = (int)fSpread;
@@ -67,6 +58,20 @@ void PropLayer::Read(PblFileChunk& chunk)
                     mObjectsPerCell = (int)(1.0f / fSpread);
                 }
             }
+            break;
+        }
+        case 0xa100bebc:
+        {
+            PropModelMesh* pModel = new PropModelMesh;
+            PblFileChunk modelChunk = chunk.ReadNextChild();
+            pModel->Read(modelChunk);
+            if (pModel->mMaxDist > mMaxDistance)
+            {
+                mMaxDistance = pModel->mMaxDist;
+            }
+            mModels[mNumModels++] = pModel;
+            break;
+        }
         }
     }
 
@@ -94,6 +99,7 @@ void PropLayer::Read(PblFileChunk& chunk)
 // FUNCTION: SWBF2 0x0062be50
 void PropLayer::CreateCollisionObjects(int x, int z, int iOffset, float)
 {
+    const float fCellWidth = PropGenerator::mLayerCellWidth;
     if (!mNumModels)
     {
         return;
@@ -114,8 +120,8 @@ void PropLayer::CreateCollisionObjects(int x, int z, int iOffset, float)
             const float fRotation = PropGenerator::GetRand() * 6.1415f;
             const float fSpread = (float)mSpreadFactor;
             const float fHalf = fSpread * 0.45f;
-            const float fX = ((float)(x - iOffset) + 0.5f - fHalf + fSpread * fRandX * 0.9f) * PropGenerator::mLayerCellWidth;
-            const float fZ = ((float)(z - iOffset) + 0.5f - fHalf + fSpread * fRandZ * 0.9f) * PropGenerator::mLayerCellWidth;
+            const float fX = ((float)(x - iOffset) + 0.5f - fHalf + fSpread * fRandX * 0.9f) * fCellWidth;
+            const float fZ = ((float)(z - iOffset) + 0.5f - fHalf + fSpread * fRandZ * 0.9f) * fCellWidth;
             mModels[i]->CreateCollisionObject(fX, fZ, fRotation);
             return;
         }
@@ -145,9 +151,10 @@ PropObject* PropLayer::CreateObject(int x, int z, int iOffset, float)
             const float fRotation = PropGenerator::GetRand() * 6.1415f;
             const float fSpread = (float)mSpreadFactor;
             const float fHalf = fSpread * 0.45f;
-            const float fX = ((float)(x - iOffset) + 0.5f - fHalf + fSpread * fRandX * 0.9f) * PropGenerator::mLayerCellWidth;
-            const float fZ = ((float)(z - iOffset) + 0.5f - fHalf + fSpread * fRandZ * 0.9f) * PropGenerator::mLayerCellWidth;
-            return mModels[i]->CreateObject(fX, fZ, fRotation);
+            return mModels[i]->CreateObject(
+                ((float)(x - iOffset) + 0.5f - fHalf + fSpread * fRandX * 0.9f) * PropGenerator::mLayerCellWidth,
+                ((float)(z - iOffset) + 0.5f - fHalf + fSpread * fRandZ * 0.9f) * PropGenerator::mLayerCellWidth,
+                fRotation);
         }
     }
     return 0;

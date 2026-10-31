@@ -276,7 +276,7 @@ void FreeCamera::UpdateOrientation(const ProcessedInputs& rInputs, float fDeltaT
     }
 
     float fTurn = mTurnMultiplier * fDeltaTime * sTurnScale;
-    mYaw -= fTurn * pJoystick->GetMouseX();
+    mYaw -= pJoystick->GetMouseX() * fTurn;
     mPitch -= fTurn * fMouseY;
 
     PblMatrix mRot;
@@ -285,9 +285,7 @@ void FreeCamera::UpdateOrientation(const ProcessedInputs& rInputs, float fDeltaT
 
     for (int i = 0; i < 3; i++)
     {
-        mMatrix.m[i][0] = mRot.m[i][0];
-        mMatrix.m[i][1] = mRot.m[i][1];
-        mMatrix.m[i][2] = mRot.m[i][2];
+        mMatrix[i] = mRot[i];
         mMatrix.m[i][3] = 0.0f;
     }
 }
@@ -297,10 +295,11 @@ void FreeCamera::UpdateTranslation(const ProcessedInputs& rInputs, float fDeltaT
 {
     GUIInputs* pGuiInputs = FLInputManager::s_instance.GetPlayerGuiInputs(mView);
     int iHeight = (int)pGuiInputs->IsFreeEyeUpButtonDown() - (int)pGuiInputs->IsFreeEyeDownButtonDown();
+    float fHeight = (float)iHeight * sHeightScale;
 
-    D3DXVECTOR3 vMove(rInputs.GetStrafeAxis() * sMoveScale,
-                      (float)iHeight * sHeightScale,
-                      -rInputs.GetMoveAxis() * sMoveScale);
+    PblVector3 vMove(rInputs.GetStrafeAxis() * sMoveScale,
+                     fHeight,
+                     -rInputs.GetMoveAxis() * sMoveScale);
 
     PblMatrix mRotY;
     const D3DXMATRIX* pMatrix;
@@ -314,14 +313,13 @@ void FreeCamera::UpdateTranslation(const ProcessedInputs& rInputs, float fDeltaT
         pMatrix = reinterpret_cast<const D3DXMATRIX*>(&mRotY);
     }
 
-    D3DXVECTOR3 vOut;
-    D3DXVec3TransformNormal(&vOut, &vMove, pMatrix);
+    PblVector3 vOut;
+    D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vOut),
+                            reinterpret_cast<const D3DXVECTOR3*>(&vMove), pMatrix);
     vMove = vOut;
 
     float fScale = mMultiplier * fDeltaTime;
-    mMatrix.m[3][0] += vMove.x * fScale;
-    mMatrix.m[3][1] += vMove.y * fScale;
-    mMatrix.m[3][2] += vMove.z * fScale;
+    mMatrix[3] = mMatrix[3] + vMove * fScale;
     mMatrix.m[3][3] = 1.0f;
 }
 

@@ -185,7 +185,8 @@ namespace RedLocalizeDB
 void ParseCommandLine(char const* pcAppName, char const* pcCmdLine)
 {
 
-    char* apcArgv[256] = { 0 };
+    char* apcArgv[256];
+    memset(apcArgv, 0, sizeof(apcArgv));
     char szCmdLine[0x800] = "";
     char szArgv0[0x100] = "";
 
@@ -208,15 +209,10 @@ void ParseCommandLine(char const* pcAppName, char const* pcCmdLine)
             ++i;
             apcArgv[iArgc++] = &szCmdLine[i];
 
-            while (szCmdLine[i] != '\0')
+            while (szCmdLine[i] != '\0' && !(szCmdLine[i] == '"' && szCmdLine[i - 1] != '\\'))
             {
-                if (szCmdLine[i] == '"')
+                if (szCmdLine[i] == '"' && szCmdLine[i - 1] == '\\')
                 {
-                    if (szCmdLine[i - 1] != '\\')
-                    {
-                        break;
-                    }
-
                     szCmdLine[i - 1] = '_';
                     szCmdLine[i] = '_';
                 }

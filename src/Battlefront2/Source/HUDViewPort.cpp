@@ -337,8 +337,10 @@ void HUD::ViewPort::WriteData(HUD::File& file, unsigned int uTabs)
 // FUNCTION: SWBF2 0x00569900
 void HUD::ViewPort::ItemConstructionCallback(HUD::Item* const pItem, void* const pUserData)
 {
-    if (pItem->GetType() == HUD::Element::Factory::type_Element)
+    switch (pItem->GetType())
     {
+    case HUD::Element::Factory::type_Element:
         static_cast<HUD::Element*>(pItem)->SetViewport(static_cast<ViewPort*>(pUserData)->mCurViewPort);
+        break;
     }
 }

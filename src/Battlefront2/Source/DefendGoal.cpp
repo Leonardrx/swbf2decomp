@@ -33,18 +33,14 @@ AI::DefendGoal::DefendGoal(unsigned char uTeam, float fWeight, const GoalTarget&
 // FUNCTION: SWBF2 0x0048b5d0
 void AI::DefendGoal::Assign(Character* pChr)
 {
-    if (!pChr)
+    if (!pChr || !pChr->GetControllable())
     {
         return;
     }
-    Controllable* pControllable = pChr->GetControllable();
-    if (!pControllable)
-    {
-        return;
-    }
-    UnitController* pController = UnitControllerPtr(pControllable->mCtrl);
+    UnitController* pController = UnitControllerPtr(pChr->GetControllable()->mCtrl);
     if (pController)
     {
-        pController->ForceCommand(UnitGoalAgentInfo(CMD_DEFEND, &mTarget));
+        UnitGoalAgentInfo info(CMD_DEFEND, &mTarget);
+        pController->ForceCommand(info);
     }
 }

@@ -285,13 +285,13 @@ void LensFlareEffect::Render(int value)
     {
         return;
     }
-    if (RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED)
+    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
     {
-        _List.Render<FlareCompressedVertex, 37506>();
+        _List.Render<FlareVertex, 642>();
     }
     else
     {
-        _List.Render<FlareVertex, 642>();
+        _List.Render<FlareCompressedVertex, 37506>();
     }
 }
 

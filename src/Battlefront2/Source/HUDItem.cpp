@@ -141,9 +141,11 @@ HUD::Item::Factory::Property::Property()
 // FUNCTION: SWBF2 0x00563d20
 HUD::Item::Factory::Property::~Property()
 {
-    delete mData;
-    mData = 0;
-
+    if (mData)
+    {
+        delete mData;
+        mData = 0;
+    }
 }
 
 // FUNCTION: SWBF2 0x00563d60
@@ -214,8 +216,7 @@ void HUD::Item::Factory::Property::Init(char* pName, PblListSingle& list, Type e
     mData->mHashID = PblHash(pName);
     mData->mType = eType;
 
-    if (mData->mType == type_Vector2 || mData->mType == type_Vector3 ||
-        mData->mType == type_Vector4)
+    if (mData->mType >= type_Vector2 && mData->mType <= type_Vector4)
     {
         for (int i = 0; i < 4; ++i)
         {
@@ -379,7 +380,7 @@ const HUD::Item::Factory::Property* HUD::Item::Factory::PropertyGetLast() const
     {
         pLast = pNode;
     }
-    return pLast != &mProperties.mHead ? (const Property*)pLast : 0;
+    return pLast == &mProperties.mHead ? 0 : (const Property*)pLast;
 }
 
 // FUNCTION: SWBF2 0x00564250
@@ -648,9 +649,10 @@ void HUD::Item::Write(HUD::File& file, unsigned int uTabs, const char* pType)
     }
     file.WriteStringf("%s(\"%s\")\n", pType, GetName());
     file.WriteTabs(uTabs);
+    ++uTabs;
     file.WriteString("{\n");
-    WriteData(file, uTabs + 1);
-    file.WriteTabs(uTabs);
+    WriteData(file, uTabs);
+    file.WriteTabs(uTabs - 1);
     file.WriteString("}\n\n");
 }
 
@@ -707,15 +709,16 @@ void HUD::FreeName(char** ppName)
 {
     if (*ppName)
     {
-        unsigned int i;
-        for (i = 0; i < sizeof(sDefaultNames) / sizeof(sDefaultNames[0]); ++i)
+        bool bIsDefault = false;
+        for (unsigned int i = 0; i < sizeof(sDefaultNames) / sizeof(sDefaultNames[0]); ++i)
         {
             if (*ppName == sDefaultNames[i])
             {
+                bIsDefault = true;
                 break;
             }
         }
-        if (i == sizeof(sDefaultNames) / sizeof(sDefaultNames[0]))
+        if (!bIsDefault)
         {
             delete[] *ppName;
         }

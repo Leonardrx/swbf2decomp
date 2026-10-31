@@ -70,11 +70,8 @@ void RemoveInterfaceElement(RedScreenGroupElement* pElement);
 
 // FUNCTION: SWBF2 0x00544c90
 HUD::Editor::Editor()
+    : mElement(0), mProperty(0), mMode(mode_Disabled)
 {
-    mElement = 0;
-    mProperty = 0;
-    mMode = mode_Disabled;
-
     mEnabled = false;
     mElementList = true;
     mFirstUpdate = true;
@@ -164,7 +161,7 @@ const RedModel* RedModel::GetLast()
 const RedModel* RedModel::GetNext(const RedModel* const pModel)
 {
     bool bFound = false;
-    PblHashTable<RedModel, 1024>::Itor it(&_HashTable);
+    PblHashTable<RedModel, 1024>::Itor it = _HashTable.Begin();
     while ((RedModel*)it && !bFound)
     {
         bFound = (pModel == it);
@@ -173,7 +170,7 @@ const RedModel* RedModel::GetNext(const RedModel* const pModel)
     const RedModel* pNext = it;
     if (!pNext)
     {
-        pNext = GetFirst();
+        pNext = PblHashTable<RedModel, 1024>::Itor(&_HashTable);
     }
     return pNext;
 }
@@ -213,7 +210,7 @@ const RedTexture* RedTexture::GetLast()
 const RedTexture* RedTexture::GetNext(const RedTexture* const pTexture)
 {
     bool bFound = false;
-    PblHashTable<RedTexture, 4096>::Itor it(&s_textureHashTable);
+    PblHashTable<RedTexture, 4096>::Itor it = s_textureHashTable.Begin();
     while ((RedTexture*)it && !bFound)
     {
         bFound = (pTexture == it);
@@ -222,7 +219,7 @@ const RedTexture* RedTexture::GetNext(const RedTexture* const pTexture)
     const RedTexture* pNext = it;
     if (!pNext)
     {
-        pNext = GetFirst();
+        pNext = PblHashTable<RedTexture, 4096>::Itor(&s_textureHashTable);
     }
     return pNext;
 }
@@ -828,7 +825,7 @@ void HUD::Editor::HighlightElement(bool bHighlight)
     {
         unsigned int uSelected = ElementSelectedIndex();
         unsigned int uIndex = 0;
-        unsigned int uFirst = uSelected < 26 ? 0 : uSelected - 25;
+        unsigned int uFirst = uSelected >= 26 ? uSelected - 25 : 0;
         unsigned int uCount = 0;
         for (Element* pElement = Element::GetFirst(); pElement; pElement = Element::GetNext(pElement))
         {
@@ -917,80 +914,78 @@ bool HUD::Editor::PropertyString(const HUD::Item::Factory::Property* const pProp
 
     Value value;
     bool bResult = mElement->GetProperty(pProperty->GetHashID(), &value);
-    if (!bResult)
+    if (bResult)
     {
-        return bResult;
-    }
-
-    switch (pProperty->GetType())
-    {
-    case Property::type_Bool:
-        sprintf(pBuffer, "%s (%s)", pProperty->GetName(), value.boolValue ? "true" : "false");
-        break;
-    case Property::type_Enum:
-        sprintf(pBuffer, "%s (%s)", pProperty->GetName(),
-                mElement->PropertyTranslateEnum(pProperty->GetHashID(), value.enumValue));
-        break;
-    case Property::type_Int:
-        sprintf(pBuffer, "%s (%d)", pProperty->GetName(), value.intValue);
-        break;
-    case Property::type_Float:
-        sprintf(pBuffer, "%s (%f)", pProperty->GetName(), value.floatValue);
-        break;
-    case Property::type_Event:
-        if (value.eventValue)
+        switch (pProperty->GetType())
         {
-            sprintf(pBuffer, "%s (%s)", pProperty->GetName(), value.eventValue);
-        }
-        else
+        case Property::type_Enum:
+            sprintf(pBuffer, "%s (%s)", pProperty->GetName(),
+                    mElement->PropertyTranslateEnum(pProperty->GetHashID(), value.enumValue));
+            break;
+        case Property::type_Bool:
+            sprintf(pBuffer, "%s (%s)", pProperty->GetName(), value.boolValue ? "true" : "false");
+            break;
+        case Property::type_Int:
+            sprintf(pBuffer, "%s (%d)", pProperty->GetName(), value.intValue);
+            break;
+        case Property::type_Float:
+            sprintf(pBuffer, "%s (%f)", pProperty->GetName(), value.floatValue);
+            break;
+        case Property::type_Event:
+            if (value.eventValue)
+            {
+                sprintf(pBuffer, "%s (%s)", pProperty->GetName(), value.eventValue);
+            }
+            else
+            {
+                sprintf(pBuffer, "%s (no event)", pProperty->GetName());
+            }
+            break;
+        case Property::type_Color:
+            sprintf(pBuffer, "%s (%d, %d, %d)", pProperty->GetName(), value.colorValue[2],
+                    value.colorValue[1], value.colorValue[0]);
+            break;
+        case Property::type_Vector2:
         {
-            sprintf(pBuffer, "%s (no event)", pProperty->GetName());
+            const float* pVector = (const float*)value.vector2Value;
+            sprintf(pBuffer, "%s (%.2f, %.2f)", pProperty->GetName(), pVector[0], pVector[1]);
+            break;
         }
-        break;
-    case Property::type_Color:
-        sprintf(pBuffer, "%s (%d, %d, %d)", pProperty->GetName(), value.colorValue[2],
-                value.colorValue[1], value.colorValue[0]);
-        break;
-    case Property::type_Vector2:
-    {
-        const float* pVector = (const float*)value.vector2Value;
-        sprintf(pBuffer, "%s (%.2f, %.2f)", pProperty->GetName(), pVector[0], pVector[1]);
-        break;
-    }
-    case Property::type_Vector3:
-    {
-        const float* pVector = (const float*)value.vector3Value;
-        sprintf(pBuffer, "%s (%.2f, %.2f, %.2f)", pProperty->GetName(), pVector[0], pVector[1],
-                pVector[2]);
-        break;
-    }
-    case Property::type_Vector4:
-    {
-        const float* pVector = (const float*)value.vector4Value;
-        sprintf(pBuffer, "%s (%.2f, %.2f, %.2f, %.2f)", pProperty->GetName(), pVector[0],
-                pVector[1], pVector[2], pVector[3]);
-        break;
-    }
-    case Property::type_Model:
-        if (value.modelValue)
+        case Property::type_Vector3:
         {
-            sprintf(pBuffer, "%s (0x%08x)", pProperty->GetName(), value.modelValue->GetName());
+            const float* pVector = (const float*)value.vector3Value;
+            sprintf(pBuffer, "%s (%.2f, %.2f, %.2f)", pProperty->GetName(), pVector[0], pVector[1],
+                    pVector[2]);
+            break;
         }
-        else
+        case Property::type_Vector4:
         {
-            sprintf(pBuffer, "%s (no model)", pProperty->GetName());
+            const float* pVector = (const float*)value.vector4Value;
+            sprintf(pBuffer, "%s (%.2f, %.2f, %.2f, %.2f)", pProperty->GetName(), pVector[0],
+                    pVector[1], pVector[2], pVector[3]);
+            break;
         }
-        break;
-    case Property::type_Texture:
-        if (value.textureValue)
-        {
-            sprintf(pBuffer, "%s (0x%08x)", pProperty->GetName(), value.textureValue->m_uiNameHash);
+        case Property::type_Model:
+            if (value.modelValue)
+            {
+                sprintf(pBuffer, "%s (0x%08x)", pProperty->GetName(), value.modelValue->GetName());
+            }
+            else
+            {
+                sprintf(pBuffer, "%s (no model)", pProperty->GetName());
+            }
+            break;
+        case Property::type_Texture:
+            if (value.textureValue)
+            {
+                sprintf(pBuffer, "%s (0x%08x)", pProperty->GetName(), value.textureValue->m_uiNameHash);
+            }
+            else
+            {
+                sprintf(pBuffer, "%s (no texture)", pProperty->GetName());
+            }
+            break;
         }
-        else
-        {
-            sprintf(pBuffer, "%s (no texture)", pProperty->GetName());
-        }
-        break;
     }
     return bResult;
 }
@@ -1007,7 +1002,7 @@ void HUD::Editor::DisplayProperties()
     unsigned int uSelected = PropertySelectedIndex();
     unsigned int uIndex = 0;
     unsigned int uCount = 0;
-    unsigned int uFirst = uSelected < 26 ? 0 : uSelected - 25;
+    unsigned int uFirst = uSelected >= 26 ? uSelected - 25 : 0;
 
     EditHeap heap;
     char acBuffer[1024];
@@ -1045,7 +1040,7 @@ PblVector3 HUD::Editor::GetScreenElementPosition()
     PblVector3 vPos;
     if (mElementList)
     {
-        vPos = PblVector3(0.0f, 0.0f, 0.0f);
+        vPos.x = vPos.y = vPos.z = 0.0f;
     }
     else
     {
@@ -1111,15 +1106,11 @@ bool HUD::Editor::GetControlValue(RawControllerInputs* const pInputs, Control eC
     case control_Select: ucKey = DIK_INSERT; break;
     }
 
-    bool bDown = GetInputsKeyboard(pInputs)->IsKeyDown(ucKey);
+    RedKeyboard* pKeyboard = *(RedKeyboard**)&pInputs->mRawInputStorage[0x2608 - 4];
+    bool bDown = pKeyboard->IsKeyDown(ucKey);
     if (bPressed)
     {
-        if (bDown && !mKeyDown[eControl])
-        {
-            mKeyDown[eControl] = true;
-            return true;
-        }
-        bDown = false;
+        bDown = bDown && !mKeyDown[eControl];
     }
     mKeyDown[eControl] = bDown;
     return bDown;
@@ -1134,8 +1125,9 @@ void HUD::Editor::KeyboardEvent(RedInputEventType eType, RedKeyboard* pKeyboard,
         return;
     }
 
-    if (ucA == DIK_E)
+    switch (ucA)
     {
+    case DIK_E:
         if (mMode == mode_Disabled)
         {
             SetMode(mode_SelectElement);
@@ -1144,10 +1136,10 @@ void HUD::Editor::KeyboardEvent(RedInputEventType eType, RedKeyboard* pKeyboard,
         {
             SetMode(mode_Disabled);
         }
-    }
-    else if (ucA == DIK_B)
-    {
+        break;
+    case DIK_B:
         mBackdrop.Enable(!mBackdrop.IsEnabled());
+        break;
     }
 }
 

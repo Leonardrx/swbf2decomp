@@ -299,9 +299,7 @@ void VoiceChat::Transport::UpdateLocalState(unsigned char node, bool)
 // FUNCTION: SWBF2 0x00674b00
 void VoiceChat::Transport::DisconnectNode(unsigned char node)
 {
-    const bool bSend = SetBit(mIncoming.mConnected, node, 1, false, 0, true);
-    const bool bReceive = SetBit(mIncoming.mConnected, node, 0, false, 0, true);
-    if (bSend | bReceive)
+    if (SetBit(mIncoming.mConnected, node, 1, false, 0, true) | SetBit(mIncoming.mConnected, node, 0, false, 0, true))
     {
         unsigned char mask;
         memset(GetBitmapElementAndMask(mIncoming.mSend, 0, node, mask), 0, mWidthBytes);
@@ -359,28 +357,31 @@ void VoiceChat::Transport::SetReceiveEnable(unsigned char localNode, unsigned ch
 // FUNCTION: SWBF2 0x006749d0
 void VoiceChat::Transport::SetLocalNode(unsigned char node, bool local, bool receive, bool send)
 {
+    const unsigned char numNodes = mNumLocalNodes;
     if (local)
     {
-        unsigned char i;
-        for (i = 0; i < mNumLocalNodes; ++i)
+        bool bFound = false;
+        for (unsigned char i = 0; i < numNodes; ++i)
         {
-            if (mLocalNodes[i] == node)
+            bFound = (mLocalNodes[i] == node);
+            if (bFound)
             {
                 break;
             }
         }
-        if (i == mNumLocalNodes)
+        if (!bFound)
         {
-            mLocalNodes[mNumLocalNodes++] = node;
+            mLocalNodes[numNodes] = node;
+            ++mNumLocalNodes;
         }
     }
     else
     {
-        for (unsigned char i = 0; i < mNumLocalNodes; ++i)
+        for (unsigned char i = 0; i < numNodes; ++i)
         {
             if (mLocalNodes[i] == node)
             {
-                for (; i < mNumLocalNodes - 1; ++i)
+                for (; i < numNodes - 1; ++i)
                 {
                     mLocalNodes[i] = mLocalNodes[i + 1];
                 }
@@ -390,10 +391,11 @@ void VoiceChat::Transport::SetLocalNode(unsigned char node, bool local, bool rec
         }
     }
 
-    const bool bReceive = SetBit(mLocal.mConnected, node, 0, local && receive,
-                                 mClientChangedNodes, true);
-    const bool bSend = SetBit(mLocal.mConnected, node, 1, local && send, mClientChangedNodes, true);
-    mClientUpdated |= bReceive | bSend;
+    const bool bReceive = local && receive;
+    const bool bSend = local && send;
+    const bool bReceiveChanged = SetBit(mLocal.mConnected, node, 0, bReceive, mClientChangedNodes, true);
+    const bool bSendChanged = SetBit(mLocal.mConnected, node, 1, bSend, mClientChangedNodes, true);
+    mClientUpdated |= bReceiveChanged | bSendChanged;
 }
 
 // FUNCTION: SWBF2 0x00674c40

@@ -183,13 +183,14 @@ CollisionAABB sDrawThisAABB;
 // FUNCTION: SWBF2 0x004609e0
 CollisionAABB::CollisionAABB(const CollisionAABB& parent, const CompressedAABB& compressed)
 {
-    const PblVector3 dim = parent.boxmax - parent.boxmin;
-    boxmin.x = parent.boxmin.x + dim.x * u8tof32_lut[compressed.boxmin.x];
-    boxmin.y = parent.boxmin.y + dim.y * u8tof32_lut[compressed.boxmin.y];
-    boxmin.z = parent.boxmin.z + dim.z * u8tof32_lut[compressed.boxmin.z];
-    boxmax.x = parent.boxmin.x + dim.x * u8tof32_lut[compressed.boxmax.x];
-    boxmax.y = parent.boxmin.y + dim.y * u8tof32_lut[compressed.boxmax.y];
-    boxmax.z = parent.boxmin.z + dim.z * u8tof32_lut[compressed.boxmax.z];
+    const PblVector3 dim(parent.boxmax.x - parent.boxmin.x, parent.boxmax.y - parent.boxmin.y,
+                         parent.boxmax.z - parent.boxmin.z);
+    boxmin = PblVector3(parent.boxmin.x + dim.x * u8tof32_lut[compressed.boxmin.x],
+                        parent.boxmin.y + dim.y * u8tof32_lut[compressed.boxmin.y],
+                        parent.boxmin.z + dim.z * u8tof32_lut[compressed.boxmin.z]);
+    boxmax = PblVector3(parent.boxmin.x + dim.x * u8tof32_lut[compressed.boxmax.x],
+                        parent.boxmin.y + dim.y * u8tof32_lut[compressed.boxmax.y],
+                        parent.boxmin.z + dim.z * u8tof32_lut[compressed.boxmax.z]);
 }
 
 // FUNCTION: SWBF2 0x00460b10
@@ -246,7 +247,7 @@ int RayConvexPoly_intersect(const PblVector3& vStart, const PblVector3& vDir, co
 // FUNCTION: SWBF2 0x00461800
 float BoxDistSq(const PblVector3& vPoint, const CollisionAABB& aabb)
 {
-    PblVector3 Vector = aabb.GetMidPoint() - vPoint;
+    PblVector3 Vector = vPoint - aabb.GetMidPoint();
     return DotProduct(Vector, Vector);
 }
 

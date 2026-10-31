@@ -239,7 +239,7 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
 // FUNCTION: SWBF2 0x00497ea0
 void EntityProp::Kill()
 {
-    CollisionManager::RemoveBody(this);
+    CollisionObject::RemoveFromCollisionManager();
     Deactivate();
 }
 
@@ -263,38 +263,37 @@ EntityProp::~EntityProp()
 // FUNCTION: SWBF2 0x004d9710
 void EntityProp::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    if (uProperty == 0xb2e7fe34)
-    {
-        int r, g, b, a;
-        sscanf(pszValue, "%i %i %i %i", &r, &g, &b, &a);
-        mGeometryColor.r = (unsigned char)r;
-        mGeometryColor.g = (unsigned char)g;
-        mGeometryColor.b = (unsigned char)b;
-        mGeometryColor.a = (unsigned char)a;
-    }
-    else
+    if (uProperty != 0xb2e7fe34 /* "GeometryColor" */)
     {
         reinterpret_cast<EntityGeometry*>(this)->EntityGeometry::SetProperty(uProperty, pszValue);
+        return;
     }
+
+    int r, g, b, a;
+    sscanf(pszValue, "%i %i %i %i", &r, &g, &b, &a);
+    mGeometryColor.r = (unsigned char)r;
+    mGeometryColor.g = (unsigned char)g;
+    mGeometryColor.b = (unsigned char)b;
+    mGeometryColor.a = (unsigned char)a;
 }
 
 // FUNCTION: SWBF2 0x004d9790
 void EntityProp::RecalculateAABB()
 {
-    mAABB = mModel->_mModel->_TotalBoundingBox.GetTransformedBox(mMatrix);
+    const PblBox& modelBox = mModel->_mModel->_TotalBoundingBox;
+    mAABB = modelBox.GetTransformedBox(mMatrix);
 }
 
 // FUNCTION: SWBF2 0x004d97d0
 void EntityProp::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
-    const EntityPropClass* pClass = static_cast<const EntityPropClass*>(mEntityClass);
-    if (pClass->m_bDynamicLighting)
+    if (!static_cast<const EntityPropClass*>(mEntityClass)->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
     if (mShadowProxy && mShadowProxy->IsInScene())
     {
@@ -307,13 +306,13 @@ void EntityProp::Render(unsigned char ucViewport, float fDist, unsigned int uiFl
     {
         if (mClothPiece[i])
         {
-            RedColor color = RedColor::WHITE;
-            color.a = (unsigned char)(int)(fDist * 255.0f);
-            mClothPiece[i]->Render(mMatrix, NULL, ucViewport, color, uiFlags, 1);
+            mClothPiece[i]->Render(mMatrix, NULL, ucViewport,
+                                   RedColor(RedColor::WHITE, (unsigned char)(int)(fDist * 255.0f)),
+                                   uiFlags, 1);
         }
     }
 
-    if (pClass->mReflected && !(uiFlags & 0x200000))
+    if (static_cast<const EntityPropClass*>(mEntityClass)->mReflected && !(uiFlags & 0x200000))
     {
         PblMatrix mReflection;
         if (FLRenderer::IsReflected(*(const PblVector3*)&_Sphere, _Sphere.w, mReflection, false))
@@ -423,14 +422,13 @@ EntityPropClass::EntityPropClass(unsigned int uHash)
     mReflected = false;
     mAttachedSoundOnlyMoving = false;
 
-    mGeometryColorMax.b = 0xFF;
-    mGeometryColorMax.g = 0xFF;
-    mGeometryColorMax.r = 0xFF;
-    mGeometryColorMax.a = 0xFF;
-    mGeometryColorMin.b = 0xFF;
-    mGeometryColorMin.g = 0xFF;
-    mGeometryColorMin.r = 0xFF;
-    mGeometryColorMin.a = 0xFF;
+    RedColor kWhite;
+    kWhite.b = 0xFF;
+    kWhite.g = 0xFF;
+    kWhite.r = 0xFF;
+    kWhite.a = 0xFF;
+    mGeometryColorMax = kWhite;
+    mGeometryColorMin = kWhite;
 
     mLODClass = 0;
     m_bDynamicLighting = false;

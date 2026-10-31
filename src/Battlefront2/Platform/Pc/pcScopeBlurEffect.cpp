@@ -31,9 +31,9 @@ void ScopeBlurEffect::PlatformReadConfigData(PblConfig::Data& data)
 void ScopeBlurEffect::PlatformInit()
 {
     m_pClearShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x403, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "Clear" */, 0x403, 0, 0, 4, RedColor::WHITE, RedColor::BLACK, 32.0f);
     m_pFilterShader = (pcFilterCopyShader*)pcRedShader::Create(
-        PblHash("FilterCopy"), 0x202, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0xfb9eb106 /* "FilterCopy" */, 0x202, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
     m_pBlurTexture = new RedTexture(256, 256, D3DFMT_A8R8G8B8, 1, D3DUSAGE_RENDERTARGET,
                                     D3DPOOL_DEFAULT, 0);
 }

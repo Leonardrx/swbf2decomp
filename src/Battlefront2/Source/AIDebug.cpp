@@ -115,10 +115,9 @@ void TestSpawn::Create()
     if (!gTestSpawnForced)
     {
         PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(0);
-        const unsigned int uTail = Hash16(pProfile->GetName() + 1);
-        const unsigned int uWhole = Hash16(pProfile->GetName());
+        const unsigned int uDiff = Hash16(pProfile->GetName()) - Hash16(pProfile->GetName() + 1);
         gTestSpawnEnabled = false;
-        if (uWhole - uTail == 0xC2ADE824)
+        if (uDiff == 0xC2ADE824)
         {
             gTestSpawnEnabled = true;
         }

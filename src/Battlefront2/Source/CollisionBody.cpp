@@ -56,7 +56,10 @@ bool CollisionBodyMesh::CollideTerrain(const PblMatrix&, PblVector3&, float&, Pb
 // FUNCTION: SWBF2 0x0045cef0
 CollisionBody::CollisionBody(const char* pcName, const PblMatrix& matrix, unsigned int uiParentHashName)
 {
-    Init(pcName, matrix, uiParentHashName);
+    mName = PblHash(pcName);
+    mMatrix = matrix;
+    mParentHashName = uiParentHashName;
+    mMask = 0;
 }
 
 // SYNTHETIC: SWBF2 0x0045cf50
@@ -266,53 +269,59 @@ void CollisionBodyPrimitive::Read(PblFileChunk& chunk)
 // FUNCTION: SWBF2 0x0045d690
 float CollisionBodyPrimitive::GetRadius() const
 {
-    if (mPrimitive.mType == CollisionPrimitive::AXIS_ALIGNED_CYLINDER ||
-        mPrimitive.mType == CollisionPrimitive::CYLINDER)
+    switch (mPrimitive.mType)
     {
+    case CollisionPrimitive::AXIS_ALIGNED_CYLINDER:
+    case CollisionPrimitive::CYLINDER:
         return sqrtf(mPrimitive.mHeight * 0.25f * mPrimitive.mHeight + mPrimitive.mRadius * mPrimitive.mRadius);
+    default:
+        return mPrimitive.mRadius;
     }
-    return mPrimitive.mRadius;
 }
 
 // FUNCTION: SWBF2 0x0045d6e0
 PblMatrix CollisionBodyPrimitive::GetMomentOfInertia() const
 {
     PblMatrix inertia = gMatrixIdentity;
-    float fXX, fYY, fZZ;
-    if (mPrimitive.mType == CollisionPrimitive::BOX)
+    switch (mPrimitive.mType)
+    {
+    case CollisionPrimitive::BOX:
     {
         float fHeight2 = mPrimitive.mHeight * mPrimitive.mHeight;
         float fDepth2 = mPrimitive.mDepth * mPrimitive.mDepth;
         float fWidth2 = mPrimitive.mWidth * mPrimitive.mWidth;
-        fXX = (fHeight2 + fDepth2) * 0.33333f;
-        fYY = (fWidth2 + fDepth2) * 0.33333f;
-        fZZ = (fWidth2 + fHeight2) * 0.33333f;
+        inertia.m[0][0] = (fHeight2 + fDepth2) * 0.33333f;
+        inertia.m[2][2] = (fWidth2 + fHeight2) * 0.33333f;
+        inertia.m[1][1] = (fWidth2 + fDepth2) * 0.33333f;
+        break;
     }
-    else if (mPrimitive.mType == CollisionPrimitive::AXIS_ALIGNED_CYLINDER ||
-             mPrimitive.mType == CollisionPrimitive::CYLINDER)
+    case CollisionPrimitive::AXIS_ALIGNED_CYLINDER:
+    case CollisionPrimitive::CYLINDER:
     {
         float fRadius = mPrimitive.mRadius;
-        fXX = mPrimitive.mHeight * 0.08333f * mPrimitive.mHeight + fRadius * 0.25f * fRadius;
-        fYY = fRadius * 0.5f * fRadius;
-        fZZ = fXX;
+        float fXX = mPrimitive.mHeight * 0.08333f * mPrimitive.mHeight + fRadius * 0.25f * fRadius;
+        inertia.m[0][0] = fXX;
+        inertia.m[2][2] = fXX;
+        inertia.m[1][1] = fRadius * 0.5f * fRadius;
+        break;
     }
-    else
+    default:
     {
-        fXX = mPrimitive.mRadius * 0.4f * mPrimitive.mRadius;
-        fYY = fXX;
-        fZZ = fXX;
+        float fSphere = mPrimitive.mRadius * 0.4f * mPrimitive.mRadius;
+        inertia.m[0][0] = fSphere;
+        inertia.m[1][1] = fSphere;
+        inertia.m[2][2] = fSphere;
+        break;
     }
-    inertia.m[0][0] = fXX;
+    }
     inertia.m[0][1] = 0.0f;
     inertia.m[0][2] = 0.0f;
     inertia.m[0][3] = 0.0f;
     inertia.m[1][0] = 0.0f;
-    inertia.m[1][1] = fYY;
     inertia.m[1][2] = 0.0f;
     inertia.m[1][3] = 0.0f;
     inertia.m[2][0] = 0.0f;
     inertia.m[2][1] = 0.0f;
-    inertia.m[2][2] = fZZ;
     inertia.m[2][3] = 0.0f;
     return inertia;
 }

@@ -122,26 +122,26 @@ void Transport::SetSendReceiveEnableUsingMask(const unsigned char nodeID, const 
 }
 
 // FUNCTION: SWBF2 0x0053e040
-unsigned int Transport::BuildPlayerTeamInfo(NetPlayerTeamInfo* teamInfo, unsigned int teamInfoSize,
-                                            const int queryNode, int* queryTeam) const
+unsigned int Transport::BuildPlayerTeamInfo(NetPlayerTeamInfo* pInfo, unsigned int uMax, int iNode,
+                                            int* pTeam) const
 {
-    (void)teamInfoSize;
-    unsigned int numPlayers = 0;
-    for (int i = 0; i < netCurMaxPlayers; ++i)
+    (void)uMax;
+    unsigned int uCount = 0;
+    for (int iPlayer = 0; iPlayer < netCurMaxPlayers; ++iPlayer)
     {
-        if (numPlayers >= 64)
+        if (uCount < 64)
         {
-            break;
+            pInfo[uCount].player = iPlayer;
+            const int iTeam = NetGame::GetStartTeam(iPlayer);
+            pInfo[uCount].team = iTeam;
+            if (pInfo[uCount].player == iNode && pTeam)
+            {
+                *pTeam = iTeam;
+            }
+            ++uCount;
         }
-        teamInfo[numPlayers].player = i;
-        teamInfo[numPlayers].team = NetGame::GetStartTeam(i);
-        if (teamInfo[numPlayers].player == queryNode && queryTeam)
-        {
-            *queryTeam = teamInfo[numPlayers].team;
-        }
-        ++numPlayers;
     }
-    return numPlayers;
+    return uCount;
 }
 
 }

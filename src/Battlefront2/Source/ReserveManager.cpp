@@ -57,20 +57,18 @@ bool sValidateTimeStamp(ReserveStruct& rEntry, float fTimeout)
     {
         bValid = false;
     }
-    if (bValid)
+    if (!bValid)
     {
-        return true;
-    }
-
-    for (int i = 0; i < sList->GetLength(); ++i)
-    {
-        if (&(*sList)[i] == &rEntry)
+        for (int i = 0; i < sList->GetLength(); ++i)
         {
-            sList->Remove(i);
-            break;
+            if (&(*sList)[i] == &rEntry)
+            {
+                sList->Remove(i);
+                break;
+            }
         }
     }
-    return false;
+    return bValid;
 }
 
 // FUNCTION: SWBF2 0x00630030
@@ -114,7 +112,7 @@ static ReserveStruct* GetReserveStruct(const GameObject* pObj, const GameObject*
 // FUNCTION: SWBF2 0x0062f740
 bool IsReservedBy(const GameObject* pObj, const GameObject* pReserver, ReserveType eType)
 {
-    return GetReserveStruct(pObj, pReserver, eType) != 0;
+    return GetReserveStruct(pObj, pReserver, eType) ? true : false;
 }
 
 // FUNCTION: SWBF2 0x0062f760
@@ -177,14 +175,15 @@ void Reserve(const GameObject* pObj, const GameObject* pReserver, ReserveType eT
 {
     if (IsReservedBy(pObj, pReserver, eType))
     {
-        GetReserveStruct(pObj, pReserver, eType)->mReserveTime = GameLoop::GetMissionTime();
+        ReserveStruct* pEntry = GetReserveStruct(pObj, pReserver, eType);
+        pEntry->mReserveTime = GameLoop::GetMissionTime();
         return;
     }
 
     ReserveStruct newEntry;
     newEntry.mObj = pObj;
-    newEntry.mReserveTime = GameLoop::GetMissionTime();
     newEntry.mReserver = pReserver;
+    newEntry.mReserveTime = GameLoop::GetMissionTime();
     newEntry.mType = eType;
     sList->Append(newEntry);
 }

@@ -71,9 +71,9 @@ ParticleEmitterObject::ParticleEmitterObject(const ParticleEmitterClass* pClass)
     : RedSceneObject(pClass->mLodData)
 {
     mLifeTime = 0.0f;
-    mEmitter = ParticleEmitter::sMemoryPool.mUsed < ParticleEmitter::sMemoryPool.mCount
-                   ? new ParticleEmitter(pClass)
-                   : 0;
+    mEmitter = ParticleEmitter::sMemoryPool.mUsed >= ParticleEmitter::sMemoryPool.mCount
+                   ? 0
+                   : new ParticleEmitter(pClass);
     mEmitterInfoData = 0;
     ActivateThread(0, PER_FRAME);
     mRegisterTime = 0.0f;
@@ -420,9 +420,9 @@ void ParticleEmitterObject::ScaleSet(float fScale)
 void ParticleEmitter::SetSpawnerSeed(unsigned int uSeed)
 {
     mSpawnerSeed = uSeed;
-    for (ParticleEmitter* p = mNext; p; p = p->mNext)
+    if (mNext)
     {
-        p->mSpawnerSeed = (uSeed += 5);
+        mNext->SetSpawnerSeed(uSeed + 5);
     }
 }
 
@@ -436,7 +436,9 @@ void ParticleEmitterObject::Reset(const ParticleEmitterClass* pClass, unsigned i
     }
     else
     {
-        mEmitter = ParticleEmitter::Create(pClass);
+        mEmitter = ParticleEmitter::sMemoryPool.mUsed >= ParticleEmitter::sMemoryPool.mCount
+                       ? 0
+                       : new ParticleEmitter(pClass);
     }
     mEmitterInfoData = 0;
     mRegisterTime = 0.0f;

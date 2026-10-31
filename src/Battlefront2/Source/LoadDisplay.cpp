@@ -170,7 +170,7 @@ LoadDisplay::IDDatabase LoadDisplay::sTipsDatabase;
 // LoadDisplay::sLVLDatabase
 LoadDisplay::IDDatabase LoadDisplay::sLVLDatabase;
 
-bool IsJournaling()
+inline bool IsJournaling()
 {
     return PblJournal::Get(PJT_FULL)->mMode == PJM_READING ||
            PblJournal::Get(PJT_FULL)->mMode == PJM_WRITING;
@@ -218,10 +218,11 @@ void AddTipsToDatabase(LoadDisplay::IDDatabase& database, const char* pcName)
     _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, 1);
     acBuffer[sizeof(acBuffer) - 1] = 0;
     unsigned int uiHash = PblHash(acBuffer);
-    for (int i = 2; RedLocalizeDB::Find(uiHash, true); ++i)
+    int i = 2;
+    while (RedLocalizeDB::Find(uiHash, true))
     {
         database.AddID(0, uiHash);
-        _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, i);
+        _snprintf(acBuffer, sizeof(acBuffer) - 1, "%s.%d", pcName, i++);
         acBuffer[sizeof(acBuffer) - 1] = 0;
         uiHash = PblHash(acBuffer);
     }
@@ -363,9 +364,7 @@ void LoadDisplay::BuildSimpleLoadingBar()
     for (int i = 0; i < 4; ++i)
     {
         m_modelTeamIcon[i].Enable(false);
-        RedColor color = RedColor::WHITE;
-        color.a = 255;
-        m_modelTeamIcon[i].SetColor(color);
+        m_modelTeamIcon[i].SetColor(RedColor(RedColor::WHITE, 255));
         m_modelTeamIcon[i].SetDepth(0.2f);
         m_modelTeamIcon[i].SetModelScale(1.0f);
         m_modelTeamIcon[i].SetPosition(0.0f, 0.0f);
@@ -472,11 +471,25 @@ void LoadDisplay::SetLoadState()
         }
         else if (GameLoop::AreMetagameRulesOn())
         {
-            m_missionHash = Lua_Callbacks::IsMetaGameStateSaved() ? MISSION_GAL_CON : MISSION_GAL_CON_SHELL;
+            if (Lua_Callbacks::IsMetaGameStateSaved())
+            {
+                m_missionHash = MISSION_GAL_CON;
+            }
+            else
+            {
+                m_missionHash = MISSION_GAL_CON_SHELL;
+            }
         }
         else if (GameLoop::mbHistoricalRules)
         {
-            m_missionHash = Lua_Callbacks::IsMetaGameStateSaved() ? MISSION_GAL_CAM : MISSION_GAL_CAM_SHELL;
+            if (Lua_Callbacks::IsMetaGameStateSaved())
+            {
+                m_missionHash = MISSION_GAL_CAM;
+            }
+            else
+            {
+                m_missionHash = MISSION_GAL_CAM_SHELL;
+            }
         }
         else
         {
@@ -496,8 +509,8 @@ void LoadDisplay::SetLoadState()
     strlcpy(m_entireMissionFileName, GameLoop::mMissionScript, sizeof(m_entireMissionFileName));
     m_entireMissionHash = PblHash(m_missionFileName);
 
-    char* pcMode = "";
     char* pcUnderscore = strchr(m_missionFileName, '_');
+    char* pcMode = "";
     if (pcUnderscore)
     {
         *pcUnderscore = 0;
@@ -539,7 +552,8 @@ void LoadDisplay::SetLoadState()
 // FUNCTION: SWBF2 0x00576660
 void LoadDisplay::Begin()
 {
-    if (IsJournaling() || g_bNoRender)
+    if (PblJournal::Get(PJT_FULL)->mMode == PJM_READING ||
+        PblJournal::Get(PJT_FULL)->mMode == PJM_WRITING || g_bNoRender)
     {
         return;
     }
@@ -610,6 +624,7 @@ void LoadDisplay::Begin()
     m_redCamera = new RedCamera(*RedRenderer::GetCamera());
     m_cameraMat = gMatrixIdentity;
 
+    const PblVector3 vBack = -PblVector3(m_cameraMat.m[2][0], m_cameraMat.m[2][1], m_cameraMat.m[2][2]);
     PblMatrix mCamera;
     mCamera.m[0][0] = m_cameraMat.m[0][0];
     mCamera.m[0][1] = m_cameraMat.m[0][1];
@@ -619,9 +634,9 @@ void LoadDisplay::Begin()
     mCamera.m[1][1] = m_cameraMat.m[1][1];
     mCamera.m[1][2] = m_cameraMat.m[1][2];
     mCamera.m[1][3] = 0.0f;
-    mCamera.m[2][0] = -m_cameraMat.m[2][0];
-    mCamera.m[2][1] = -m_cameraMat.m[2][1];
-    mCamera.m[2][2] = -m_cameraMat.m[2][2];
+    mCamera.m[2][0] = vBack.x;
+    mCamera.m[2][1] = vBack.y;
+    mCamera.m[2][2] = vBack.z;
     mCamera.m[2][3] = 0.0f;
     mCamera.m[3][0] = m_cameraMat.m[3][0];
     mCamera.m[3][1] = m_cameraMat.m[3][1];
@@ -642,7 +657,8 @@ void LoadDisplay::Begin()
 // FUNCTION: SWBF2 0x00576b90
 void LoadDisplay::End()
 {
-    if (IsJournaling() || g_bNoRender)
+    if (PblJournal::Get(PJT_FULL)->mMode == PJM_READING ||
+        PblJournal::Get(PJT_FULL)->mMode == PJM_WRITING || g_bNoRender)
     {
         return;
     }
@@ -658,7 +674,8 @@ void LoadDisplay::End()
 // FUNCTION: SWBF2 0x00576c00
 void LoadDisplay::Update()
 {
-    if (IsJournaling() || g_bNoRender || !m_bDisplay)
+    if (PblJournal::Get(PJT_FULL)->mMode == PJM_READING ||
+        PblJournal::Get(PJT_FULL)->mMode == PJM_WRITING || g_bNoRender || !m_bDisplay)
     {
         return;
     }
@@ -690,14 +707,15 @@ void LoadDisplay::Update()
                                   fBottom + fBorderY, fBorderX, fBorderY);
     }
 
-    ScreenTransition::sInstance->Update(fDelta);
+    ScreenTransition::sInstance->ScreenTransition::Update(fDelta);
 
-    float fBlink = PblMath::Sin(m_loadingTextBlinkRate * PblMath::fTwoPi * m_totalTime);
+    float fBlink = PblMath::Sin(m_loadingTextBlinkRate * 6.2831855f * m_totalTime);
     float fIndex = (fBlink * 0.5f + 0.5f) * (float)(m_loadingColorPalleteSize - 1);
     int iIndex = (int)fIndex;
-    m_textLoading.SetColor(Interpolate(m_loadingColorPallete[iIndex],
-                                       m_loadingColorPallete[PblMath::Ceiling(fIndex)],
-                                       fIndex - (float)iIndex));
+    RedColor color = Interpolate(m_loadingColorPallete[iIndex],
+                                 m_loadingColorPallete[PblMath::Ceiling(fIndex)],
+                                 fIndex - (float)iIndex);
+    m_textLoading.SetColor(color);
 
     m_progressBar.Update(fDelta, 0, 0);
     Render();
@@ -809,8 +827,8 @@ unsigned int LoadDisplay::LoadRandomLVLChunk(const char* pcFileName, IDDatabase&
 
     file.Seek(0, PblFile::SeekFromStart);
     PblFileChunk root(&file);
-    unsigned int uiHash = 0;
     const unsigned int uiRandomID = database.GetRandomID();
+    unsigned int uiHash = 0;
     while (root.HasMoreChildren())
     {
         PblFileChunk child = root.ReadNextChild();
@@ -861,15 +879,16 @@ void LoadDisplay::LoadDataChunk(PblFileChunk& chunk)
         case 0x5f786574:
         {
             RedTexture* pTexture = RedTexture::Read(child);
-            int i;
-            for (i = 0; i < m_numTextures; ++i)
+            bool bKnown = false;
+            for (int i = 0; i < m_numTextures; ++i)
             {
-                if (m_textures[i] == pTexture)
+                if (pTexture == m_textures[i])
                 {
+                    bKnown = true;
                     break;
                 }
             }
-            if (i >= m_numTextures)
+            if (!bKnown)
             {
                 m_textures[m_numTextures++] = pTexture;
             }
@@ -1353,13 +1372,13 @@ unsigned int LoadDisplay::IDDatabase::GetRandomID()
         m_usedLoadedIDsEndIndex = m_usedLoadedIDsStartIndex;
     }
 
-    IDType& entry = m_loadedIDs[rand.GetInt() % m_numLoadedIDs];
-    const unsigned int uiID = entry.id;
-    m_usedIDs[m_usedLoadedIDsEndIndex] = entry;
+    IDType* pEntry = &m_loadedIDs[rand.GetInt() % m_numLoadedIDs];
+    const IDType picked = *pEntry;
+    m_usedIDs[m_usedLoadedIDsEndIndex] = *pEntry;
     ++m_usedLoadedIDsEndIndex;
     --m_numLoadedIDs;
-    entry = m_loadedIDs[m_numLoadedIDs];
-    return uiID;
+    *pEntry = m_loadedIDs[m_numLoadedIDs];
+    return picked.id;
 }
 
 // FUNCTION: SWBF2 0x00578d40

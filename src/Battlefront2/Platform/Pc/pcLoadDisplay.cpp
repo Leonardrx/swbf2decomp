@@ -66,7 +66,7 @@ void LoadDisplay::PlatformRenderTexture(unsigned int uiTextureHash, float x0, fl
     pPrimitive->EndVertexData();
 
     pcClearShader* pShader = (pcClearShader*)pcRedShader::Create(
-        PblHash("Clear"), 0x203, 0, 0, 0x210004, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        0x5c6e1222 /* "Clear" */, 0x203, 0, 0, 0x210004, RedColor::WHITE, RedColor::BLACK, 32.0f);
     pShader->m_pTex = RedTexture::Find(uiTextureHash);
     RedRenderer::pcRenderPrimitive(pPrimitive, pShader, gMatrixIdentity,
                                    RedColor::WHITE, 0x200, 0, 0, 0);

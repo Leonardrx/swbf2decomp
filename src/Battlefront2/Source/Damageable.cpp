@@ -280,7 +280,7 @@ void Damageable::ApplyNetClientDamage(const DamageDesc& damage, unsigned int uFl
                         continue;
                     }
                     int iViewport = NetGame::GetJoystickIndex(it->mPlayerId);
-                    if (iViewport >= 0 && mIsAlive)
+                    if (iViewport >= 0 && IsAlive())
                     {
                         float fAmount;
                         if (mCurHealth > 0.0f)
@@ -295,8 +295,7 @@ void Damageable::ApplyNetClientDamage(const DamageDesc& damage, unsigned int uFl
                         {
                             fAmount = 1.0f;
                         }
-                        RedColor color = RedColor::RED;
-                        color.a = (unsigned char)(int)(fAmount * 96.0f + 32.0f);
+                        RedColor color(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f));
                         float fTime = fAmount * 0.15f + 0.15f;
                         ScreenFilterEffect::Instance()->TimedFilter(iViewport, fTime, 0.0f, fTime, color,
                                                                     0xDE020766);
@@ -543,11 +542,7 @@ bool Damageable::ApplyDamage(const DamageDesc& damage, const PblVector3& vDir,
     PblVector3 vNormal;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
     vFlat = vNormal;
-    const PblMatrix& mMatrix = GetGameObject()->GetMatrix();
-    PblVector3 vHit;
-    vHit.x = mMatrix.m[3][0] - vFlat.x * 30.0f;
-    vHit.y = mMatrix.m[3][1] - vFlat.y * 30.0f;
-    vHit.z = mMatrix.m[3][2] - vFlat.z * 30.0f;
+    PblVector3 vHit = GetGameObject()->GetMatrix().GetTranslation() - vFlat * 30.0f;
     ApplyDamageCommon(damage, uFlags, fMultiplier, true, vHit);
 
     bool bAlive = mIsAlive;
@@ -568,8 +563,7 @@ bool Damageable::ApplyDamage(const DamageDesc& damage, const PblVector3& vDir,
 // FUNCTION: SWBF2 0x004895e0
 bool Damageable::ApplyDamage(const DamageDesc& damage, unsigned int uFlags)
 {
-    float fMultiplier = GetDamageMultiplier(-1);
-    ApplyDamageCommon(damage, uFlags, fMultiplier, false, gVectorZero);
+    ApplyDamageCommon(damage, uFlags, GetDamageMultiplier(-1), false, gVectorZero);
     return mIsAlive;
 }
 
@@ -608,10 +602,9 @@ void Damageable::SpreadDamageEvent(const DamageDesc& damage, bool bIsShot, const
     const PblList<Controllable>& list = pObject->GetControllableList();
     for (PblList<Controllable>::Itor it = list.Begin(); it != list.End(); ++it)
     {
-        Controller* pController = it->mCtrl;
-        if (pController && pController->IsRtti(UnitController::GetRtti()))
+        if (it->mCtrl && it->mCtrl->IsRtti(UnitController::GetRtti()))
         {
-            UnitController* pUnit = static_cast<UnitController*>(pController);
+            UnitController* pUnit = static_cast<UnitController*>(it->mCtrl);
             AI::EventInfo_Damaged info(damage.mDamageOwner.mCharacter, bIsShot, vPos, fHealthLost, false);
             pUnit->SendEvent(&info);
         }

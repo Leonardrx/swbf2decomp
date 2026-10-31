@@ -94,7 +94,15 @@ void HeroMessageDisplay::PlayHeroSoundSpawn(int iTeam)
         return;
     }
 
-    Character* pHero = GetHeroCharacter(iTeam);
+    Character* pHero;
+    if (netHeroPlayerID[iTeam] != -1)
+    {
+        pHero = Character::FindPlayer(netHeroPlayerID[iTeam]);
+    }
+    else
+    {
+        pHero = Character::GetPtr(netHeroAIID[iTeam]);
+    }
     if (!pHero)
     {
         return;
@@ -102,18 +110,20 @@ void HeroMessageDisplay::PlayHeroSoundSpawn(int iTeam)
 
     if (pHero->mUnit)
     {
-        mHeroSpawned[iTeam]->Play(GetUnitPosition(pHero->mUnit), 0, false, true);
+        const PblVector3* pPos = (const PblVector3*)&pHero->mUnit->GetMatrix().m[3][0];
+        mHeroSpawned[iTeam]->Play(pPos, 0, false, true);
     }
 
     const unsigned short* pFormat = RedLocalizeDB::Find(0x0F669681, false);
-    if (!Team::sTeams[iTeam])
+    Team* pTeam = Team::sTeams[iTeam];
+    if (!pTeam)
     {
         return;
     }
 
     unsigned short heroName[64];
     heroName[0] = 0;
-    const GameObjectClass* pHeroClass = Team::sTeams[iTeam]->GetHeroClass();
+    const GameObjectClass* pHeroClass = pTeam->GetHeroClass();
     if (pHeroClass)
     {
         PblUnicode::ustrlcpy(heroName, pHeroClass->mLabel, 63);
@@ -161,10 +171,19 @@ void HeroMessageDisplay::PlayHeroSoundDefeat(int iTeam)
         return;
     }
 
-    Character* pHero = GetHeroCharacter(iTeam);
+    Character* pHero;
+    if (netHeroPlayerID[iTeam] != -1)
+    {
+        pHero = Character::FindPlayer(netHeroPlayerID[iTeam]);
+    }
+    else
+    {
+        pHero = Character::GetPtr(netHeroAIID[iTeam]);
+    }
     if (pHero && pHero->mUnit)
     {
-        mHeroDefeated[iTeam]->Play(GetUnitPosition(pHero->mUnit), 0, false, true);
+        const PblVector3* pPos = (const PblVector3*)&pHero->mUnit->GetMatrix().m[3][0];
+        mHeroDefeated[iTeam]->Play(pPos, 0, false, true);
     }
 }
 
@@ -278,7 +297,8 @@ void HeroMessageDisplay::Hide()
     mVisible = false;
     if ((unsigned int)mViewport < CameraManager::sInstance->m_iNumCam)
     {
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mViewport].heroSelectDisable, true).Send();
+        HUD::Event event(HUD::GameEvents::gPlayerEvents[mViewport].heroSelectDisable, true);
+        event.Send();
     }
 }
 
@@ -350,9 +370,12 @@ void HeroMessageDisplay::UpdateHeroSelect(float fDeltaTime, int iTeam, float& fT
     if ((unsigned int)mViewport < CameraManager::sInstance->m_iNumCam)
     {
         HUD::GameEvents::PlayerEvents& events = HUD::GameEvents::gPlayerEvents[mViewport];
-        HUD::Event(events.heroSelectTimer, fTimeLeft).Send();
-        HUD::Event(events.heroSelectTimerFraction, fTimeLeft / fTotalTime).Send();
-        HUD::Event(events.heroSelectMessage, reinterpret_cast<const wchar_t*>(message)).Send();
+        HUD::Event timerEvent(events.heroSelectTimer, fTimeLeft);
+        timerEvent.Send();
+        HUD::Event fractionEvent(events.heroSelectTimerFraction, fTimeLeft / fTotalTime);
+        fractionEvent.Send();
+        HUD::Event messageEvent(events.heroSelectMessage, reinterpret_cast<const wchar_t*>(message));
+        messageEvent.Send();
     }
 }
 
@@ -387,7 +410,8 @@ bool HeroMessageDisplay::Update(float fDeltaTime)
     }
 
     mIsInHeroSelecting = false;
-    HUD::Event(HUD::GameEvents::gPlayerEvents[mViewport].heroSelectDisable, true).Send();
+    HUD::Event disableEvent(HUD::GameEvents::gPlayerEvents[mViewport].heroSelectDisable, true);
+    disableEvent.Send();
 
     Character* pCharacter = Character::FindPlayer(NetGame::GetLocalIndex(mJoystickIndex));
     if (!pCharacter)
@@ -412,7 +436,7 @@ bool HeroMessageDisplay::Update(float fDeltaTime)
         {
             float fTotalTime = 5.0f;
             float fTimeLeft = 0.0f;
-            if (netHeroNextPlayerID[i] >= 0 && netHeroSelectedTurn[i] != 0 &&
+            if (netHeroNextPlayerID[i] >= 0 && netHeroSelectedTurn[i] > 0 &&
                 NetGame::GetLocalIndex(mJoystickIndex) == netHeroNextPlayerID[i] &&
                 netHeroPlayerID[i] == -1)
             {

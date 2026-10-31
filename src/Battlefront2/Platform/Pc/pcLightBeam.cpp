@@ -131,18 +131,27 @@ void LightBeamEffect::_PlatformInit()
         m_pShader->Release();
     }
 
-    m_pShader = pcRedShader::Create(
-        PblHash("LightBeam"),
-        RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED ? 0x1082 : 0x82,
-        0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED)
+    {
+        m_pShader = pcRedShader::Create(0xe8651328 /* "LightBeam" */, 0x1082, 0, 0, 0x10040,
+                                        RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
+    else
+    {
+        m_pShader = pcRedShader::Create(0xe8651328 /* "LightBeam" */, 0x82, 0, 0, 0x10040,
+                                        RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
 }
 
 // FUNCTION: SWBF2 0x00410ba0
-inline void VertexC::SetPos(const PblVector3& v)
+void VertexC::SetPos(const PblVector3& v)
 {
-    pos.x = (short)((v.x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
-    pos.y = (short)((v.y - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
-    pos.z = (short)((v.z - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+    const float x = v.x;
+    const float z = v.z;
+    const float y = v.y;
+    pos.x = (short)((x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+    pos.y = (short)((y - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+    pos.z = (short)((z - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
 }
 
 

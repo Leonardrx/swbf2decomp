@@ -44,21 +44,24 @@ void GameMusic::Stop()
 // FUNCTION: SWBF2 0x00534f20
 GameMusic::PlayState GameMusic::GetCurrentPlayState() const
 {
+    PlayState state = (PlayState)mPlayState;
     if (mMusic)
     {
         switch (mMusic->GetCurrentPlayState())
         {
-        case Music::playState_starting:
-        case Music::playState_playing:
-            return playState_playing;
         case Music::playState_stopping:
         case Music::playState_stopped:
         case Music::playState_pausing:
         case Music::playState_paused:
-            return playState_stopped;
+            state = playState_stopped;
+            break;
+        case Music::playState_starting:
+        case Music::playState_playing:
+            state = playState_playing;
+            break;
         }
     }
-    return (PlayState)mPlayState;
+    return state;
 }
 
 // FUNCTION: SWBF2 0x00534f70
@@ -72,7 +75,7 @@ void GameMusic::SetID(const char* pcID)
 // FUNCTION: SWBF2 0x00534fa0
 bool GameMusic::ReadyToPlay() const
 {
-    return mMusic && mMusic->GetInactiveTimeLeft() <= 0.0f;
+    return mMusic && !(mMusic->GetInactiveTimeLeft() > 0.0f);
 }
 
 // FUNCTION: SWBF2 0x00534fc0

@@ -448,7 +448,7 @@ void Music::Load(PblFileChunk& chunk)
         }
         unsigned int uTag = child._pFile->Read32();
         child._pFile->Read8();
-        if (uTag != 0x9F9C4FD4)
+        if (uTag != 0x9F9C4FD4 /* "Music" */)
         {
             continue;
         }
@@ -457,8 +457,8 @@ void Music::Load(PblFileChunk& chunk)
             Music::sMemoryPool.Setup(0x20, Music::sMemoryPool.GetSize(), Music::sMemoryPool.GetGrow());
         }
         Music* pMusic = new Music;
-        PblFileChunk data = chunk.ReadNextChild();
-        pMusic->Read(data);
+        child = chunk.ReadNextChild();
+        pMusic->Read(child);
     }
     Music::sMusicInactive.Sort();
 }

@@ -89,19 +89,17 @@ bool HUD::TransformNumberColorBlend::ReadData(PblConfig& config, PblConfig::Data
 {
     switch (data.GetId())
     {
-    case 0x5d8b6dab:
+    case 0x5d8b6dab: /* "Alpha" */
         mAlpha = (unsigned char)(int)(data.GetFloatArg(0) * 255.0f);
         return true;
-    case 0x211b0ef6:
-        Item::ReadEvent(data, mEventBlend);
-        return true;
-    case 0x41b355c1:
-        Item::ReadEvent(data, mEventAlpha);
-        return true;
-    case 0xfa784eab:
+    case 0x211b0ef6: /* "EventBlend" */
+        return Item::ReadEvent(data, mEventBlend);
+    case 0x41b355c1: /* "EventAlpha" */
+        return Item::ReadEvent(data, mEventAlpha);
+    case 0xfa784eab: /* "BlendMode" */
     {
         unsigned int uMode = HUD::TranslateString((const char**)sBlendMode, 2, data.GetStringArg(0)) + 1;
-        if (uMode <= blendMode_Additive)
+        if (uMode < blendMode_Additive + 1)
         {
             mBlendMode = (BlendMode)uMode;
         }

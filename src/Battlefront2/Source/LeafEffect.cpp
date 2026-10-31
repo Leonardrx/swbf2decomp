@@ -163,11 +163,10 @@ void FallingLeafParticle::DoTumbleUpdate(float fDeltaTime)
 // FUNCTION: SWBF2 0x0056be80
 void FallingLeafParticle::DoGroundedUpdate(float)
 {
-    PblVector3 vPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
+    PblVector3 vPos = mMatrix.GetTranslation();
     mGroundHeight = RedTerrain::GetHoleHeight(vPos);
-    mMatrix.m[3][0] = vPos.x;
-    mMatrix.m[3][1] = mGroundHeight + 0.1f;
-    mMatrix.m[3][2] = vPos.z;
+    vPos.y = mGroundHeight + 0.1f;
+    *(PblVector3*)mMatrix.m[3] = vPos;
     mMatrix.m[3][3] = 1.0f;
 }
 
@@ -305,13 +304,13 @@ bool LeafParticleManager::Create()
 // FUNCTION: SWBF2 0x0056c710
 bool LeafParticleManager::Destroy()
 {
-    if (!sInstance)
+    if (sInstance)
     {
-        return false;
+        delete sInstance;
+        sInstance = NULL;
+        return true;
     }
-    delete sInstance;
-    sInstance = NULL;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0056c730

@@ -89,17 +89,17 @@ static const unsigned int kBackgroundHash = 0x4BABD89Du;
 bool HUD::BorderedBox::ReadData(PblConfig& config, PblConfig::Data& data)
 {
     const unsigned int uId = data.GetId();
-    if (uId == kBorderHash)
+    switch (uId)
     {
+    case kBorderHash:
         SetBorder(data.GetFloatArg(0), data.GetFloatArg(1));
         return true;
-    }
-    if (uId == kBackgroundHash)
-    {
+    case kBackgroundHash:
         SetTexture(data.GetStringArg(0));
         return true;
+    default:
+        return ElementGroupBase::ReadData(config, data);
     }
-    return ElementGroupBase::ReadData(config, data);
 }
 
 // FUNCTION: SWBF2 0x00544600
@@ -159,18 +159,9 @@ void HUD::BorderedBox::SetupElements()
 bool HUD::BorderedBox::SetProperty(const unsigned int uHashID, const void* pValue)
 {
     const unsigned int* words = (const unsigned int*)pValue;
-    if (uHashID == kBorderHash)
+    switch (uHashID)
     {
-        SetBorder(*(const float*)&words[0], *(const float*)&words[1]);
-        return true;
-    }
-    if (uHashID == kBackgroundHash)
-    {
-        mTextureHash = words[1];
-        SetupElements();
-        return true;
-    }
-    if (uHashID == 0xEAE44D07u)
+    case 0xEAE44D07u /* "Rect" */:
     {
         const bool accepted = ElementGroupBase::SetProperty(uHashID, pValue);
         if (accepted)
@@ -179,25 +170,35 @@ bool HUD::BorderedBox::SetProperty(const unsigned int uHashID, const void* pValu
         }
         return accepted;
     }
+    case kBackgroundHash:
+        mTextureHash = words[1];
+        SetupElements();
+        return true;
+    case kBorderHash:
+        SetBorder(*(const float*)&words[0], *(const float*)&words[1]);
+        return true;
+    }
     return ElementGroupBase::SetProperty(uHashID, pValue);
 }
 
 // FUNCTION: SWBF2 0x005448d0
 bool HUD::BorderedBox::GetProperty(const unsigned int uHashID, void* pValue)
 {
-    if (uHashID == kBorderHash)
+    switch (uHashID)
+    {
+    case kBorderHash:
     {
         float* values = (float*)pValue;
         values[0] = mBorderWidth;
         values[1] = mBorderHeight;
         return true;
     }
-    if (uHashID == kBackgroundHash)
-    {
+    case kBackgroundHash:
         *(RedTexture**)pValue = RedTexture::Find(mTextureHash);
         return true;
+    default:
+        return ElementGroupBase::GetProperty(uHashID, pValue);
     }
-    return ElementGroupBase::GetProperty(uHashID, pValue);
 }
 
 // FUNCTION: SWBF2 0x00544530

@@ -51,8 +51,13 @@ void Fsm::FSMUpdate(float dt, bool b)
             EnterState();
             if (++iCount > 40)
             {
-                return;
+                break;
             }
+        }
+
+        if (iCount > 40)
+        {
+            break;
         }
 
         if (mCurState != 0 && mCurState != 100)

@@ -100,9 +100,8 @@ bool PrepareForRender(ParticleEmitter* pEmitter, const PblVector3& vPos, int iUn
                       float fMaxDist)
 {
     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
-    const float fDist = mCamera.m[2][0] * (mCamera.m[3][0] - vPos.x) +
-                        mCamera.m[2][1] * (mCamera.m[3][1] - vPos.y) +
-                        mCamera.m[2][2] * (mCamera.m[3][2] - vPos.z);
+    const PblVector3 vOffset = mCamera.GetTranslation() - vPos;
+    const float fDist = DotProduct(mCamera.GetZAxis(), vOffset);
     const float fZoom = RedRenderer::GetCamera()->GetZoom();
     fMaxDist = fZoom * fMaxDist;
 
@@ -133,10 +132,23 @@ bool PrepareForRender(ParticleEmitter* pEmitter, const PblVector3& vPos, int iUn
     mFadeVal = fAlpha;
 
     float fLod = (4.0f / (fMaxDist + ParticleSystem::mFadeBias - 20.0f)) * (fDepth - 20.0f);
-    fLod = Clamp(fLod, 0.0f, 3.0f);
-    const int iLod = (int)fLod;
-    mLodFadeVal = 1.0f - (fLod - (float)iLod);
-    fLod = Max(1.0f, fLod);
+    int iLod;
+    if (fLod > 0.0f && !(3.0f > fLod))
+    {
+        iLod = 3;
+        mLodFadeVal = 1.0f;
+        fLod = 3.0f;
+    }
+    else
+    {
+        if (!(fLod > 0.0f))
+        {
+            fLod = 0.0f;
+        }
+        iLod = (int)fLod;
+        mLodFadeVal = 1.0f - (fLod - (float)iLod);
+        fLod = Max(1.0f, fLod);
+    }
     ParticleSystem::mCurrentLod = iLod;
     mSizeMultiplier = fLod * 0.1f + 1.2f;
     mMinParticleSize = fDepth * 0.002f + 0.01f;
@@ -255,12 +267,11 @@ namespace ParticleSystem
 // FUNCTION: SWBF2 0x0060e690
 float GetLodAlpha(int iLod)
 {
-    float fAlpha = ParticleSystem::mFadeVal;
     if (sLodFadeMask[ParticleSystem::mCurrentLod][iLod])
     {
-        fAlpha *= ParticleSystem::mLodFadeVal;
+        return ParticleSystem::mLodFadeVal * ParticleSystem::mFadeVal;
     }
-    return fAlpha;
+    return ParticleSystem::mFadeVal;
 }
 
 }
@@ -289,14 +300,17 @@ namespace ParticleSystem
 // FUNCTION: SWBF2 0x0060e700
 void CacheParticle(const PblVector3& vPos, const RedColorValue& color, float fSize, float fRotation)
 {
-    if (ParticleSystem::mNumCachedParticles < 300)
+    const unsigned int uIndex = ParticleSystem::mNumCachedParticles;
+    if (uIndex >= 300)
     {
-        ::CacheParticle& particle = sCachedParticles[ParticleSystem::mNumCachedParticles++];
-        particle.mPos = vPos;
-        particle.mColor = color;
-        particle.mSize = fSize;
-        particle.mRotation = fRotation;
+        return;
     }
+    ::CacheParticle& particle = sCachedParticles[uIndex];
+    particle.mPos = vPos;
+    ParticleSystem::mNumCachedParticles = uIndex + 1;
+    particle.mColor = color;
+    particle.mSize = fSize;
+    particle.mRotation = fRotation;
 }
 
 }

@@ -59,10 +59,12 @@ EntityItemClass::EntityItemClass(unsigned int uHash)
 {
     mNoLifeSpanDisplay = false;
 
-    m_colorLight.b = 0;
-    m_colorLight.g = 0;
-    m_colorLight.r = 0;
-    m_colorLight.a = 0;
+    RedColor colorLight;
+    colorLight.b = 0;
+    colorLight.g = 0;
+    colorLight.r = 0;
+    colorLight.a = 0;
+    m_colorLight = colorLight;
 
     m_bDynamicLighting = true;
 
@@ -344,7 +346,7 @@ EntityItem::~EntityItem()
     {
         mTrailEmitterObj->DeactivateEffect();
     }
-    Deactivate();
+    RemoveFromScene();
 }
 
 // SYNTHETIC: SWBF2 0x004caba0
@@ -418,15 +420,16 @@ bool EntityItem::Update(float fDeltaTime)
 // FUNCTION: SWBF2 0x004cb450
 void EntityItem::Render(unsigned char ucLod, float fAlpha, unsigned int uiFlags)
 {
-    if (!(mLifeTimer > -1.0f))
+    if (-1.0f >= mLifeTimer)
     {
         return;
     }
 
     float fFade = 1.0f;
-    if (mLifeTimer + 1.0f <= 1.0f)
+    const float fLife = mLifeTimer + 1.0f;
+    if (!(fLife > 1.0f))
     {
-        fFade = mLifeTimer + 1.0f;
+        fFade = fLife;
     }
     RedColor color;
     color.b = 0xff;
@@ -434,13 +437,13 @@ void EntityItem::Render(unsigned char ucLod, float fAlpha, unsigned int uiFlags)
     color.r = 0xff;
     color.a = (unsigned char)(int)(fAlpha * 255.0f * fFade);
 
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
     // GLOBAL: SWBF2 0x01faa924
     // sPlayerShadow
@@ -464,8 +467,9 @@ void EntityItem::Render(unsigned char ucLod, float fAlpha, unsigned int uiFlags)
     PblMatrix mReflection;
     if (FLRenderer::IsReflected(GetRenderPos(), _Sphere.w, mReflection, false))
     {
+        const PblMatrix mBase = *pMatrix;
         PblMatrix mWorld;
-        mWorld = *pMatrix * mReflection;
+        mWorld = mBase * mReflection;
         mReflection = mWorld;
         mModel->Render(ucLod, fAlpha, &mReflection, 0, color, (uiFlags & ~0x10000) | 0x10000100, 0);
     }
@@ -567,7 +571,7 @@ bool EntityItem::IsSuitableEnemy() const
 // FUNCTION: SWBF2 0x004cba80
 void EntityItem::DeactivatePhysics()
 {
-    static_cast<Thread*>(this)->DeactivateThread();
+    DeactivateThread();
 }
 
 // FUNCTION: SWBF2 0x004cbad0

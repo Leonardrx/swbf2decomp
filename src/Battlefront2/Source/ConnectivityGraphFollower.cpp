@@ -21,9 +21,13 @@ static inline float DistSq(const PblVector3& a, const PblVector3& b)
 
 // FUNCTION: SWBF2 0x00482020
 ConnectivityGraphFollower::ConnectivityGraphFollower(UnitController* pCtrl)
-    : mGraph(0), mType(0), mCtrl(pCtrl), mDestNode(0), mUseDest2ForWeights(false),
-      mDestPos(0.0f, 0.0f, 0.0f)
 {
+    mCtrl = pCtrl;
+    mDestPos = PblVector3(0.0f, 0.0f, 0.0f);
+    mUseDest2ForWeights = false;
+    mGraph = 0;
+    mDestNode = 0;
+    mType = 0;
 }
 
 // FUNCTION: SWBF2 0x00482070

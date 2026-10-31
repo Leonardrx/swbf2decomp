@@ -35,19 +35,15 @@ AI::DestroyGoal::DestroyGoal(unsigned char uTeam, float fWeight, const GoalTarge
 // FUNCTION: SWBF2 0x0048c790
 void AI::DestroyGoal::Assign(Character* pChr)
 {
-    if (!pChr)
+    if (!pChr || !pChr->GetControllable())
     {
         return;
     }
-    Controllable* pControllable = pChr->GetControllable();
-    if (!pControllable)
-    {
-        return;
-    }
-    UnitController* pController = UnitControllerPtr(pControllable->mCtrl);
+    UnitController* pController = UnitControllerPtr(pChr->GetControllable()->mCtrl);
     if (pController)
     {
-        pController->ForceCommand(UnitGoalAgentInfo(CMD_DESTROY, &mTarget));
+        UnitGoalAgentInfo info(CMD_DESTROY, &mTarget);
+        pController->ForceCommand(info);
     }
 }
 

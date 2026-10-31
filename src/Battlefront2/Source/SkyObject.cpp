@@ -70,8 +70,12 @@ SkyObjectManager::SkyObjectClass::SkyObjectClass(PblConfig& config)
     mHeightVariance = 30.0f;
     mDistance = 300.0f;
     mInDirectionFactor = 3.0f;
-    mMidPos = PblVector3(0, 0, 0);
-    mAcceleration = PblVector3(0, 0, 0);
+    mMidPos.x = 0.0f;
+    mMidPos.y = 0.0f;
+    mMidPos.z = 0.0f;
+    mAcceleration.x = 0.0f;
+    mAcceleration.y = 0.0f;
+    mAcceleration.z = 0.0f;
     mMaxLifeTime = 1000.0f;
     mModel = 0;
 
@@ -115,14 +119,14 @@ SkyObjectManager::SkyObjectClass::SkyObjectClass(PblConfig& config)
         }
     }
 
-    if (mModel)
-    {
-        mObjects = new SkyObject[mNumObjects];
-    }
-    else
+    if (!mModel)
     {
         mNumObjects = 0;
         mObjects = 0;
+    }
+    else
+    {
+        mObjects = new SkyObject[mNumObjects];
     }
 
     float fMinDist = mDistance + 10.0f;
@@ -148,17 +152,16 @@ bool SkyObjectManager::SkyObjectClass::Update(float fDeltaTime)
 {
     for (int i = 0; i < mNumObjects; i++)
     {
-        SkyObject& obj = mObjects[i];
-        if (obj.mAlpha >= 0.0f)
+        if (mObjects[i].mAlpha >= 0.0f)
         {
-            float fDX = obj.mMatrix.m[3][0] - mMidPos.x;
-            float fDZ = obj.mMatrix.m[3][2] - mMidPos.z;
-            if (fDX * fDX + fDZ * fDZ > mMaxDist * mMaxDist || obj.mLifeTime > mMaxLifeTime)
+            float fDZ = mObjects[i].mMatrix.m[3][2] - mMidPos.z;
+            float fDX = mObjects[i].mMatrix.m[3][0] - mMidPos.x;
+            if (fDX * fDX + fDZ * fDZ > mMaxDist * mMaxDist || mObjects[i].mLifeTime > mMaxLifeTime)
             {
-                obj.mAlpha = -1.0f;
+                mObjects[i].mAlpha = -1.0f;
             }
         }
-        if (!obj.Update(fDeltaTime))
+        if (!mObjects[i].Update(fDeltaTime))
         {
             Spawn(i);
         }
@@ -202,14 +205,12 @@ bool SkyObjectManager::SkyObjectClass::SkyObject::Update(float fDeltaTime)
         return false;
     }
 
-    mVelocity += mAcceleration * fDeltaTime;
+    mVelocity = mVelocity + mAcceleration * fDeltaTime;
 
     float fX = fDeltaTime * mVelocity.x;
     float fY = mVelocity.y * fDeltaTime;
     float fZ = mVelocity.z * fDeltaTime;
-    mMatrix.m[3][0] = mMatrix.m[3][0] + mMatrix.m[0][0] * fX + mMatrix.m[1][0] * fY + mMatrix.m[2][0] * fZ;
-    mMatrix.m[3][1] = mMatrix.m[3][1] + mMatrix.m[0][1] * fX + mMatrix.m[1][1] * fY + mMatrix.m[2][1] * fZ;
-    mMatrix.m[3][2] = mMatrix.m[3][2] + mMatrix.m[0][2] * fX + mMatrix.m[1][2] * fY + mMatrix.m[2][2] * fZ;
+    *(PblVector3*)&mMatrix.m[3][0] = mMatrix.GetTranslation() + mMatrix.GetXAxis() * fX + mMatrix.GetYAxis() * fY + mMatrix.GetZAxis() * fZ;
     mMatrix.m[3][3] = 1.0f;
     return true;
 }

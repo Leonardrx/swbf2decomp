@@ -57,25 +57,21 @@ float HUD::ElementBar::SetValue(const float fValue)
 // FUNCTION: SWBF2 0x0054a2c0
 bool HUD::ElementBar::SetProperty(const unsigned int uHashID, const void* pValue)
 {
-    if (uHashID == kValueHash)
+    switch (uHashID)
     {
+    case kValueHash:
         mDefaultValue = mValue = *(const float*)pValue;
-    }
-    else if (uHashID == kMinValueHash)
-    {
+        break;
+    case kMinValueHash:
         mMinValue = *(const float*)pValue;
-    }
-    else if (uHashID == kMaxValueHash)
-    {
+        break;
+    case kMaxValueHash:
         mMaxValue = *(const float*)pValue;
-    }
-    else if (uHashID == kEventValueHash)
-    {
+        break;
+    case kEventValueHash:
         Item::SetEvent(*(const char* const*)pValue, mEventValue);
         return true;
-    }
-    else
-    {
+    default:
         return false;
     }
     SetValue(mValue);
@@ -85,24 +81,21 @@ bool HUD::ElementBar::SetProperty(const unsigned int uHashID, const void* pValue
 // FUNCTION: SWBF2 0x0054a340
 bool HUD::ElementBar::GetProperty(const unsigned int uHashID, void* pValue)
 {
-    if (uHashID == kValueHash)
+    switch (uHashID)
     {
+    case kValueHash:
         *(float*)pValue = mValue;
-    }
-    else if (uHashID == kMinValueHash)
-    {
+        break;
+    case kMinValueHash:
         *(float*)pValue = mMinValue;
-    }
-    else if (uHashID == kMaxValueHash)
-    {
+        break;
+    case kMaxValueHash:
         *(float*)pValue = mMaxValue;
-    }
-    else if (uHashID == kEventValueHash)
-    {
+        break;
+    case kEventValueHash:
         *(const char**)pValue = mEventValue.GetRegisteredClassName(false);
-    }
-    else
-    {
+        break;
+    default:
         return false;
     }
     return true;
@@ -121,25 +114,21 @@ void HUD::ElementBar::PostReadSetup()
 // FUNCTION: SWBF2 0x0054a3e0
 bool HUD::ElementBar::ReadData(PblConfig& config, PblConfig::Data& data)
 {
-    const unsigned int uId = data.GetId();
-    if (uId == kValueHash)
+    switch (data.GetId())
     {
+    case kValueHash:
         mDefaultValue = mValue = data.GetFloatArg(0);
-    }
-    else if (uId == kMinValueHash)
-    {
+        break;
+    case kMinValueHash:
         mMinValue = data.GetFloatArg(0);
-    }
-    else if (uId == kMaxValueHash)
-    {
+        break;
+    case kMaxValueHash:
         mMaxValue = data.GetFloatArg(0);
-    }
-    else if (uId == kEventValueHash)
-    {
+        break;
+    case kEventValueHash:
         Item::ReadEvent(data, mEventValue);
-    }
-    else
-    {
+        break;
+    default:
         return false;
     }
     return true;
@@ -158,8 +147,7 @@ void HUD::ElementBar::WriteData(HUD::File& file, unsigned int uTabs)
 void HUD::ElementBar::EventValue(const HUD::Event& event, void* const pData)
 {
     const EventClass::Type eType = event.GetClass()->GetType();
-    if (eType == EventClass::type_Int || eType == EventClass::type_Uint ||
-        eType == EventClass::type_Float)
+    if (eType >= EventClass::type_Int && eType <= EventClass::type_Float)
     {
         ((ElementBar*)pData)->SetValue(event.GetDataFloat());
     }

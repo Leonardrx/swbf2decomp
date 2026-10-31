@@ -24,14 +24,14 @@ float UnitCTFOffenseAgent::GetUpdateRate() const
 {
     switch (mCurState)
     {
-    case 2:
-    case 5:
-        return 2.0f;
     case 3:
     case 8:
         return 0.8f;
     case 4:
         return 1.0f;
+    case 2:
+    case 5:
+        return 2.0f;
     case 6:
     case 7:
         return mDefendHelper.GetUpdateRate();
@@ -53,12 +53,13 @@ const char UnitCTFOffenseAgent::rttiNameUnitCTFOffenseAgent[] = "UnitCTFOffenseA
 
 // FUNCTION: SWBF2 0x00664730
 UnitCTFOffenseAgent::UnitCTFOffenseAgent(UnitController* pCtrl, const FlagItem* pFlag, const PblVector3& vPos)
-    : UnitAgent(pCtrl), mCombatHelper(this), mDefendHelper(this), mCapturePos(vPos)
+    : UnitAgent(pCtrl), mCombatHelper(this), mDefendHelper(this)
 {
     mCurState = 1;
     mNextState = 1;
     mFlag.mObject = reinterpret_cast<const GameObject*>(pFlag);
     mFlag.mSavedHandleId = pFlag ? pFlag->mHandleId : 0;
+    mCapturePos = vPos;
 
     mDefendCarrierOffset = AIUtil::GetRandomFloat(1.0f, 6.0f);
 }
@@ -76,27 +77,24 @@ void UnitCTFOffenseAgent::Kill()
 // FUNCTION: SWBF2 0x006646f0
 int GetFormationType(const UnitController* pCtrl)
 {
-    if (!pCtrl)
+    if (pCtrl)
     {
-        return 0;
+        const Controllable* pOwner = pCtrl->mOwner;
+        if (pOwner)
+        {
+            const Character* pData = pOwner->mCharacter;
+            if (pData)
+            {
+                const Team* pTeam = pData->mTeamPtr;
+                if (pTeam)
+                {
+                    const unsigned int value = pTeam->mSide;
+                    return (static_cast<unsigned int>(value - 2) > 1) + 2;
+                }
+            }
+        }
     }
-    const Controllable* pOwner = pCtrl->mOwner;
-    if (!pOwner)
-    {
-        return 0;
-    }
-    const Character* pData = pOwner->mCharacter;
-    if (!pData)
-    {
-        return 0;
-    }
-    const Team* pTeam = pData->mTeamPtr;
-    if (!pTeam)
-    {
-        return 0;
-    }
-    const unsigned int value = pTeam->mSide;
-    return (static_cast<unsigned int>(value - 2) > 1) + 2;
+    return 0;
 }
 
 
@@ -273,54 +271,46 @@ bool UnitCTFOffenseAgent::IsFlagInAlliedHandsButNotMine() const
 bool UnitCTFOffenseAgent::IsFlagInEnemyHands() const
 {
     const GameObject* pFlag = mFlag;
-    if (!pFlag)
+    if (pFlag)
     {
-        return false;
+        const Character* pCarrier = static_cast<const EntityItem*>(pFlag)->GetOwner();
+        if (pCarrier)
+        {
+            const int iCarrierTeam = pCarrier->mTeamNumber;
+            return mCtrl->mOwner->mCharacter->mTeamPtr->GetAffiliation(iCarrierTeam) < 0;
+        }
     }
-    const Character* pCarrier = static_cast<const EntityItem*>(pFlag)->GetOwner();
-    if (!pCarrier)
-    {
-        return false;
-    }
-    return mCtrl->mOwner->mCharacter->mTeamPtr->GetAffiliation(pCarrier->mTeamNumber) < 0;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00664d30
 void UnitCTFOffenseAgent::FaceTargetIfClose(ControllableHeight eHeight)
 {
-    AILowLevel& lowLevel = mCtrl->GetLowLevel();
-    lowLevel.SetHeight(eHeight);
+    mCtrl->GetLowLevel().SetHeight(eHeight);
     const PblMatrix& myMat = mCtrl->mOwner->GetMatrix();
-    AttackHelper* pAttack = &mAttackHelper;
-    const GameObject* pTarget = pAttack->GetVisibleTarget();
-    PblVector3 vLastSeen = pAttack->HasTarget() ? pAttack->GetLastSeenTargetPos() : PblVector3(0, 0, 0);
+    const GameObject* pTarget = mAttackHelper.GetVisibleTarget();
+    PblVector3 vLastSeen = mAttackHelper.HasTarget() ? mAttackHelper.GetLastSeenTargetPos() : PblVector3(0, 0, 0);
 
-    if (pAttack->GetVisibleTarget())
+    if (mAttackHelper.GetVisibleTarget())
     {
-        const PblVector3& vTarget = GetCollisionObject(pTarget)->GetPosition();
-        float dx = myMat.m[3][0] - vTarget.x;
-        float dy = myMat.m[3][1] - vTarget.y;
-        float dz = myMat.m[3][2] - vTarget.z;
-        if (dx * dx + dy * dy + dz * dz < 625.0f)
+        const PblVector3& vTarget = pTarget->GetPosition();
+        if (SquaredLength(myMat.GetTranslation() - vTarget) < 625.0f)
         {
-            lowLevel.SetHeading(pAttack->GetVisibleTarget());
+            mCtrl->GetLowLevel().SetHeading(mAttackHelper.GetVisibleTarget());
             return;
         }
     }
 
-    if (pAttack->HasTarget())
+    if (mAttackHelper.HasTarget())
     {
-        float dx = myMat.m[3][0] - vLastSeen.x;
-        float dy = myMat.m[3][1] - vLastSeen.y;
-        float dz = myMat.m[3][2] - vLastSeen.z;
-        if (dx * dx + dy * dy + dz * dz < 625.0f)
+        if (SquaredLength(myMat.GetTranslation() - vLastSeen) < 625.0f)
         {
-            lowLevel.SetHeading(PblVector3(vLastSeen.x + 0.0f, vLastSeen.y + 1.6f, vLastSeen.z + 0.0f), 0.0f);
+            mCtrl->GetLowLevel().SetHeading(PblVector3(vLastSeen.x + 0.0f, vLastSeen.y + 1.6f, vLastSeen.z + 0.0f), 0.0f);
             return;
         }
     }
 
-    lowLevel.SetHeadingDefault();
+    mCtrl->GetLowLevel().SetHeadingDefault();
 }
 
 // FUNCTION: SWBF2 0x00664a10
@@ -384,9 +374,7 @@ void UnitCTFOffenseAgent::EnterState()
         break;
 
     case 2:
-        mCtrl->GetLowLevel().SetNavigator_Goto(
-            *reinterpret_cast<const PblVector3*>(&GetCollisionObject(static_cast<const GameObject*>(mFlag))->GetMatrix().m[3][0]),
-            0, false, false);
+        mCtrl->GetLowLevel().SetNavigator_Goto(mFlag->GetMatrix().GetTranslation(), 0, false, false);
         break;
 
     case 3:
@@ -400,15 +388,26 @@ void UnitCTFOffenseAgent::EnterState()
         break;
 
     case 6:
-        mDefendHelper.Init(AI::GoalTarget(pFlag));
+    {
+        AI::GoalTarget target(pFlag);
+        mDefendHelper.Init(target);
         break;
+    }
 
     case 7:
     {
         const RedRegion* pHome = reinterpret_cast<const FlagItem*>(pFlag)->GetHomeRegion();
-        PblVector3 vPos = pHome ? pHome->mMatrix.GetTranslation()
-                                : GetCollisionObject(pFlag)->GetPosition();
-        mDefendHelper.Init(AI::GoalTarget(vPos));
+        PblVector3 vPos;
+        if (pHome)
+        {
+            vPos = pHome->mMatrix.GetTranslation();
+        }
+        else
+        {
+            vPos = GetCollisionObject(pFlag)->GetPosition();
+        }
+        AI::GoalTarget target(vPos);
+        mDefendHelper.Init(target);
         break;
     }
 

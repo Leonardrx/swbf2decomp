@@ -216,10 +216,10 @@ const ZephyrAnim* GetWalkerAnimation(const RedAnimation* const* ppAnims, int iNu
 WalkerAnimation::WalkerAnimation(const RedAnimation* const* ppAnims, int iNumAnims, const char* pszNames, bool bFullWalkAnim)
     : m_bHasTiltAnims(false), m_bFullWalkAnim(bFullWalkAnim), mSpeed(0.0f), mTimeTotal(0.0f)
 {
-    const ZephyrAnim* pAnims[3] = { 0, 0, 0 };
+    int iCount = 0;
     char acName[52];
     char* pcName = acName;
-    int iCount = 0;
+    const ZephyrAnim* pAnims[3] = { 0, 0, 0 };
     do
     {
         if (*pszNames == '\0' || *pszNames == ' ')
@@ -238,9 +238,7 @@ WalkerAnimation::WalkerAnimation(const RedAnimation* const* ppAnims, int iNumAni
     if (pAnims[0] && pAnims[1] && pAnims[2])
     {
         mAnimations = new const ZephyrAnim*[3];
-        mAnimations[0] = pAnims[0];
-        mAnimations[1] = pAnims[1];
-        mAnimations[2] = pAnims[2];
+        memcpy(mAnimations, pAnims, sizeof(pAnims));
         m_bHasTiltAnims = true;
     }
     else
@@ -274,12 +272,13 @@ WalkerAnimation::~WalkerAnimation()
 void WalkerAnimation::Setup(WalkerBlend& rBlend, float fTime, float fBlendDuration, bool bLoop, bool bReversed)
 {
     rBlend.mTime = fTime;
-    rBlend.mSpeed = mSpeed;
+    const float fSpeed = mSpeed;
+    rBlend.mSpeed = fSpeed;
     rBlend.m_bReversed = bReversed;
     rBlend.m_bFullWalkAnim = m_bFullWalkAnim;
     if (bReversed)
     {
-        rBlend.mSpeed = mSpeed * -1.0f;
+        rBlend.mSpeed = fSpeed * -1.0f;
     }
     rBlend.mBlendDuration = fBlendDuration;
     if (fBlendDuration > 0.0f)
@@ -301,17 +300,25 @@ void WalkerAnimation::Setup(WalkerBlend& rBlend, float fTime, float fBlendDurati
         return;
     }
 
-    rBlend.mTimeTotal = mTimeTotal;
+    const float fTimeTotal = mTimeTotal;
+    rBlend.mTimeTotal = fTimeTotal;
     if (bReversed)
     {
-        fTime = mTimeTotal - fTime;
+        fTime = fTimeTotal - fTime;
         rBlend.mTime = fTime;
     }
     rBlend.mCount = 1;
 
     ZephyrPoseDyn<64>& rPose = rBlend.mUnits[0]->mPose;
     rPose.SetLoop(bLoop);
-    rPose.m_bPlayingBackward = bReversed;
+    if (bReversed)
+    {
+        rPose.PlayAnimBackward();
+    }
+    else
+    {
+        rPose.PlayAnimForward();
+    }
     rPose.SetAnimation(pAnim, 30.0f);
     rPose.SetCurTime(ComputeTime(fTime));
     rPose.Update(0.0f);
@@ -333,12 +340,13 @@ void WalkerAnimationIdle::Setup(WalkerBlend& rBlend, float fTime, float fBlendDu
     }
 
     rBlend.mTime = fTime;
-    rBlend.mSpeed = mSpeed;
+    const float fSpeed = mSpeed;
+    rBlend.mSpeed = fSpeed;
     rBlend.m_bReversed = bReversed;
     rBlend.m_bFullWalkAnim = m_bFullWalkAnim;
     if (bReversed)
     {
-        rBlend.mSpeed = mSpeed * -1.0f;
+        rBlend.mSpeed = fSpeed * -1.0f;
     }
     rBlend.mBlendDuration = fBlendDuration;
     if (fBlendDuration > 0.0f)
@@ -359,10 +367,11 @@ void WalkerAnimationIdle::Setup(WalkerBlend& rBlend, float fTime, float fBlendDu
         return;
     }
 
-    rBlend.mTimeTotal = mTimeTotal;
+    const float fTimeTotal = mTimeTotal;
+    rBlend.mTimeTotal = fTimeTotal;
     if (bReversed)
     {
-        fTime = mTimeTotal - fTime;
+        fTime = fTimeTotal - fTime;
         rBlend.mTime = fTime;
     }
     rBlend.mCount = m_bHasTiltAnims ? 3 : 1;
@@ -370,8 +379,15 @@ void WalkerAnimationIdle::Setup(WalkerBlend& rBlend, float fTime, float fBlendDu
     for (int i = 0; i < rBlend.mCount; ++i)
     {
         ZephyrPoseDyn<64>& rPose = rBlend.mUnits[i]->mPose;
-        rPose.m_bLoop = bLoop;
-        rPose.m_bPlayingBackward = bReversed;
+        rPose.SetLoop(bLoop);
+        if (bReversed)
+        {
+            rPose.PlayAnimBackward();
+        }
+        else
+        {
+            rPose.PlayAnimForward();
+        }
         rPose.SetAnimation(mAnimations[i], 30.0f);
         rPose.SetCurTime(ComputeTime(fTime));
         rPose.Update(0.0f);
@@ -388,13 +404,24 @@ float WalkerBlend::GetTurnState()
 // FUNCTION: SWBF2 0x00675d10
 void WalkerBlend::SetFrameState(float fState)
 {
-    if (m_bReversed ? mTurnState <= fState : fState <= mTurnState)
+    if (m_bReversed)
     {
-        for (int i = 0; i < mCount; ++i)
+        if (mTurnState > fState)
         {
-            mUnits[i]->mPose.SetFrameNumFloat(fState);
-            mUnits[i]->mPose.Update(0.0f);
+            return;
         }
+    }
+    else
+    {
+        if (fState > mTurnState)
+        {
+            return;
+        }
+    }
+    for (int i = 0; i < mCount; ++i)
+    {
+        mUnits[i]->mPose.SetFrameNumFloat(fState);
+        mUnits[i]->mPose.Update(0.0f);
     }
 }
 
@@ -417,5 +444,12 @@ float WalkerBlend::GetStateLimit()
 // FUNCTION: SWBF2 0x00675ea0
 const ZephyrAnim* GetWalkerAnimation(const RedAnimation* const* ppAnims, int iNumAnims, const char* pszName)
 {
-    return GetWalkerAnimation(ppAnims, iNumAnims, PblTEMPHash(pszName));
+    const unsigned int uiHash = PblTEMPHash(pszName);
+    const ZephyrAnim* pAnim = 0;
+    for (int i = 0; i < iNumAnims && !pAnim; ++i)
+    {
+        ZephyrAnimBank* pBank = ppAnims[i]->_pZephyrAnimBank;
+        pAnim = pBank ? pBank->Find(uiHash) : 0;
+    }
+    return pAnim;
 }

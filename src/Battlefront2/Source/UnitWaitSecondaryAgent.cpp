@@ -84,9 +84,11 @@ UnitWaitSecondaryAgent::UnitWaitSecondaryAgent(UnitController* pCtrl, float fWai
 // FUNCTION: SWBF2 0x0066b780
 void UnitWaitSecondaryAgent::EnterState()
 {
-    if (mCurState == 2)
+    switch (mCurState)
     {
+    case 2:
         mCtrl->mLowLevel.SetNavigator_Stationary();
+        break;
     }
 }
 
@@ -99,7 +101,7 @@ void UnitWaitSecondaryAgent::ExitState()
 GameObject* UnitWaitSecondaryAgent::IsPlayerLookingAtVehicle()
 {
     const PblMatrix& mMe = mCtrl->mOwner->GetMatrix();
-    const float* pMyPos = &mMe.m[3][0];
+    const PblVector3& vMyPos = mMe.GetTranslation();
     int iTeam = mCtrl->mOwner->mCharacter->mTeamNumber;
 
     for (int i = 0; i < Character::sCharacterLimit; ++i)
@@ -115,11 +117,8 @@ GameObject* UnitWaitSecondaryAgent::IsPlayerLookingAtVehicle()
         }
 
         const PblMatrix& mHim = pCharacter->mUnit->GetMatrix();
-        PblVector3 vDelta;
-        vDelta.x = pMyPos[0] - mHim.m[3][0];
-        vDelta.y = pMyPos[1] - mHim.m[3][1];
-        vDelta.z = pMyPos[2] - mHim.m[3][2];
-        float fDistSq = vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z;
+        PblVector3 vDelta = vMyPos - mHim.GetTranslation();
+        float fDistSq = SquaredLength(vDelta);
         if (fDistSq > 150.0f * 150.0f)
         {
             continue;
@@ -193,43 +192,45 @@ const char* UnitWaitSecondaryAgent::NFINAL_GetStateString(int iState) const
 void UnitWaitSecondaryAgent::UpdateStatePostVision(float dt)
 {
     mAttackHelper.Update();
-    if (mCurState != 2)
+    switch (mCurState)
     {
-        return;
-    }
-
-    Character* pCharacter = mCtrl->mOwner->mCharacter;
-    if (!pCharacter)
+    case 2:
     {
-        SetNextState(100);
-        return;
-    }
-    Controllable* pVehicle = pCharacter->mVehicle;
-    if (!pVehicle)
-    {
-        SetNextState(100);
-        return;
-    }
-
-    GameObject* pVehicleObj = pVehicle->GetGameObject();
-    GameObject* pPlayer = IsPlayerLookingAtVehicle();
-    if (pPlayer)
-    {
-        if (mImpatientSoundTime > 0.0f && GameLoop::GetMissionTime() > mImpatientSoundTime)
+        Character* pCharacter = mCtrl->mOwner->mCharacter;
+        if (!pCharacter)
         {
-            mImpatientSoundTime = 0.0f;
-            AI::VOHelper::Play(AI::VOT_VehicleWaitingImpatiently, AIUtil::FindFirstAIInVehicle(pVehicleObj), pPlayer, pPlayer, 0.0f);
-        }
-        if (mPlayerWaitTimeout > GameLoop::GetMissionTime())
-        {
+            SetNextState(100);
             return;
         }
-    }
+        Controllable* pVehicle = pCharacter->mVehicle;
+        if (!pVehicle)
+        {
+            SetNextState(100);
+            return;
+        }
 
-    if (AIUtil::CountUnitsInVehicle(pVehicle) == pVehicleObj->GetControllableList().GetCount() ||
-        (GameLoop::GetMissionTime() > mWaitUntilMissionTime &&
-         !ReserveManager::GetReservationCountForObject(pVehicleObj, mCtrl->mOwner->mCharacter->mTeamNumber, RT_BOARD)))
-    {
-        SetNextState(100);
+        GameObject* pVehicleObj = pVehicle->GetGameObject();
+        GameObject* pPlayer = IsPlayerLookingAtVehicle();
+        if (pPlayer)
+        {
+            if (mImpatientSoundTime > 0.0f && GameLoop::GetMissionTime() > mImpatientSoundTime)
+            {
+                mImpatientSoundTime = 0.0f;
+                AI::VOHelper::Play(AI::VOT_VehicleWaitingImpatiently, AIUtil::FindFirstAIInVehicle(pVehicleObj), pPlayer, pPlayer, 0.0f);
+            }
+            if (mPlayerWaitTimeout > GameLoop::GetMissionTime())
+            {
+                return;
+            }
+        }
+
+        if (AIUtil::CountUnitsInVehicle(pVehicle) == pVehicleObj->GetControllableList().GetCount() ||
+            (GameLoop::GetMissionTime() > mWaitUntilMissionTime &&
+             !ReserveManager::GetReservationCountForObject(pVehicleObj, mCtrl->mOwner->mCharacter->mTeamNumber, RT_BOARD)))
+        {
+            SetNextState(100);
+        }
+        break;
+    }
     }
 }

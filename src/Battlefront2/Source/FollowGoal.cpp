@@ -49,7 +49,7 @@ void AI::FollowGoal::Update()
     if (mEnabled)
     {
         if (mTarget.mType == GTT_GAMEOBJECT && static_cast<const GameObject*>(mTarget.mGameObj) &&
-            !IsAlive(static_cast<const GameObject*>(mTarget.mGameObj)))
+            !static_cast<const GameObject*>(mTarget.mGameObj)->IsAlive())
         {
             SetEnabled(false);
             return;
@@ -57,7 +57,7 @@ void AI::FollowGoal::Update()
         AIGoal::Update();
     }
     else if (mTarget.mType == GTT_GAMEOBJECT && static_cast<const GameObject*>(mTarget.mGameObj) &&
-             IsAlive(static_cast<const GameObject*>(mTarget.mGameObj)))
+             static_cast<const GameObject*>(mTarget.mGameObj)->IsAlive())
     {
         SetEnabled(true);
     }

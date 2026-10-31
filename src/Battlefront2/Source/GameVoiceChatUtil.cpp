@@ -72,8 +72,9 @@ void* VoiceChat::NetPacketAudio::Alloc()
     if (packet)
     {
         packet->BeginWrite();
+        return packet;
     }
-    return packet;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x0053e380
@@ -113,14 +114,14 @@ bool __cdecl SendVoice(NetPacket* packet, unsigned char destination, unsigned in
                 if (count)
                 {
                     VoiceChat::Node* voiceNode = GameVoiceChat::GetNode(i);
-                    while (i < count)
+                    do
                     {
                         if (voiceNode && voiceNode->GetID() == node)
                         {
                             break;
                         }
                         ++i;
-                    }
+                    } while (i < count);
                 }
                 Snd::Queue<NetPacket*,4>& queue = GameVoiceChat::gPacketQueue[i];
                 if (!queue.IsFull())

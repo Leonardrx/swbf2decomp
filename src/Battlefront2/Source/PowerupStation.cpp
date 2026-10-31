@@ -68,12 +68,9 @@ PowerupStationClass::PowerupStationClass(PowerupStationClass* pBase, unsigned in
     : EntityBuildingClass(pBase, uHash)
 {
     mPowerupDelay = pBase->mPowerupDelay;
-    for (int i = 0; i < 8; i++)
-    {
-        mAddHealth[i] = pBase->mAddHealth[i];
-        mAddAmmo[i] = pBase->mAddAmmo[i];
-        mAddEnergy[i] = pBase->mAddEnergy[i];
-    }
+    memcpy(mAddHealth, pBase->mAddHealth, sizeof(mAddHealth));
+    memcpy(mAddAmmo, pBase->mAddAmmo, sizeof(mAddAmmo));
+    memcpy(mAddEnergy, pBase->mAddEnergy, sizeof(mAddEnergy));
     mBuffOffenseTimer = pBase->mBuffOffenseTimer;
     mBuffOffenseMult = pBase->mBuffOffenseMult;
     mBuffDefenseTimer = pBase->mBuffDefenseTimer;
@@ -91,10 +88,7 @@ PowerupStationClass::PowerupStationClass(PowerupStationClass* pBase, unsigned in
     mIdleWobbleFactor = pBase->mIdleWobbleFactor;
     mIdleWobbleLeftFootHash = pBase->mIdleWobbleLeftFootHash;
     mIdleWobbleRightFootHash = pBase->mIdleWobbleRightFootHash;
-    for (int i = 0; i < 4; i++)
-    {
-        mActiveRotateHash[i] = pBase->mActiveRotateHash[i];
-    }
+    memcpy(mActiveRotateHash, pBase->mActiveRotateHash, sizeof(mActiveRotateHash));
     mActiveSpinHash = pBase->mActiveSpinHash;
 }
 
@@ -321,11 +315,8 @@ const RedPose* PowerupStation::GetRenderPose() const
 
 // FUNCTION: SWBF2 0x00624600
 PowerupStation::PowerupStation(PowerupStationClass* pClass, const EntityDesc& desc)
-    : EntityBuilding(pClass, desc)
+    : EntityBuilding(pClass, desc), mClass(pClass), mEffectRegion(0), mPowerupTimer(0.0f)
 {
-    mClass = pClass;
-    mEffectRegion = 0;
-    mPowerupTimer = 0.0f;
     ActivateThread(0, PER_LOCAL_TURN);
     NetGame::Created(this);
     mPowerupState = PS_IDLE;
@@ -412,7 +403,11 @@ int PowerupStation::GetObjectsInRegion(RedRegion* pRegion, GameObject** const pp
 // FUNCTION: SWBF2 0x00625cc0
 bool PowerupStation::IsInsideRegion(RedRegion* pRegion, const GameObject* pObject) const
 {
-    if (!pRegion || !pObject)
+    if (!pRegion)
+    {
+        return false;
+    }
+    if (!pObject)
     {
         return false;
     }

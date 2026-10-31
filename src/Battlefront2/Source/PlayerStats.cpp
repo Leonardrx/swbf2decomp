@@ -24,7 +24,7 @@
 const EntityClass* PlayerStats::GetFavoriteSoldierClass(int) const
 {
     float bestTime = 0.0f;
-    int bestTeam = 0, bestClass = 0;
+    int bestClass = 0, bestTeam = 0;
     for (int team = 0; team < 2; ++team)
     {
         for (int slot = 0; slot < MAX_STAT_CLASSES; ++slot)
@@ -32,8 +32,8 @@ const EntityClass* PlayerStats::GetFavoriteSoldierClass(int) const
             if (mTimePlayedPerClassList[team][slot] && mTimePlayedPerClass[team][slot]._val > bestTime)
             {
                 bestTime = mTimePlayedPerClass[team][slot]._val;
-                bestTeam = team;
                 bestClass = slot;
+                bestTeam = team;
             }
         }
     }
@@ -61,7 +61,7 @@ float PlayerStats::GetFavoriteSoldierTime(int) const
 const WeaponClass* PlayerStats::GetFavoriteWeaponClass(int) const
 {
     float bestTime = 0.0f;
-    int bestTeam = 0, bestWeapon = 0;
+    int bestWeapon = 0, bestTeam = 0;
     for (int team = 0; team < 2; ++team)
     {
         for (int slot = 0; slot < MAX_STAT_WEAPONS; ++slot)
@@ -69,8 +69,8 @@ const WeaponClass* PlayerStats::GetFavoriteWeaponClass(int) const
             if (mTimePlayedPerWeaponList[team][slot] && mTimePlayedPerWeapon[team][slot]._val > bestTime)
             {
                 bestTime = mTimePlayedPerWeapon[team][slot]._val;
-                bestTeam = team;
                 bestWeapon = slot;
+                bestTeam = team;
             }
         }
     }
@@ -98,7 +98,7 @@ float PlayerStats::GetFavoriteWeaponTime(int) const
 const EntityClass* PlayerStats::GetFavoriteVehicleClass(int) const
 {
     float bestTime = 0.0f;
-    int bestTeam = 0, bestVehicle = 0;
+    int bestVehicle = 0, bestTeam = 0;
     for (int team = 0; team < 2; ++team)
     {
         for (int slot = 0; slot < MAX_STAT_VEHICLES; ++slot)
@@ -106,8 +106,8 @@ const EntityClass* PlayerStats::GetFavoriteVehicleClass(int) const
             if (mTimeInsideVehicleList[team][slot] && mTimeInsideVehicle[team][slot]._val > bestTime)
             {
                 bestTime = mTimeInsideVehicle[team][slot]._val;
-                bestTeam = team;
                 bestVehicle = slot;
+                bestTeam = team;
             }
         }
     }
@@ -140,8 +140,8 @@ int PlayerStats::GetExperiencePoints(int, int) const
 // FUNCTION: SWBF2 0x0061fad0
 Character* PlayerStats::GetBait(int, int iTeamStat) const
 {
-    const int iOwnTeam = Character::GetPtr(mStatId)->mTeamNumber;
     int iBest = 0, iBestIndex = 0;
+    const int iOwnTeam = Character::GetPtr(mStatId)->mTeamNumber;
     for (int iTeam = 0; iTeam < 2; ++iTeam)
     {
         for (int i = 0; i < Character::sCharacterLimit; ++i)
@@ -179,14 +179,16 @@ int PlayerStats::GetBaitVal(int, int iTeamStat) const
 // FUNCTION: SWBF2 0x0061f900
 Character* PlayerStats::GetNemesis(int, int iTeamStat) const
 {
-    const int iOwnTeam = Character::GetPtr(mStatId)->mTeamNumber;
     int iBest = 0, iBestIndex = 0;
+    const int iStatId = mStatId;
+    const int iCharacterLimit = Character::sCharacterLimit;
+    const int iOwnTeam = Character::GetPtr(iStatId)->mTeamNumber;
     for (int iTeam = 0; iTeam < 2; ++iTeam)
     {
-        for (int i = 0; i < Character::sCharacterLimit; ++i)
+        for (int i = 0; i < iCharacterLimit; ++i)
         {
-            PlayerStats& candidate = Character::sCharacters[i].GetPlayerStats();
-            int iValue = candidate.mKillsByPlayer[iTeam][iTeamStat][mStatId]._val;
+            PlayerStats& candidate = Character::GetPtr(i)->GetPlayerStats();
+            int iValue = candidate.mKillsByPlayer[iTeam][iTeamStat][iStatId]._val;
             if (iValue > iBest || (iValue == iBest && iTeam != iOwnTeam))
             {
                 iBest = iValue;
@@ -200,14 +202,15 @@ Character* PlayerStats::GetNemesis(int, int iTeamStat) const
 // FUNCTION: SWBF2 0x0061fa00
 int PlayerStats::GetNemesisVal(int, int iTeamStat) const
 {
-    const int iOwnTeam = Character::GetPtr(mStatId)->mTeamNumber;
+    const int iStatId = mStatId;
+    const int iOwnTeam = Character::GetPtr(iStatId)->mTeamNumber;
     int iBest = 0;
     for (int iTeam = 0; iTeam < 2; ++iTeam)
     {
         for (int i = 0; i < Character::sCharacterLimit; ++i)
         {
-            PlayerStats& candidate = Character::sCharacters[i].GetPlayerStats();
-            int iValue = candidate.mKillsByPlayer[iTeam][iTeamStat][mStatId]._val;
+            PlayerStats& candidate = Character::GetPlayerStats(Character::GetPtr(i));
+            int iValue = candidate.mKillsByPlayer[iTeam][iTeamStat][iStatId]._val;
             if (iValue > iBest || (iValue == iBest && iTeam != iOwnTeam))
             {
                 iBest = iValue;
@@ -665,9 +668,13 @@ void PlayerStats::AddAllyKill(Character* pVictim, GameObject*)
     if (NetGame::IsEnabled() && !NetGame::IsClient())
     {
         Character* pCharacter = Character::GetPtr(mStatId);
-        if (pCharacter && pCharacter->mPlayerId >= 0)
+        if (pCharacter)
         {
-            NetComm::SetPLKills(pCharacter->mPlayerId, GetKills(-1, -1));
+            int iPlayerId = pCharacter->mPlayerId;
+            if (iPlayerId >= 0)
+            {
+                NetComm::SetPLKills(iPlayerId, GetKills(-1, -1));
+            }
         }
     }
 }
@@ -776,9 +783,13 @@ void PlayerStats::AddDeath(Character*)
     if (NetGame::IsEnabled() && !NetGame::IsClient())
     {
         Character* pCharacter = Character::GetPtr(mStatId);
-        if (pCharacter && pCharacter->mPlayerId >= 0)
+        if (pCharacter)
         {
-            NetComm::SetPLDeaths(pCharacter->mPlayerId, GetDeaths(-1, -1));
+            int iPlayerId = pCharacter->mPlayerId;
+            if (iPlayerId >= 0)
+            {
+                NetComm::SetPLDeaths(iPlayerId, GetDeaths(-1, -1));
+            }
         }
     }
 }
@@ -1126,16 +1137,16 @@ int PlayerStats::_GetPlayerAwardVal(AwardStatT eAward, int iTeam, int) const
 void PlayerStats::_GetPlayerAwardMax(AwardStatT eAward, int& iValue,
                                      int& iCharacter, int& iTeam)
 {
+    const int iCharacterLimit = Character::sCharacterLimit;
     iValue = 0;
     iCharacter = 0;
     iTeam = 0;
     for (int team = 0; team < 2; ++team)
     {
-        for (int character = 0; character < Character::sCharacterLimit; ++character)
+        for (int character = 0; character < iCharacterLimit; ++character)
         {
-            Character* pCharacter = Character::GetPtr(character);
-            PlayerStats& stats = Character::GetPlayerStats(pCharacter);
-            int value = stats._GetPlayerAwardVal(eAward, team, character);
+            int value = Character::GetPlayerStats(Character::GetPtr(character))
+                            ._GetPlayerAwardVal(eAward, team, character);
             if (value > iValue)
             {
                 iValue = value;
@@ -1208,25 +1219,29 @@ bool PlayerStats::IsClassSelectable(int iClassIndex, UnselectableReason* pReason
         return false;
     }
 
-    if (pClass->mPointsToUnlock <= 0 ||
-        pTeam->GetClassCurrentUnits(iClassIndex) < pTeam->GetClassMaxUnits(iClassIndex))
+    if (pClass->mPointsToUnlock > 0 &&
+        pTeam->GetClassCurrentUnits(iClassIndex) >= pTeam->GetClassMaxUnits(iClassIndex))
     {
-        if (!pClass->IsRtti(EntityDroidekaClass::rttiHashEntityDroidekaClass))
+        if (pReason)
         {
-            return true;
+            *pReason = TOO_MANY_UNITS;
         }
-        MemoryPool* pPool = MemoryPool::Find("EntityDroideka");
-        if (pPool && pPool->mCount != pPool->mUsed)
-        {
-            return true;
-        }
+        return false;
     }
 
-    if (pReason)
+    if (pClass->IsRtti(EntityDroidekaClass::rttiHashEntityDroidekaClass))
     {
-        *pReason = TOO_MANY_UNITS;
+        MemoryPool* pPool = MemoryPool::Find("EntityDroideka");
+        if (!pPool || pPool->mCount - pPool->mUsed == 0)
+        {
+            if (pReason)
+            {
+                *pReason = TOO_MANY_UNITS;
+            }
+            return false;
+        }
     }
-    return false;
+    return true;
 }
 
 namespace PopupText
@@ -1272,7 +1287,7 @@ void PlayerStats::AddGameStatsToProfile()
 
 namespace
 {
-unsigned int ReadStatBits(NetPktGroup& group, int iBits)
+inline unsigned int ReadStatBits(NetPktGroup& group, int iBits)
 {
     unsigned int uValue = 0;
     group.ReadBits(uValue, iBits);
@@ -1342,16 +1357,18 @@ void PlayerStats::ReadAll(NetPktGroup& group)
 {
     mGotMPStats = true;
     mStatsActive = false;
-    const int iCount = Character::sCharacterLimit;
     if (NetGame::IsHost())
     {
         PlayerStats temporary;
-        temporary.Init(0, iCount);
+        temporary.Init(0, Character::sCharacterLimit);
         mGotMPStats = true;
         mStatsActive = false;
+        const int iCount = Character::sCharacterLimit;
         for (int i = 0; i < iCount; ++i)
         {
-            if (ReadStatBits(group, 1))
+            unsigned int uHasStats = 0;
+            group.ReadBits(uHasStats, 1);
+            if (uHasStats != 0)
             {
                 temporary.Reset();
                 temporary.Read(group);
@@ -1360,17 +1377,23 @@ void PlayerStats::ReadAll(NetPktGroup& group)
     }
     else
     {
+        const int iCount = Character::sCharacterLimit;
         for (int i = 0; i < iCount; ++i)
         {
             Character* pCharacter = Character::GetPtr(i);
             if (pCharacter)
             {
-                pCharacter->GetPlayerStats().Reset();
+                if (PlayerStats* pStats = &pCharacter->GetPlayerStats())
+                {
+                    pStats->Reset();
+                }
             }
         }
         for (int i = 0; i < iCount; ++i)
         {
-            if (ReadStatBits(group, 1))
+            unsigned int uHasStats = 0;
+            group.ReadBits(uHasStats, 1);
+            if (uHasStats)
             {
                 Character* pCharacter = Character::GetPtr(i);
                 pCharacter->GetPlayerStats().Read(group);

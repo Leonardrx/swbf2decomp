@@ -21,31 +21,17 @@ void Adrenaline::Update(float fDeltaTime, const GameObject* pObject)
     if (pObject->GetMaxSpeed() != 0.0f)
     {
         const PblVector3& vVel = pObject->GetVelocity();
-        fSpeedFactor = 1.0f - sqrtf(vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z) /
+        float fRawFactor = 1.0f - sqrtf(vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z) /
                                   pObject->GetMaxSpeed();
-        if (fSpeedFactor < 0.7f)
-        {
-            fSpeedFactor = 0.7f;
-        }
-        else if (fSpeedFactor > 1.0f)
-        {
-            fSpeedFactor = 1.0f;
-        }
+        fSpeedFactor = fRawFactor < 0.7f ? 0.7f : (fRawFactor > 1.0f ? 1.0f : fRawFactor);
     }
     else
     {
         fSpeedFactor = 1.0f;
     }
 
-    float fHealthFactor = pObject->mCurHealth / pObject->mMaxHealth;
-    if (fHealthFactor < 0.3f)
-    {
-        fHealthFactor = 0.3f;
-    }
-    else if (fHealthFactor > 1.0f)
-    {
-        fHealthFactor = 1.0f;
-    }
+    float fHealthRatio = pObject->mCurHealth / pObject->mMaxHealth;
+    float fHealthFactor = fHealthRatio < 0.3f ? 0.3f : (fHealthRatio > 1.0f ? 1.0f : fHealthRatio);
 
     AdjustLevel(fDeltaTime * -0.04f * fSpeedFactor * fHealthFactor);
 
@@ -62,7 +48,7 @@ void Adrenaline::Update(float fDeltaTime, const GameObject* pObject)
         {
             continue;
         }
-        const PblVector3& vOther = pCharacter->GetControllable()->GetMatrix().GetTranslation();
+        PblVector3 vOther = pCharacter->GetControllable()->GetMatrix().GetTranslation();
         float dx = vOther.x - vPos.x;
         float dy = vOther.y - vPos.y;
         float dz = vOther.z - vPos.z;
@@ -77,18 +63,7 @@ void Adrenaline::Update(float fDeltaTime, const GameObject* pObject)
 void Adrenaline::AdjustLevel(float fAmount)
 {
     float fLevel = mLevel + fAmount;
-    if (fLevel < 0.0f)
-    {
-        mLevel = 0.0f;
-    }
-    else if (fLevel > 1.0f)
-    {
-        mLevel = 1.0f;
-    }
-    else
-    {
-        mLevel = fLevel;
-    }
+    mLevel = fLevel < 0.0f ? 0.0f : (fLevel > 1.0f ? 1.0f : fLevel);
 }
 
 // FUNCTION: SWBF2 0x004384b0
@@ -170,7 +145,10 @@ void Adrenaline::AddDied(const GameObject* pObject)
             float fDx = vOther.x - vPos.x;
             float fDy = vOther.y - vPos.y;
             float fDz = vOther.z - vPos.z;
-            if (fDx * fDx + fDy * fDy + fDz * fDz < 225.0f)
+            float fDistSq = fDx * fDx;
+            fDistSq += fDy * fDy;
+            fDistSq += fDz * fDz;
+            if (fDistSq < 225.0f)
             {
                 pCharacter->mAdrenaline.NearbyDeath(pTeam->GetAffiliation(pCharacter->mTeamNumber) > 0);
             }

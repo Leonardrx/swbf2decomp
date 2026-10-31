@@ -243,9 +243,9 @@ void OrdnanceGrapplingHook::Render(unsigned char ucViewport, float fDist, unsign
 // FUNCTION: SWBF2 0x00423ea0
 void OrdnanceGrapplingHook::PlatformInit()
 {
-    sShader = pcRedShader::Create(PblHash("Particle"),
-                                  RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_COMPRESSED
-                                      ? 0x9282 : 0x282,
+    unsigned int uiFormat =
+        RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ? 0x9282 : 0x282;
+    sShader = pcRedShader::Create(0x8a8743bf /* "Particle" */, uiFormat,
                                   &sTextureHash, 1, 0x10004, RedColor::WHITE, RedColor::BLACK,
                                   32.0f);
 }

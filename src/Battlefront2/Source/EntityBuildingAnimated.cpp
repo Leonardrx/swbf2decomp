@@ -28,8 +28,7 @@ EntityBuildingAnimatedClass::EntityBuildingAnimatedClass(unsigned int uHash)
     : EntityBuildingClass(uHash)
 {
     mAnimObj = 0;
-    mAnimations[0] = 0;
-    mAnimations[1] = 0;
+    memset(mAnimations, 0, sizeof(mAnimations));
     memset(mDeathEffectHash, 0, sizeof(mDeathEffectHash));
     memset(mDeathEffectNodeHash, 0, sizeof(mDeathEffectNodeHash));
     mDeathExplosions = false;
@@ -80,14 +79,8 @@ EntityBuildingAnimatedClass::EntityBuildingAnimatedClass(EntityBuildingAnimatedC
     mAnimObj = pBase->mAnimObj;
     mAnimations[0] = pBase->mAnimations[0];
     mAnimations[1] = pBase->mAnimations[1];
-    for (int i = 0; i < 5; i++)
-    {
-        mDeathEffectHash[i] = pBase->mDeathEffectHash[i];
-    }
-    for (int i = 0; i < 5; i++)
-    {
-        mDeathEffectNodeHash[i] = pBase->mDeathEffectNodeHash[i];
-    }
+    memcpy(mDeathEffectHash, pBase->mDeathEffectHash, sizeof(mDeathEffectHash));
+    memcpy(mDeathEffectNodeHash, pBase->mDeathEffectNodeHash, sizeof(mDeathEffectNodeHash));
     mDeathExplosions = pBase->mDeathExplosions;
 }
 
@@ -95,7 +88,11 @@ EntityBuildingAnimatedClass::EntityBuildingAnimatedClass(EntityBuildingAnimatedC
 bool EntityBuildingAnimatedClass::InitAnimations(const char* pszName)
 {
     mAnimObj = RedAnimation::Find(PblHash(pszName));
-    return mAnimObj != 0;
+    if (!mAnimObj)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x00494ca0
@@ -103,25 +100,25 @@ void EntityBuildingAnimatedClass::SetProperty(unsigned int uProperty, const char
 {
     switch (uProperty)
     {
-    case 0x98557a5e:
+    case 0x98557a5e: /* "AnimationName" */
         InitAnimations(pszValue);
         break;
 
-    case 0x297bc6eb:
+    case 0x297bc6eb: /* "IdleAnimation" */
         if (mAnimObj)
         {
             mAnimations[0] = (ZephyrAnim*)mAnimObj->FindAnimation(pszValue);
         }
         break;
 
-    case 0x5fac58b5:
+    case 0x5fac58b5: /* "DeathAnimation" */
         if (mAnimObj)
         {
             mAnimations[1] = (ZephyrAnim*)mAnimObj->FindAnimation(pszValue);
         }
         break;
 
-    case 0x3e4e9ba0:
+    case 0x3e4e9ba0: /* "EnableDeathExplosions" */
     {
         int iValue;
         sscanf(pszValue, "%d", &iValue);
@@ -129,15 +126,19 @@ void EntityBuildingAnimatedClass::SetProperty(unsigned int uProperty, const char
         break;
     }
 
-    case 0xf138015c:
+    case 0xf138015c: /* "DeathEffect" */
     {
-        int i = 0;
-        while (mDeathEffectHash[i])
+        int i;
+        for (i = 0; i < 5; i++)
         {
-            if (++i >= 5)
+            if (!mDeathEffectHash[i])
             {
-                return;
+                break;
             }
+        }
+        if (i >= 5)
+        {
+            return;
         }
         char acEffect[32];
         char acNode[32];
@@ -231,7 +232,7 @@ EntityBuildingAnimated::EntityBuildingAnimated(EntityBuildingAnimatedClass* pCla
     mAnimationId = (unsigned int)-1;
     if (pClass->mAnimations[0])
     {
-        mAnimationTime = PblRandom::GetGlobalFloat() * mAnimatedClass->mAnimations[0]->m_u16NumFrames * 30.0f;
+        mAnimationTime = mAnimatedClass->mAnimations[0]->m_u16NumFrames * PblRandom::_Global.GetFloat() * 30.0f;
     }
     else
     {
@@ -374,7 +375,8 @@ bool EntityBuildingAnimated::Update(float fDeltaTime)
                 PblMatrix mWorld;
                 mWorld = mMatrix * mEffect;
                 mEffect = mWorld;
-                if (CameraManager::sInstance->IsInsideAnyCamera(mEffect.GetTranslation(), 60.0f, 70.0f))
+                PblVector3 vEffectPos = mEffect.GetTranslation();
+                if (CameraManager::sInstance->IsInsideAnyCamera(vEffectPos, 60.0f, 70.0f))
                 {
                     if (FLEffectClass* pEffectClass = FLEffect::Get(mAnimatedClass->mDeathEffectHash[i]))
                     {
@@ -393,7 +395,7 @@ bool EntityBuildingAnimated::Update(float fDeltaTime)
         kPose.Open(mZephyrSkeleton);
         if (mAnimationId != (unsigned int)-1)
         {
-            mAnimationTime += fDeltaTime;
+            mAnimationTime = fDeltaTime + mAnimationTime;
             mZephyrPoseDyn.Update(fDeltaTime);
             kPose.Set(mZephyrPoseDyn, true);
         }
@@ -401,11 +403,8 @@ bool EntityBuildingAnimated::Update(float fDeltaTime)
         mPose.ConvertFromZephyrPose(mZephyrSkeleton);
     }
 
-    if (NetGame::IsEnabled() && NetGame::IsClient())
-    {
-        return true;
-    }
-    if (mState == STATE_DEAD && !IsInScene() && !IsInCollisionList() && mAddHealth < FLT_EPSILON)
+    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mState == STATE_DEAD && !IsInScene() &&
+        !IsInCollisionList() && mAddHealth < FLT_EPSILON)
     {
         return false;
     }

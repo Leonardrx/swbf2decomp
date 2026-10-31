@@ -77,11 +77,15 @@ void DefendHelper::Init(const AI::GoalTarget& target)
 // FUNCTION: SWBF2 0x0048b810
 float DefendHelper::GetUpdateRate() const
 {
-    if (mCurState == STATE_Idle || mCurState == STATE_GotoFortification || mCurState == STATE_Snipe)
+    switch (mCurState)
     {
+    case STATE_Idle:
+    case STATE_GotoFortification:
+    case STATE_Snipe:
         return 2.0f;
+    default:
+        return 1.5f;
     }
-    return 1.5f;
 }
 
 
@@ -236,11 +240,11 @@ void DefendHelper::ExitState()
     case STATE_Idle:
         mIdleHelper.Clean();
         break;
-    case STATE_DoPatrolPath:
-        mPatrolPathHelper.HELPERClean();
-        break;
     case STATE_Snipe:
         mSnipeHelper.HELPERClean();
+        break;
+    case STATE_DoPatrolPath:
+        mPatrolPathHelper.HELPERClean();
         break;
     case STATE_Mine:
         mMineHelper.HELPERClean();
@@ -252,10 +256,10 @@ void DefendHelper::ExitState()
 bool DefendHelper::CheckTargetPosition(const PblVector3& vPos)
 {
     const PblVector3& vMyPos = GetMe()->GetMatrix().GetTranslation();
-    if (DistSq(vMyPos, vPos) > 2500.0f)
+    if (SquaredLength(vMyPos - vPos) > 2500.0f)
     {
         float fRange = mCurState == STATE_Goto ? 25.0f : 5.0f;
-        if (DistSq(vPos, mLastSeekPos) > fRange * fRange)
+        if (SquaredLength(vPos - mLastSeekPos) > fRange * fRange)
         {
             SetNextState(STATE_Goto);
             return true;
@@ -275,7 +279,8 @@ bool DefendHelper::ChooseHint(const BaseHint** ppHints, int iCount, const PblVec
         const BaseHint* pHint = ppHints[i];
         if (AIUtil::IsHintAvailable(pObj, pHint))
         {
-            float fDistSq = DistSq(vPos, pHint->GetCollisionCenter());
+            const PblVector3& vCenter = pHint->GetCollisionCenter();
+            float fDistSq = SquaredLength(vPos - vCenter);
             if (fBestDistSq > fDistSq)
             {
                 pBest = pHint;
@@ -303,7 +308,7 @@ bool DefendHelper::CheckEnterFortification(float dt, const PblVector3& vPos)
         return false;
     }
 
-    if (DistSq(vPos, mLastFortificationPos) < 625.0f)
+    if (SquaredLength(vPos - mLastFortificationPos) < 625.0f)
     {
         mFortificationTime += dt;
     }
@@ -334,7 +339,7 @@ bool DefendHelper::CheckEnterFortification(float dt, const PblVector3& vPos)
 // FUNCTION: SWBF2 0x0048c130
 bool DefendHelper::CheckExitFortification(const PblVector3& vPos)
 {
-    if (DistSq(vPos, mLastFortificationPos) > 625.0f)
+    if (SquaredLength(vPos - mLastFortificationPos) > 625.0f)
     {
         mFortificationTime = 0.0f;
         mLastFortificationPos = vPos;
@@ -396,7 +401,11 @@ void DefendHelper::UpdateState(float dt)
         {
             break;
         }
-        if (mFortificationHint)
+        if (!mFortificationHint)
+        {
+            CheckEnterFortification(dt, vPos);
+        }
+        else
         {
             mFortificationHint->Reserve(GetMe()->GetGameObject());
             if (CheckExitFortification(vPos))
@@ -408,10 +417,6 @@ void DefendHelper::UpdateState(float dt)
                 SetNextState(STATE_DoPatrol);
                 break;
             }
-        }
-        else
-        {
-            CheckEnterFortification(dt, vPos);
         }
 
         if (mSnipeHelper.LookForSnipeHintAndInit() == true)
@@ -477,7 +482,7 @@ void DefendHelper::UpdateState(float dt)
         else if (!GetLowLevel().IsNavigatorInProgress())
         {
             vPos = mFortificationHint->GetCollisionCenter();
-            if (DistSq(vPos, GetMe()->GetMatrix().GetTranslation()) > 25.0f)
+            if (SquaredLength(vPos - GetMe()->GetMatrix().GetTranslation()) > 25.0f)
             {
                 SetNextState(STATE_Goto);
             }

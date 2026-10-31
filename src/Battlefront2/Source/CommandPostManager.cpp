@@ -70,10 +70,7 @@ CommandPost* CommandPostManager::FindPostClosestToEnemy(int iTeam) const
             if (pTeam->GetAffiliation(pObject->mTeam) < 0)
             {
                 const PblVector3& vEnemy = pEnemy->GetMatrix().GetTranslation();
-                float fDX = vPost.x - vEnemy.x;
-                float fDY = vPost.y - vEnemy.y;
-                float fDZ = vPost.z - vEnemy.z;
-                float fDist2 = fDX * fDX + fDY * fDY + fDZ * fDZ;
+                float fDist2 = SquaredLength(vPost - vEnemy);
                 if (fClosest > fDist2)
                 {
                     fClosest = fDist2;

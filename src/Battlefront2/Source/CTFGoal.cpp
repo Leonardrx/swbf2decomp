@@ -72,8 +72,9 @@ void AI::CTFGoal::Assign(Character* pChr)
     UnitController* pCtrl = UnitControllerPtr(pChr->GetControllable()->mCtrl);
     if (pCtrl)
     {
-        pCtrl->ForceCommand(UnitGoalAgentInfo(
-            CMD_CTFOFFENSE, reinterpret_cast<const FlagItem*>(static_cast<const GameObject*>(mFlag)), mCapturePos));
+        UnitGoalAgentInfo info(
+            CMD_CTFOFFENSE, reinterpret_cast<const FlagItem*>(static_cast<const GameObject*>(mFlag)), mCapturePos);
+        pCtrl->ForceCommand(info);
     }
 }
 

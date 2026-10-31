@@ -155,7 +155,7 @@ bool AIUtil::IsUberMode()
 // FUNCTION: SWBF2 0x0043ef50
 float AIUtil::GetRandomFloat(float fMin, float fMax)
 {
-    if (fMin == fMax)
+    if (fMax == fMin)
     {
         return fMin;
     }
@@ -165,11 +165,11 @@ float AIUtil::GetRandomFloat(float fMin, float fMax)
 // FUNCTION: SWBF2 0x0043efc0
 int AIUtil::GetRandomInt(int iMin, int iMax)
 {
-    if (iMax <= iMin)
+    if (iMax > iMin)
     {
-        return iMin;
+        return (int)(PblRandom::GetSim().GetFloat() * (float)(iMax - iMin + 1) + (float)iMin);
     }
-    return (int)(PblRandom::GetSim().GetFloat() * (float)(iMax - iMin + 1) + (float)iMin);
+    return iMin;
 }
 
 namespace VisionManager
@@ -276,7 +276,7 @@ namespace AIUtil
 // FUNCTION: SWBF2 0x00442b30
 bool __fastcall ShouldStayInVehicle(Controllable* pMe)
 {
-    static_cast<const Trackable*>(pMe)->GetGameObject();
+    static_cast<const Controllable*>(pMe)->GetGameObject();
     if (!AIUtil::IsEndGame(0))
     {
         return true;
@@ -296,18 +296,19 @@ bool __fastcall ShouldStayInVehicle(Controllable* pMe)
 // FUNCTION: SWBF2 0x00441690
 bool AIUtil::IsNearNonAllyCommandPost(const GameObject* pObject, const CommandPost** ppPost)
 {
-    *ppPost = 0;
-    const PblVector3 vObject = pObject->GetMatrix().GetTranslation();
     float fNearest = 3.402823466e38f;
+    *ppPost = 0;
+    PblVector3 vObject;
+    vObject = pObject->GetMatrix().GetTranslation();
     for (int i = 0; i < CommandPostManager::Instance()->GetCount(); ++i)
     {
         CommandPost* pPost = CommandPostManager::Instance()->FindPostFromIndex(i);
         const GameObject* pPostObject = pPost->GetGameObject();
         if (!pObject->IsMyFriend(pPostObject))
         {
-            const PblVector3 vPost = GetCommandPostPos(pPost);
-            const float dx = vPost.x - vObject.x;
-            const float dz = vPost.z - vObject.z;
+            const PblVector3 vDelta = GetCommandPostPos(pPost) - vObject;
+            const float dz = vDelta.z;
+            const float dx = vDelta.x;
             const float fDistanceSq = dx * dx + dz * dz;
             if (fDistanceSq < fNearest && fDistanceSq < 5625.0f)
             {
@@ -447,13 +448,15 @@ PblVector3 AIUtil::GetSafeNormal(const PblVector3& v)
 bool AIUtil::GetLeadPosition(float fTime, const Controllable* pMe, const GameObject* pTarget,
                              PblVector3* pvLead)
 {
-    PblVector3 vTarget = GetTargetPoint(pTarget, pMe->mEyePoint, pMe->mEyeDir, -1);
+    PblVector3 vTarget = pTarget->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
     const PblVector3& vMyVel = GetVelocity(pMe->GetGameObject());
     const PblVector3& vHisVel = GetVelocity(pTarget);
-    vTarget.x += (vHisVel.x - vMyVel.x) * fTime;
-    vTarget.y += (vHisVel.y - vMyVel.y) * fTime;
-    vTarget.z += (vHisVel.z - vMyVel.z) * fTime;
-    return pMe->GetCurAimer()->GetLeadPos(vTarget, GetVelocity(pTarget), pvLead);
+    const PblVector3 vRel(vHisVel.x - vMyVel.x, vHisVel.y - vMyVel.y, vHisVel.z - vMyVel.z);
+    vTarget.x = vRel.x * fTime + vTarget.x;
+    vTarget.y = vRel.y * fTime + vTarget.y;
+    vTarget.z = vRel.z * fTime + vTarget.z;
+    const Aimer* pAimer = pMe->GetCurAimer();
+    return pAimer->GetLeadPos(vTarget, GetVelocity(pTarget), pvLead);
 }
 
 namespace AIUtil
@@ -950,8 +953,8 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
 bool AIUtil::GetTangentPointToCircle(const PblVector3& vCenter, const PblVector3& vPoint, float fRadius,
                                      PblVector3& vTangent, PblVector3& vDir, bool bClockwise)
 {
-    const float dz = vPoint.z - vCenter.z;
     const float dx = vPoint.x - vCenter.x;
+    const float dz = vPoint.z - vCenter.z;
     const float fDist = sqrtf(dz * dz + dx * dx);
     if (fRadius > fDist)
     {
@@ -963,12 +966,9 @@ bool AIUtil::GetTangentPointToCircle(const PblVector3& vCenter, const PblVector3
     float fSin;
     float fCos;
     PblMath::SinCos(&fSin, &fCos, bClockwise ? fAngle - fHalfAngle : fAngle + fHalfAngle);
-    vDir.x = fCos;
-    vDir.y = 0.0f;
-    vDir.z = fSin;
-    vTangent.x = vCenter.x + vDir.x * fRadius;
-    vTangent.y = vCenter.y + vDir.y * fRadius;
-    vTangent.z = vCenter.z + vDir.z * fRadius;
+    vDir = PblVector3(fCos, 0.0f, fSin);
+    const PblVector3 vOffset(vDir.x * fRadius, vDir.y * fRadius, vDir.z * fRadius);
+    vTangent = PblVector3(vCenter.x + vOffset.x, vCenter.y + vOffset.y, vCenter.z + vOffset.z);
     return true;
 }
 
@@ -1099,23 +1099,31 @@ void AIUtil::CalculateFlyerSteerPoint(const PblVector3& vPos, const PblVector3& 
 void AIUtil::CalculateSoldierSteerPoint(const PblVector3& vPrev, const PblVector3& vGoto,
                                         const PblVector3& vPos, float fSpeed, PblVector3& vSteer)
 {
-    const PblVector3 vFrom(vPrev.x, vPos.y, vPrev.z);
-    const PblVector3 vTo(vGoto.x, vPos.y, vGoto.z);
-    const PblVector3 vLeg = vTo - vFrom;
-    if (0.0001f > SquaredLength(vLeg))
+    PblVector3 vFrom;
+    vFrom = vPrev;
+    vFrom.y = vPos.y;
+    PblVector3 vTo;
+    vTo = vGoto;
+    vTo.y = vPos.y;
+    const PblVector3 vLeg(vTo.x - vFrom.x, vTo.y - vFrom.y, vTo.z - vFrom.z);
+    if (0.0001f > vLeg.x * vLeg.x + vLeg.y * vLeg.y + vLeg.z * vLeg.z)
     {
         vSteer = vTo;
         return;
     }
 
-    PblVector3 vDir = Normalize(vLeg);
-    const float fAhead = DotProduct(vDir, vPos - vFrom) + fSpeed + 0.2f;
-    if (fAhead * fAhead > SquaredLengthXZ(vLeg))
+    PblVector3 vDir;
+    PblVector3 vLegCopy(vLeg);
+    D3DXVec3Normalize(&vDir, &vLegCopy);
+    const PblVector3 vRel(vPos.x - vFrom.x, vPos.y - vFrom.y, vPos.z - vFrom.z);
+    const float fAhead = vDir.y * vRel.y + vRel.x * vDir.x + vDir.z * vRel.z + fSpeed + 0.2f;
+    if (fAhead * fAhead > vLeg.z * vLeg.z + vLeg.x * vLeg.x)
     {
         vSteer = vTo;
         return;
     }
-    vSteer = (vDir * fAhead + vFrom);
+    vSteer = PblVector3(vDir.x * fAhead + vFrom.x, vDir.y * fAhead + vFrom.y,
+                        vDir.z * fAhead + vFrom.z);
 }
 
 // FUNCTION: SWBF2 0x00440f20
@@ -1255,29 +1263,36 @@ GameObject* AIUtil::GetAlivePtr(PblHandle<GameObject> const& hObj, bool bInclude
 // FUNCTION: SWBF2 0x00441210
 PblVector3 AIUtil::GetRandomPtInRegion(const RedRegion* pRegion)
 {
+    PblVector3 vPoint;
     if (!pRegion)
     {
-        return gMatrixIdentity.GetTranslation();
+        vPoint = gMatrixIdentity.GetTranslation();
+        return vPoint;
     }
 
     switch (pRegion->mType)
     {
+    case PblRegion::type_box:
+    case PblRegion::type_box_aligned:
+    {
+        const PblVector3 v = PblRandom::GetGlobalVector3();
+        const PblVector3 vLocal(pRegion->mSize.x * v.x, pRegion->mSize.y * v.y, pRegion->mSize.z * v.z);
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&pRegion->mMatrix));
+        return vPoint;
+    }
     case PblRegion::type_sphere:
     {
         PblVector3 v;
         do
         {
             v = PblRandom::GetGlobalVector3();
-        } while (SquaredLength(v) > 1.0f);
-        return pRegion->mMatrix.ApplyTranslation(v * pRegion->mSize.x);
-    }
-    case PblRegion::type_box:
-    case PblRegion::type_box_aligned:
-    {
-        const PblVector3 v = PblRandom::GetGlobalVector3();
-        const PblVector3 vLocal = pRegion->mSize * v;
-        PblVector3 vPoint;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&pRegion->mMatrix));
+        } while (v.x * v.x + v.y * v.y + v.z * v.z > 1.0f);
+        const PblVector3& vCenter = pRegion->mMatrix.GetTranslation();
+        const float fRadius = pRegion->mSize.x;
+        const PblVector3 vOffset(v.x * fRadius, v.y * fRadius, v.z * fRadius);
+        vPoint.x = vCenter.x + vOffset.x;
+        vPoint.y = vCenter.y + vOffset.y;
+        vPoint.z = vCenter.z + vOffset.z;
         return vPoint;
     }
     case PblRegion::type_cylinder:
@@ -1289,14 +1304,16 @@ PblVector3 AIUtil::GetRandomPtInRegion(const RedRegion* pRegion)
         do
         {
             v = PblRandom::GetGlobalVector3();
-        } while (SquaredLengthXZ(v) > 1.0f);
-        const PblVector3 vLocal = pRegion->mSize * v;
-        PblVector3 vPoint;
+        } while (v.x * v.x + v.z * v.z > 1.0f);
+        const PblVector3 vLocal(pRegion->mSize.x * v.x, pRegion->mSize.y * v.y, pRegion->mSize.z * v.z);
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&pRegion->mMatrix));
         return vPoint;
     }
     default:
-        return PblVector3(0.0f, 0.0f, 0.0f);
+        vPoint.x = 0.0f;
+        vPoint.y = 0.0f;
+        vPoint.z = 0.0f;
+        return vPoint;
     }
 }
 
@@ -1304,13 +1321,11 @@ PblVector3 AIUtil::GetRandomPtInRegion(const RedRegion* pRegion)
 PblVector3 AIUtil::GetCommandPostOffset(const CommandPost* pPost)
 {
     const RedRegion* pRegion = pPost->mCaptureRegion;
-    if (!pRegion)
+    if (pRegion)
     {
-        return PblVector3(0.0f, 0.0f, 0.0f);
+        return GetRandomPtInRegion(pRegion) - pRegion->mMatrix.GetTranslation();
     }
-    const PblVector3 vPoint = GetRandomPtInRegion(pRegion);
-    const PblVector3& vCenter = pRegion->mMatrix.GetTranslation();
-    return PblVector3(vPoint.x - vCenter.x, vPoint.y - vCenter.y, vPoint.z - vCenter.z);
+    return PblVector3(0.0f, 0.0f, 0.0f);
 }
 
 // FUNCTION: SWBF2 0x00441450
@@ -1327,10 +1342,8 @@ PblVector3 AIUtil::GetCommandPostPos(const CommandPost* pPost)
 bool AIUtil::IsNearPost(const Controllable* pMe, const CommandPost* pPost, const PblVector3& vOffset)
 {
     const PblVector3 vMyPos = pMe->GetMatrix().GetTranslation();
-    const PblVector3 vPostPos = GetCommandPostPos(pPost);
-    const float dx = vPostPos.x + vOffset.x - vMyPos.x;
-    const float dz = vPostPos.z + vOffset.z - vMyPos.z;
-    const float fDistSq = dz * dz + dx * dx;
+    const PblVector3 vDelta = GetCommandPostPos(pPost) + vOffset - vMyPos;
+    const float fDistSq = vDelta.z * vDelta.z + vDelta.x * vDelta.x;
 
     float fRadius = pMe->GetGameObject()->GetMaxSpeed() * 0.5f;
     if (pPost->mCaptureRegion)
@@ -1342,8 +1355,9 @@ bool AIUtil::IsNearPost(const Controllable* pMe, const CommandPost* pPost, const
     }
     else
     {
-        const float fReach = pMe->GetGameObject()->GetCollisionObject()->GetCollisionRadius() +
-                             pPost->GetGameObject()->GetCollisionObject()->GetCollisionRadius() + 5.0f;
+        const float fMyRadius = pMe->GetGameObject()->GetCollisionObject()->GetCollisionRadius();
+        const float fPostRadius = pPost->GetGameObject()->GetCollisionObject()->GetCollisionRadius();
+        const float fReach = fMyRadius + fPostRadius + 5.0f;
         fRadius = 10.0f > fReach ? 10.0f : fReach;
         if (pPost->GetGameObject()->GetMaxSpeed() > 0.0f)
         {
@@ -1363,9 +1377,10 @@ bool __cdecl CanPotentiallySee(Controllable* pMe, const GameObject* pObject, flo
     // GLOBAL: SWBF2 0x01faa7d0
     static const float sCosHalfFOV = PblMath::Cos(FOV_ANGLE * 0.5f);
 
-    const PblVector3 vTarget = pObject->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
-    const PblVector3 vTo(vTarget.x - pMe->mEyePoint.x, vTarget.y - pMe->mEyePoint.y,
-                         vTarget.z - pMe->mEyePoint.z);
+    const PblVector3& vEye = pMe->mEyePoint;
+    const PblVector3& vDir = pMe->mEyeDir;
+    const PblVector3 vTarget = pObject->GetTargetPoint(vEye, vDir, -1);
+    const PblVector3 vTo(vTarget.x - vEye.x, vTarget.y - vEye.y, vTarget.z - vEye.z);
     const float fDistSq = vTo.x * vTo.x + vTo.y * vTo.y + vTo.z * vTo.z;
     if (100.0f > fDistSq)
     {
@@ -1379,7 +1394,7 @@ bool __cdecl CanPotentiallySee(Controllable* pMe, const GameObject* pObject, flo
     bool bResult = true;
     if (fDistSq > 0.0001f)
     {
-        const float fDot = pMe->mEyeDir.x * vTo.x + pMe->mEyeDir.y * vTo.y + pMe->mEyeDir.z * vTo.z;
+        const float fDot = vDir.x * vTo.x + vDir.y * vTo.y + vDir.z * vTo.z;
         bResult = fDot > 0.0f && fDot * fDot > sCosHalfFOV * fDistSq * sCosHalfFOV;
     }
     if (pOut)
@@ -1427,9 +1442,10 @@ float AIUtil::GetCollisionRadius(const GameObject* pObj)
         }
     }
 
-    const PblBox& box = pObj->GetModel()->_mModel->_TotalBoundingBox;
-    const float dx = box._vMax.x - box._vMin.x;
-    const float dz = box._vMax.z - box._vMin.z;
+    const PblVector3& vMin = pObj->GetModel()->_mModel->_TotalBoundingBox._vMin;
+    const PblVector3& vMax = pObj->GetModel()->_mModel->_TotalBoundingBox._vMax;
+    const float dx = vMax.x - vMin.x;
+    const float dz = vMax.z - vMin.z;
     const float fDiag = sqrtf(dx * dx + dz * dz);
     if (eType == ENTITY_HOVER)
     {
@@ -1457,33 +1473,39 @@ int AIUtil::GetAIType(const GameObject* pObj)
 // FUNCTION: SWBF2 0x00441d60
 bool AIUtil::AvoidBarriers(EntityFlyer* pFlyer, const PblVector3&  , PblVector3* pNewDest)
 {
-    const PblVector3 vPos = pFlyer->GetMatrix().GetTranslation();
+    PblVector3 vPos;
+    vPos = pFlyer->GetMatrix().GetTranslation();
     const PblVector3 vForward = GetSafeNormalXZ(pFlyer->GetMatrix().GetZAxis());
     const float fAhead = pFlyer->mClass->mMaxFlyerSpeed;
-    const PblVector3 vAhead(vPos.x + vForward.x * fAhead, vPos.y + vForward.y * fAhead,
-                            vPos.z + vForward.z * fAhead);
+    const PblVector3 vAhead = vPos + vForward * fAhead;
     const float fCollisionRadius = GetCollisionRadius(pFlyer);
     const float fRadius = 15.0f > fCollisionRadius ? 15.0f : fCollisionRadius;
 
-    PblVector3 vStart = vPos;
+    PblVector3 vStart;
+    vStart = vPos;
     const Obstacle* pBarrier = GetGameObjectBarrier(pFlyer->GetGameObject());
-    if (PathFinder::GetClosestValidPoint(vStart, vStart, fRadius, GetAIType(pFlyer), &pBarrier, 1))
+    bool bBlocked = !PathFinder::GetClosestValidPoint(vStart, vStart, fRadius, GetAIType(pFlyer), &pBarrier, 1);
+    if (!bBlocked)
     {
-        PblVector3 vEnd = vAhead;
+        PblVector3 vEnd;
+        vEnd = vAhead;
         PblVector3 vNormal;
-        if (!PathFinder::PushValidPoint(vStart, vEnd, vNormal, fRadius, GetAIType(pFlyer), &pBarrier, 1) &&
-            !FlyRegionManager::RayTest(vPos, vAhead, fRadius))
-        {
-            return false;
-        }
+        bBlocked = PathFinder::PushValidPoint(vStart, vEnd, vNormal, fRadius, GetAIType(pFlyer), &pBarrier, 1) ||
+                   FlyRegionManager::RayTest(vPos, vAhead, fRadius);
+    }
+    if (!bBlocked)
+    {
+        return false;
     }
 
     const float fSide = pFlyer->mClass->mMaxFlyerSpeed * 2.0f;
     const float fDist = 30.0f > fSide ? 30.0f : fSide;
     const PblVector3& vUp = gVectorUnitY;
-    pNewDest->x = (vForward.y * vUp.z - vForward.z * vUp.y) * fDist + vPos.x;
-    pNewDest->y = (vForward.z * vUp.x - vForward.x * vUp.z) * fDist + vPos.y;
-    pNewDest->z = (vForward.x * vUp.y - vForward.y * vUp.x) * fDist + vPos.z;
+    PblVector3 vSide;
+    vSide.x = vForward.y * vUp.z - vForward.z * vUp.y;
+    vSide.y = vForward.z * vUp.x - vForward.x * vUp.z;
+    vSide.z = vForward.x * vUp.y - vForward.y * vUp.x;
+    *pNewDest = PblVector3(vSide.x * fDist + vPos.x, vSide.y * fDist + vPos.y, vSide.z * fDist + vPos.z);
     return true;
 }
 
@@ -1542,6 +1564,10 @@ bool ShouldSoldierDodgeThisType(int eType)
     case COLL_ATTACHED:
     case COLL_SPECIAL:
         return true;
+    case COLL_TERRAIN:
+    case COLL_WATER:
+    case COLL_LEAFPATCH:
+        return false;
     default:
         return false;
     }
@@ -1582,7 +1608,7 @@ void AIUtil::Slide(GameObject* pMe, const GameObject* pTarget, bool bUseAttackHe
             const PblVector3& vMe = pMe->GetMatrix().GetTranslation();
             const float dx = vMe.x - vTarget.x;
             const float dz = vMe.z - vTarget.z;
-            if (dx * dx + dz * dz <= 1.0f)
+            if (!(dx * dx + dz * dz > 1.0f))
             {
                 return;
             }
@@ -1608,7 +1634,8 @@ void AIUtil::Slide(GameObject* pMe, const GameObject* pTarget, bool bUseAttackHe
         {
             *pbIsPathing = true;
             *pfPathTime = GameLoop::GetMissionTime();
-            const PblVector3 vDest = pTarget->GetMatrix().GetTranslation();
+            PblVector3 vDest;
+            vDest = pTarget->GetMatrix().GetTranslation();
             lowLevel.SetNavigator_Goto(vDest, 0, false, false);
         }
     }
@@ -1652,14 +1679,13 @@ bool AIUtil::HasCPMoved(const CommandPost* pPost, Controllable* pMe, const PblVe
 {
     const UnitController* pUnit = UnitControllerPtr(pMe->mCtrl);
     const PblVector3 vPost = GetCommandPostPos(pPost);
-    const float dx = vPost.x - vLastPos.x;
-    const float dy = vPost.y - vLastPos.y;
-    const float dz = vPost.z - vLastPos.z;
-    if (dx * dx + dy * dy + dz * dz > 400.0f && GameLoop::GetMissionTime() > fLastTime + 15.0f)
+    if (SquaredLength(vPost - vLastPos) > 400.0f && GameLoop::GetMissionTime() > fLastTime + 15.0f)
     {
-        const PblVector3& vMe = pMe->GetMatrix().GetTranslation();
-        const float fDot = (vMe.y - vDir.y) * (vPost.y - vMe.y) + (vMe.x - vDir.x) * (vPost.x - vMe.x) +
-                           (vMe.z - vDir.z) * (vPost.z - vMe.z);
+        PblVector3 vMe;
+        vMe = pMe->GetMatrix().GetTranslation();
+        const PblVector3 vToPost(vPost.x - vMe.x, vPost.y - vMe.y, vPost.z - vMe.z);
+        const float fDot = (vMe.y - vDir.y) * vToPost.y + (vMe.x - vDir.x) * vToPost.x +
+                           (vMe.z - vDir.z) * vToPost.z;
         if (0.0f > fDot)
         {
             return true;
@@ -1678,27 +1704,23 @@ namespace AIUtil
 // FUNCTION: SWBF2 0x00442430
 bool IsImportant(const GameObject* pObj)
 {
-    if (gAllSoldiers || NetGame::IsEnabled())
+    if (!gAllSoldiers && !NetGame::IsEnabled())
     {
-        return true;
+        const PblVector3& vVel = pObj->GetVelocity();
+        if (100.0f > vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z)
+        {
+            PblVector3 vPos;
+            vPos = static_cast<const CollisionObject*>(pObj)->GetMatrix().GetTranslation();
+            PblVector3 vCam;
+            vCam = CameraManager::Instance()->GetCamera(0)->GetMatrix().GetTranslation();
+            if (SquaredLength(vCam - vPos) > 2025.0f &&
+                !CameraManager::Instance()->IsInsideAnyCamera(vPos, -1.0f, 70.0f))
+            {
+                return false;
+            }
+        }
     }
-
-    const PblVector3& vVel = pObj->GetVelocity();
-    if (!(100.0f > vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z))
-    {
-        return true;
-    }
-
-    const PblVector3 vPos = static_cast<const CollisionObject*>(pObj)->GetMatrix().GetTranslation();
-    const PblVector3 vCam = CameraManager::Instance()->GetCamera(0)->GetMatrix().GetTranslation();
-    const float dx = vCam.x - vPos.x;
-    const float dy = vCam.y - vPos.y;
-    const float dz = vCam.z - vPos.z;
-    if (!(dx * dx + dy * dy + dz * dz > 2025.0f))
-    {
-        return true;
-    }
-    return CameraManager::Instance()->IsInsideAnyCamera(vPos, -1.0f, 70.0f);
+    return true;
 }
 }
 
@@ -1711,11 +1733,18 @@ bool AIUtil::IsPlayerTeam(int iTeam)
     {
         return false;
     }
-    if (pPlayer2)
+    if (!pPlayer2)
     {
-        return pPlayer1->mTeamNumber == pPlayer2->mTeamNumber && iTeam == pPlayer1->mTeamNumber;
+        if (iTeam == pPlayer1->mTeamNumber)
+        {
+            return true;
+        }
     }
-    return iTeam == pPlayer1->mTeamNumber;
+    else if (pPlayer1->mTeamNumber == pPlayer2->mTeamNumber && iTeam == pPlayer1->mTeamNumber)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004425d0
@@ -1795,8 +1824,7 @@ bool AIUtil::IsSnipeHintNearby(const GameObject* pObj, const SnipeHelper& helper
 {
     if (GameLoop::GetMissionTime() > *pfNextCheckTime)
     {
-        const float fWait = GetRandomFloat(0.0f, 4.0f);
-        *pfNextCheckTime = GameLoop::GetMissionTime() + 8.0f + fWait;
+        *pfNextCheckTime = GetRandomFloat(0.0f, 4.0f) + (GameLoop::GetMissionTime() + 8.0f);
         *ppHint = 0;
         const SnipeHint* pHint = helper.HELPERFindSnipeHint();
         if (pHint)
@@ -1821,10 +1849,13 @@ PblVector3 AIUtil::GetHisVisionTargetPos(const Controllable* pMe, const GameObje
     const PblVector3 vMyPos = GetMyVisionPos(pMe);
     if (pObj->GetControllable())
     {
-        const PblVector3 vHisEye = pObj->GetControllable()->GetEyePoint();
-        const PblVector3 vDir = pMe->mEyeDir;
+        PblVector3 vHisEye;
+        vHisEye = pObj->GetControllable()->GetEyePoint();
+        PblVector3 vDir;
+        vDir = pMe->mEyeDir;
         const PblVector3 vTarget = pObj->GetTargetPoint(vMyPos, vDir, -1);
-        return ((vTarget + vHisEye) * 0.5f);
+        const PblVector3 vSum(vHisEye.x + vTarget.x, vHisEye.y + vTarget.y, vHisEye.z + vTarget.z);
+        return PblVector3(vSum.x * 0.5f, vSum.y * 0.5f, vSum.z * 0.5f);
     }
     return pObj->GetTargetPoint(vMyPos, pMe->mEyeDir, -1);
 }
@@ -1871,7 +1902,8 @@ bool AIUtil::CanSee(Controllable* pMe, const GameObject* pObj, PblVector3* pPos)
 void AIUtil::GrenadeAlert(const PblVector3& vPos, const GameObject* pObject, float* pBeginTime,
                           float* pLastEventTime)
 {
-    const float fDelay = AIDifficulty::GetGrenadeReactionTime() + GetRandomFloat(0.0f, 0.3f);
+    const float fReactionTime = AIDifficulty::GetGrenadeReactionTime();
+    const float fDelay = fReactionTime + GetRandomFloat(0.0f, 0.3f);
     if (GameLoop::GetMissionTime() > *pBeginTime + fDelay &&
         GameLoop::GetMissionTime() > *pLastEventTime + 1.0f)
     {
@@ -1914,46 +1946,42 @@ bool AIUtil::IsEndGame(int)
 // FUNCTION: SWBF2 0x00442d30
 bool AIUtil::ResolveCollision(const GameObject* pMe, const GameObject* pOther)
 {
-    if (!pOther->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker) &&
-        !pOther->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover))
+    if (pOther->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker) ||
+        pOther->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover))
     {
-        return false;
-    }
+        const CollisionObject* pMyCollision = pMe->GetCollisionObject();
+        const CollisionObject* pOtherCollision = pOther->GetCollisionObject();
+        if (!(pMyCollision->GetMass() > pOtherCollision->GetMass() * 3.0f))
+        {
+            if (pOtherCollision->GetMass() > pMyCollision->GetMass() * 3.0f)
+            {
+                return true;
+            }
 
-    const float fMyMass = pMe->GetCollisionObject()->GetMass();
-    const float fOtherMass = pOther->GetCollisionObject()->GetMass();
-    if (fMyMass > fOtherMass * 3.0f)
-    {
-        return false;
+            const PblVector3& vMyVel = pMe->GetVelocity();
+            if (vMyVel.x * vMyVel.x + vMyVel.z * vMyVel.z > 0.0001f)
+            {
+                const PblVector3& vOtherVel = pOther->GetVelocity();
+                if (vOtherVel.x * vOtherVel.x + vOtherVel.z * vOtherVel.z > 0.0001f)
+                {
+                    const PblVector3 vMyDir = GetSafeNormal(pMe->GetVelocity());
+                    const PblVector3 vOtherDir = GetSafeNormal(pOther->GetVelocity());
+                    PblVector3 vMyPos;
+                    vMyPos = pMe->GetMatrix().GetTranslation();
+                    PblVector3 vOtherPos;
+                    vOtherPos = pOther->GetMatrix().GetTranslation();
+                    const PblVector3 vDelta(vOtherPos.x - vMyPos.x, vOtherPos.y - vMyPos.y,
+                                            vOtherPos.z - vMyPos.z);
+                    const PblVector3 vToOther = GetSafeNormal(vDelta);
+                    const PblVector3 vToMe(-vToOther.x, -vToOther.y, -vToOther.z);
+                    const float fMyDot = vMyDir.y * vToMe.y + vMyDir.x * vToMe.x + vMyDir.z * vToMe.z;
+                    const float fOtherDot = vOtherDir.y * vToOther.y + vOtherDir.x * vToOther.x + vOtherDir.z * vToOther.z;
+                    return fOtherDot > fMyDot;
+                }
+            }
+        }
     }
-    if (fOtherMass > fMyMass * 3.0f)
-    {
-        return true;
-    }
-
-    const PblVector3& vMyVel = pMe->GetVelocity();
-    if (vMyVel.x * vMyVel.x + vMyVel.z * vMyVel.z <= 0.0001f)
-    {
-        return false;
-    }
-    const PblVector3& vOtherVel = pOther->GetVelocity();
-    if (vOtherVel.x * vOtherVel.x + vOtherVel.z * vOtherVel.z <= 0.0001f)
-    {
-        return false;
-    }
-
-    const PblVector3 vMyDir = GetSafeNormal(pMe->GetVelocity());
-    const PblVector3 vOtherDir = GetSafeNormal(pOther->GetVelocity());
-    const PblVector3& vMyPos = pMe->GetMatrix().GetTranslation();
-    const PblVector3& vOtherPos = pOther->GetMatrix().GetTranslation();
-    PblVector3 vDelta;
-    vDelta.x = vOtherPos.x - vMyPos.x;
-    vDelta.y = vOtherPos.y - vMyPos.y;
-    vDelta.z = vOtherPos.z - vMyPos.z;
-    const PblVector3 vToOther = GetSafeNormal(vDelta);
-
-    return vOtherDir.x * vToOther.x + vOtherDir.y * vToOther.y + vOtherDir.z * vToOther.z >
-           vMyDir.x * -vToOther.x + vMyDir.y * -vToOther.y + vMyDir.z * -vToOther.z;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00442f30
@@ -1991,11 +2019,11 @@ const Obstacle* AIUtil::_GetGameObjectBarrier(const GameObject* pObj)
     }
     if (pObj->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover))
     {
-        return HoverGetObstacle(pObj->GetEntity());
+        return static_cast<const EntityHover*>(pObj->GetEntity())->mObstacle;
     }
     if (pObj->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
     {
-        return FlyerGetObstacle(pObj->GetEntity());
+        return static_cast<const EntityFlyer*>(pObj->GetEntity())->mObstacle;
     }
     return 0;
 }
@@ -2020,8 +2048,7 @@ PblVector3 AIUtil::GetRandomAccessiblePoint(const UnitController* pCtrl)
         return PblVector3(0.0f, 0.0f, 0.0f);
     }
 
-    const Controllable* pMe = pCtrl->mOwner;
-    const GameObject* pObj = pMe->GetGameObject();
+    const GameObject* pObj = static_cast<const Controllable*>(pCtrl->mOwner)->GetGameObject();
     const ConnectivityGraph* pGraph = ConnectivityGraphManager::GetWorldGraph((ConnectivityGraph::ProhibitFlag)-1);
     const ConnectivityNode* pNode;
     if (pGraph && (pNode = pGraph->GetRandomAccessibleNode(pCtrl)) != 0)
@@ -2035,12 +2062,14 @@ PblVector3 AIUtil::GetRandomAccessiblePoint(const UnitController* pCtrl)
         return vPoint;
     }
 
-    const PblVector3 vPos = pMe->GetMatrix().GetTranslation();
+    const PblVector3 vPos = pCtrl->mOwner->GetMatrix().GetTranslation();
     PblVector3 vStart = vPos;
     PathFinder::GetClosestValidPoint(vStart, vStart, pObj);
     PblVector3 vDest = PblRandom::GetGlobalVector3();
-    vDest.x = vStart.x + vDest.x * 100.0f;
-    vDest.z = vStart.z + vDest.z * 100.0f;
+    const float fOffsetX = vDest.x * 100.0f;
+    const float fOffsetZ = vDest.z * 100.0f;
+    vDest.x = vStart.x + fOffsetX;
+    vDest.z = vStart.z + fOffsetZ;
     vDest.y = vPos.y;
     PathFinder::PushValidPoint(vStart, vDest, pObj);
     return vDest;
@@ -2098,10 +2127,15 @@ void AIUtil::TellAIToExit(GameObject* pObject)
             continue;
         }
         Controllable* pMe = pUnit->mOwner;
-        if (pMe && pMe->mCharacter && pMe->mCharacter->mUnit && !pUnit->IsNewCommand())
+        if (pMe && pMe->mCharacter)
         {
-            AI::VOHelper::Play(AI::VOT_SC_GetOutResponse, pMe->mCharacter->mUnit->GetGameObject(), 0, pObject,
-                               AIUtil::GetRandomFloat(0.5f, 1.2f) + GameLoop::GetMissionTime());
+            Controllable* pSpeakerUnit = pMe->mCharacter->mUnit;
+            if (pSpeakerUnit && !pUnit->IsNewCommand())
+            {
+                const GameObject* pSpeaker = pSpeakerUnit->GetGameObject();
+                AI::VOHelper::Play(AI::VOT_SC_GetOutResponse, pSpeaker, 0, pObject,
+                                   AIUtil::GetRandomFloat(0.5f, 1.2f) + GameLoop::GetMissionTime());
+            }
         }
         AI::EventInfo info(AI::EVT_SC_GetOutOfVehicle, pObject);
         pUnit->SendEvent(&info);

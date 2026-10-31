@@ -65,7 +65,7 @@ bool UnitRandomAgent::ShouldQueueCurCmd(const UnitCmdInfo& cmd) const
 UnitRandomAgent::UnitRandomAgent(UnitController* pCtrl)
     : UnitAgent(pCtrl)
 {
-    mStartPos = GetMe()->GetMatrix().GetTranslation();
+    mStartPos = pCtrl->mOwner->GetMatrix().GetTranslation();
     mCurState = 1;
     mNextState = 2;
 }
@@ -74,7 +74,7 @@ UnitRandomAgent::UnitRandomAgent(UnitController* pCtrl)
 bool UnitRandomAgent::IsPointValid(const PblVector3& vPoint)
 {
     const GameObject* pObj = GetMe()->GetGameObject();
-    PblVector3 vPos = (GameObjectGetMatrix(pObj)).GetTranslation();
+    PblVector3 vPos = pObj->GetMatrix().GetTranslation();
     return PathFinder::IsPointValid(vPos, AIUtil::GetCollisionRadius(pObj), AIUtil::GetAIType(pObj), 0, 0, 0);
 }
 
@@ -91,9 +91,11 @@ void UnitRandomAgent::PickRandomDest()
 // FUNCTION: SWBF2 0x00669530
 void UnitRandomAgent::EnterState()
 {
-    if (mCurState == 2)
+    switch (mCurState)
     {
+    case 2:
         PickRandomDest();
+        break;
     }
 }
 
@@ -107,7 +109,9 @@ void UnitRandomAgent::ExitState()
 void UnitRandomAgent::UpdateStatePostVision(float dt)
 {
     mAttackHelper.Update();
-    if (mCurState == 2)
+    switch (mCurState)
+    {
+    case 2:
     {
         float fRange = 6.0f;
         GetLowLevel().mFoldStatus = FOLD_UNFOLD;
@@ -116,7 +120,7 @@ void UnitRandomAgent::UpdateStatePostVision(float dt)
             fRange = 2.0f;
         }
 
-        PblVector3 vPos = (GameObjectGetMatrix(GetMe()->GetGameObject())).GetTranslation();
+        PblVector3 vPos = GetMe()->GetGameObject()->GetMatrix().GetTranslation();
         float fX = vPos.x - mStartPos.x;
         float fY = vPos.y - mStartPos.y;
         float fZ = vPos.z - mStartPos.z;
@@ -130,17 +134,19 @@ void UnitRandomAgent::UpdateStatePostVision(float dt)
         bool bCollided = false;
         if (GetMe()->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
         {
-            bCollided = EntitySoldierAiGetLastCollisionDirection(GetMe()->GetEntity()) != 0;
+            bCollided = static_cast<EntitySoldier*>(GetMe()->GetEntity())->mAILastCollisionDirection != 0;
         }
         if (GetMe()->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
-            bCollided = EntityDroidekaAiGetLastCollisionDirection(GetMe()->GetEntity()) != 0;
+            bCollided = static_cast<EntityDroideka*>(GetMe()->GetEntity())->mAILastCollisionDirection != 0;
         }
 
         if (bCollided || GameLoop::GetMissionTime() > mRandTime + 3.0f || GetLowLevel().IsAtDest())
         {
             PickRandomDest();
         }
+        break;
+    }
     }
     FaceTarget(HEIGHT_STAND);
 }
@@ -148,11 +154,11 @@ void UnitRandomAgent::UpdateStatePostVision(float dt)
 // FUNCTION: SWBF2 0x006696f0
 int UnitRandomAgent::EventHandler(AI::EventInfo* pInfo)
 {
-    if (pInfo->mType == AI::EVT_Path_PathFollowerStuck)
+    if (pInfo->mType != AI::EVT_Path_PathFollowerStuck)
     {
-        return 0;
+        return UnitAgent::EventHandler(pInfo);
     }
-    return UnitAgent::EventHandler(pInfo);
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00669710

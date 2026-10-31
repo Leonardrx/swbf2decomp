@@ -611,17 +611,19 @@ void HUD::ElementTarget::Read(PblConfig& config, Factory::ItemCallback pCallback
         PblConfig::Data data = config.ReadNextData();
         if (config.m_pChunk->PeekNextChildId() == 0x504f4353)
         {
+            bool bHandled = false;
             for (i = 0; i < targetCommonState_MAX; ++i)
             {
                 if (data.GetId() == mTargetCommonAll[i].GetNameHash())
                 {
+                    PblConfig scope(config.ReadNextScope(), true);
+                    mTargetCommonAll[i].Read(scope, 0, 0);
+                    bHandled = true;
                     break;
                 }
             }
-            if (i < targetCommonState_MAX)
+            if (bHandled)
             {
-                PblConfig scope(config.ReadNextScope(), true);
-                mTargetCommonAll[i].Read(scope, 0, 0);
                 continue;
             }
 
@@ -629,13 +631,14 @@ void HUD::ElementTarget::Read(PblConfig& config, Factory::ItemCallback pCallback
             {
                 if (data.GetId() == mTargetPlayerAll[i].GetNameHash())
                 {
+                    PblConfig scope(config.ReadNextScope(), true);
+                    mTargetPlayerAll[i].Read(scope, 0, 0);
+                    bHandled = true;
                     break;
                 }
             }
-            if (i < targetPlayerState_MAX)
+            if (bHandled)
             {
-                PblConfig scope(config.ReadNextScope(), true);
-                mTargetPlayerAll[i].Read(scope, 0, 0);
                 continue;
             }
 
@@ -669,12 +672,11 @@ void HUD::ElementTarget::Read(PblConfig& config, Factory::ItemCallback pCallback
     }
 
     const PblVector3& vPos = RedGroupElement::GetPosition();
-    float fX = vPos.x;
-    if (CameraManager::Instance()->GetNumCameras() <= 1)
-    {
-        fX = ConvertWideScreenX(fX, sViewportWidth, sViewportHeight);
-    }
-    RedGroupElement::SetPosition(fX, vPos.y, vPos.z);
+    RedGroupElement::SetPosition(
+        CameraManager::Instance()->GetNumCameras() <= 1
+            ? ConvertWideScreenX(vPos.x, sViewportWidth, sViewportHeight)
+            : vPos.x,
+        vPos.y, vPos.z);
 
     PostReadSetup();
 }
@@ -738,13 +740,13 @@ void HUD::ElementTarget::WriteData(HUD::File& file, unsigned int uTabs)
 {
     const PblVector3& vPos = RedGroupElement::GetPosition();
     float fX;
-    if (CameraManager::Instance()->GetNumCameras() <= 1)
+    if (CameraManager::Instance()->GetNumCameras() > 1)
     {
-        fX = ConvertXForWideScreen(vPos.x, GetContainerViewWidth(), GetContainerViewHeight());
+        fX = vPos.x;
     }
     else
     {
-        fX = vPos.x;
+        fX = ConvertXForWideScreen(vPos.x, GetContainerViewWidth(), GetContainerViewHeight());
     }
     RedGroupElement::SetPosition(fX, vPos.y, vPos.z);
 

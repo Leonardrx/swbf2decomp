@@ -61,22 +61,22 @@ void LuaMemory::CreatePools(bool bMission)
     RedAllocFromHeap(iOldHeap, 4, 0);
 
     MemPoolInfo* pInfo = bMission ? gGamePoolInfo : gShellPoolInfo;
-    unsigned int i;
-    for (i = 0; i < 48; ++i)
+    MemPoolInfo* pDest = gPoolInfo;
+    MemoryPool** ppPool = gPools;
+    for (int iLeft = 48; iLeft != 0; --iLeft, ++pInfo, ++pDest, ++ppPool)
     {
-
-        gPoolInfo[i] = pInfo[i];
-        if (gPoolInfo[i].mCount == 0)
+        *pDest = *pInfo;
+        if (pDest->mCount == 0)
         {
-            gPools[i] = 0;
+            *ppPool = 0;
             continue;
         }
 
         char acName[16];
-        sprintf(acName, "Lua%d", pInfo[i].mBin);
+        sprintf(acName, "Lua%d", pInfo->mBin);
         MemoryPool* pPool = new MemoryPool(acName, 0);
-        gPools[i] = pPool;
-        pPool->Create(pInfo[i].mCount, pInfo[i].mBin * 4, 0);
+        *ppPool = pPool;
+        pPool->Create(pInfo->mCount, pInfo->mBin * 4, 0);
     }
 
     RedSetCurrentHeap(iOldHeap);
@@ -100,10 +100,18 @@ MemoryPool* LuaMemory::LocatePool(unsigned int uiSize, void* pBlock)
 
     if (pBlock)
     {
-        return (pPool && pPool->IsPresent(pBlock)) ? pPool : 0;
+        if (pPool && pPool->IsPresent(pBlock))
+        {
+            return pPool;
+        }
+        return 0;
     }
 
-    return (pPool && pPool->mUsed < pPool->mCount) ? pPool : 0;
+    if (pPool && pPool->mUsed < pPool->mCount)
+    {
+        return pPool;
+    }
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x005a17d0
@@ -144,7 +152,14 @@ void* Lua_Red_realloc(void* pBlock, unsigned int uiOldSize, unsigned int uiNewSi
 
     if (pBlock)
     {
-        memcpy(pNew, pBlock, uiNewSize < uiOldSize ? uiNewSize : uiOldSize);
+        if (uiNewSize <= uiOldSize)
+        {
+            memcpy(pNew, pBlock, uiNewSize);
+        }
+        else
+        {
+            memcpy(pNew, pBlock, uiOldSize);
+        }
         Lua_Red_Free(pBlock, uiOldSize);
     }
 

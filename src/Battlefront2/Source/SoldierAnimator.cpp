@@ -144,8 +144,10 @@ void SoldierAnimator::SetNewOwner(unsigned int uiOwnerId, const EntitySoldier* p
     mWeaponAnim = SoldierAnimType::WEAPON_IDLE;
     mWeaponMeleeAnim = NO_MELEE_ANIM;
     mWeaponMeleeAnimNext = NO_MELEE_ANIM;
-    m_bUseDirectionalJumps = pOwner ? SoldierClass(pOwner)->m_bUseDirectionalJumps : true;
-    m_bUseDirectionalDeaths = pOwner ? SoldierClass(pOwner)->m_bUseDirectionalDeaths : true;
+    bool bDirectionalJumps = pOwner ? SoldierClass(pOwner)->m_bUseDirectionalJumps : true;
+    m_bUseDirectionalJumps = bDirectionalJumps;
+    bool bDirectionalDeaths = pOwner ? SoldierClass(pOwner)->m_bUseDirectionalDeaths : true;
+    m_bUseDirectionalDeaths = bDirectionalDeaths;
     mZephyrSkeleton.SetSharedSkeleton(pSkeleton ? pSkeleton : SoldierAnimatorClass::Instance()->GetDefaultSkeleton());
     mUpperBodyAnimMask = upperBodyMask;
     mLowerBodyAnimMask = lowerBodyMask;
@@ -185,9 +187,13 @@ bool SoldierAnimator::RestartJumpAnimation(float fForward, float fSide, bool bFo
 {
     SoldierAnimType::ActionAnimation ePrevAction = mAction;
 
-    if (m_bUseDirectionalJumps && fForward * fForward + fSide * fSide >= 0.0625f)
+    if (!m_bUseDirectionalJumps || fForward * fForward + fSide * fSide < 0.0625f)
     {
-        float fAbsSide = fabsf(fSide);
+        mAction = SoldierAnimType::JUMP_UP;
+    }
+    else
+    {
+        float fAbsSide = fSide < 0.0f ? -fSide : fSide;
         if (fForward > fAbsSide)
         {
             mAction = SoldierAnimType::JUMP_FORWARD;
@@ -198,28 +204,27 @@ bool SoldierAnimator::RestartJumpAnimation(float fForward, float fSide, bool bFo
         }
         else
         {
-            mAction = fSide <= 0.0f ? SoldierAnimType::JUMP_RIGHT : SoldierAnimType::JUMP_LEFT;
+            mAction = fSide > 0.0f ? SoldierAnimType::JUMP_LEFT : SoldierAnimType::JUMP_RIGHT;
         }
     }
-    else
-    {
-        mAction = SoldierAnimType::JUMP_UP;
-    }
 
+    bool bRestarted = false;
     if (ePrevAction == mAction)
     {
         if (bForce || mAction == SoldierAnimType::JUMP_UP || mAction == SoldierAnimType::JUMP_FORWARD)
         {
             mActionTime = 0.0f;
             m_bRestartJumpForJedi = true;
-            return true;
+            bRestarted = true;
         }
-        return false;
     }
-
-    mActionTime = 0.0f;
-    m_bFirstTime = false;
-    return true;
+    else
+    {
+        mActionTime = 0.0f;
+        m_bFirstTime = false;
+        bRestarted = true;
+    }
+    return bRestarted;
 }
 
 // FUNCTION: SWBF2 0x0063ed60
@@ -667,7 +672,10 @@ void SoldierAnimator::SetWeaponState(int eState, float fTime, bool bRestart, boo
         (mAction == SoldierAnimType::MOVE || mAction == SoldierAnimType::JET || mAction == SoldierAnimType::LAND_SOFT) &&
         mWeaponAnim >= SoldierAnimType::SHOOT)
     {
-        bIdleOk = mWeaponAnim <= SoldierAnimType::SHOOT_SECONDARY2;
+        if (mWeaponAnim <= SoldierAnimType::SHOOT_SECONDARY2)
+        {
+            bIdleOk = true;
+        }
     }
 
     if (eAnim == SoldierAnimType::WEAPON_IDLE && bIdleOk)
@@ -678,11 +686,7 @@ void SoldierAnimator::SetWeaponState(int eState, float fTime, bool bRestart, boo
     }
 
     mWeaponAnimationRate = 1.0f;
-    if (eAnim == SoldierAnimType::WEAPON_IDLE)
-    {
-        m_bAnimVelocityMatched = false;
-    }
-    else
+    if (eAnim != SoldierAnimType::WEAPON_IDLE)
     {
         mWeaponAnimationRate = 1.0f;
         m_bAnimVelocityMatched = eAnim != mWeaponAnim;
@@ -695,6 +699,10 @@ void SoldierAnimator::SetWeaponState(int eState, float fTime, bool bRestart, boo
                 mWeaponAnimationRate = (float)(pAnim->GetAnimationNumFrames() - 1) * (1.0f / 30.0f) / fTime;
             }
         }
+    }
+    else
+    {
+        m_bAnimVelocityMatched = false;
     }
 
     mWeaponAnim = eAnim;
@@ -1985,15 +1993,18 @@ bool SoldierAnimator::UpdateUpperBodyAnimation(float fDeltaTime, const SoldierAn
     }
 
     unsigned char uiSyncType = 0;
+    float fBlendInTime;
     float fBlendTime;
     if (m_pAnimUpper)
     {
         uiSyncType = m_pAnimUpper->GetSyncType();
+        fBlendInTime = pAnim->GetBlendInTime();
         fBlendTime = m_pAnimUpper->GetBlendTime(pAnim);
     }
     else
     {
-        fBlendTime = pAnim->GetBlendInTime();
+        fBlendInTime = pAnim->GetBlendInTime();
+        fBlendTime = fBlendInTime;
     }
 
     float fTime;
@@ -2030,16 +2041,16 @@ bool SoldierAnimator::UpdateUpperBodyAnimation(float fDeltaTime, const SoldierAn
     mBlendDurationUpper = fBlendTime;
     m_pAnimUpper = const_cast<SoldierAnimation*>(pAnim);
 
-    unsigned int uiPrevAim = m_uiAimState & 3;
+    unsigned char uiPrevAim = m_uiAimState & 3;
     m_uiAimState = pAnim->m_pAnimData->m_uiAimType;
     if (m_uiAimState == SoldierAnimationData::AIM_FULLBODY)
     {
         m_uiAimState = 4;
     }
-    unsigned int uiAim = m_uiAimState & 3;
+    unsigned char uiAim = m_uiAimState & 3;
     if (pCurAnim && uiAim != uiPrevAim)
     {
-        mBlendDurationRotate = pAnim->GetBlendInTime();
+        mBlendDurationRotate = fBlendInTime;
         m_uiAimState |= (uiAim | uiPrevAim) << 4;
     }
     return true;
@@ -2153,7 +2164,7 @@ bool SoldierAnimator::UpdateUpperBodyAnimation(float fDeltaTime, const ZephyrAni
     mZephyrPoseDynUpper.Update(fDeltaTime);
     mAnimationTimerUpper = fDeltaTime;
 
-    const unsigned int uOldAim = m_uiAimState & 3;
+    const unsigned char uOldAim = m_uiAimState & 3;
     mBlendFactorUpper = 0.0f;
     mBlendDurationUpper = fBlend;
     m_pAnimUpper = 0;
@@ -2162,11 +2173,11 @@ bool SoldierAnimator::UpdateUpperBodyAnimation(float fDeltaTime, const ZephyrAni
     {
         m_uiAimState = 4;
     }
-    const unsigned int uNewAim = m_uiAimState & 3;
+    const unsigned char uNewAim = m_uiAimState & 3;
     if (pPrevAnim && uNewAim != uOldAim)
     {
         mBlendDurationRotate = fBlendTime;
-        m_uiAimState = (unsigned char)(m_uiAimState | ((uNewAim | uOldAim) << 4));
+        m_uiAimState |= (uNewAim | uOldAim) << 4;
     }
     return true;
 }
@@ -2238,7 +2249,7 @@ float SoldierAnimator::CalculateBlendFactorDelta(float fPrevFactor, float fFacto
 // FUNCTION: SWBF2 0x006426e0
 float SoldierAnimator::GetUpperBodyBlendFactor()
 {
-    float fFactor = (mBlendDurationUpper > mAnimationTimerUpper) ? mAnimationTimerUpper / mBlendDurationUpper : 1.0f;
+    float fFactor = (mAnimationTimerUpper < mBlendDurationUpper) ? mAnimationTimerUpper / mBlendDurationUpper : 1.0f;
     float fBlend = SoldierAnimator::CalculateBlendFactorDelta(mBlendFactorUpper, fFactor);
     mBlendFactorUpper = fFactor;
     return fBlend;
@@ -2247,7 +2258,7 @@ float SoldierAnimator::GetUpperBodyBlendFactor()
 // FUNCTION: SWBF2 0x00642720
 float SoldierAnimator::GetLowerBodyBlendFactor()
 {
-    float fFactor = (mBlendDurationLower > mAnimationTimerLower) ? mAnimationTimerLower / mBlendDurationLower : 1.0f;
+    float fFactor = (mAnimationTimerLower < mBlendDurationLower) ? mAnimationTimerLower / mBlendDurationLower : 1.0f;
     float fBlend = SoldierAnimator::CalculateBlendFactorDelta(mBlendFactorLower, fFactor);
     mBlendFactorLower = fFactor;
     return fBlend;
@@ -2267,7 +2278,7 @@ void SoldierAnimator::SetDamageDir(EntitySoldier::DAMAGEDIR eDir)
     m_eLastHitDir = eDir;
 
     int iDir = eDir;
-    float fRand = PblRandom::GetGlobalFloat();
+    float fRand = PblRandom::_Global.GetFloat();
     if (fRand > 0.9f)
     {
         iDir = (iDir + 2) % 4;
@@ -2310,13 +2321,13 @@ float SoldierAnimator::GetAlertFactor() const
 {
     if (m_bAlert)
     {
-        if (m_fAlertBlendDuration > m_fAlertTimer)
+        if (m_fAlertTimer < m_fAlertBlendDuration)
         {
             return m_fAlertTimer / m_fAlertBlendDuration;
         }
         return 1.0f;
     }
-    if (m_fAlertBlendDuration > m_fAlertTimer)
+    if (m_fAlertTimer < m_fAlertBlendDuration)
     {
         return 1.0f - m_fAlertTimer / m_fAlertBlendDuration;
     }

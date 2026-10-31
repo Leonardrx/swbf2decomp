@@ -65,7 +65,7 @@ HUD::Envelope::Phase HUD::Envelope::Update(float fTime)
     {
         mTime -= mPhaseTime[mPhase];
         mPhase = (Phase)(mPhase + 1);
-        if (mPhase >= phase_MAX)
+        if (mPhase > phase_Release)
         {
             mPhase = phase_Inactive;
         }
@@ -79,8 +79,10 @@ float HUD::Envelope::CalculateValue() const
 {
     switch (mPhase)
     {
+    case phase_Inactive:
+        return 0.0f;
     case phase_Attack:
-        if (mPhaseTime[phase_Attack] > mTime)
+        if (mTime < mPhaseTime[phase_Attack])
         {
             return mTime / mPhaseTime[phase_Attack];
         }
@@ -89,7 +91,7 @@ float HUD::Envelope::CalculateValue() const
     case phase_Sustain:
         return 1.0f;
     case phase_Release:
-        if (mPhaseTime[phase_Release] > mTime)
+        if (mTime < mPhaseTime[phase_Release])
         {
             return 1.0f - mTime / mPhaseTime[phase_Release];
         }

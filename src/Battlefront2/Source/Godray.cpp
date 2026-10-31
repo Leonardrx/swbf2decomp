@@ -41,8 +41,11 @@ void GodrayManager::Create()
 // FUNCTION: SWBF2 0x0053e570
 void GodrayManager::Destroy()
 {
-    delete s_pInstance;
-    s_pInstance = 0;
+    if (s_pInstance)
+    {
+        delete s_pInstance;
+        s_pInstance = 0;
+    }
 }
 
 // FUNCTION: SWBF2 0x0053e590
@@ -297,10 +300,7 @@ void GodrayManager::UpdateGodrayPosition(unsigned int uiId, const PblVector3& vP
         return;
     }
     Godray* pGodray = &m_aGodrays[uiId - 1];
-    const float fDX = pGodray->vStartPos.x - vPos.x;
-    const float fDY = pGodray->vStartPos.y - vPos.y;
-    const float fDZ = pGodray->vStartPos.z - vPos.z;
-    if (fDX * fDX + fDY * fDY + fDZ * fDZ <= 0.0001f)
+    if (SquaredLength(pGodray->vStartPos - vPos) <= 0.0001f)
     {
         return;
     }
@@ -609,7 +609,8 @@ bool GodrayManager::AnimateVisibleGodray(VisibleGodray* pVisible, float fTime, f
 // FUNCTION: SWBF2 0x0053f980
 bool GodrayManager::UpdateVisibleGodray(VisibleGodray* pVisible)
 {
-    return AnimateVisibleGodray(pVisible, m_fTime, 0.0f);
+    AnimateVisibleGodray(pVisible, m_fTime, 0.0f);
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0053f9a0
@@ -790,9 +791,9 @@ GodrayClass::GodrayClass(unsigned int uHash)
     : EntityClass(uHash)
     , FLEffectClass()
 {
+    m_fRadius = 1.0f;
     m_fLifetimeMin = 2.0f;
     m_fLifetimeMax = 5.0f;
-    m_fRadius = 1.0f;
     m_fAlphaMin = 0.5f;
     m_fAlphaMax = 1.0f;
     m_color = RedColor::WHITE;
@@ -832,9 +833,9 @@ EntityClass* GodrayClass::Derive(unsigned int uHash)
 FLEffectObject* GodrayClass::BuildEffect()
 {
     GodrayDesc desc;
-    desc.fRadius = m_fRadius;
     desc.fLifetimeMin = m_fLifetimeMin;
     desc.fLifetimeMax = m_fLifetimeMax;
+    desc.fRadius = m_fRadius;
     desc.fAlphaMin = m_fAlphaMin;
     desc.fAlphaMax = m_fAlphaMax;
     desc.color = m_color;

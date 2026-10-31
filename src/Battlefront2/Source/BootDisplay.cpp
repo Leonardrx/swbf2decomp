@@ -123,13 +123,21 @@ void BootDisplay::Init()
 void BootDisplay::Bind(unsigned int uiViewport)
 {
     mJoystickIndex = uiViewport;
-    mViewport = CameraManager::sInstance->m_hView[uiViewport];
+    const unsigned int hView = CameraManager::sInstance->m_hView[uiViewport];
+    mViewport = hView;
     mStatusGroup.AddElement(&mStatusText0);
     mStatusGroup.AddElement(&mStatusText1);
     mStatusGroup.AddElement(&mStatusText2);
-    FLRenderer::AddInterfaceElement(mViewport, &mStatusGroup, RedInterfaceScreen::LEFT,
+    FLRenderer::AddInterfaceElement(hView, &mStatusGroup, RedInterfaceScreen::LEFT,
                                     RedInterfaceScreen::TOP, true);
-    ActivateThread(NetGame::IsEnabled() ? -101 : -1, PER_LOCAL_TURN);
+    if (NetGame::IsEnabled())
+    {
+        ActivateThread(-101, PER_LOCAL_TURN);
+    }
+    else
+    {
+        ActivateThread(-1, PER_LOCAL_TURN);
+    }
 }
 
 // FUNCTION: SWBF2 0x0044d610
@@ -223,16 +231,17 @@ void BootDisplay::UpdateMode()
 // FUNCTION: SWBF2 0x0044d920
 const unsigned short* BootDisplay::GetBootReasonString(int iReason)
 {
+    const unsigned short* pcReason = NULL;
     switch (iReason)
     {
-    case 0: return RedLocalizeDB::Find(0x649f6f47u, false);
-    case 1: return RedLocalizeDB::Find(0x79f094d6u, false);
-    case 2: return RedLocalizeDB::Find(0x2e3928adu, false);
-    case 3: return RedLocalizeDB::Find(0xf10330b9u, false);
-    case 4: return RedLocalizeDB::Find(0xd1cbb520u, false);
-    case 5: return RedLocalizeDB::Find(0x145b8b50u, false);
+    case 0: pcReason = RedLocalizeDB::Find(0x649f6f47u /* "ifs.mp.vote.teamkill" */, false); break;
+    case 1: pcReason = RedLocalizeDB::Find(0x79f094d6u /* "ifs.mp.vote.lag" */, false); break;
+    case 2: pcReason = RedLocalizeDB::Find(0x2e3928adu /* "ifs.mp.vote.cheat" */, false); break;
+    case 3: pcReason = RedLocalizeDB::Find(0xf10330b9u /* "ifs.mp.vote.haras" */, false); break;
+    case 4: pcReason = RedLocalizeDB::Find(0xd1cbb520u /* "ifs.mp.vote.inactivity" */, false); break;
+    case 5: pcReason = RedLocalizeDB::Find(0x145b8b50u /* "ifs.mp.vote.voice" */, false); break;
     }
-    return NULL;
+    return pcReason;
 }
 
 // FUNCTION: SWBF2 0x0044d9b0

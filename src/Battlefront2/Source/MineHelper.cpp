@@ -67,14 +67,16 @@ void MineHelper::EnterState()
     switch (mCurState)
     {
     case STATE_GOTO:
+    {
         mFacePos = mMinePos;
         if (RedTerrain::_bEnable)
         {
             mFacePos.y = RedTerrain::GetInterpolatedHeight(mFacePos.x, mFacePos.z) + 1.5f;
         }
-        UnitControllerPtr(GetMe()->mCtrl)->mLowLevel
-            .SetNavigator_Goto(mMinePos, NULL, false, false);
+        AILowLevel& rLowLevel = UnitControllerPtr(GetMe()->mCtrl)->mLowLevel;
+        rLowLevel.SetNavigator_Goto(mMinePos, NULL, false, false);
         break;
+    }
 
     case STATE_LAYMINE:
         UnitControllerPtr(GetMe()->mCtrl)->mLowLevel
@@ -115,8 +117,8 @@ void MineHelper::UpdateState(float)
         {
             if (!mLaidMine)
             {
-                UnitControllerPtr(GetMe()->mCtrl)->mLowLevel
-                    .SetFireRequest(true, false);
+                AILowLevel& rLowLevel = UnitControllerPtr(GetMe()->mCtrl)->mLowLevel;
+                rLowLevel.SetFireRequest(true, false);
                 mMineTimer = GameLoop::GetMissionTime();
                 mLaidMine = true;
             }
@@ -142,11 +144,7 @@ static bool sHasMines(const WeaponDispenser* pWpn)
     }
 
     int iMaxItems = static_cast<const WeaponDispenserClass*>(pWpn->mClass)->mMaxItems;
-    if (iMaxItems && *pWpn->GetItemCount() >= iMaxItems)
-    {
-        return false;
-    }
-    return true;
+    return !iMaxItems || *pWpn->GetItemCount() < iMaxItems;
 }
 
 // FUNCTION: SWBF2 0x005a4170
@@ -208,19 +206,25 @@ bool MineHelper::FindMinePos(const MinefieldHint* pHint, PblVector3* pPos) const
     int iMineCount = 0;
     for (int i = 0; i < iCount; ++i)
     {
-        GameObject* pObject = apObjects[i];
+        const GameObject* pObject = apObjects[i];
         if (pObject->GetGameObject()->IsRtti(EntityMine::rttiHashEntityMine))
         {
             apMinePositions[iMineCount++] = &pObject->GetMatrix().GetTranslation();
         }
     }
     bool bFound = false;
-    for (int i = 0; i < iMineCount && !bFound; ++i)
+    for (int i = 0; i < iMineCount; ++i)
     {
-        const PblVector3& vMine = *apMinePositions[i];
-        const float fX = vPos.x - vMine.x;
-        const float fZ = vPos.z - vMine.z;
-        bFound = fX * fX + fZ * fZ < 5.0625f;
+        if (!bFound)
+        {
+            const PblVector3& vMine = *apMinePositions[i];
+            const float fZ = vPos.z - vMine.z;
+            const float fX = vPos.x - vMine.x;
+            if (fZ * fZ + fX * fX < 5.0625f)
+            {
+                bFound = true;
+            }
+        }
     }
     if (bFound)
     {
@@ -233,6 +237,7 @@ bool MineHelper::FindMinePos(const MinefieldHint* pHint, PblVector3* pPos) const
 // FUNCTION: SWBF2 0x005a42b0
 bool MineHelper::HELPERIsMinePosNearby(const MinefieldHint** ppHint, PblVector3* pPos) const
 {
+    bool bFound = false;
     const BaseHint* apHints[3];
     int iCount = HintManager::RequestMinefieldHints(mAgent->mCtrl, GetMe()->GetMatrix().GetTranslation(),
                                                     100, 3, apHints);
@@ -253,10 +258,11 @@ bool MineHelper::HELPERIsMinePosNearby(const MinefieldHint** ppHint, PblVector3*
         {
             *ppHint = pHint;
             *pPos = vPos;
-            return true;
+            bFound = true;
+            break;
         }
     }
-    return false;
+    return bFound;
 }
 
 // FUNCTION: SWBF2 0x005a41f0
@@ -318,12 +324,7 @@ bool MineHelper::SetMineWpn(bool* pbSwitching)
 {
     *pbSwitching = false;
     Weapon* pCurrentWeapon = GetMe()->GetCurWpn();
-    int iWeapon = 0;
-    if (GetMe()->GetWeaponCount() <= 0)
-    {
-        return false;
-    }
-    for (;;)
+    for (int iWeapon = 0; iWeapon < GetMe()->GetWeaponCount(); ++iWeapon)
     {
         Weapon* pWeapon = GetMe()->GetWeaponPtr(iWeapon);
         if (pWeapon->IsRtti(WeaponDispenser::rttiHashWeaponDispenser))
@@ -332,18 +333,14 @@ bool MineHelper::SetMineWpn(bool* pbSwitching)
             if (pDispenseClass->IsRtti(EntityMineClass::rttiHashEntityMineClass) &&
                 sHasMines(static_cast<WeaponDispenser*>(pWeapon)))
             {
-                break;
+                if (pCurrentWeapon != pWeapon)
+                {
+                    UnitControllerPtr(GetMe()->mCtrl)->mLowLevel.SetNextWeapon(iWeapon);
+                    *pbSwitching = true;
+                }
+                return true;
             }
         }
-        if (++iWeapon >= GetMe()->GetWeaponCount())
-        {
-            return false;
-        }
     }
-    if (pCurrentWeapon != GetMe()->GetWeaponPtr(iWeapon))
-    {
-        UnitControllerPtr(GetMe()->mCtrl)->mLowLevel.SetNextWeapon(iWeapon);
-        *pbSwitching = true;
-    }
-    return true;
+    return false;
 }

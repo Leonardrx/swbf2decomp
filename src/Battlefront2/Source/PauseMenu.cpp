@@ -54,11 +54,11 @@ void GameLoop::SetFreeMode(bool bFreeCamera)
     sFreeMode = bFreeCamera;
     if (bFreeCamera)
     {
-        CameraManager::sInstance->FreeLook(0);
+        CameraManager::Instance()->FreeLook(0);
     }
     else
     {
-        CameraManager::sInstance->ChaseMode(0);
+        CameraManager::Instance()->ChaseMode(0);
     }
 }
 
@@ -269,7 +269,7 @@ void PauseMenu::_SetPauseAudio(bool bPause)
         return;
     }
 
-    Snd::Bus* pBus = Snd::Bus::FindByHashID(0xFA930D1C);
+    Snd::Bus* pBus = Snd::Bus::FindByHashID(0xFA930D1C /* "ingame_spawnducked" */);
     if (bPause)
     {
         if (pBus)
@@ -277,7 +277,8 @@ void PauseMenu::_SetPauseAudio(bool bPause)
             pBus->Fade(1.0f, 0.0f, -1.0f);
         }
 
-        for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
+        const unsigned int uiNumCameras = CameraManager::sInstance->m_iNumCam;
+        for (unsigned int i = 0; i < uiNumCameras; ++i)
         {
             Snd::EngineBase::smListeners[i].mFlags &= ~Snd::ListenerBase::flags_reverbUpdate;
         }
@@ -295,7 +296,8 @@ void PauseMenu::_SetPauseAudio(bool bPause)
             pBus->Fade(1.0f, 1.0f, -1.0f);
         }
 
-        for (unsigned int i = 0; i < CameraManager::sInstance->m_iNumCam; ++i)
+        const unsigned int uiNumCameras = CameraManager::sInstance->m_iNumCam;
+        for (unsigned int i = 0; i < uiNumCameras; ++i)
         {
             Snd::Listener& listener = Snd::EngineBase::smListeners[i];
             Snd::Space* pSpace = listener.mSpace;
@@ -337,15 +339,15 @@ void PauseMenu::_SetPaused(bool bPaused)
     GuiManager* pGui = GuiManager::Instance(iViewport);
     if (mVisible)
     {
-        if (iViewport >= 1)
+        if (iViewport < 1)
+        {
+            pGui->PushScreen("ifs_pausemenu", iViewport, 0);
+        }
+        else
         {
             char screen[256];
             _snprintf(screen, 256, "ifs_pausemenu%d", iViewport + 1);
             pGui->PushScreen(screen, iViewport, 0);
-        }
-        else
-        {
-            pGui->PushScreen("ifs_pausemenu", iViewport, 0);
         }
         GuiManager::sStartupDelay = 3;
         _SetPauseAudio(true);
@@ -369,7 +371,7 @@ void PauseMenu::_SetPaused(bool bPaused)
         }
         else
         {
-            PlayerController::sEnabled = NetGame::IsEnabled() ? PlayerController::sEnabled : -1;
+            PlayerController::sEnabled = !NetGame::IsEnabled() ? -1 : PlayerController::sEnabled;
         }
 
         PopupText::DisablePopup();
@@ -381,7 +383,13 @@ void PauseMenu::_SetPaused(bool bPaused)
 
     if (sPauseMenuSoundEnabled)
     {
-        EnableDisplays(iViewport, !mVisible);
+        StatusDisplay::EnableViewport(iViewport, !mVisible);
+        ReticuleDisplay::EnableViewport(iViewport, !mVisible);
+        CaptureDisplay::EnableViewport(iViewport, !mVisible);
+        MessageDisplay::EnableViewport(iViewport, !mVisible);
+        BootDisplay::EnableViewport(iViewport, !mVisible);
+        HeroMessageDisplay::EnableViewport(iViewport, !mVisible);
+        SpectatorDisplay::EnableViewport(iViewport, !mVisible);
         for (unsigned int i = 0; i < 5; ++i)
         {
             HUD::gScreenGroup[i].Enable(!mVisible);
@@ -399,7 +407,7 @@ void PauseMenu::_SetPaused(bool bPaused)
             pMessages->Update(0.01f);
         }
 
-        PauseMenu::sPausingViewport = mVisible ? PauseMenu::sPausingViewport : -1;
+        PauseMenu::sPausingViewport = !mVisible ? -1 : PauseMenu::sPausingViewport;
     }
 }
 
@@ -428,7 +436,13 @@ void PauseMenu::_SetFreeCamera(bool bFreeCamera)
         {
             GameLoop::Resume();
         }
-        EnableDisplays(mViewport, !mVisible);
+        StatusDisplay::EnableViewport(mViewport, !mVisible);
+        ReticuleDisplay::EnableViewport(mViewport, !mVisible);
+        CaptureDisplay::EnableViewport(mViewport, !mVisible);
+        MessageDisplay::EnableViewport(mViewport, !mVisible);
+        BootDisplay::EnableViewport(mViewport, !mVisible);
+        HeroMessageDisplay::EnableViewport(mViewport, !mVisible);
+        SpectatorDisplay::EnableViewport(mViewport, !mVisible);
         _SetPauseAudio(false);
     }
 
@@ -586,6 +600,7 @@ void PopupText::DisablePopup()
         return;
     }
 
+    const unsigned int uNumCameras = GameLoop::mNumCameras;
     Snd::Bus* pBus = Snd::Bus::FindByHashID(0xB38617C5);
     if (pBus)
     {
@@ -596,46 +611,61 @@ void PopupText::DisablePopup()
         GameLoop::Resume();
     }
 
-    for (unsigned int i = 0; i < GameLoop::mNumCameras; ++i)
+    for (unsigned int i = 0; i < uNumCameras; ++i)
     {
         if (PopupText::gMapEnabled[i])
         {
-            HUD::Event(HUD::GameEvents::gPlayerEvents[i].mapEnable, true).Send();
+            HUD::Event mapEvent(HUD::GameEvents::gPlayerEvents[i].mapEnable, true);
+            mapEvent.Send();
         }
         if (PopupText::gSpawnDisplayEnabled[i])
         {
-            Character* pPlayer = NetGame::GetLocalPlayer(i);
+            Character* pPlayer = NetGame::GetLocalPlayer(NetGame::GetLocalIndex(i));
             SpawnDisplay::Instance(i)->ChangeClass(pPlayer);
         }
     }
 
-    HUD::EventClass* pDisable = 0;
     switch (PopupText::gType)
     {
-    case PopupText::HINT: pDisable = HUD::GameEvents::gObjectiveEvents.hintPopupDisable; break;
-    case PopupText::OBJECTIVE: pDisable = HUD::GameEvents::gObjectiveEvents.objectivePopupDisable; break;
-    case PopupText::SELECTION: pDisable = HUD::GameEvents::gObjectiveEvents.selectionPopupDisable; break;
+    case PopupText::HINT:
+        {
+            HUD::Event popupEvent(HUD::GameEvents::gObjectiveEvents.hintPopupDisable, true);
+            popupEvent.Send();
+        }
+        break;
+    case PopupText::OBJECTIVE:
+        {
+            HUD::Event popupEvent(HUD::GameEvents::gObjectiveEvents.objectivePopupDisable, true);
+            popupEvent.Send();
+        }
+        break;
+    case PopupText::SELECTION:
+        {
+            HUD::Event popupEvent(HUD::GameEvents::gObjectiveEvents.selectionPopupDisable, true);
+            popupEvent.Send();
+        }
+        break;
     default: break;
     }
-    if (pDisable)
-    {
-        HUD::Event(pDisable, true).Send();
-    }
 
-    if (GameLoop::mNumCameras == 1)
+    if (uNumCameras == 1)
     {
         HUD::ElementMap* pMap = HUD::ElementMap::FindByPlayerIndex(0);
         if (pMap && pMap->mMode == HUD::ElementMap::mode_Large)
         {
-            HUD::Event(HUD::GameEvents::gPlayerEvents[0].objectiveListEnable, true).Send();
-            HUD::Event(HUD::GameEvents::gPlayerEvents[0].pressSelectToReturn, true).Send();
+            HUD::Event listEvent(HUD::GameEvents::gPlayerEvents[0].objectiveListEnable, true);
+            listEvent.Send();
+            HUD::Event returnEvent(HUD::GameEvents::gPlayerEvents[0].pressSelectToReturn, true);
+            returnEvent.Send();
             if (ObjectiveManager::GetCurrentPopupText())
             {
-                HUD::Event(HUD::GameEvents::gPlayerEvents[0].objectiveDetails, true).Send();
+                HUD::Event detailsEvent(HUD::GameEvents::gPlayerEvents[0].objectiveDetails, true);
+                detailsEvent.Send();
             }
             if (PopupText::gNumHints > 0)
             {
-                HUD::Event(HUD::GameEvents::gPlayerEvents[0].hintsAvailable, true).Send();
+                HUD::Event hintsEvent(HUD::GameEvents::gPlayerEvents[0].hintsAvailable, true);
+                hintsEvent.Send();
             }
         }
     }

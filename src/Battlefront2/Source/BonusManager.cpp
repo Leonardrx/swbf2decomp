@@ -161,20 +161,17 @@ void BonusManager::UpdateIndividualBonuses(float)
 void BonusManager::ClearTeamBonuses()
 {
     mVOStartTimer = 5.0f;
-    for (int i = 0; i < 2; ++i)
-    {
-        mTeamBonuses[i] = 0;
-        mUnlockHeroTimer[i] = 0.0f;
-        mbDidUseGarrison[i] = false;
-    }
+    memset(mTeamBonuses, 0, sizeof(mTeamBonuses));
+    memset(mUnlockHeroTimer, 0, sizeof(mUnlockHeroTimer));
+    memset(mbDidUseGarrison, 0, sizeof(mbDidUseGarrison));
     CleanupTeamBonusAutoturrets();
 }
 
 // FUNCTION: SWBF2 0x0044c750
 int BonusManager::GetTeamIndex(int iTeam)
 {
-    if (GameState::GetState() == 0x8FF60339 && GameLoop::AreMetagameRulesOn() &&
-        GetSide(Team::sTeams[1]) > GetSide(Team::sTeams[2]))
+    if (GameState::GetState() == 0x8FF60339 /* "mission" */ && GameLoop::AreMetagameRulesOn() &&
+        Team::sTeams[1]->mSide > Team::sTeams[2]->mSide)
     {
         return 2 - iTeam;
     }
@@ -188,7 +185,7 @@ void BonusManager::SetTeamBonusActive(int iTeam, unsigned int uBonus, bool bActi
     if (bActive)
     {
         mTeamBonuses[iIndex] = uBonus;
-        if (GameState::GetState() == 0x8FF60339 && mVOStartTimer < 0.0f)
+        if (GameState::GetState() == 0x8FF60339 /* "mission" */ && mVOStartTimer < 0.0f)
         {
             PlayTeamBonusVO(uBonus, iTeam);
         }
@@ -202,11 +199,7 @@ void BonusManager::SetTeamBonusActive(int iTeam, unsigned int uBonus, bool bActi
 // FUNCTION: SWBF2 0x0044c7e0
 bool BonusManager::IsTeamBonusActive(int iTeam, unsigned int uBonus)
 {
-    if (iTeam < 1 || iTeam > 2)
-    {
-        return false;
-    }
-    return mTeamBonuses[GetTeamIndex(iTeam)] == uBonus;
+    return iTeam >= 1 && iTeam <= 2 && mTeamBonuses[GetTeamIndex(iTeam)] == uBonus;
 }
 
 // FUNCTION: SWBF2 0x0044c810
@@ -246,7 +239,7 @@ void BonusManager::UpdateTeamBonuses(float fDeltaTime)
 // FUNCTION: SWBF2 0x0044c9c0
 void BonusManager::UpdateTeamBonusBactaTanks(int iTeam, float fDeltaTime)
 {
-    if (!IsTeamBonusActive(iTeam, 0xc10b9cdc))
+    if (!IsTeamBonusActive(iTeam, 0xc10b9cdc /* "team_bonus_bacta_tanks" */))
     {
         return;
     }
@@ -254,23 +247,23 @@ void BonusManager::UpdateTeamBonusBactaTanks(int iTeam, float fDeltaTime)
     Team* pTeam = Team::sTeams[iTeam];
     for (int i = 0; i < pTeam->mMemberCount; ++i)
     {
-        Character* pCharacter = pTeam->mMemberArray[i];
-        if (!pCharacter || !pCharacter->mUnit || !GetTrackable(pCharacter->mUnit)->GetGameObject())
+        Character* pCharacter = pTeam->GetMemberPtr(i);
+        if (!pCharacter || !pCharacter->mUnit || !pCharacter->mUnit->GetGameObject())
         {
             continue;
         }
 
-        Damageable* pDamageable = GetDamageable(GetTrackable(pCharacter->mUnit)->GetGameObject());
-        float fHealth = CurHealth(pDamageable);
+        GameObject* pObject = pCharacter->mUnit->GetGameObject();
+        float fHealth = pObject->mCurHealth;
         if (fHealth > 0.0f)
         {
-            float fMaxHealth = MaxHealth(pDamageable);
+            float fMaxHealth = pObject->mMaxHealth;
             float fNewHealth = fHealth + fMaxHealth * 0.01f * fDeltaTime;
             if (!(fMaxHealth > fNewHealth))
             {
                 fNewHealth = fMaxHealth;
             }
-            pDamageable->SetCurHealth(fNewHealth, true, 0);
+            pObject->SetCurHealth(fNewHealth, true, 0);
         }
     }
 }
@@ -383,8 +376,8 @@ void BonusManager::CleanupTeamBonusAutoturrets()
         delete[] mpCommandPostData;
         mpCommandPostData = 0;
     }
-    mbIsBonusAutoturretsInitialized = false;
     mNumCPs = 0;
+    mbIsBonusAutoturretsInitialized = false;
 }
 
 // FUNCTION: SWBF2 0x0044cc10
@@ -394,17 +387,18 @@ void BonusManager::UpdateTeamBonusAutoturrets(int iTeam, float fDeltaTime)
     for (int i = 0; i < mNumCPs; ++i)
     {
         CommandPostData& data = mpCommandPostData[i];
-        CommandPost* pPost = data.pCommandPost;
         if (bActive)
         {
-            if (pPost->GetGameObject()->IsAlive() && GetTeam(pPost->GetGameObject()) == iTeam)
+            if (data.pCommandPost->GetGameObject()->IsAlive() &&
+                GetTeam(data.pCommandPost->GetGameObject()) == iTeam)
             {
                 AddTurretsToCP(data, iTeam);
             }
         }
         else
         {
-            if (pPost->GetGameObject() && GetTeam(pPost->GetGameObject()) == iTeam)
+            if (data.pCommandPost->GetGameObject() &&
+                GetTeam(data.pCommandPost->GetGameObject()) == iTeam)
             {
                 RemoveTurretsFromCP(data);
             }
@@ -424,10 +418,10 @@ void BonusManager::AddTurretsToCP(CommandPostData& data, int iTeam)
             if (!pTurret)
             {
                 const PblVector3& vPosition = pPath->GetPointPosition(i);
-                PblQuaternion qRotation;
+                D3DXQUATERNION qRotation;
                 PblMatrix matrix;
                 D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&matrix),
-                                             D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRotation), reinterpret_cast<const D3DXQUATERNION*>(&pPath->GetPointRotation(i))));
+                                             D3DXQuaternionNormalize(&qRotation, reinterpret_cast<const D3DXQUATERNION*>(&pPath->GetPointRotation(i))));
                 matrix.m[3][0] = vPosition.x;
                 matrix.m[3][1] = vPosition.y;
                 matrix.m[3][2] = vPosition.z;
@@ -481,7 +475,7 @@ void BonusManager::RemoveTurretsFromCP(CommandPostData& data)
 // FUNCTION: SWBF2 0x0044cf00
 EntityDefenseGridTurret* BonusManager::MakeNewAutoturret(const PblMatrix& matrix, int iTeam)
 {
-    EntityClass* pClass = EntityClass::Find(0x07673219);
+    EntityClass* pClass = EntityClass::Find(0x07673219 /* "com_bldg_inf_defenseturret" */);
     if (!pClass || !pClass->IsRtti(EntityDefenseGridTurretClass::GetRtti()))
     {
         return 0;
@@ -493,8 +487,8 @@ EntityDefenseGridTurret* BonusManager::MakeNewAutoturret(const PblMatrix& matrix
     if (pEntity)
     {
         GameObject* pObject = static_cast<EntityDefenseGridTurret*>(pEntity);
-        SetTeam(pObject, iTeam);
-        SetPerceivedTeam(pObject, iTeam);
+        pObject->SetTeam(iTeam);
+        pObject->SetPerceivedTeam(iTeam);
         pEntity->Init();
     }
     return reinterpret_cast<EntityDefenseGridTurret*>(pEntity);

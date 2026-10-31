@@ -273,12 +273,13 @@ void** CopyStatsBucketRange(void** ppFirst, void** ppLast, void** ppDest)
         uiCount = 0;
     }
 
-    for (unsigned int i = 0; i < uiCount; i++)
+    for (unsigned int i = 0; i != uiCount; i++)
     {
         if (ppDest)
         {
-            *ppDest = ppFirst[i];
+            *ppDest = *ppFirst;
         }
+        ppFirst++;
         ppDest++;
     }
 

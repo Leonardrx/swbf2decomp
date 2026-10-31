@@ -71,11 +71,11 @@ struct DroidekaVertexU
 // FUNCTION: SWBF2 0x004285c0
 const PblBox& ShieldEffect::GetBBox() const
 {
-    if (!m_pClass->m_pPrim)
+    if (m_pClass->m_pPrim)
     {
-        return *(const PblBox*)0;
+        return m_pClass->m_pPrim->m_bbox;
     }
-    return m_pClass->m_pPrim->m_bbox;
+    return *(const PblBox*)0;
 }
 
 
@@ -108,18 +108,23 @@ void ShieldEffect::PlatformRender(const PblMatrix& mMatrix, unsigned char ucView
         const PblVector3& vX = mMatrix.GetXAxis();
         const float fScale = sqrtf(vX.x * vX.x + vX.y * vX.y + vX.z * vX.z);
         mBillboard.Scale(fScale);
-        mBillboard.m[3][0] = mMatrix.m[3][0];
-        mBillboard.m[3][1] = mMatrix.m[3][1];
-        mBillboard.m[3][2] = mMatrix.m[3][2];
-        mBillboard.m[3][3] = 1.0f;
+        mBillboard.SetTranslation(mMatrix.GetTranslation());
 
         const PblVector3& vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
         const float fX = vCamera.x - mMatrix.m[3][0];
         const float fY = vCamera.y - mMatrix.m[3][1];
         const float fZ = vCamera.z - mMatrix.m[3][2];
         const float fRadius = m_pClass->m_fRadius;
-        m_pShader->m_fVertexMinDistSqr = 0.0f;
-        m_pShader->m_fViewAngleFactor = fRadius * fRadius > fY * fY + fX * fX + fZ * fZ ? 0.2f : 0.0f;
+        if (fRadius * fRadius > fY * fY + fX * fX + fZ * fZ)
+        {
+            m_pShader->m_fViewAngleFactor = 0.2f;
+            m_pShader->m_fVertexMinDistSqr = 0.0f;
+        }
+        else
+        {
+            m_pShader->m_fViewAngleFactor = 0.0f;
+            m_pShader->m_fVertexMinDistSqr = 0.0f;
+        }
         RedRenderer::pcRenderPrimitive(m_pClass->m_pPrim, m_pShader,
                                        mBillboard, RedColor::WHITE,
                                        uiFlags, 0, 0, 0);
@@ -127,8 +132,10 @@ void ShieldEffect::PlatformRender(const PblMatrix& mMatrix, unsigned char ucView
     }
 
     const float fZoom = RedRenderer::GetCamera()->GetZoom();
-    pcShieldShader::s_fFadeStart = FLRenderer::GetNearSceneFadeStart() * fZoom;
-    pcShieldShader::s_fFadeEnd = FLRenderer::GetNearSceneFadeEnd() * fZoom;
+    const float fFadeStart = FLRenderer::GetNearSceneFadeStart() * fZoom;
+    const float fFadeEnd = FLRenderer::GetNearSceneFadeEnd() * fZoom;
+    pcShieldShader::s_fFadeStart = fFadeStart;
+    pcShieldShader::s_fFadeEnd = fFadeEnd;
     float fOffsetU = m_pClass->m_fScrollRate * m_fScrollTimer;
     fOffsetU -= (float)(int)fOffsetU;
     float fOffsetV;
@@ -147,12 +154,13 @@ void ShieldEffect::PlatformRender(const PblMatrix& mMatrix, unsigned char ucView
         if (fRadius * fRadius > fY * fY + fX * fX + fZ * fZ)
         {
             m_pShader->m_fViewAngleFactor = 0.2f;
+            m_pShader->m_fVertexMinDistSqr = 0.0f;
         }
         else
         {
             m_pShader->m_fViewAngleFactor = m_pClass->m_fViewAngleFactor;
+            m_pShader->m_fVertexMinDistSqr = 0.0f;
         }
-        m_pShader->m_fVertexMinDistSqr = 0.0f;
     }
     m_pShader->m_fOffsetU = fOffsetU;
     m_pShader->m_fOffsetV = fOffsetV;
@@ -438,24 +446,24 @@ void ShieldEffectClass::PlatformInit()
 // FUNCTION: SWBF2 0x00428220
 void ShieldEffect::PlatformInit()
 {
-    pcRedShader* pShader;
+    pcShieldShader* pShader;
     if (RedRenderer::pcGetRenderCaps().pipeline == PIPELINE_FIXED && m_pClass->m_type == 0)
     {
-        pShader = pcRedShader::Create(0x337519B0, 0xA2, &m_pClass->m_uiTextureHash, 1, 0x100C0,
+        pShader = (pcShieldShader*)pcRedShader::Create(0x337519B0 /* "shield" */, 0xA2, &m_pClass->m_uiTextureHash, 1, 0x100C0,
                                       m_pClass->m_color, m_pClass->m_colorSpecular, 32.0f);
     }
     else if (RedRenderer::pcGetGeometryMode())
     {
-        pShader = pcRedShader::Create(0x337519B0, 0xD222, &m_pClass->m_uiTextureHash, 1, 0x100C4,
+        pShader = (pcShieldShader*)pcRedShader::Create(0x337519B0 /* "shield" */, 0xD222, &m_pClass->m_uiTextureHash, 1, 0x100C4,
                                       m_pClass->m_color, m_pClass->m_colorSpecular, 32.0f);
     }
     else
     {
-        pShader = pcRedShader::Create(0x337519B0, 0x222, &m_pClass->m_uiTextureHash, 1, 0x100C4,
+        pShader = (pcShieldShader*)pcRedShader::Create(0x337519B0 /* "shield" */, 0x222, &m_pClass->m_uiTextureHash, 1, 0x100C4,
                                       m_pClass->m_color, m_pClass->m_colorSpecular, 32.0f);
     }
 
-    m_pShader = (pcShieldShader*)pShader;
-    m_pShader->m_fViewAngleFactor = m_pClass->m_fViewAngleFactor;
-    m_pShader->m_fVertexMinDistSqr = 0.0f;
+    pShader->m_fViewAngleFactor = m_pClass->m_fViewAngleFactor;
+    m_pShader = pShader;
+    pShader->m_fVertexMinDistSqr = 0.0f;
 }

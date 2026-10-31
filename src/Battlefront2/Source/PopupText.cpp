@@ -108,13 +108,13 @@ void __fastcall PopupText::ShowPopup(int iType, unsigned int uTextId)
             pBus->Fade(0.5f, 0.0f, -1.0f);
         }
         HUD::ElementMap* pMap = HUD::ElementMap::FindByPlayerIndex(0);
-        gMapEnabled[0] = pMap && static_cast<RedInterfaceElement*>(static_cast<RedGroupElement*>(pMap))->m_bEnabled;
+        gMapEnabled[0] = pMap ? (static_cast<RedInterfaceElement*>(static_cast<RedGroupElement*>(pMap))->m_bEnabled != 0) : false;
         HUD::GameEvents::DisableAllForObjectiveDisplay(0, true);
         SpawnDisplay* pSpawn = SpawnDisplay::Instance(0);
         if (pSpawn->mVisible && pSpawn->mMode == SpawnDisplay::eCHANGECLASS)
         {
             gSpawnDisplayEnabled[0] = true;
-            pSpawn->ChangeClass(NetGame::GetLocalPlayer(0));
+            pSpawn->Hide(NetGame::GetLocalPlayer(NetGame::GetLocalIndex(0)));
         }
         else
         {
@@ -129,28 +129,43 @@ void __fastcall PopupText::ShowPopup(int iType, unsigned int uTextId)
     gType = (PopupType)iType;
     gButtonTrigger.Clear();
 
-    if (iType == HINT)
+    switch (iType)
     {
-        HUD::Event(HUD::GameEvents::gObjectiveEvents.hintPopup, gHints[gCurHint]).Send();
+    case SELECTION:
+        if (uTextId)
+        {
+            gLastObjectiveTextID = 0;
+            HUD::Event evSelection(HUD::GameEvents::gObjectiveEvents.selectionPopup, uTextId);
+            evSelection.Send();
+        }
+        break;
+    case OBJECTIVE:
+        if (uTextId)
+        {
+            gLastObjectiveTextID = uTextId;
+            HUD::Event evObjective(HUD::GameEvents::gObjectiveEvents.objectivePopup, uTextId);
+            evObjective.Send();
+        }
+        break;
+    case HINT:
+    {
+        HUD::Event evHint(HUD::GameEvents::gObjectiveEvents.hintPopup, gHints[gCurHint]);
+        evHint.Send();
         unsigned short page[16];
         PblUnicode::usnprintf(page, 16, "%d/%d", gCurHint + 1, gNumHints);
-        HUD::Event(HUD::GameEvents::gObjectiveEvents.hintPopupPageNumber,
-                   (const wchar_t*)page).Send();
+        HUD::Event evPage(HUD::GameEvents::gObjectiveEvents.hintPopupPageNumber,
+                          (const wchar_t*)page);
+        evPage.Send();
+        break;
     }
-    else if (iType == OBJECTIVE && uTextId)
-    {
-        gLastObjectiveTextID = uTextId;
-        HUD::Event(HUD::GameEvents::gObjectiveEvents.objectivePopup, uTextId).Send();
-    }
-    else if (iType == SELECTION && uTextId)
-    {
-        gLastObjectiveTextID = 0;
-        HUD::Event(HUD::GameEvents::gObjectiveEvents.selectionPopup, uTextId).Send();
     }
 
-    HUD::Event(HUD::GameEvents::gPlayerEvents[0].pressSelectToReturnDisable, true).Send();
-    HUD::Event(HUD::GameEvents::gPlayerEvents[0].objectiveDetailsDisable, true).Send();
-    HUD::Event(HUD::GameEvents::gPlayerEvents[0].hintsAvailableDisable, true).Send();
+    HUD::Event evPressSelect(HUD::GameEvents::gPlayerEvents[0].pressSelectToReturnDisable, true);
+    evPressSelect.Send();
+    HUD::Event evObjectiveDetails(HUD::GameEvents::gPlayerEvents[0].objectiveDetailsDisable, true);
+    evObjectiveDetails.Send();
+    HUD::Event evHintsAvailable(HUD::GameEvents::gPlayerEvents[0].hintsAvailableDisable, true);
+    evHintsAvailable.Send();
     gPreventJump = true;
     gPopupShownLatch = true;
     gAcceptReleased = false;
@@ -181,14 +196,15 @@ void Update(float fDeltaTime)
 
     ProcessedInputs* pInput = FLInputManager::s_instance.GetPlayerInputs(0);
     GUIInputs* pGui = FLInputManager::s_instance.GetPlayerGuiInputs(0);
-    const float fAccept = pGui->mProcessedGUIInputs[eGUIINPUT_Accept];
-    if (fAccept < 0.125f)
+    const bool bAcceptDown = pGui->mProcessedGUIInputs[eGUIINPUT_Accept] >= 0.125f;
+    if (!bAcceptDown)
     {
         gAcceptReleased = true;
     }
 
-    if (gType == SELECTION)
+    switch (gType)
     {
+    case SELECTION:
         if (pInput)
         {
             gButtonTrigger.Update(fDeltaTime, pInput->IsAcceptHeroPressed());
@@ -205,42 +221,37 @@ void Update(float fDeltaTime)
                 DisablePopup();
             }
         }
-        return;
-    }
-    if (gType == OBJECTIVE)
-    {
-        if (gAcceptReleased && fAccept >= 0.125f)
+        break;
+    case OBJECTIVE:
+        if (gAcceptReleased && bAcceptDown)
         {
             DisablePopup();
         }
-        return;
-    }
-    if (gType != HINT)
-    {
-        return;
-    }
-
-    if (gAcceptReleased && fAccept >= 0.125f)
-    {
-        DisablePopup();
-    }
-    else if (pGui->IsLeftPressed() && !gDirectionPressedLastUpdate)
-    {
-        if (--gCurHint < 0)
+        break;
+    case HINT:
+        if (gAcceptReleased && bAcceptDown)
         {
-            gCurHint = gNumHints - 1;
+            DisablePopup();
         }
-        ShowPopup(HINT, 0);
-    }
-    else if (pGui->IsRightPressed() && !gDirectionPressedLastUpdate)
-    {
-        if (++gCurHint >= gNumHints)
+        else if (pGui->IsLeftPressed() && !gDirectionPressedLastUpdate)
         {
-            gCurHint = 0;
+            if (--gCurHint < 0)
+            {
+                gCurHint = gNumHints - 1;
+            }
+            ShowPopup((int)HINT, 0);
         }
-        ShowPopup(HINT, 0);
+        else if (pGui->IsRightPressed() && !gDirectionPressedLastUpdate)
+        {
+            if (++gCurHint >= gNumHints)
+            {
+                gCurHint = 0;
+            }
+            ShowPopup((int)HINT, 0);
+        }
+        gDirectionPressedLastUpdate = pGui->IsRightPressed() || pGui->IsLeftPressed();
+        break;
     }
-    gDirectionPressedLastUpdate = pGui->IsRightPressed() || pGui->IsLeftPressed();
 }
 }
 

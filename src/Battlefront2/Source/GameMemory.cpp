@@ -115,10 +115,9 @@ void GameMemory::BuildHeaps(bool bMission)
 
     char* pArtistStart = (char*)(((unsigned int)pLuaEnd + 0x3F) & 0xFFFFFFC0);
     gArtistHeapStart = pArtistStart;
-    char* pArtistEnd = pArtistStart + 0x2000;
-    ArtistHeap = RedCreateHeap(pArtistStart, pArtistEnd, 0x10, "Artist");
+    ArtistHeap = RedCreateHeap(pArtistStart, pArtistStart + 0x2000, 0x10, "Artist");
 
-    char* pRunTimeStart = (char*)(((unsigned int)pArtistEnd + 0x3F) & 0xFFFFFFC0);
+    char* pRunTimeStart = (char*)(((unsigned int)(pArtistStart + 0x2000) + 0x3F) & 0xFFFFFFC0);
     RunTimeHeap = RedCreateHeap(pRunTimeStart, gArenaEnd, 0x10, "Runtime");
     RedSetCurrentHeap(RunTimeHeap);
 

@@ -126,23 +126,22 @@ void Tracker::SetTrackable(Trackable* pTrackable, int iPlayer)
     {
         return;
     }
-    Tracker& rTracker = (*sInstances)[iPlayer];
-    if (rTracker.mTrackable)
+    if ((*sInstances)[iPlayer].mTrackable)
     {
-        Tracker* pOld = rTracker.mTrackable->mTracker;
-        if ((unsigned int)pOld != 0xDDDDDDDDu && pOld && rTracker.IsFirstPersonView())
+        Tracker* pOld = (*sInstances)[iPlayer].mTrackable->mTracker;
+        if ((unsigned int)pOld != 0xDDDDDDDDu && pOld && (*sInstances)[iPlayer].IsFirstPersonView())
         {
-            rTracker.mTrackable->SetFirstPersonView(iPlayer, false);
+            (*sInstances)[iPlayer].mTrackable->SetFirstPersonView(iPlayer, false);
         }
-        if (pOld == &rTracker)
+        if (pOld == &(*sInstances)[iPlayer])
         {
-            rTracker.mTrackable->SetTracker(0);
+            (*sInstances)[iPlayer].mTrackable->SetTracker(0);
         }
     }
-    rTracker.mTrackable = pTrackable;
+    (*sInstances)[iPlayer].mTrackable = pTrackable;
     if (pTrackable)
     {
-        pTrackable->SetTracker(&rTracker);
+        pTrackable->SetTracker(&(*sInstances)[iPlayer]);
     }
     int iJoystick = NetGame::GetJoystickIndex(iPlayer);
     if (iJoystick >= 0 &&
@@ -152,11 +151,11 @@ void Tracker::SetTrackable(Trackable* pTrackable, int iPlayer)
     }
     if (!pTrackable)
     {
-        rTracker.SetFirstPersonView(iPlayer, false);
+        (*sInstances)[iPlayer].SetFirstPersonView(iPlayer, false);
     }
-    if (rTracker.IsFirstPersonView())
+    if ((*sInstances)[iPlayer].IsFirstPersonView())
     {
-        rTracker.mTrackable->SetFirstPersonView(iPlayer, true);
+        (*sInstances)[iPlayer].mTrackable->SetFirstPersonView(iPlayer, true);
     }
 }
 

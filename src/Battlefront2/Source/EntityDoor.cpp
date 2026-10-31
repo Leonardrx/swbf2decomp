@@ -174,11 +174,7 @@ EntityDoorClass::EntityDoorClass(unsigned int uHash)
 {
     mAnimObj = 0;
     mAnimation = 0;
-    for (int i = 0; i < 3; i++)
-    {
-        mAnimationTriggers[i].mTriggerPoint = 0;
-        mAnimationTriggers[i].mTriggerRadius = 0.0f;
-    }
+    memset(mAnimationTriggers, 0, sizeof(mAnimationTriggers));
 }
 
 // FUNCTION: SWBF2 0x00497f60
@@ -217,11 +213,11 @@ EntityDoor::EntityDoor(EntityDoorClass* pClass, const EntityDesc& desc)
 {
     hasPortal_ = true;
     portal_ = 0;
+    mAnimObj = pClass->mAnimObj;
     mOpenTrigger = false;
     mIsOpen = false;
     mIsLocked = false;
     mJustRendered = false;
-    mAnimObj = pClass->mAnimObj;
     mAnimatedClass = pClass;
     mTimeSinceLastTriggered = 500.0f;
     mLastAnimTime = 0.0f;
@@ -231,8 +227,9 @@ EntityDoor::EntityDoor(EntityDoorClass* pClass, const EntityDesc& desc)
         mShadowProxy->RemoveFromScene();
     }
 
+    const ZephyrSkeletonShared* pShared = mAnimatedClass->mAnimObj->GetZephyrSkeletonShared();
     ZephyrPoseStatic<32> kPose;
-    mZephyrSkeleton.Open(*mAnimatedClass->mAnimObj->GetZephyrSkeletonShared(), kPose);
+    mZephyrSkeleton.Open(*pShared, kPose);
     kPose.Open(mZephyrSkeleton);
     mZephyrPoseDyn.Open(mZephyrSkeleton);
     mZephyrPoseDyn.SetLoop(false);
@@ -457,11 +454,12 @@ void EntityDoor::BeginIter()
 // FUNCTION: SWBF2 0x00498ea0
 EntityDoor* EntityDoor::GetCurrentIter()
 {
-    if (msDoorIter == mspDoors->End())
+    EntityDoor* pDoor = msDoorIter;
+    if (pDoor != mspDoors->End())
     {
-        return 0;
+        return pDoor;
     }
-    return msDoorIter;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00498ed0
@@ -479,10 +477,7 @@ EntityDoorClass::EntityDoorClass(EntityDoorClass* pBase, unsigned int uHash)
 {
     mAnimObj = pBase->mAnimObj;
     mAnimation = pBase->mAnimation;
-    for (int i = 0; i < 3; i++)
-    {
-        mAnimationTriggers[i] = pBase->mAnimationTriggers[i];
-    }
+    memcpy(mAnimationTriggers, pBase->mAnimationTriggers, sizeof(mAnimationTriggers));
 }
 
 // FUNCTION: SWBF2 0x00499020
@@ -494,7 +489,7 @@ EntityDoorClass::~EntityDoorClass()
 bool EntityDoorClass::InitAnimations(const char* pszName)
 {
     mAnimObj = RedAnimation::Find(PblHash(pszName));
-    return mAnimObj != 0;
+    return mAnimObj ? true : false;
 }
 
 // FUNCTION: SWBF2 0x00499070
@@ -502,44 +497,43 @@ void EntityDoorClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
     switch (uProperty)
     {
-    case 0x323f7450:
+    case 0x323f7450: /* "OpenSound" */
         mOpenSound.SetID(pszValue, false, false);
         break;
 
-    case 0x4fcf4562:
+    case 0x4fcf4562: /* "CloseSound" */
         mCloseSound.SetID(pszValue, false, false);
         break;
 
-    case 0x027b5cb2:
+    case 0x027b5cb2: /* "LockedSound" */
         mLockedSound.SetID(pszValue, false, false);
         break;
 
-    case 0x1d56b73b:
+    case 0x1d56b73b: /* "AnimationTrigger" */
     {
         char acName[256];
         float fRadius;
         sscanf(pszValue, "%s %f", acName, &fRadius);
-        int i = 0;
-        while (mAnimationTriggers[i].mTriggerPoint)
+        for (int i = 0; i < 3; i++)
         {
-            if (++i >= 3)
+            if (!mAnimationTriggers[i].mTriggerPoint)
             {
-                return;
+                mAnimationTriggers[i].mTriggerPoint = PblTEMPHash(acName);
+                mAnimationTriggers[i].mTriggerRadius = fRadius;
+                break;
             }
         }
-        mAnimationTriggers[i].mTriggerPoint = PblTEMPHash(acName);
-        mAnimationTriggers[i].mTriggerRadius = fRadius;
         break;
     }
 
-    case 0xe145ee5d:
+    case 0xe145ee5d: /* "Animation" */
         if (mAnimObj)
         {
-            mAnimation = mAnimObj->FindAnimation(pszValue);
+            mAnimation = (ZephyrAnim*)mAnimObj->FindAnimation(pszValue);
         }
         break;
 
-    case 0x98557a5e:
+    case 0x98557a5e: /* "AnimationName" */
         InitAnimations(pszValue);
         break;
 

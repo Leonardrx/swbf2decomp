@@ -64,7 +64,14 @@ void HDREffect::Init()
 void HDREffect::Enable(bool bEnable)
 {
     FLEffect::Enable(bEnable);
-    RedRenderer::SetLightingScale(bEnable ? 0.5f : 1.0f);
+    if (bEnable)
+    {
+        RedRenderer::SetLightingScale(0.5f);
+    }
+    else
+    {
+        RedRenderer::SetLightingScale(1.0f);
+    }
 }
 
 // FUNCTION: SWBF2 0x005423d0

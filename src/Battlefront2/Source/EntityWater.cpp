@@ -38,6 +38,7 @@ float EntityWater::RayHit(const PblVector3& vStart, const PblVector3& vDir, floa
 // FUNCTION: SWBF2 0x0050b1b0
 EntityWater::~EntityWater()
 {
+    DeactivateThread();
 }
 
 // SYNTHETIC: SWBF2 0x0050b180

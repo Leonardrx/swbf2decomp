@@ -61,31 +61,37 @@ float UnitCombatAgent::GetUpdateRate() const
 // FUNCTION: SWBF2 0x00662f60
 void UnitCombatAgent::EnterState()
 {
-    if (mCurState == STATE_Combat)
+    switch (mCurState)
     {
+    case STATE_Combat:
         mCombatHelper.Init(mCombatInfo);
+        break;
     }
 }
 
 // FUNCTION: SWBF2 0x00662f80
 void UnitCombatAgent::ExitState()
 {
-    if (mCurState == STATE_Combat)
+    switch (mCurState)
     {
+    case STATE_Combat:
         mCombatHelper.Clean();
+        break;
     }
 }
 
 // FUNCTION: SWBF2 0x00662fa0
 void UnitCombatAgent::UpdateStatePostVision(float dt)
 {
-    if (mCurState == STATE_Combat)
+    switch (mCurState)
     {
+    case STATE_Combat:
         mCombatHelper.FSMUpdate(dt, false);
         if (mCombatHelper.IsDone())
         {
             SetNextState(100);
         }
+        break;
     }
 }
 

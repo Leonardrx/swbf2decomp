@@ -177,15 +177,14 @@ void GrassPatchClass::RenderMaxDist(const PblMatrix& matrix, float fMaxDist,
     }
     fMaxDist = fMaxDist * 20.0f / 20.0f;
     const PblMatrix& cam = RedRenderer::GetCamera()->_Matrix;
-    const float distance = cam.m[2][0] * (cam.m[3][0] - matrix.m[3][0]) +
-                           cam.m[2][1] * (cam.m[3][1] - matrix.m[3][1]) +
-                           cam.m[2][2] * (cam.m[3][2] - matrix.m[3][2]);
+    const PblVector3 vDelta(cam.m[3][0] - matrix.m[3][0], cam.m[3][1] - matrix.m[3][1],
+                            cam.m[3][2] - matrix.m[3][2]);
+    const float distance = cam.m[2][0] * vDelta.x + cam.m[2][1] * vDelta.y + cam.m[2][2] * vDelta.z;
     if (distance < -mBoundingRadius || distance - mBoundingRadius > fMaxDist)
     {
         return;
     }
     static float FADE = 20.0f;
-    static float inverseFADE = 1.0f / FADE;
     float alpha = 1.0f;
     if (uiFlags & 0x20000000)
     {
@@ -210,6 +209,7 @@ void GrassPatchClass::RenderMaxDist(const PblMatrix& matrix, float fMaxDist,
     }
     else if (distance > fMaxDist - FADE)
     {
+        static float inverseFADE = 1.0f / FADE;
         alpha = 1.0f - (distance - (fMaxDist - FADE)) * inverseFADE;
         if (alpha < 0.0f)
         {
@@ -245,10 +245,10 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
     }
 
     PblSphere sphere;
+    sphere.w = m_pClass->mBoundingRadius;
     sphere.x = matrix.m[3][0];
     sphere.y = matrix.m[3][1];
     sphere.z = matrix.m[3][2];
-    sphere.w = m_pClass->mBoundingRadius;
     RedRenderer::SetLightingState(*RedLight::GetLightingState(sphere, 4, false, false, false));
 
     const PblMatrix& camMat = RedRenderer::GetCamera()->_Matrix;
@@ -276,22 +276,15 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
                                               uiFlags | 8);
         }
     }
-    else if (fDist < m_fDistanceFarShader)
-    {
-        if (m_pPrimitive)
-        {
-            RenderPrimitive(m_pPrimitive, m_pShader, &matrix, &color, uiFlags);
-        }
-    }
-    else
+    else if (fDist >= m_fDistanceFarShader)
     {
         PblMatrix mat = matrix;
+        mat.m[1][3] = 0.0f;
         float fAlpha = 1.0f - (float)color.a * (1.0f / 255.0f);
         float fFade = 1.0f - fAlpha * fAlpha;
         mat.m[1][0] *= fFade;
         mat.m[1][1] *= fFade;
         mat.m[1][2] *= fFade;
-        mat.m[1][3] = 0.0f;
 
         RedColor opaque;
         opaque.b = color.b;
@@ -302,6 +295,13 @@ void GrassPatchRenderable::RenderInstance(const PblMatrix& matrix, const RedColo
         if (m_pPrimitiveFar)
         {
             RenderPrimitive(m_pPrimitiveFar, m_pShaderFar, &mat, &opaque, uiFlags);
+        }
+    }
+    else
+    {
+        if (m_pPrimitive)
+        {
+            RenderPrimitive(m_pPrimitive, m_pShader, &matrix, &color, uiFlags);
         }
     }
 }

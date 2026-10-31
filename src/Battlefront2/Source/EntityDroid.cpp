@@ -70,8 +70,8 @@ static int sWeaponSection;
 EntityDroidClass::EntityDroidClass(unsigned int uHash)
     : GameObjectClass(uHash)
 {
-    mHealthType = HEALTH_TYPE_DROID;
     m_bDynamicLighting = true;
+    mHealthType = HEALTH_TYPE_DROID;
     mPilotType = PILOT_SELF;
 
     mSetAltitude = 0.0f;
@@ -95,14 +95,14 @@ EntityDroidClass::EntityDroidClass(unsigned int uHash)
     mCollisionScale[2] = 0.0f;
     mCollisionInflict = 1.0f;
 
+    memset(mWeaponClass, 0, sizeof(mWeaponClass));
+    memset(mWeaponAmmo, 0, sizeof(mWeaponAmmo));
     for (int i = 0; i < 4; ++i)
     {
-        mWeaponClass[i] = 0;
-        mWeaponAmmo[i].uiAmmo = 0;
-        mWeaponAmmo[i].uiHeat = 0;
         mWeaponAmmo[i].bFlagAmmoInfinite = 1;
-        mWeaponAmmo[i].bFlagShareHeat = 0;
-        mWeaponAmmo[i].bFlagShareAmmo = 0;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
         mWeaponChannel[i] = i;
     }
 
@@ -119,9 +119,6 @@ EntityDroidClass::EntityDroidClass(unsigned int uHash)
     mCameraSettings.mCameraTrackOffset.x = 0.0f;
     mCameraSettings.mCameraTrackOffset.y = 0.0f;
     mCameraSettings.mCameraTrackOffset.z = 4.5f;
-    mCameraSettings.mCameraSafePoint.x = 0.0f;
-    mCameraSettings.mCameraSafePoint.y = 0.15f;
-    mCameraSettings.mCameraSafePoint.z = -0.3f;
     mCameraSettings.mCameraMoveTensionL = 12.0f;
     mCameraSettings.mCameraMoveTensionR = 12.0f;
     mCameraSettings.mCameraMoveTensionU = 12.0f;
@@ -129,6 +126,9 @@ EntityDroidClass::EntityDroidClass(unsigned int uHash)
     mCameraSettings.mCameraMoveTensionF = 12.0f;
     mCameraSettings.mCameraMoveTensionB = 12.0f;
     mCameraSettings.mCameraAimTension = FLT_MAX;
+    mCameraSettings.mCameraSafePoint.x = 0.0f;
+    mCameraSettings.mCameraSafePoint.y = 0.15f;
+    mCameraSettings.mCameraSafePoint.z = -0.3f;
 
     mExplosion = 0;
 
@@ -165,22 +165,13 @@ EntityDroidClass::EntityDroidClass(EntityDroidClass* pBase, unsigned int uHash)
     mMaxPitch = pBase->mMaxPitch;
     mLevelSpring = pBase->mLevelSpring;
     mLevelDamp = pBase->mLevelDamp;
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionThreshold[i] = pBase->mCollisionThreshold[i];
-    }
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionScale[i] = pBase->mCollisionScale[i];
-    }
+    memcpy(mCollisionThreshold, pBase->mCollisionThreshold, sizeof(mCollisionThreshold));
+    memcpy(mCollisionScale, pBase->mCollisionScale, sizeof(mCollisionScale));
     mCollisionInflict = pBase->mCollisionInflict;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponClass[i] = pBase->mWeaponClass[i];
-        mWeaponAmmo[i] = pBase->mWeaponAmmo[i];
-        mWeaponChannel[i] = pBase->mWeaponChannel[i];
-    }
+    memcpy(mWeaponClass, pBase->mWeaponClass, sizeof(mWeaponClass));
+    memcpy(mWeaponAmmo, pBase->mWeaponAmmo, sizeof(mWeaponAmmo));
+    memcpy(mWeaponChannel, pBase->mWeaponChannel, sizeof(mWeaponChannel));
     mWeaponCount = pBase->mWeaponCount;
     for (int i = 0; i < 4; ++i)
     {
@@ -890,8 +881,8 @@ void EntityDroid::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, fl
                                   bool bArg)
 {
     const PblVector3& vCenter = GetCollisionCenter();
-    PblVector3 vDiff(vCenter.x - vPos.x, vCenter.y - vPos.y, vCenter.z - vPos.z);
-    float fDist = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+    PblVector3 vDiff = vCenter - vPos;
+    float fDist = sqrtf(SquaredLength(vDiff));
     if (fDist > 0.0001f)
     {
         float fEffect = CalcRadiusEffect(fDist, fInnerRadius, fOuterRadius);
@@ -899,9 +890,7 @@ void EntityDroid::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, fl
         {
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDiff));
-            mVelocity.x = vDir.x * fPush * fEffect + mVelocity.x;
-            mVelocity.y = vDir.y * fPush * fEffect + mVelocity.y;
-            mVelocity.z = vDir.z * fPush * fEffect + mVelocity.z;
+            mVelocity += vDir * fPush * fEffect;
         }
     }
 }
@@ -920,13 +909,13 @@ void EntityDroid::Render(unsigned char ucViewport, float fDist, unsigned int uiF
     color.g = 0xff;
     color.r = 0xff;
     color.a = (unsigned char)(int)(fDist * 255.0f);
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
 
     PblMatrix mReflection;
@@ -1622,9 +1611,12 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
 void EntityDroid::RecalculateAABB()
 {
     SetCollisionRadius(1.5f);
-    const PblVector3& vCenter = GetCollisionCenter();
-    mAABB = PblBox(vCenter.x - 2.5f, vCenter.y - 2.5f, vCenter.z - 2.5f, vCenter.x + 2.5f, vCenter.y + 2.5f,
-                   vCenter.z + 2.5f);
+    const PblVector3& vUpper = GetCollisionCenter();
+    const PblVector3 vMax(vUpper.x + 2.5f, vUpper.y + 2.5f, vUpper.z + 2.5f);
+    const PblVector3& vLower = GetCollisionCenter();
+    const PblVector3 vMin(vLower.x - 2.5f, vLower.y - 2.5f, vLower.z - 2.5f);
+    mAABB._vMin = vMin;
+    mAABB._vMax = vMax;
 }
 
 // FUNCTION: SWBF2 0x0049c7d0
@@ -1855,11 +1847,13 @@ float EntityDroid::GetMaxStrafe() const
 // FUNCTION: SWBF2 0x0049cdf0
 void EntityDroid::SetupCameraZoomFactor(float& rZoom)
 {
-    rZoom = 1.0f;
-    const int iIndex = mWeaponIndex[0];
-    if (mTargetInfo.mIsAiming && iIndex >= 0 && mWeapon[iIndex])
+    if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]])
     {
-        rZoom = mWeapon[iIndex]->mZoom;
+        rZoom = mWeapon[mWeaponIndex[0]]->mZoom;
+    }
+    else
+    {
+        rZoom = 1.0f;
     }
 }
 
@@ -1914,18 +1908,20 @@ extern float GetDefaultFOV();
 // FUNCTION: SWBF2 0x0049cd80
 void EntityDroid::SetupCameraFOV(float& rFOV)
 {
-    if (!IsAlive())
+    if (IsAlive())
     {
-        rFOV = GetDefaultFOV();
-        return;
-    }
-    if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
-    {
-        rFOV = GetControllableClass()->mFirstPersonFOV;
+        if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
+        {
+            rFOV = GetControllableClass()->mFirstPersonFOV;
+        }
+        else
+        {
+            rFOV = GetControllableClass()->mThirdPersonFOV;
+        }
     }
     else
     {
-        rFOV = GetControllableClass()->mThirdPersonFOV;
+        rFOV = GetDefaultFOV();
     }
 }
 
@@ -1937,7 +1933,7 @@ void EntityDroid::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     static PblVector3 vCameraOffset(0.0f, 0.0f, 8.5f);
     (void)&vCameraOffset;
     CameraTrackSetting settings = mClass->mCameraSettings;
-    if (mState == FROZEN || mState == EXPLODE || mState == KILLTIMER)
+    if (mState == KILLTIMER || mState == EXPLODE || mState == FROZEN)
     {
         settings.mCameraTrackOffset = mClass->mCameraDestructTrackOffset;
         settings.mCameraTiltValue = mClass->mCameraDestructTiltValue;
@@ -1945,11 +1941,7 @@ void EntityDroid::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     if (IsAlive() && (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView())))
     {
         const float fEyeDist = mTargetInfo.mIsAiming ? 0.5f : 0.3f;
-        PblVector3 vEye(mEyePoint.x - mEyeDir.x * fEyeDist,
-                        mEyePoint.y - mEyeDir.y * fEyeDist,
-                        mEyePoint.z - mEyeDir.z * fEyeDist);
-        rMatrix = DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z),
-                                  mMatrix.GetYAxis(), vEye);
+        rMatrix = DirectionMatrix(-mEyeDir, mMatrix.GetYAxis(), mEyePoint - mEyeDir * fEyeDist);
         const int iFirstPerson = GetFirstPersonIndex();
         if (iFirstPerson >= 0 && !mTargetInfo.mIsAiming)
         {

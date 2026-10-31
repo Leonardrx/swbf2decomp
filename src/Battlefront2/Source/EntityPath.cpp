@@ -81,9 +81,12 @@ void* EntityPath::BranchRegionFactory::CreateRegion(RedRegionDesc& desc, const c
 // FUNCTION: SWBF2 0x004d0fb0
 EntityPath::NodeProperties::NodeProperties()
     : mNumBranchPaths(5), mBranchProbability(0.0f), mCosMaxAngle(0.0f), mSpeedFactor(1.0f),
-      mVariance(0.0f, 0.0f, 0.0f), mBranchInfoType(1), mBranchSet(0), mLandOnArrival(false)
+      mBranchInfoType(1), mBranchSet(0), mLandOnArrival(false)
 {
     mBranchInfo.range = FLT_MAX;
+    mVariance.z = 0.0f;
+    mVariance.y = 0.0f;
+    mVariance.x = 0.0f;
 }
 
 // FUNCTION: SWBF2 0x004d1000
@@ -112,32 +115,18 @@ void EntityPath::NodeProperties::CalculateNodePosition(const PblVector3* const p
                                                        const PblVector3* const pDirection,
                                                        PblVector3& vPosition) const
 {
-    if (pVariance->x == 0.0f && pVariance->y == 0.0f && pVariance->z == 0.0f)
-    {
-        vPosition = *pPosition;
-    }
-    else
-    {
-        vPosition = RandomVector(*pPosition, pVariance->x, pVariance->y, pVariance->z);
-    }
+    vPosition = (pVariance->x == 0.0f && pVariance->y == 0.0f && pVariance->z == 0.0f)
+                    ? *pPosition
+                    : RandomVector(*pPosition, pVariance->x, pVariance->y, pVariance->z);
 
     if (pDirection->x != 0.0f || pDirection->y != 0.0f || pDirection->z != 0.0f)
     {
         PblVector3 vDirection = *pDirection;
         PblMatrix matrix;
         EntityPath::BuildMatrix(vDirection, matrix, 0);
-        PblVector3 vOffset = RandomVector(matrix.GetXAxis(), mVariance.x, mVariance.x, mVariance.x);
-        vPosition.x += vOffset.x;
-        vPosition.y += vOffset.y;
-        vPosition.z += vOffset.z;
-        vOffset = RandomVector(matrix.GetYAxis(), mVariance.y, mVariance.y, mVariance.y);
-        vPosition.x += vOffset.x;
-        vPosition.y += vOffset.y;
-        vPosition.z += vOffset.z;
-        vOffset = RandomVector(matrix.GetZAxis(), mVariance.z, mVariance.z, mVariance.z);
-        vPosition.x += vOffset.x;
-        vPosition.y += vOffset.y;
-        vPosition.z += vOffset.z;
+        vPosition += RandomVector(matrix.GetXAxis(), mVariance.x, mVariance.x, mVariance.x);
+        vPosition += RandomVector(matrix.GetYAxis(), mVariance.y, mVariance.y, mVariance.y);
+        vPosition += RandomVector(matrix.GetZAxis(), mVariance.z, mVariance.z, mVariance.z);
     }
 }
 
@@ -239,7 +228,8 @@ void EntityPath::DupeHeadAndTail()
 {
     for (int i = GetNumPoints() - 3; i >= 0; --i)
     {
-        mNodeArray.GetNode(i + 1) = mNodeArray.GetNode(i);
+        Node& dest = mNodeArray.GetNode(i + 1);
+        dest = mNodeArray.GetNode(i);
         mNodeProps[i + 1] = mNodeProps[i];
     }
 
@@ -249,19 +239,26 @@ void EntityPath::DupeHeadAndTail()
         Node& first = mNodeArray.GetNode(1);
         Node& head = mNodeArray.GetNode(0);
         head = first;
-        head.mPosition.x += (first.mPosition.x - next.mPosition.x) * 0.2f;
-        head.mPosition.y += (first.mPosition.y - next.mPosition.y) * 0.2f;
-        head.mPosition.z += (first.mPosition.z - next.mPosition.z) * 0.2f;
+        const PblVector3 vHeadOffset((first.mPosition.x - next.mPosition.x) * 0.2f,
+                                     (first.mPosition.y - next.mPosition.y) * 0.2f,
+                                     (first.mPosition.z - next.mPosition.z) * 0.2f);
+        head.mPosition.x += vHeadOffset.x;
+        head.mPosition.y += vHeadOffset.y;
+        head.mPosition.z += vHeadOffset.z;
 
         Node& prev = mNodeArray.GetNode(GetNumPoints() - 3);
         Node& last = mNodeArray.GetNode(GetNumPoints() - 2);
         Node& tail = mNodeArray.GetNode(GetNumPoints() - 1);
         tail = last;
-        tail.mPosition.x += (last.mPosition.x - prev.mPosition.x) * 0.2f;
-        tail.mPosition.y += (last.mPosition.y - prev.mPosition.y) * 0.2f;
-        tail.mPosition.z += (last.mPosition.z - prev.mPosition.z) * 0.2f;
+        const PblVector3 vTailOffset((last.mPosition.x - prev.mPosition.x) * 0.2f,
+                                     (last.mPosition.y - prev.mPosition.y) * 0.2f,
+                                     (last.mPosition.z - prev.mPosition.z) * 0.2f);
+        tail.mPosition.x += vTailOffset.x;
+        tail.mPosition.y += vTailOffset.y;
+        tail.mPosition.z += vTailOffset.z;
 
-        mNodeProps[GetNumPoints() - 1] = mNodeProps[GetNumPoints() - 2];
+        const NodeProperties& lastProps = mNodeProps[GetNumPoints() - 2];
+        mNodeProps[GetNumPoints() - 1] = lastProps;
     }
 }
 
@@ -315,20 +312,17 @@ const PblVector3* EntityPath::GetPointPosition(int i) const
 // FUNCTION: SWBF2 0x004d1ac0
 void EntityPath::CalculatePointPosition(int i, char cDirection, PblVector3& vPosition) const
 {
-    const NodeProperties& props = GetNodeProperties(i);
     PblVector3 vDirection;
-    const PblVector3& vVariance = props.GetVariance();
+    const PblVector3& vVariance = mNodeProps[i].GetVariance();
     if (vVariance.x == 0.0f && vVariance.y == 0.0f && vVariance.z == 0.0f)
     {
-        vDirection.x = 0.0f;
-        vDirection.y = 0.0f;
-        vDirection.z = 0.0f;
+        vDirection.SetAll(0.0f);
     }
     else
     {
         CalculateDirection(i, cDirection, vDirection);
     }
-    props.CalculateNodePosition(&RedPath::GetPointPosition(i), &mVariance, &vDirection, vPosition);
+    mNodeProps[i].CalculateNodePosition(&RedPath::GetPointPosition(i), &mVariance, &vDirection, vPosition);
 }
 
 // FUNCTION: SWBF2 0x004d1b60
@@ -363,9 +357,7 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
     if (!pDelta)
     {
         const PblVector3& vPoint = RedPath::GetPointPosition(i);
-        vDelta.x = vPoint.x - pPosition->x;
-        vDelta.y = vPoint.y - pPosition->y;
-        vDelta.z = vPoint.z - pPosition->z;
+        vDelta = PblVector3(vPoint.x - pPosition->x, vPoint.y - pPosition->y, vPoint.z - pPosition->z);
         pDelta = &vDelta;
     }
     if (fDistSq == -1.0f)
@@ -373,18 +365,14 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
         fDistSq = pDelta->x * pDelta->x + pDelta->y * pDelta->y + pDelta->z * pDelta->z;
     }
 
-    float fSuitability = 1.0f;
-    if (fDistSq != 0.0f)
+    float fSuitability = fDistSq != 0.0f ? fRange / fDistSq : 1.0f;
+    if (fSuitability > 1.0f)
     {
-        fSuitability = fRange / fDistSq;
-        if (fSuitability > 1.0f)
-        {
-            fSuitability = 1.0f;
-        }
-        else if (!(fSuitability > 0.0f))
-        {
-            return fSuitability;
-        }
+        fSuitability = 1.0f;
+    }
+    else if (!(fSuitability > 0.0f))
+    {
+        return fSuitability;
     }
     if (!pDirection)
     {
@@ -395,8 +383,8 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
     if (fDistSq != 0.0f)
     {
         float fInvDist = 1.0f / (float)sqrt(fDistSq);
-        float fDot = pDirection->x * (pDelta->x * fInvDist) + pDirection->y * (pDelta->y * fInvDist) +
-                     pDirection->z * (pDelta->z * fInvDist);
+        const PblVector3 vToPoint(pDelta->x * fInvDist, pDelta->y * fInvDist, pDelta->z * fInvDist);
+        float fDot = pDirection->x * vToPoint.x + pDirection->y * vToPoint.y + pDirection->z * vToPoint.z;
         if (fMinDot > fDot)
         {
             return 0.0f;
@@ -411,8 +399,8 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
     PblVector3 vPathDirection;
     CalculateDirection(i, cDirection, vPathDirection);
     float fInvDist = 1.0f / (float)sqrt(fDistSq);
-    float fDot = (pDelta->x * fInvDist) * vPathDirection.x + (pDelta->y * fInvDist) * vPathDirection.y +
-                 (pDelta->z * fInvDist) * vPathDirection.z;
+    const PblVector3 vToPoint(pDelta->x * fInvDist, pDelta->y * fInvDist, pDelta->z * fInvDist);
+    float fDot = vToPoint.x * vPathDirection.x + vToPoint.y * vPathDirection.y + vToPoint.z * vPathDirection.z;
     if (fMinDot > fDot)
     {
         return 0.0f;
@@ -432,19 +420,18 @@ float EntityPath::CalculateSuitability(const PblVector3* const pPosition, const 
 // FUNCTION: SWBF2 0x004d1e50
 bool EntityPath::ClassIsSupported(unsigned int uClassID, bool bCheckCount) const
 {
-    if (bCheckCount && mCount >= mMaxCount)
+    if (!bCheckCount || mCount < mMaxCount)
     {
-        return false;
-    }
-    if (!mNumClassIDs || !uClassID)
-    {
-        return true;
-    }
-    for (unsigned int i = 0; i < mNumClassIDs; ++i)
-    {
-        if (mClasses[i].GetID() == uClassID)
+        if (!mNumClassIDs || !uClassID)
         {
-            return !bCheckCount || mClasses[i].GetCount() < mClasses[i].GetMaxCount();
+            return true;
+        }
+        for (unsigned int i = 0; i < mNumClassIDs; ++i)
+        {
+            if (mClasses[i].GetID() == uClassID)
+            {
+                return !bCheckCount || mClasses[i].GetCount() < mClasses[i].GetMaxCount();
+            }
         }
     }
     return false;
@@ -459,33 +446,34 @@ const EntityPath::NodeProperties& EntityPath::GetNodeProperties(unsigned int i) 
 // FUNCTION: SWBF2 0x004d1ef0
 bool EntityPath::Add(unsigned int uClassID, char cDirection, PblListDouble::Node* const pNode) const
 {
-    if (mCount >= mMaxCount)
+    if (mCount < mMaxCount)
     {
-        return false;
-    }
-    ++mCount;
-    if (mNumClassIDs)
-    {
-        unsigned int i;
-        for (i = 0; i < mNumClassIDs; ++i)
+        ++mCount;
+        if (mNumClassIDs)
         {
-            if (mClasses[i].GetID() == uClassID)
+            bool bAdded = false;
+            for (unsigned int i = 0; i < mNumClassIDs; ++i)
             {
-                break;
+                if (mClasses[i].GetID() == uClassID)
+                {
+                    bAdded = mClasses[i].Add();
+                    break;
+                }
+            }
+            if (!bAdded)
+            {
+                --mCount;
+                return false;
             }
         }
-        if (i >= mNumClassIDs || !mClasses[i].Add())
+        if (pNode)
         {
-            --mCount;
-            return false;
+            mEntityList.AddLast(pNode);
         }
+        mDirectionEntity = cDirection;
+        return true;
     }
-    if (pNode)
-    {
-        mEntityList.AddLast(pNode);
-    }
-    mDirectionEntity = cDirection;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x004d1f80
@@ -669,23 +657,19 @@ float EntityPath::BuildMatrix(const PblVector3& vDirection, PblMatrix& matrix, P
     float fSin, fCos;
     PblMath::SinCos(&fSin, &fCos, fYaw * 0.5f);
     PblQuaternion qYaw;
+    qYaw._fS = fCos;
     qYaw._fX = fSin * matrix.m[1][0];
     qYaw._fY = matrix.m[1][1] * fSin;
     qYaw._fZ = matrix.m[1][2] * fSin;
-    qYaw._fS = fCos;
     PblVector3 vRight = qYaw.RotateVector(PblVector3(1.0f, 0.0f, 0.0f));
 
-    matrix.m[2][0] = vDirection.x;
-    matrix.m[2][1] = vDirection.y;
-    matrix.m[2][2] = vDirection.z;
+    *(PblVector3*)&matrix.m[2][0] = vDirection;
     matrix.m[2][3] = 0.0f;
-    matrix.m[0][0] = vRight.x;
-    matrix.m[0][1] = vRight.y;
-    matrix.m[0][2] = vRight.z;
+    *(PblVector3*)&matrix.m[0][0] = vRight;
     matrix.m[0][3] = 0.0f;
-    matrix.m[1][0] = vDirection.y * vRight.z - vDirection.z * vRight.y;
-    matrix.m[1][1] = vDirection.z * vRight.x - vDirection.x * vRight.z;
-    matrix.m[1][2] = vDirection.x * vRight.y - vDirection.y * vRight.x;
+    *(PblVector3*)&matrix.m[1][0] = PblVector3(vDirection.y * vRight.z - vDirection.z * vRight.y,
+                                               vDirection.z * vRight.x - vDirection.x * vRight.z,
+                                               vDirection.x * vRight.y - vDirection.y * vRight.x);
     matrix.m[1][3] = 0.0f;
 
     if (pFlatMatrix)
@@ -693,17 +677,16 @@ float EntityPath::BuildMatrix(const PblVector3& vDirection, PblMatrix& matrix, P
         PblVector3 vFlat(matrix.m[2][0], 0.0f, matrix.m[2][2]);
         PblVector3 vForward;
         D3DXVec3Normalize((D3DXVECTOR3*)&vForward, (const D3DXVECTOR3*)&vFlat);
-        pFlatMatrix->m[2][0] = vForward.x;
-        pFlatMatrix->m[2][1] = vForward.y;
-        pFlatMatrix->m[2][2] = vForward.z;
+        *(PblVector3*)&pFlatMatrix->m[2][0] = vForward;
         pFlatMatrix->m[2][3] = 0.0f;
         pFlatMatrix->m[1][0] = 0.0f;
         pFlatMatrix->m[1][1] = 1.0f;
         pFlatMatrix->m[1][2] = 0.0f;
         pFlatMatrix->m[1][3] = 0.0f;
-        pFlatMatrix->m[0][0] = pFlatMatrix->m[1][1] * pFlatMatrix->m[2][2] - pFlatMatrix->m[1][2] * pFlatMatrix->m[2][1];
-        pFlatMatrix->m[0][1] = pFlatMatrix->m[1][2] * pFlatMatrix->m[2][0] - pFlatMatrix->m[1][0] * pFlatMatrix->m[2][2];
-        pFlatMatrix->m[0][2] = pFlatMatrix->m[1][0] * pFlatMatrix->m[2][1] - pFlatMatrix->m[1][1] * pFlatMatrix->m[2][0];
+        *(PblVector3*)&pFlatMatrix->m[0][0] =
+            PblVector3(pFlatMatrix->m[1][1] * pFlatMatrix->m[2][2] - pFlatMatrix->m[1][2] * pFlatMatrix->m[2][1],
+                       pFlatMatrix->m[1][2] * pFlatMatrix->m[2][0] - pFlatMatrix->m[1][0] * pFlatMatrix->m[2][2],
+                       pFlatMatrix->m[1][0] * pFlatMatrix->m[2][1] - pFlatMatrix->m[1][1] * pFlatMatrix->m[2][0]);
         pFlatMatrix->m[0][3] = 0.0f;
     }
     return fYaw;

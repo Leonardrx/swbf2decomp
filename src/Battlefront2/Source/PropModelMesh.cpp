@@ -138,16 +138,19 @@ PropCollisionObject::PropCollisionObject(PblMatrix& matrix, PropModelMesh* pMode
 {
     mMatrix = matrix;
 
-    PblVector3 vCenter;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter,
-                           (const D3DXVECTOR3*)&pModel->mRenderObj.mGeometry->_BoundingSphere,
-                           (const D3DXMATRIX*)&mMatrix);
-    SetCollisionCenter(vCenter);
+    {
+        PblVector3 vCenter;
+        D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter,
+                               (const D3DXVECTOR3*)&pModel->mRenderObj.mGeometry->_BoundingSphere,
+                               (const D3DXMATRIX*)&mMatrix);
+        SetCollisionCenter(vCenter);
+    }
 
     const float fRadius = pModel->mRenderObj.mGeometry->_BoundingSphere.GetRadius();
     SetCollisionRadius(fRadius);
+    Set2DCollisionRadius(fRadius);
 
-    RecalculateAABB(mMatrix, pModel->mRenderObj.mGeometry->_TotalBoundingBox);
+    mAABB = pModel->mRenderObj.mGeometry->_TotalBoundingBox.GetTransformedBox(mMatrix);
     AddStaticToCollisionManager();
 }
 
@@ -237,7 +240,7 @@ void PropObjectMesh::Init(PropModelMesh* pModel, float x, float z, float rotatio
 // FUNCTION: SWBF2 0x0062c5e0
 void PropObjectMesh::CalculateNextTriggerTime()
 {
-    mNextTriggerTime = PblRandom::GetGlobalFloat() * mModel->mSoundTriggerTimeDev +
+    mNextTriggerTime = PblRandom::_Global.GetFloat() * mModel->mSoundTriggerTimeDev +
                        mModel->mSoundTriggerTime;
 }
 
@@ -468,9 +471,6 @@ void PropObjectMesh::Setup()
     }
     fBrightness *= 255.0f;
 
-    const float fVariation = mModel->mColorVariation;
-    mColor.a = 0xff;
-
     union
     {
         float f;
@@ -479,6 +479,9 @@ void PropObjectMesh::Setup()
     seed.f = mMatrix.m[3][2] * mMatrix.m[3][0];
     PblRandom rand(seed.u ^ 0xC71C2830u);
     rand.GetInt();
+
+    const float fVariation = mModel->mColorVariation;
+    mColor.a = 0xff;
 
     mColor.b = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
     mColor.g = (unsigned char)(int)((1.0f - rand.GetFloat() * fVariation) * fBrightness);
@@ -497,11 +500,11 @@ float PropObjectMesh::GetDist()
 
 // FUNCTION: SWBF2 0x0062cc30
 PropModelMesh::PropModelMesh()
-    : mCollisionModel(0),
-      mAIVisFactorCrouch(1.0f),
-      mAIVisFactorStand(1.0f)
 {
     mRenderObj.mGeometry = 0;
+    mCollisionModel = 0;
+    mAIVisFactorCrouch = 1.0f;
+    mAIVisFactorStand = 1.0f;
 }
 
 // SYNTHETIC: SWBF2 0x0062cc70
@@ -510,9 +513,14 @@ PropModelMesh::PropModelMesh()
 // FUNCTION: SWBF2 0x0062cca0
 PropModelMesh::~PropModelMesh()
 {
-    if (mType == PMM_MESH && mRenderObj.mGeometry)
+    switch (mType)
     {
-        delete mRenderObj.mGeometry;
+    case PMM_MESH:
+        if (mRenderObj.mGeometry)
+        {
+            delete mRenderObj.mGeometry;
+        }
+        break;
     }
 }
 
@@ -624,8 +632,7 @@ void PropModelMesh::Read(PblFileChunk& chunk)
 
         case 0x827eb1c9:
         {
-            char acLighting[256];
-            memset(acLighting, 0, sizeof(acLighting));
+            char acLighting[256] = { 0 };
             child.ReadString(acLighting, 256);
             const size_t uiLen = strlen(acLighting);
             if (uiLen)
@@ -677,15 +684,8 @@ void PropModelMesh::Read(PblFileChunk& chunk)
             mCollisionModel->AddBody(new CollisionBodyMesh(
                 pMesh, "CollisionMesh", gMatrixIdentity, 0));
 
-            CollisionMask noMask;
-            noMask.mMask[0] = 0;
-            noMask.mMask[1] = 0;
-            const CollisionObjectType eRigid = COLL_RIGID;
-            mCollisionModel->SetCollisionMask(eRigid, noMask);
-            noMask.mMask[0] = 0;
-            noMask.mMask[1] = 0;
-            const CollisionObjectType eOrdnance = COLL_ORDNANCE;
-            mCollisionModel->SetCollisionMask(eOrdnance, noMask);
+            mCollisionModel->SetCollisionMask(COLL_RIGID, CollisionMask(0));
+            mCollisionModel->SetCollisionMask(COLL_ORDNANCE, CollisionMask(0));
         }
     }
 }
@@ -699,26 +699,23 @@ PropObject* PropModelMesh::CreateObject(float x, float z, float rotation)
         {
             mRenderObj.mGrassClass = static_cast<GrassPatchClass*>(EntityClass::Find(mHash));
             mRenderObj.mGrassClass->Init();
-            mYOffset = 0.0f;
             mMaxDist = mRenderObj.mGrassClass->mBoundingRadius * mScale + mGeometryMaxDist * 1.45f;
+            mYOffset = 0.0f;
         }
         else if (mType == PMM_LEAF)
         {
             mRenderObj.mLeafClass = static_cast<LeafPatchClass*>(EntityClass::Find(mHash));
             mRenderObj.mLeafClass->Init();
-            mYOffset = 0.0f;
             mMaxDist = mRenderObj.mLeafClass->mBoundingRadius * mScale + mGeometryMaxDist * 1.45f;
+            mYOffset = 0.0f;
         }
         mHash = 0;
     }
 
     float fChance = mMaxDist / 100.0f;
-    const float fHigh = 3.0f;
-    fChance = (std::min)(fChance, fHigh);
-    const float fLow = 0.3f;
-    fChance = (std::max)(fChance, fLow);
-    const float fThreshold = GetDensity() * fChance;
-    if (fThreshold > (float)(rand() % 0x7fff) / 32767.0f)
+    fChance = util::Min_(fChance, 3.0f);
+    fChance = util::Max_(fChance, 0.3f);
+    if (GetDensity() * fChance > (float)(rand() % 0x7fff) / 32767.0f)
     {
         return PropObjectMesh::Create(this, x, z, rotation);
     }

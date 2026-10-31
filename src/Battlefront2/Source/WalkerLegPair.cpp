@@ -76,11 +76,9 @@ WalkerLegPair::WalkerLegPair(EntityWalker* pParent, const WalkerLegPairInfo& inf
     mBlend->SetJointMask(2, mTopMask);
 
     mLegJoints[Left] = info.mLegJoints[Left];
+    mLegAdjustments[Left] = PblQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
     mLegJoints[Right] = info.mLegJoints[Right];
-
-    PblQuaternion identity(1.0f, 0.0f, 0.0f, 0.0f);
-    mLegAdjustments[Left] = identity;
-    mLegAdjustments[Right] = identity;
+    mLegAdjustments[Right] = PblQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
     mBlendFactor = 0.0f;
 }
 
@@ -142,10 +140,11 @@ void WalkerLegPair::InitDone()
 // FUNCTION: SWBF2 0x00676900
 bool WalkerLegPair::FootTerrainCollision(const CollisionResult* pResult)
 {
+    const int iCollider = pResult->mColliderId;
     int i;
     for (i = 0; i < FootCount; ++i)
     {
-        if (mFootCollisionBody[i] == pResult->mColliderId)
+        if (mFootCollisionBody[i] == iCollider)
         {
             break;
         }
@@ -279,13 +278,12 @@ void WalkerLegPair::AdjustLeg(eFoot eWhich, const PblQuaternion& kAdjust)
         return;
     }
 
-    ZephyrTransform* pJoints = mParent->mZephyrPoseStatic.m_pJoints;
-    PblQuaternion& kJoint = pJoints[(unsigned short)iJoint].kQuat;
+    PblQuaternion& kJoint = mParent->mZephyrPoseStatic.m_pJoints[(unsigned short)iJoint].kQuat;
     PblQuaternion kRot = kJoint;
     for (char iParent = mParent->mZephyrSkeleton.m_pShared->m_pJoints[iJoint].m_iParent; iParent;
          iParent = mParent->mZephyrSkeleton.m_pShared->m_pJoints[iParent].m_iParent)
     {
-        kRot = pJoints[(unsigned short)iParent].kQuat * kRot;
+        kRot = mParent->mZephyrPoseStatic.m_pJoints[(unsigned short)iParent].kQuat * kRot;
     }
 
     mLegAdjustments[eWhich] = kRot.Inverse() * kAdjust * kRot;

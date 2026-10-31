@@ -110,7 +110,7 @@ void ChaseCamera::Update(float fDeltaTime)
     for (int i = 0; i < mShakeCount; ++i)
     {
         mShake += mShakeAmount[i];
-        mShakeAmount[i] -= fDeltaTime * mShakeDecay[i];
+        mShakeAmount[i] -= mShakeDecay[i] * fDeltaTime;
         if (mShakeAmount[i] <= 0.0f)
         {
             for (int j = i; j < mShakeCount - 1; ++j)
@@ -123,8 +123,8 @@ void ChaseCamera::Update(float fDeltaTime)
         }
     }
 
-    Trackable* pTrackable = 0;
     bool bFound = false;
+    Trackable* pTrackable = 0;
     if (!gDemoMode && !mDemoMode)
     {
         if ((sStepToNextMember || sStepToPreviousMember) && sCycleDirection == 0)
@@ -263,7 +263,7 @@ swing:
 // FUNCTION: SWBF2 0x00453c40
 static float BiasedRandom()
 {
-    float f = PblRandom::GetGlobalFloat() * 2.0f - 1.0f;
+    float f = PblRandom::_Global.GetFloat() * 2.0f - 1.0f;
     return f * f * f;
 }
 

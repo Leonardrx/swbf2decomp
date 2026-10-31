@@ -57,7 +57,11 @@ SaveFsm mSaveFsm;
 // FUNCTION: SWBF2 0x00633050
 bool CheckIfOkToExitMemoryMode()
 {
-    return !SaveGameManager::mForceNoSaveDevice && mSaveFsm.IsDeviceInsertted();
+    if (SaveGameManager::mForceNoSaveDevice)
+    {
+        return false;
+    }
+    return mSaveFsm.IsDeviceInsertted();
 }
 
 // FUNCTION: SWBF2 0x00633110
@@ -294,22 +298,21 @@ namespace SaveGameManager
 // FUNCTION: SWBF2 0x00633220
 unsigned short const* GetNextFileName(int iType, int* piArg)
 {
-    SaveFile* pFile;
-    do
+    SaveFile* pFile = mSaveFsm.GetNextFile();
+    while (pFile)
     {
-        pFile = mSaveFsm.GetNextFile();
-        if (!pFile)
+        if (pFile->GetType() == iType)
         {
-            return 0;
+            PblUnicode::ustrlcpy(sNextFileName, pFile->GetGameName(), 260);
+            if (piArg)
+            {
+                *piArg = 0;
+            }
+            return sNextFileName;
         }
-    } while (pFile->GetType() != iType);
-
-    PblUnicode::ustrlcpy(sNextFileName, pFile->GetGameName(), 260);
-    if (piArg)
-    {
-        *piArg = 0;
+        pFile = mSaveFsm.GetNextFile();
     }
-    return sNextFileName;
+    return 0;
 }
 }
 

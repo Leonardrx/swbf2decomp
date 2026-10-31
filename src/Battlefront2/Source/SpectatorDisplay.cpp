@@ -40,7 +40,11 @@ SpectatorDisplay::SpectatorDisplay()
     const float fScreenHeight = (float)RedInterfaceScreen::GetScreenHeight() *
                                 RedInterfaceScreen::GetScreenSafeZone();
     const float fHalfWidth = fScreenWidth * 0.5f;
-    const float fHeight = NetGame::IsHost() ? 0.15f : 0.06f;
+    float fHeight = 0.06f;
+    if (NetGame::IsHost())
+    {
+        fHeight = 0.15f;
+    }
     const RedColor white = { 0xff, 0xff, 0xff, 0xff };
 
     sCanRender = false;
@@ -122,7 +126,8 @@ SpectatorDisplay::SpectatorDisplay()
     mPregamePrompt1.SetPosition(-0.45f, 152.0f);
     mPregameGroup.AddElement(&mPregamePrompt1);
 
-    FLRenderer::AddInterfaceElement(&mPregameGroup, 0.0f, 0.0f, true);
+    FLRenderer::AddInterfaceElement(&mPregameGroup, RedInterfaceScreen::LEFT,
+                                    RedInterfaceScreen::TOP, true);
 }
 
 // FUNCTION: SWBF2 0x0064f480
@@ -178,9 +183,13 @@ void SpectatorDisplay::Init()
         fWidth = fRight - fLeft;
     }
 
+    float fHeight = 0.06f;
     float fScreenHeight = (float)RedInterfaceScreen::GetScreenHeight() *
                           RedInterfaceScreen::GetScreenSafeZone();
-    float fHeight = NetGame::IsHost() ? 0.15f : 0.06f;
+    if (NetGame::IsHost())
+    {
+        fHeight = 0.15f;
+    }
     mBitmapBGPregame.SetRect(fWidth + 32.0f, fHeight * fScreenHeight,
                              RedBitmapElement::BITMAP_HALIGN_CENTER,
                              RedBitmapElement::BITMAP_VALIGN_TOP);
@@ -275,7 +284,8 @@ void SpectatorDisplay::ChangeSpectatedName()
         unsigned short ausText[128] = { 0 };
         unsigned short ausName[33] = { 0 };
         PblUnicode::ustrncnv(ausName, NetGame::GetPlayerName(iSpectator), 32);
-        PblUnicode::usnprintf(ausText, 127, RedLocalizeDB::Find(0xAC69F600, false), ausName);
+        const unsigned short* pusFormat = RedLocalizeDB::Find(0xAC69F600, false);
+        PblUnicode::usnprintf(ausText, 127, pusFormat, ausName);
         mSpectatorPrompt.SetText(ausText, true);
     }
     else
@@ -353,29 +363,33 @@ void SpectatorDisplay::SetPosition()
     float fHeight = (float)RedInterfaceScreen::GetScreenHeight() *
                     RedInterfaceScreen::GetScreenSafeZone();
     unsigned int uiNumCam = CameraManager::sInstance->m_iNumCam;
-    if (uiNumCam == 2)
+    switch (uiNumCam)
     {
+    case 2:
         fHeight *= 0.5f;
-    }
-    else if (uiNumCam == 3 || uiNumCam == 4)
-    {
+        break;
+    case 3:
+    case 4:
         fWidth *= 0.5f;
         fHeight *= 0.5f;
+        break;
     }
 
     float fPromptX = fWidth * 0.5f;
     float fPromptY = fHeight * 0.25f;
     float fButtonY = fHeight * 0.98f;
     float fJoinX = fWidth * 0.78f;
-    if (uiNumCam == 2)
+    switch (uiNumCam)
     {
+    case 2:
         fButtonY = fHeight * 0.9f;
-    }
-    else if (uiNumCam == 3 || uiNumCam == 4)
-    {
+        break;
+    case 3:
+    case 4:
         fPromptY = fHeight * 0.35f;
         fJoinX = fWidth * 0.6f;
         fButtonY = fHeight * 0.9f;
+        break;
     }
 
     mMessageGroup.SetPosition(0.0f, 0.0f, 0.0f);

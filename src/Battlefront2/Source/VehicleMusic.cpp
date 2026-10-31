@@ -12,8 +12,8 @@ VehicleMusicClass::VehicleMusicClass()
 
 // FUNCTION: SWBF2 0x0066e510
 VehicleMusic::VehicleMusic(const VehicleMusicClass* pClass)
+    : mTimeWithPilot(0.0f)
 {
-    mTimeWithPilot = 0.0f;
     for (int i = 0; i < 8; ++i)
     {
         mMusic[i] = pClass->mMusic[i];
@@ -32,31 +32,34 @@ VehicleMusic::~VehicleMusic()
 // FUNCTION: SWBF2 0x0066e5a0
 void VehicleMusic::Update(const VehicleMusicClass* pClass, float fDeltaTime, bool bPiloted, float fSpeed, int iSide)
 {
-    GameMusic& music = mMusic[iSide];
-    if (!bPiloted)
+    if (bPiloted)
     {
-        if (music.GetPlayState() == GameMusic::playState_playing)
+        if (fSpeed >= pClass->mMusicSpeed)
         {
-            music.Stop();
+            if (mTimeWithPilot >= pClass->mMusicDelay &&
+                mMusic[iSide].GetPlayState() == GameMusic::playState_stopped)
+            {
+                mMusic[iSide].Play();
+            }
+        }
+        else
+        {
+            if (mMusic[iSide].GetPlayState() == GameMusic::playState_playing &&
+                mMusic[iSide].GetCurrentPlayState() == GameMusic::playState_stopped)
+            {
+                mMusic[iSide].Stop();
+            }
+        }
+        mTimeWithPilot += fDeltaTime;
+    }
+    else
+    {
+        if (mMusic[iSide].GetPlayState() == GameMusic::playState_playing)
+        {
+            mMusic[iSide].Stop();
         }
         mTimeWithPilot = 0.0f;
-        return;
     }
-
-    if (fSpeed < pClass->mMusicSpeed)
-    {
-        if (music.GetPlayState() == GameMusic::playState_playing &&
-            music.GetCurrentPlayState() == GameMusic::playState_stopped)
-        {
-            music.Stop();
-        }
-    }
-    else if (mTimeWithPilot >= pClass->mMusicDelay &&
-             music.GetPlayState() == GameMusic::playState_stopped)
-    {
-        music.Play();
-    }
-    mTimeWithPilot += fDeltaTime;
 }
 
 // FUNCTION: SWBF2 0x0066e710

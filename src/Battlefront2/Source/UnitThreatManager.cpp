@@ -182,7 +182,7 @@ void UnitThreatManager::Update(float dt, UnitController* pCtrl)
         if (iBest != mVisibleObjectIndex)
         {
             mLastVisObjUpdateTime = fTime;
-            if ((unsigned int)iBest >= MAX_THREATS || mVisibleObjectIndex < 0 ||
+            if ((unsigned int)iBest > MAX_THREATS - 1 || mVisibleObjectIndex < 0 ||
                 mVisibleObjectIndex >= MAX_THREATS)
             {
                 mVisibleObjectIndex = iBest;
@@ -190,8 +190,8 @@ void UnitThreatManager::Update(float dt, UnitController* pCtrl)
             else
             {
                 Controllable* pMe = mMyCtrl->mOwner;
-                unsigned char uCur = mThreats[mVisibleObjectIndex].GetPriority(fTime, pMe);
-                if (mThreats[iBest].GetPriority(fTime, pMe) > uCur + 10)
+                int iCurPriority = mThreats[mVisibleObjectIndex].GetPriority(fTime, pMe) + 10;
+                if (mThreats[iBest].GetPriority(fTime, pMe) > iCurPriority)
                 {
                     mVisibleObjectIndex = iBest;
                 }
@@ -325,8 +325,8 @@ void UnitThreatManager::UpdateThreat(GameObject* pObj, ThreatStatus eStatus)
         }
         if (iWorst >= 0)
         {
-            mThreats[iWorst].Reset();
             iIndex = iWorst;
+            mThreats[iIndex].Reset();
         }
         if (iIndex < 0)
         {
@@ -381,13 +381,19 @@ bool UnitThreatManager::ShouldRaytestUnit(const GameObject* pObj) const
         {
             return true;
         }
+        bool bVisPlayer = false;
         Controllable* pVisCtl = pVisible->GetFirstControllable();
-        if (pVisCtl && pVisCtl->mCtrl && PlayerControllerPtr(pVisCtl->mCtrl))
+        if (pVisCtl && pVisCtl->mCtrl)
+        {
+            bVisPlayer = PlayerControllerPtr(pVisCtl->mCtrl) != 0;
+        }
+        if (bVisPlayer)
         {
             return false;
         }
     }
-    return TimeSinceLastRaytest(pObj) >= fRaytestInterval[mMyCtrl->mLodState];
+    const int iLodState = mMyCtrl->mLodState;
+    return TimeSinceLastRaytest(pObj) >= fRaytestInterval[iLodState];
 }
 
 }

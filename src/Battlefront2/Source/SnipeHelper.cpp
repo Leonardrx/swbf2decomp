@@ -87,24 +87,19 @@ SnipeHelper::SnipeHelper(UnitAgent* pOwner)
 // FUNCTION: SWBF2 0x0063b6e0
 bool SnipeHelper::LookForSnipeHintAndInit()
 {
-    if (mCurState != 0 && mCurState != STATE_START && mCurState != 100)
+    if (mCurState == 0 || mCurState == STATE_START || mCurState == 100)
     {
-        return false;
+        if (AIUtil::IsSniperGuy(GetMe()->GetGameObject()))
+        {
+            if (AIUtil::IsSnipeHintNearby(GetMe()->GetGameObject(), *this, (const SnipeHint**)&mHint,
+                                          &mNextHintCheckTime))
+            {
+                HELPERInit(mHint);
+                return true;
+            }
+        }
     }
-
-    if (!AIUtil::IsSniperGuy(GetMe()->GetGameObject()))
-    {
-        return false;
-    }
-
-    if (!AIUtil::IsSnipeHintNearby(GetMe()->GetGameObject(), *this, (const SnipeHint**)&mHint,
-                                   &mNextHintCheckTime))
-    {
-        return false;
-    }
-
-    HELPERInit(mHint);
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x0063b760
@@ -374,11 +369,7 @@ ControllableHeight SnipeHelper::HELPERGetHeight() const
 // FUNCTION: SWBF2 0x0063c0d0
 bool SnipeHelper::HELPERDamagedInterrupt(bool b, const PblVector3& vPos) const
 {
-    if (mCurState == STATE_SNIPE && b)
-    {
-        return !IsWithinSnipeFOV(vPos);
-    }
-    return true;
+    return !(mCurState == STATE_SNIPE && b && IsWithinSnipeFOV(vPos));
 }
 
 // FUNCTION: SWBF2 0x0063c100
@@ -401,7 +392,7 @@ bool SnipeHelper::HELPERHearEnemyInterrupt(const GameObject* pEnemy) const
 {
     if (mCurState == STATE_SNIPE)
     {
-        return !IsWithinSnipeFOV((GetCollisionObject(pEnemy)->GetMatrix()).GetTranslation());
+        return !IsWithinSnipeFOV(pEnemy->GetMatrix().GetTranslation());
     }
     return true;
 }

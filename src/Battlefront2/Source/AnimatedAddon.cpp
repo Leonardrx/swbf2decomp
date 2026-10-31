@@ -18,8 +18,7 @@ AnimatedAddon::AnimatedAddon(const ZephyrSkeletonShared& parentSkeleton)
       mParentSkeleton(parentSkeleton),
       mAnimation(0)
 {
-    mAnimations[Idle] = 0;
-    mAnimations[WalkForward] = 0;
+    memset(mAnimations, 0, sizeof(mAnimations));
 }
 
 // FUNCTION: SWBF2 0x00443ac0
@@ -86,8 +85,12 @@ void AnimatedAddon::Render(TentacleSimulator* pTentacles, const PblVector3& vVel
     PblMatrix aTentacleMatrices[20];
     if (pTentacles)
     {
-        pTentacles->DoTentacles(&pose, mWorld, vVelocity, aTentacleMatrices,
-                                (uiFlags & 0x10000000) || (uiFlags & 0x200000) ? 0.0f : -1.0f);
+        float fParam = -1.0f;
+        if ((uiFlags & 0x10000000) > 0 || (uiFlags & 0x200000) > 0)
+        {
+            fParam = 0.0f;
+        }
+        pTentacles->DoTentacles(&pose, mWorld, vVelocity, aTentacleMatrices, fParam);
     }
 
     mModel->GetRedModel(0)->Render(&mWorld, &pose, color, uiFlags, 0);
