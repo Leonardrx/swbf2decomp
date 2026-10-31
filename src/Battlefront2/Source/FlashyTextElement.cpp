@@ -204,9 +204,7 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
         }
 
         PblMatrix mScaled = mContext;
-        mScaled.m[1][0] *= fScale;
-        mScaled.m[1][1] *= fScale;
-        mScaled.m[1][2] *= fScale;
+        mScaled[1] = mContext[1] * fScale;
         mScaled.m[1][3] = 0.0f;
         mScaled.m[3][1] = mContext.m[3][1] - (1.0f - fScale) * 0.5f * (fBottom - fTop);
 

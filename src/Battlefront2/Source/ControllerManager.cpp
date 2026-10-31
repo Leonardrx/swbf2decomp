@@ -341,7 +341,7 @@ void ControllerManager::UpdatePilotSelf()
 // FUNCTION: SWBF2 0x00486040
 void ControllerManager::UpdateCrowd(Controller* pCtrl)
 {
-    if (pCtrl->mCrowdTestTimer + 1.0f > GameLoop::GetMissionTime())
+    if (GameLoop::GetMissionTime() < pCtrl->mCrowdTestTimer + 1.0f)
     {
         return;
     }

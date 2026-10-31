@@ -395,13 +395,7 @@ EntityHover::EntityHover(EntityHoverClass* pClass, const EntityDesc& desc)
 
     PblVector3 vLift(0.0f, 0.0f, 0.0f);
     vLift.y += mClass->mSetAltitude;
-    const float fX = mMatrix.m[3][0] + vLift.x;
-    const float fY = mMatrix.m[3][1] + vLift.y;
-    const float fZ = mMatrix.m[3][2] + vLift.z;
-    mMatrix.m[3][0] = fX;
-    mMatrix.m[3][1] = fY;
-    mMatrix.m[3][2] = fZ;
-    mMatrix.m[3][3] = 1.0f;
+    mMatrix.SetTranslation(mMatrix.GetTranslation() + vLift);
     AddToScene();
 
     mVelocity.x = 0.0f;
@@ -426,7 +420,7 @@ EntityHover::EntityHover(EntityHoverClass* pClass, const EntityDesc& desc)
         {
             continue;
         }
-        mAimer[i] = new Aimer(&mClass->mAimerClass[i], this, &mMatrix, &mPose, 0);
+        mAimer[i] = new Aimer(&pClass->mAimerClass[i], this, &mMatrix, &mPose, 0);
         WeaponDesc weaponDesc;
         weaponDesc.mOwner = this;
         weaponDesc.mAimer = mAimer[i];
@@ -506,9 +500,7 @@ EntityHover::EntityHover(EntityHoverClass* pClass, const EntityDesc& desc)
     mForceFrameNum1 = -1.0f;
     mForceFrameNum2 = -1.0f;
     mForceFrameBlend = -1.0f;
-    mCurrSuspensionOffset = mClass->mMidSuspensionOffset;
-    mNextSuspensionOffset = mClass->mMidSuspensionOffset;
-    mLastSuspensionOffset = mClass->mMidSuspensionOffset;
+    mLastSuspensionOffset = mNextSuspensionOffset = mCurrSuspensionOffset = mClass->mMidSuspensionOffset;
     mSuspensionVelocity = 0.0f;
     mStuckState = 0;
     mStuckCycle = -100.0f;
@@ -667,24 +659,15 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     mBankFilter = pBase->mBankFilter;
     mLevelSpring = pBase->mLevelSpring;
     mLevelDamp = pBase->mLevelDamp;
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionThreshold[i] = pBase->mCollisionThreshold[i];
-    }
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionScale[i] = pBase->mCollisionScale[i];
-    }
+    memcpy(mCollisionThreshold, pBase->mCollisionThreshold, sizeof(mCollisionThreshold));
+    memcpy(mCollisionScale, pBase->mCollisionScale, sizeof(mCollisionScale));
     mCollisionInflict = pBase->mCollisionInflict;
 
     for (int i = 0; i < 4; ++i)
     {
         mWeaponClass[i] = pBase->mWeaponClass[i];
     }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponAmmo[i] = pBase->mWeaponAmmo[i];
-    }
+    memcpy(mWeaponAmmo, pBase->mWeaponAmmo, sizeof(mWeaponAmmo));
     for (int i = 0; i < 4; ++i)
     {
         mWeaponChannel[i] = pBase->mWeaponChannel[i];
@@ -702,10 +685,7 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     }
     mCameraSettings = pBase->mCameraSettings;
 
-    for (int i = 0; i < 8; ++i)
-    {
-        mTurretClass[i] = pBase->mTurretClass[i];
-    }
+    memcpy(mTurretClass, pBase->mTurretClass, sizeof(mTurretClass));
     mPassengerSlotClass = pBase->mPassengerSlotClass;
     mNumPassengerSlots = pBase->mNumPassengerSlots;
     mExplosion = pBase->mExplosion;
@@ -716,10 +696,7 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     mBlurEffect = pBase->mBlurEffect;
     mBlurStartV = pBase->mBlurStartV;
     mNumWakeEmitters = pBase->mNumWakeEmitters;
-    for (int i = 0; i < 6; ++i)
-    {
-        mWakeEmitterPrimitives[i] = pBase->mWakeEmitterPrimitives[i];
-    }
+    memcpy(mWakeEmitterPrimitives, pBase->mWakeEmitterPrimitives, sizeof(mWakeEmitterPrimitives));
     mLODClass = 1;
     mSoundCloseToGroundHeight = pBase->mSoundCloseToGroundHeight;
     mSoundCloseToGround = pBase->mSoundCloseToGround;
@@ -757,26 +734,11 @@ EntityHoverClass::EntityHoverClass(EntityHoverClass* pBase, unsigned int uHash)
     mJumpEnergyPerSec = pBase->mJumpEnergyPerSec;
     mJumpMinSpeedMult = pBase->mJumpMinSpeedMult;
     mWheelCount = pBase->mWheelCount;
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelTextureId[i] = pBase->mWheelTextureId[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelVelocToU[i] = pBase->mWheelVelocToU[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelVelocToV[i] = pBase->mWheelVelocToV[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelOmegaToU[i] = pBase->mWheelOmegaToU[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWheelOmegaToV[i] = pBase->mWheelOmegaToV[i];
-    }
+    memcpy(mWheelTextureId, pBase->mWheelTextureId, sizeof(mWheelTextureId));
+    memcpy(mWheelVelocToU, pBase->mWheelVelocToU, sizeof(mWheelVelocToU));
+    memcpy(mWheelVelocToV, pBase->mWheelVelocToV, sizeof(mWheelVelocToV));
+    memcpy(mWheelOmegaToU, pBase->mWheelOmegaToU, sizeof(mWheelOmegaToU));
+    memcpy(mWheelOmegaToV, pBase->mWheelOmegaToV, sizeof(mWheelOmegaToV));
 }
 
 // FUNCTION: SWBF2 0x004ca890
@@ -2544,13 +2506,13 @@ void EntityHover::Render(unsigned char ucViewport, float fDist, unsigned int uiF
         return;
     }
 
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
 
     if (mClass->mSuspensionCenterHash)
@@ -2566,7 +2528,7 @@ void EntityHover::Render(unsigned char ucViewport, float fDist, unsigned int uiF
                 mCenter = *pCenter;
             }
             PblVector3 vPos = mClass->mBaseSuspensionPos;
-            vPos.y += mCurrSuspensionOffset;
+            vPos.y = mCurrSuspensionOffset + vPos.y;
             mCenter.SetTranslation(vPos);
         }
 
@@ -2580,20 +2542,15 @@ void EntityHover::Render(unsigned char ucViewport, float fDist, unsigned int uiF
                 mPose.Store(mClass->mSuspensionLeftArmHash, &mLeft);
             }
             const PblVector3& vPivot = mClass->mLeftSuspensionPos;
-            PblVector3 vTarget(0.0f, vPivot.y + mCurrSuspensionOffset, vPivot.z);
-            PblMatrix mArm = DirectionMatrix(
-                PblVector3(vTarget.x - vPivot.x, vTarget.y - vPivot.y, vTarget.z - vPivot.z), gVectorUnitY, vPivot);
-            mLeft.m[0][0] = -mArm.m[2][0];
-            mLeft.m[0][1] = -mArm.m[2][1];
-            mLeft.m[0][2] = -mArm.m[2][2];
+            PblVector3 vTarget = vPivot;
+            vTarget.x = 0.0f;
+            vTarget.y = mCurrSuspensionOffset + vTarget.y;
+            PblMatrix mArm = DirectionMatrix(vTarget - vPivot, gVectorUnitY, vPivot);
+            mLeft[0] = -mArm[2];
             mLeft.m[0][3] = 0.0f;
-            mLeft.m[1][0] = mArm.m[1][0];
-            mLeft.m[1][1] = mArm.m[1][1];
-            mLeft.m[1][2] = mArm.m[1][2];
+            mLeft[1] = mArm[1];
             mLeft.m[1][3] = 0.0f;
-            mLeft.m[2][0] = mArm.m[0][0];
-            mLeft.m[2][1] = mArm.m[0][1];
-            mLeft.m[2][2] = mArm.m[0][2];
+            mLeft[2] = mArm[0];
             mLeft.m[2][3] = 0.0f;
             mLeft.SetTranslation(mClass->mLeftSuspensionPos);
         }
@@ -2608,20 +2565,15 @@ void EntityHover::Render(unsigned char ucViewport, float fDist, unsigned int uiF
                 mPose.Store(mClass->mSuspensionRightArmHash, &mRight);
             }
             const PblVector3& vPivot = mClass->mRightSuspensionPos;
-            PblVector3 vTarget(0.0f, vPivot.y + mCurrSuspensionOffset, vPivot.z);
-            PblMatrix mArm = DirectionMatrix(
-                PblVector3(vTarget.x - vPivot.x, vTarget.y - vPivot.y, vTarget.z - vPivot.z), gVectorUnitY, vPivot);
-            mRight.m[0][0] = mArm.m[2][0];
-            mRight.m[0][1] = mArm.m[2][1];
-            mRight.m[0][2] = mArm.m[2][2];
+            PblVector3 vTarget = vPivot;
+            vTarget.x = 0.0f;
+            vTarget.y = mCurrSuspensionOffset + vTarget.y;
+            PblMatrix mArm = DirectionMatrix(vTarget - vPivot, gVectorUnitY, vPivot);
+            mRight[0] = mArm[2];
             mRight.m[0][3] = 0.0f;
-            mRight.m[1][0] = mArm.m[1][0];
-            mRight.m[1][1] = mArm.m[1][1];
-            mRight.m[1][2] = mArm.m[1][2];
+            mRight[1] = mArm[1];
             mRight.m[1][3] = 0.0f;
-            mRight.m[2][0] = -mArm.m[0][0];
-            mRight.m[2][1] = -mArm.m[0][1];
-            mRight.m[2][2] = -mArm.m[0][2];
+            mRight[2] = -mArm[0];
             mRight.m[2][3] = 0.0f;
             mRight.SetTranslation(mClass->mRightSuspensionPos);
         }
@@ -2786,9 +2738,7 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
             float fAlong = mEyeDir.y * (mEyePoint.y - mTargetInfo.mAimStart.y) +
                            mEyeDir.x * (mEyePoint.x - mTargetInfo.mAimStart.x) +
                            mEyeDir.z * (mEyePoint.z - mTargetInfo.mAimStart.z);
-            mTargetInfo.mAimStart.x = mTargetInfo.mAimStart.x + mEyeDir.x * fAlong;
-            mTargetInfo.mAimStart.y = mEyeDir.y * fAlong + mTargetInfo.mAimStart.y;
-            mTargetInfo.mAimStart.z = mEyeDir.z * fAlong + mTargetInfo.mAimStart.z;
+            mTargetInfo.mAimStart += mEyeDir * fAlong;
         }
         const GameObject* pIgnore = this;
         CollisionObject* pHit;
@@ -2991,18 +2941,14 @@ void EntityHover::UpdateColliderBody(int iBody, float fDeltaTime)
             {
                 float fRatio = fDepth / mClass->mColliderBodyInfo[iBody].mSpringLength;
                 float fCompress = 1.0f > fRatio ? fRatio : 1.0f;
-                if (!(mColliderBody[iBody].mOverlap > fCompress))
-                {
-                    mColliderBody[iBody].mOverlap = fCompress;
-                }
+                mColliderBody[iBody].mOverlap =
+                    mColliderBody[iBody].mOverlap > fCompress ? mColliderBody[iBody].mOverlap : fCompress;
                 if (fRatio > 1.0f && 0.0f > mVelocity.y)
                 {
                     mVelocity.y *= 0.5f;
                     mVelocity.x *= 0.9f;
                     mVelocity.z *= 0.9f;
-                    mOmega.x *= 0.9f;
-                    mOmega.y *= 0.9f;
-                    mOmega.z *= 0.9f;
+                    mOmega = mOmega * 0.9f;
                 }
             }
         }
@@ -3017,9 +2963,9 @@ void EntityHover::UpdateColliderBody(int iBody, float fDeltaTime)
         mGroundRatio = 1.0f;
 
         const EntityHoverClass::ColliderBodyInfo& info = mClass->mColliderBodyInfo[iBody];
-        PblVector3 vUp = mMatrix.GetYAxis();
-        float fOverlap = mColliderBody[iBody].mOverlap;
-        float fClosing = mVelocity.y * vUp.y + mVelocity.x * vUp.x + mVelocity.z * vUp.z;
+        const PblVector3 vUp = mMatrix.GetYAxis();
+        const float fOverlap = mColliderBody[iBody].mOverlap;
+        float fClosing = DotProduct(mVelocity, vUp);
         if (!(0.0f > fClosing))
         {
             fClosing = 0.0f;
@@ -3110,20 +3056,14 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
         if (pOther->GetGameObject())
         {
             const PblVector3& vOtherVel = pOther->GetGameObject()->GetVelocity();
-            vRelVel.x -= vOtherVel.x;
-            vRelVel.y -= vOtherVel.y;
-            vRelVel.z -= vOtherVel.z;
+            vRelVel = vRelVel - vOtherVel;
         }
         const PblVector3& vNormal = pResult->mSeparationNormal;
         float fApproach = vNormal.y * vRelVel.y + vRelVel.x * vNormal.x + vNormal.z * vRelVel.z;
 
         if (pOther->GetCollisionType() != COLL_SOFT)
         {
-            if (pOther->GetCollisionType() == COLL_RIGID)
-            {
-                ApplyCollisionImpact(fApproach, vNormal, pOther);
-            }
-            else
+            if (pOther->GetCollisionType() != COLL_RIGID)
             {
                 int iBody = UpdateCollisionOnColliderBody(pResult->mColliderId, pResult->mOverlap, vNormal);
                 if (iBody >= 0)
@@ -3150,6 +3090,10 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
                     }
                     return true;
                 }
+            }
+            else
+            {
+                ApplyCollisionImpact(fApproach, vNormal, pOther);
             }
 
             if (0.0f > fApproach && IsAlive())
@@ -3302,10 +3246,10 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
             PblVector3 vToDest(vDest.x - vPos.x, 0.0001f, vDest.z - vPos.z);
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToDest));
-            PblVector3 vStart(vPos.x + 0.0f, vPos.y + 1.0f, vPos.z + 0.0f);
-            PblVector3 vEnd(vDir.x * fLook + vStart.x, vDir.y * fLook + vStart.y, vDir.z * fLook + vStart.z);
-            PblVector3 vRay(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
-            float fLength = sqrtf(vRay.x * vRay.x + vRay.y * vRay.y + vRay.z * vRay.z);
+            PblVector3 vStart = vPos + PblVector3(0.0f, 1.0f, 0.0f);
+            PblVector3 vEnd = vDir * fLook + vStart;
+            PblVector3 vRay = vEnd - vStart;
+            float fLength = Length(vRay);
             PblVector3 vRayDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRayDir), reinterpret_cast<const D3DXVECTOR3*>(&vRay));
             if (1.0f > CollisionManager::RayHit(vStart, vRayDir, fLength, pHit, &vHitNormal, pIgnore, 2, 0x43b,
@@ -3313,17 +3257,13 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
             {
                 PblVector3 vSide(-vDir.z, 0.0f, vDir.x);
                 PblVector3 vOffset(vSide.x * fLook * 0.25f, vSide.y * fLook * 0.25f, vSide.z * fLook * 0.25f);
-                if (vSide.x * vHitNormal.x + vHitNormal.y * vSide.y + vSide.z * vHitNormal.z > 0.0f)
+                if (DotProduct(vSide, vHitNormal) > 0.0f)
                 {
-                    vDest.x += vOffset.x;
-                    vDest.y += vOffset.y;
-                    vDest.z += vOffset.z;
+                    vDest += vOffset;
                 }
                 else
                 {
-                    vDest.x -= vOffset.x;
-                    vDest.y -= vOffset.y;
-                    vDest.z -= vOffset.z;
+                    vDest -= vOffset;
                 }
                 fThrustScale = 0.5f;
                 dest.mPos = vDest;
@@ -3370,7 +3310,7 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
     if (mStuckState == 1)
     {
         const PblVector3& vFront = GetMatrix().GetZAxis();
-        if (0.0f > mStuckDir.y * vFront.y + mStuckDir.x * vFront.x + mStuckDir.z * vFront.z)
+        if (0.0f > DotProduct(mStuckDir, vFront))
         {
             mStuckState = 2;
             mStuckTimer = GameLoop::GetMissionTime();
@@ -3582,7 +3522,8 @@ void EntityHover::SetupInterpolatedCameraTrackMatrix(PblMatrix& rMatrix)
 // FUNCTION: SWBF2 0x004c7800
 void EntityHover::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
 {
-    PblMatrix mTarget = GetSmoothedMatrix();
+    PblMatrix mTarget;
+    mTarget = GetSmoothedMatrix();
     if (IsAlive() && (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView())))
     {
         const PblVector3 vBack(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z);
@@ -3595,14 +3536,13 @@ void EntityHover::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     }
     else
     {
+        PblVector3 vOrigin = mTarget.GetTranslation();
         if (mClass->mSuspensionCenterHash)
         {
             const float fRise = (mCurrSuspensionOffset - mClass->mMidSuspensionOffset) * 1.75f;
-            mTarget.m[3][0] += mTarget.m[1][0] * fRise;
-            mTarget.m[3][1] += mTarget.m[1][1] * fRise;
-            mTarget.m[3][2] += mTarget.m[1][2] * fRise;
+            vOrigin = vOrigin + mTarget.GetYAxis() * fRise;
         }
-        mTarget.m[3][3] = 1.0f;
+        mTarget.SetTranslation(vOrigin);
         PblMatrix mUnbank;
         mUnbank.SetRotateZ(-mBankRollAngle);
         mUnbank.RotateX(-mBankPitchAngle);

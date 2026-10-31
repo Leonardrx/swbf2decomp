@@ -1095,19 +1095,29 @@ int ScriptCB_GetPersonalStats(lua_State* L)
                           pStats->GetCriticalShots(-1, 1) + pStats->GetCriticalShots(-1, 0));
             break;
         case 8:
-        {
-            int iTeam = (pStats->GetNemesisVal(-1, 0) > pStats->GetNemesisVal(-1, 1)) ? 0 : 1;
-            Stats_AddPlayerAward(RedLocalizeDB::Find(0xa39860dcu, false), pStats->GetNemesis(-1, iTeam),
-                                 pStats->GetNemesisVal(-1, iTeam));
+            if (pStats->GetNemesisVal(-1, 0) > pStats->GetNemesisVal(-1, 1))
+            {
+                Stats_AddPlayerAward(RedLocalizeDB::Find(0xa39860dcu, false), pStats->GetNemesis(-1, 0),
+                                     pStats->GetNemesisVal(-1, 0));
+            }
+            else
+            {
+                Stats_AddPlayerAward(RedLocalizeDB::Find(0xa39860dcu, false), pStats->GetNemesis(-1, 1),
+                                     pStats->GetNemesisVal(-1, 1));
+            }
             break;
-        }
         case 9:
-        {
-            int iTeam = (pStats->GetBaitVal(-1, 0) > pStats->GetBaitVal(-1, 1)) ? 0 : 1;
-            Stats_AddPlayerAward(RedLocalizeDB::Find(0x1e7c34f0u, false), pStats->GetBait(-1, iTeam),
-                                 pStats->GetBaitVal(-1, iTeam));
+            if (pStats->GetBaitVal(-1, 0) > pStats->GetBaitVal(-1, 1))
+            {
+                Stats_AddPlayerAward(RedLocalizeDB::Find(0x1e7c34f0u, false), pStats->GetBait(-1, 0),
+                                     pStats->GetBaitVal(-1, 0));
+            }
+            else
+            {
+                Stats_AddPlayerAward(RedLocalizeDB::Find(0x1e7c34f0u, false), pStats->GetBait(-1, 1),
+                                     pStats->GetBaitVal(-1, 1));
+            }
             break;
-        }
         }
         ++i;
         lua_rawseti(LuaHelper::mState, -2, i);
@@ -1128,7 +1138,7 @@ int ScriptCB_GetAwardStats(lua_State* L)
         return 0;
     }
     int iSide = (int)luaL_checknumber(LuaHelper::mState, 1);
-    const char* pcTable = iSide ? "teamstats_awardsListbox_contentsR" : "teamstats_awardsListbox_contentsL";
+    const char* pcTable = (iSide == 0) ? "teamstats_awardsListbox_contentsL" : "teamstats_awardsListbox_contentsR";
 
     if (NetGame::IsEnabled() && NetGame::IsClient() && !PlayerStats::mGotMPStats)
     {
@@ -1161,8 +1171,8 @@ int ScriptCB_GetAwardStats(lua_State* L)
     for (int i = iFirst; i < iEnd; ++i)
     {
         lua_newtable(LuaHelper::mState);
-        Character* pCharacter = 0;
         int iValue = 0;
+        Character* pCharacter = 0;
         switch (i)
         {
         case 0:

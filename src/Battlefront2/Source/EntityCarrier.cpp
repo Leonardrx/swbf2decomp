@@ -506,9 +506,8 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         const PblMatrix& mBody = GetMatrix();
         PblVector3 vBack(-mBody.m[2][0], -mBody.m[2][1], -mBody.m[2][2]);
         const PblVector3& vCenter = GetCollisionCenter();
-        PblVector3 vOffset(vCamera.x - vCenter.x, vCamera.y - vCenter.y, vCamera.z - vCenter.z);
-        if (vOffset.y * vBack.y + vOffset.x * vBack.x + vOffset.z * vBack.z -
-                mClass->mGuidedMissileDeathCamMinDistance < 0.0f)
+        if ((vCamera.y - vCenter.y) * vBack.y + (vCamera.x - vCenter.x) * vBack.x +
+                (vCamera.z - vCenter.z) * vBack.z - mClass->mGuidedMissileDeathCamMinDistance < 0.0f)
         {
             float fPullback = mClass->mGuidedMissileDeathCamPullbackSpeed * fDeltaTime;
             const PblMatrix& mNow = GetMatrix();
@@ -549,22 +548,28 @@ void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
 
         if (mTowCableWalker != 0)
         {
-            CameraTrackSetting& rSettings = mClass->mCameraSettings;
-            const PblVector3 vSavedOffset = rSettings.mCameraTrackOffset;
+            const PblVector3 vSavedOffset = mClass->mCameraSettings.mCameraTrackOffset;
             PblVector3 vPos = mBody.GetTranslation();
             const PblVector3& vWalker = mTowCableWalker->GetCollisionObject()->GetPosition();
-            PblVector3 vToCamera(vPos.x - vWalker.x, vPos.y - vWalker.y, vPos.z - vWalker.z);
+            PblVector3 vToCamera = vPos - vWalker;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vToCamera));
             const float fSide = vPos.x * mTarget.m[0][0] + vPos.y * mTarget.m[0][1] + vPos.z * mTarget.m[0][2];
-            rSettings.mCameraTrackOffset.y = 0.5f;
-            rSettings.mCameraTrackOffset.z = 8.0f;
-            rSettings.mCameraTrackOffset.x = fSide > 0.0f ? 2.0f : -2.0f;
+            mClass->mCameraSettings.mCameraTrackOffset.y = 0.5f;
+            mClass->mCameraSettings.mCameraTrackOffset.z = 8.0f;
+            if (fSide > 0.0f)
+            {
+                mClass->mCameraSettings.mCameraTrackOffset.x = 2.0f;
+            }
+            else
+            {
+                mClass->mCameraSettings.mCameraTrackOffset.x = -2.0f;
+            }
             const float fRadius = GetCollisionRadius();
-            rSettings.mCameraTrackOffset.x *= fRadius;
-            rSettings.mCameraTrackOffset.y = fRadius * rSettings.mCameraTrackOffset.y;
-            rSettings.mCameraTrackOffset.z = fRadius * rSettings.mCameraTrackOffset.z;
-            rSettings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody, mEyeDir, 1.0f, 1.0f, this);
-            rSettings.mCameraTrackOffset = vSavedOffset;
+            mClass->mCameraSettings.mCameraTrackOffset.x *= fRadius;
+            mClass->mCameraSettings.mCameraTrackOffset.y = fRadius * mClass->mCameraSettings.mCameraTrackOffset.y;
+            mClass->mCameraSettings.mCameraTrackOffset.z = fRadius * mClass->mCameraSettings.mCameraTrackOffset.z;
+            mClass->mCameraSettings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody, mEyeDir, 1.0f, 1.0f, this);
+            mClass->mCameraSettings.mCameraTrackOffset = vSavedOffset;
             mTrickCameraInterpDir = 0.0f;
             mTrickCameraInterpDetach = 0.0f;
         }

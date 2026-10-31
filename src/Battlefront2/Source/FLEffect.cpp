@@ -781,13 +781,11 @@ void FLEffectObject::_UpdateWorldMatrix()
 
         if (m_pmAttachedToMatrix)
         {
-            D3DXMatrixMultiply((D3DXMATRIX*)&m_mWorldMatrix, (const D3DXMATRIX*)m_pmAttachedToMatrix,
-                               (const D3DXMATRIX*)&m_mWorldMatrix);
+            m_mWorldMatrix = *m_pmAttachedToMatrix * m_mWorldMatrix;
         }
         if (m_pmLocalOffsetMatrix)
         {
-            D3DXMatrixMultiply((D3DXMATRIX*)&m_mWorldMatrix, (const D3DXMATRIX*)m_pmLocalOffsetMatrix,
-                               (const D3DXMATRIX*)&m_mWorldMatrix);
+            m_mWorldMatrix = *m_pmLocalOffsetMatrix * m_mWorldMatrix;
         }
         UpdatedWorldMatrix();
     }
@@ -797,9 +795,10 @@ void FLEffectObject::_UpdateWorldMatrix()
         {
             if (m_pmLocalOffsetMatrix)
             {
-                m_mWorldMatrix.m[3][0] = m_pmLocalOffsetMatrix->m[3][0] + m_pvAttachedToVector->x;
-                m_mWorldMatrix.m[3][1] = m_pvAttachedToVector->y + m_pmLocalOffsetMatrix->m[3][1];
-                m_mWorldMatrix.m[3][2] = m_pvAttachedToVector->z + m_pmLocalOffsetMatrix->m[3][2];
+                const PblVector3 vPos(m_pmLocalOffsetMatrix->m[3][0] + m_pvAttachedToVector->x,
+                                      m_pvAttachedToVector->y + m_pmLocalOffsetMatrix->m[3][1],
+                                      m_pvAttachedToVector->z + m_pmLocalOffsetMatrix->m[3][2]);
+                m_mWorldMatrix[3] = vPos;
             }
             else
             {
@@ -813,8 +812,7 @@ void FLEffectObject::_UpdateWorldMatrix()
     {
         if (m_pmLocalOffsetMatrix)
         {
-            D3DXMatrixMultiply((D3DXMATRIX*)&m_mWorldMatrix, (const D3DXMATRIX*)m_pmLocalOffsetMatrix,
-                               (const D3DXMATRIX*)m_pmAttachedToMatrix);
+            m_mWorldMatrix = *m_pmLocalOffsetMatrix * *m_pmAttachedToMatrix;
         }
         else
         {

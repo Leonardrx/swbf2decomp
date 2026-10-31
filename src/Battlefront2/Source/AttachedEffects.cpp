@@ -91,51 +91,49 @@ AttachedEffects* AttachedEffectsClass::BuildEffects(const EntityGeometry* pGeome
 
     for (unsigned int i = 0; i < m_uiNumAttached; ++i)
     {
-        const AttachClassData& classData = m_aAttachClassData[i];
-        AttachedEffects::AttachData& data = pEffects->m_aAttachData[i];
-
-        if (classData.bIsOdf)
+        if (m_aAttachClassData[i].bIsOdf)
         {
             EntityDesc desc;
-            desc.mMatrix = gMatrixIdentity;
             desc.mMatrix = pGeometry->GetMatrix();
-            Entity* pEntity = classData.pOdfClass->Build(desc);
+            Entity* pEntity = m_aAttachClassData[i].pOdfClass->Build(desc);
             if (pEntity->IsRtti(EntityLight::GetRtti()))
             {
-                data.pEffect = static_cast<EntityLight*>(pEntity);
+                pEffects->m_aAttachData[i].pEffect = static_cast<EntityLight*>(pEntity);
             }
-            data.fTimer = 0.0f;
-            if (data.pEffect && classData.uiNumParams >= 1)
+            pEffects->m_aAttachData[i].fTimer = 0.0f;
+            if (pEffects->m_aAttachData[i].pEffect && m_aAttachClassData[i].uiNumParams >= 1)
             {
                 char acBuffer[64];
-                sprintf(acBuffer, "%f", classData.afParam[0] > 0.0f ? classData.afParam[0] : 0.0f);
+                sprintf(acBuffer, "%f",
+                        m_aAttachClassData[i].afParam[0] > 0.0f ? m_aAttachClassData[i].afParam[0] : 0.0f);
                 pEntity->SetProperty(0xE6915CF6, acBuffer);
             }
         }
         else
         {
             bool bDelayed = false;
-            if (classData.uiNumParams >= 1)
+            if (m_aAttachClassData[i].uiNumParams >= 1)
             {
-                const float fMin = classData.afParam[0];
-                const float fMax = classData.uiNumParams >= 2 ? classData.afParam[1] : fMin;
+                const float fMin = m_aAttachClassData[i].afParam[0];
+                const float fMax = m_aAttachClassData[i].uiNumParams >= 2 ? m_aAttachClassData[i].afParam[1] : fMin;
                 if (fMax > 0.0f && fMin >= 0.0f)
                 {
-                    data.fTimer = -(PblRandom::GetGlobalFloat() * fMax);
-                    data.pEffect = 0;
+                    pEffects->m_aAttachData[i].fTimer = -(PblRandom::_Global.GetFloat() * fMax);
+                    pEffects->m_aAttachData[i].pEffect = 0;
                     bDelayed = true;
                 }
             }
             if (!bDelayed)
             {
-                data.fTimer = 0.0f;
-                data.pEffect = classData.pEffectClass->BuildEffect();
+                pEffects->m_aAttachData[i].fTimer = 0.0f;
+                pEffects->m_aAttachData[i].pEffect = m_aAttachClassData[i].pEffectClass->BuildEffect();
             }
         }
 
-        if (data.pEffect)
+        if (pEffects->m_aAttachData[i].pEffect)
         {
-            data.pEffect->AttachEffectToObject(pGeometry, classData.uiBoneName, false);
+            pEffects->m_aAttachData[i].pEffect->AttachEffectToObject(pGeometry, m_aAttachClassData[i].uiBoneName,
+                                                                     false);
         }
     }
     return pEffects;
@@ -244,41 +242,41 @@ bool AttachedEffects::Update(float fDeltaTime)
 
     for (unsigned int i = 0; i < m_pClass->m_uiNumAttached; ++i)
     {
-        const AttachedEffectsClass::AttachClassData& classData = m_pClass->m_aAttachClassData[i];
-        AttachData& data = m_aAttachData[i];
-
-        if (!classData.bIsOdf && !data.pEffect)
+        if (!m_pClass->m_aAttachClassData[i].bIsOdf && !m_aAttachData[i].pEffect)
         {
-            data.fTimer += fDeltaTime;
-            if (classData.uiNumParams >= 1)
+            m_aAttachData[i].fTimer += fDeltaTime;
+            if (m_pClass->m_aAttachClassData[i].uiNumParams >= 1)
             {
-                if (data.fTimer - fDeltaTime > 0.0f)
+                if (m_aAttachData[i].fTimer - fDeltaTime > 0.0f)
                 {
-                    const float fMin = classData.afParam[0] > 0.0f ? classData.afParam[0] : 0.0f;
-                    float fMax = fMin;
-                    if (classData.uiNumParams >= 2 && classData.afParam[1] > fMin)
-                    {
-                        fMax = classData.afParam[1];
-                    }
-                    data.fTimer = -fMin;
+                    const float fMin = m_pClass->m_aAttachClassData[i].afParam[0] > 0.0f
+                                           ? m_pClass->m_aAttachClassData[i].afParam[0]
+                                           : 0.0f;
+                    const float fMax = (m_pClass->m_aAttachClassData[i].uiNumParams >= 2 &&
+                                        m_pClass->m_aAttachClassData[i].afParam[1] > fMin)
+                                           ? m_pClass->m_aAttachClassData[i].afParam[1]
+                                           : fMin;
+                    m_aAttachData[i].fTimer = -fMin;
                     if (fMax > fMin)
                     {
-                        data.fTimer -= PblRandom::GetGlobalFloat() * (fMax - fMin);
+                        m_aAttachData[i].fTimer -= PblRandom::GetGlobalFloat() * (fMax - fMin);
                     }
                 }
-                else if (data.fTimer > 0.0f)
+                else if (m_aAttachData[i].fTimer > 0.0f)
                 {
-                    data.pEffect = classData.pEffectClass->BuildEffect();
-                    if (data.pEffect)
+                    m_aAttachData[i].pEffect = m_pClass->m_aAttachClassData[i].pEffectClass->BuildEffect();
+                    if (m_aAttachData[i].pEffect)
                     {
-                        data.pEffect->AttachEffectToObject(pGeometry, classData.uiBoneName, false);
+                        m_aAttachData[i].pEffect->AttachEffectToObject(
+                            pGeometry, m_pClass->m_aAttachClassData[i].uiBoneName, false);
                     }
                 }
             }
         }
-        else if (m_pClass->m_bDynamic && data.pEffect)
+        else if (m_pClass->m_bDynamic && m_aAttachData[i].pEffect)
         {
-            data.pEffect->AttachEffectToObject(pGeometry, classData.uiBoneName, false);
+            m_aAttachData[i].pEffect->AttachEffectToObject(
+                pGeometry, m_pClass->m_aAttachClassData[i].uiBoneName, false);
         }
     }
     return true;

@@ -425,7 +425,7 @@ void SoldierAnimator::SetAction(SoldierState::SoldierState eState, const PblMatr
         }
         if (m_bUseDirectionalJumps && fSide * fSide + fForward * fForward >= 4.0f)
         {
-            float fAbsSide = fabsf(fSide);
+            float fAbsSide = (fSide < 0.0f ? -fSide : fSide);
             if (fForward > fAbsSide)
             {
                 mAction = SoldierAnimType::JUMP_FORWARD;
@@ -478,7 +478,7 @@ void SoldierAnimator::SetAction(SoldierState::SoldierState eState, const PblMatr
         float fForward = z.y * mMovement.y + z.x * mMovement.x + z.z * mMovement.z;
         float fSide = mMovement.y * x.y + mMovement.x * x.x + mMovement.z * x.z;
         mActionTime = 0.0f;
-        if (fabsf(fForward) > fabsf(fSide))
+        if ((fForward < 0.0f ? -fForward : fForward) > (fSide < 0.0f ? -fSide : fSide))
         {
             mAction = fForward < 0.0f ? SoldierAnimType::FLY_BACKWARD : SoldierAnimType::FLY_FORWARD;
         }
@@ -496,7 +496,7 @@ void SoldierAnimator::SetAction(SoldierState::SoldierState eState, const PblMatr
                    mMovement.z * mLegMatrix.m[0][2];
         float fZ = mLegMatrix.m[2][1] * mMovement.y + mLegMatrix.m[2][0] * mMovement.x +
                    mLegMatrix.m[2][2] * mMovement.z;
-        if (fabsf(fX) > 0.05f || fabsf(fZ) > 0.05f)
+        if ((fX < 0.0f ? -fX : fX) > 0.05f || (fZ < 0.0f ? -fZ : fZ) > 0.05f)
         {
             mLegAngle = atan2f(fX, fZ);
         }
@@ -544,14 +544,15 @@ void SoldierAnimator::SetAction(SoldierState::SoldierState eState, const PblMatr
                 float fCycles = mActionTime /
                                 ((float)(pAnim->GetAnimationNumFrames() - 1) * (1.0f / 30.0f) * 0.5f);
                 float fPhase = fCycles - (float)(int)fCycles;
-                bool bMid = fPhase > 0.4f && fPhase < 0.9f;
                 if (mAction == SoldierAnimType::TUMBLE_FORWARD)
                 {
-                    mAction = bMid ? SoldierAnimType::LAND_BACK : SoldierAnimType::LAND_FRONT;
+                    mAction = (fPhase > 0.4f && fPhase < 0.9f) ? SoldierAnimType::LAND_BACK
+                                                               : SoldierAnimType::LAND_FRONT;
                 }
                 else
                 {
-                    mAction = bMid ? SoldierAnimType::LAND_FRONT : SoldierAnimType::LAND_BACK;
+                    mAction = (fPhase > 0.4f && fPhase < 0.9f) ? SoldierAnimType::LAND_FRONT
+                                                               : SoldierAnimType::LAND_BACK;
                 }
             }
             else if (mRotAngle > 3.1415927f)
@@ -1154,11 +1155,7 @@ void SoldierAnimator::ApplyProceduralAnimationAndBuildWorldMatrices(float fDelta
     }
 
     float fBlend;
-    if (mAnimationTimerUpper < mBlendDurationRotate)
-    {
-        fBlend = mAnimationTimerUpper / mBlendDurationRotate;
-    }
-    else
+    if (mAnimationTimerUpper >= mBlendDurationRotate)
     {
         m_uiAimState &= ~0x30;
         if (!(m_uiAimState & 0x33))
@@ -1167,6 +1164,10 @@ void SoldierAnimator::ApplyProceduralAnimationAndBuildWorldMatrices(float fDelta
             return;
         }
         fBlend = 1.0f;
+    }
+    else
+    {
+        fBlend = mAnimationTimerUpper / mBlendDurationRotate;
     }
 
     unsigned int uiAimState = m_uiAimState;
@@ -1220,27 +1221,29 @@ void SoldierAnimator::ApplyProceduralAnimationAndBuildWorldMatrices(float fDelta
         }
     }
 
+    float fPitchSin = mLegMatrix.GetYAxis().y * mAimDir.y + mLegMatrix.GetYAxis().x * mAimDir.x +
+                      mLegMatrix.GetYAxis().z * mAimDir.z;
     float fYaw = atan2f(mLegMatrix.GetXAxis().x * mAimDir.x + mLegMatrix.GetXAxis().y * mAimDir.y +
                             mLegMatrix.GetXAxis().z * mAimDir.z,
                         mLegMatrix.GetZAxis().x * mAimDir.x + mLegMatrix.GetZAxis().y * mAimDir.y +
                             mLegMatrix.GetZAxis().z * mAimDir.z);
-    float fPitch = -asinf(mLegMatrix.GetYAxis().x * mAimDir.x + mLegMatrix.GetYAxis().y * mAimDir.y +
-                          mLegMatrix.GetYAxis().z * mAimDir.z);
+    float fPitch = -asinf(fPitchSin);
 
     float fLegAngle = mLegAngle;
     float fYawOffset = fYaw - fLegAngle;
-    float fClampedYaw = (fYawOffset < fYawMin) ? fYawMin : (fYawOffset > fYawMax) ? fYawMax : fYawOffset;
-    float fClampedPitch = (fPitch < fPitchMin) ? fPitchMin : (fPitch > fPitchMax) ? fPitchMax : fPitch;
     float fRate;
     if (mSoldierAction == SoldierState::ARMED_PASSENGER || (fRate = fDeltaTime * 4.5f) >= 1.0f)
     {
-        mAimYAngle = fClampedYaw + fLegAngle;
-        mAimXAngle = fClampedPitch;
+        mAimYAngle = ((fYawOffset < fYawMin) ? fYawMin : (fYawOffset > fYawMax) ? fYawMax : fYawOffset) + fLegAngle;
+        mAimXAngle = (fPitch < fPitchMin) ? fPitchMin : (fPitch > fPitchMax) ? fPitchMax : fPitch;
     }
     else
     {
-        mAimYAngle += (fClampedYaw + fLegAngle - mAimYAngle) * fRate;
-        mAimXAngle += (fClampedPitch - mAimXAngle) * fRate;
+        mAimYAngle += (((fYawOffset < fYawMin) ? fYawMin : (fYawOffset > fYawMax) ? fYawMax : fYawOffset) +
+                       fLegAngle - mAimYAngle) *
+                      fRate;
+        mAimXAngle += (((fPitch < fPitchMin) ? fPitchMin : (fPitch > fPitchMax) ? fPitchMax : fPitch) - mAimXAngle) *
+                      fRate;
     }
     if (mPosture == SoldierAnimType::PRONE && mAimXAngle < 0.0f)
     {
@@ -1343,9 +1346,9 @@ bool SoldierAnimator::UpdateActionAnimation(SoldierAnimType::ActionAnimation eAc
     }
 
     bool bFinished = true;
-    const int iLastFrame = mZephyrPoseDynLower.m_kAnim.m_pkAnim->GetNumFrames() - 1;
     if ((m_pAnimLower && m_pAnimLower->m_pAnimData->m_uiLoop != SoldierAnimationData::LOOP_END) ||
-        (int)((float)iLastFrame * mZephyrPoseDynLower.m_fCurT) < iLastFrame)
+        (int)((float)(mZephyrPoseDynLower.m_kAnim.m_pkAnim->GetNumFrames() - 1) * mZephyrPoseDynLower.m_fCurT) <
+            mZephyrPoseDynLower.m_kAnim.m_pkAnim->GetNumFrames() - 1)
     {
         bFinished = false;
     }
@@ -1475,7 +1478,15 @@ void SoldierAnimator::UpdateMovementAnimation(float fDeltaTime, const ZephyrAnim
     float fSide = 0.0f;
     float fTurn = 0.0f;
 
-    if (fDeltaTime > 0.0f)
+    if (fDeltaTime <= 0.0f)
+    {
+        eMove = mMoveAnimation;
+        if (eMove > SoldierAnimType::TURN_RIGHT)
+        {
+            eNewMove = eMove;
+        }
+    }
+    else
     {
         if (mSoldierAction == SoldierState::ARMED_PASSENGER)
         {
@@ -1537,14 +1548,6 @@ void SoldierAnimator::UpdateMovementAnimation(float fDeltaTime, const ZephyrAnim
                 }
             }
             mLegDirection = mLegMatrix.GetZAxis();
-        }
-    }
-    else
-    {
-        eMove = mMoveAnimation;
-        if (eMove > SoldierAnimType::TURN_RIGHT)
-        {
-            eNewMove = eMove;
         }
     }
 
@@ -1880,14 +1883,14 @@ SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float f
     }
 
     float fSpeedSq = fSide * fSide + fForward * fForward;
-    if (mMoveAnimation != SoldierAnimType::IDLE)
+    if (mMoveAnimation == SoldierAnimType::IDLE)
     {
-        if (fSpeedSq < 0.2f * 0.2f)
+        if (fSpeedSq < 0.3f * 0.3f)
         {
             return SoldierAnimType::IDLE;
         }
     }
-    else if (fSpeedSq < 0.3f * 0.3f)
+    else if (fSpeedSq < 0.2f * 0.2f)
     {
         return SoldierAnimType::IDLE;
     }
@@ -1895,18 +1898,29 @@ SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float f
     bool bAlert = m_bAlert;
     const SoldierAnimatorClass* pClass = SoldierAnimatorClass::Instance();
     const SoldierAnimation* apAnim[SoldierAnimType::NUM_MOVEMENT_ANIMATIONS] = { 0 };
-    for (int i = SoldierAnimType::WALK_FORWARD; i < SoldierAnimType::NUM_MOVEMENT_ANIMATIONS; ++i)
-    {
-        apAnim[i] = pClass->GetLowerBodyMovementAnimation((SoldierAnimType::MovementAnimation)i, mPosture,
-                                                          mWeaponAnimationMap, bAlert);
-    }
+    apAnim[SoldierAnimType::WALK_FORWARD] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_FORWARD, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::RUN_FORWARD] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_FORWARD, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::WALK_BACKWARD] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_BACKWARD, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::RUN_BACKWARD] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_BACKWARD, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::WALK_LEFT] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_LEFT, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::RUN_LEFT] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_LEFT, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::WALK_RIGHT] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_RIGHT, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
+    apAnim[SoldierAnimType::RUN_RIGHT] = pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_RIGHT, mPosture,
+                                                                        mWeaponAnimationMap, bAlert);
 
     int eAnim = SoldierAnimType::WALK_FORWARD;
     if ((apAnim[SoldierAnimType::WALK_RIGHT] || apAnim[SoldierAnimType::RUN_RIGHT]) &&
         (apAnim[SoldierAnimType::WALK_LEFT] || apAnim[SoldierAnimType::RUN_LEFT]))
     {
         fAngle = atan2f(fSide, fForward);
-        if (fabsf(fSide) > fabsf(fForward))
+        if ((fSide < 0.0f ? -fSide : fSide) > (fForward < 0.0f ? -fForward : fForward))
         {
             if (fSide > 0.0f)
             {

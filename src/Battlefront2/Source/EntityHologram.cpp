@@ -673,74 +673,66 @@ void EntityHologram::Render(unsigned char ucViewport, float fDist, unsigned int 
         }
     }
 
-    if (!m_pHoloModel || m_fCurrentIntensity * pClass->m_fImageIntensity <= 0.0f)
+    if (m_pHoloModel && m_fCurrentIntensity * pClass->m_fImageIntensity > 0.0f)
     {
-        return;
-    }
+        const PblVector3& vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
+        const PblVector3& vPos = m_WorldMatrix.GetTranslation();
+        float fDX = vCamera.x - vPos.x;
+        float fDY = vCamera.y - vPos.y;
+        float fDZ = vCamera.z - vPos.z;
+        float fDistSq = fDY * fDY + fDX * fDX + fDZ * fDZ;
+        float fVisibleSq = pClass->m_fVisibleDistance * pClass->m_fVisibleDistance;
+        if (fDistSq < fVisibleSq)
+        {
+            float fFade = 1.0f;
+            if (fDistSq > kfFadeDrawDistanceSquared * fVisibleSq)
+            {
+                fFade = (1.0f - fDistSq / fVisibleSq) * kfFadeDrawDistanceFactor;
+            }
+            float fInvAspect = 1.0f / m_fAspect;
+            float fSize = m_fCurrentFadeInFactor * pClass->m_fSize;
 
-    const PblVector3& vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
-    const PblVector3& vPos = m_WorldMatrix.GetTranslation();
-    float fDX = vCamera.x - vPos.x;
-    float fDY = vCamera.y - vPos.y;
-    float fDZ = vCamera.z - vPos.z;
-    float fDistSq = fDY * fDY + fDX * fDX + fDZ * fDZ;
-    float fVisibleSq = pClass->m_fVisibleDistance * pClass->m_fVisibleDistance;
-    if (fVisibleSq <= fDistSq)
-    {
-        return;
-    }
+            PblMatrix mModel(gMatrixIdentity);
+            PblMatrix mTemp;
+            mModel.RotateX(m_fTilt);
+            mModel.RotateY(pClass->m_fRotateRate * m_fRotateTimer);
 
-    float fFade = 1.0f;
-    if (fDistSq > kfFadeDrawDistanceSquared * fVisibleSq)
-    {
-        fFade = (1.0f - fDistSq / fVisibleSq) * kfFadeDrawDistanceFactor;
-    }
-    float fInvAspect = 1.0f / m_fAspect;
-    float fSize = m_fCurrentFadeInFactor * pClass->m_fSize;
+            mModel.m[3][0] += 0.0f;
+            mModel.m[3][1] += pClass->m_fHeight;
+            mModel.m[3][2] += 0.0f;
+            float fScaleXZ = m_fAspect * fSize;
+            float fScaleY = fSize * fInvAspect;
+            mModel[0] = mModel[0] * fScaleXZ;
+            mModel.m[0][3] = 0.0f;
+            mModel[1] = mModel[1] * fScaleY;
+            mModel.m[1][3] = 0.0f;
+            mModel[2] = mModel[2] * fScaleXZ;
+            mModel.m[2][3] = 0.0f;
+            mModel *= m_WorldMatrix;
 
-    PblMatrix mModel(gMatrixIdentity);
-    PblMatrix mTemp;
-    mModel.RotateX(m_fTilt);
-    mModel.RotateY(pClass->m_fRotateRate * m_fRotateTimer);
-
-    float fScaleXZ = m_fAspect * fSize;
-    float fScaleY = fSize * fInvAspect;
-    for (int i = 0; i < 3; ++i)
-    {
-        float fScale = (i == 1) ? fScaleY : fScaleXZ;
-        mModel.m[i][0] *= fScale;
-        mModel.m[i][1] *= fScale;
-        mModel.m[i][2] *= fScale;
-        mModel.m[i][3] = 0.0f;
-    }
-    mModel.m[3][0] += 0.0f;
-    mModel.m[3][1] += pClass->m_fHeight;
-    mModel.m[3][2] += 0.0f;
-    mModel *= m_WorldMatrix;
-
-    float fNear, fUnused;
-    RedRenderer::GetCamera()->GetFrustum(fNear, fUnused, fUnused, fUnused);
-    const PblVector3& vZ = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
-    const PblVector3& vEye = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
-    const PblVector3& vModel = mModel.GetTranslation();
-    float fDepth =
-        -fNear - (vZ.y * (vModel.y - vEye.y) + vZ.x * (vModel.x - vEye.x) + vZ.z * (vModel.z - vEye.z));
-    if (fDepth <= 0.0f)
-    {
-        return;
-    }
-
-    if (fSize > fDepth)
-    {
-        fFade *= fDepth / fSize;
-    }
-    color.a = (unsigned char)(int)(color.a * m_fCurrentIntensity * pClass->m_fImageIntensity * fFade);
-    m_pHoloModel->Render(&mModel, 0, color, uiFlags | 0x10, 0);
-    if (bReflected)
-    {
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mModel), reinterpret_cast<const D3DXMATRIX*>(&mReflection));
-        mReflection = mTemp;
-        m_pHoloModel->Render(&mReflection, 0, color, (uiFlags & ~0x10000u) | 0x10000110, 0);
+            float fNear, fUnused;
+            RedRenderer::GetCamera()->GetFrustum(fNear, fUnused, fUnused, fUnused);
+            const PblVector3& vZ = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
+            const PblVector3& vEye = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
+            const PblVector3& vModel = mModel.GetTranslation();
+            float fDepth =
+                -fNear - (vZ.y * (vModel.y - vEye.y) + vZ.x * (vModel.x - vEye.x) + vZ.z * (vModel.z - vEye.z));
+            if (fDepth > 0.0f)
+            {
+                if (fSize > fDepth)
+                {
+                    fFade *= fDepth / fSize;
+                }
+                color.a = (unsigned char)(int)(color.a * m_fCurrentIntensity * pClass->m_fImageIntensity * fFade);
+                m_pHoloModel->Render(&mModel, 0, color, uiFlags | 0x10, 0);
+                if (bReflected)
+                {
+                    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mModel), reinterpret_cast<const D3DXMATRIX*>(&mReflection));
+                    mReflection = mTemp;
+                    m_pHoloModel->Render(&mReflection, 0, color, (uiFlags & ~0x10000u) | 0x10000110, 0);
+                }
+            }
+        }
     }
 }
 

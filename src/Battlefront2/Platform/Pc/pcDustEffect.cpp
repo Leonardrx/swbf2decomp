@@ -145,59 +145,53 @@ void DustEffectRenderData::AddParticle(const PblVector3& vPos, float fSize, cons
 
     if (RedRenderer::pcGetGeometryMode())
     {
-        DustVertexCompressed* v = (DustVertexCompressed*)m_pVertices;
+        DustVertexCompressed*& v = (DustVertexCompressed*&)m_pVertices;
         v->pos.SetPos(pos);
         v->color = color;
         v->uv.SetUV(1.0f, 0.0f);
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertexCompressed*)m_pVertices;
         v->pos.SetPos(pos + right);
         v->color = color;
         v->uv.SetUV(1.0f, 1.0f);
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertexCompressed*)m_pVertices;
         v->pos.SetPos((pos + up) + right);
         v->color = color;
         v->uv.SetUV(0.0f, 1.0f);
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertexCompressed*)m_pVertices;
         v->pos.SetPos(pos + up);
         v->color = color;
         v->uv.SetUV(0.0f, 0.0f);
-        m_pVertices = v + 1;
+        ++v;
     }
     else
     {
-        DustVertex* v = (DustVertex*)m_pVertices;
+        DustVertex*& v = (DustVertex*&)m_pVertices;
         v->pos = pos;
         v->color = color;
         v->u = 1.0f;
         v->v = 0.0f;
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertex*)m_pVertices;
         v->pos = pos + right;
         v->color = color;
         v->u = 1.0f;
         v->v = 1.0f;
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertex*)m_pVertices;
         v->pos = (pos + up) + right;
         v->color = color;
         v->u = 0.0f;
         v->v = 1.0f;
-        m_pVertices = v + 1;
+        ++v;
 
-        v = (DustVertex*)m_pVertices;
         v->pos = pos + up;
         v->color = color;
         v->u = 0.0f;
         v->v = 0.0f;
-        m_pVertices = v + 1;
+        ++v;
     }
 }
 

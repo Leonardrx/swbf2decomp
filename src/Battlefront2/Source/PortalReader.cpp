@@ -249,8 +249,8 @@ void PortalReader::Read(IPortal& portal, PblConfig& config, IManager& manager, c
 // FUNCTION: SWBF2 0x00622100
 void PortalReader::Read(IManager& manager, PblConfig& config)
 {
-    PblConfig cfg(config, true);
     int iNumPortals = 0;
+    PblConfig cfg(config, true);
 
     while (!cfg.IsDone())
     {
@@ -290,7 +290,7 @@ void PortalReader::Read(IManager& manager, PblConfig& config)
     for (PblHashTable<EntityEx, 1024>::Itor it = map.Begin(); it != map.End(); ++it)
     {
         EntityEx* pEntity = it;
-        if (pEntity && pEntity->IsRtti(EntityProp::GetRtti()))
+        if (pEntity && pEntity->IsRtti(EntityProp::rttiHashEntityProp))
         {
             IDisplayable& displayable = *static_cast<EntityProp*>(pEntity);
             if (!displayable.GetSector())

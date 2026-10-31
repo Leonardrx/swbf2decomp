@@ -45,27 +45,60 @@ FoleyFXSoldier::~FoleyFXSoldier()
 // FUNCTION: SWBF2 0x0052cd60
 bool FoleyFXSoldier::Read(PblFileChunk& chunk, unsigned int uChunkID)
 {
-    GameSound* pSound;
     switch (uChunkID)
     {
-    case 0x2a9f6673: pSound = &mFootstepLeftWalk;  break;
-    case 0xe79eb7c2: pSound = &mFootstepRightWalk; break;
-    case 0x640f6efb: pSound = &mFootstepLeftRun;   break;
-    case 0xa4df1b00: pSound = &mFootstepRightRun;  break;
-    case 0xb59a8702: pSound = &mFootstepLeftStop;  break;
-    case 0x54e8af1f: pSound = &mFootstepRightStop; break;
-    case 0xa73f5c0d: pSound = &mJump;              break;
-    case 0x6dea369c: pSound = &mLand;              break;
-    case 0x16ff3d1e: pSound = &mRoll;              break;
-    case 0x6dd99a25: pSound = &mProne;             break;
-    case 0x65bfa4e1: pSound = &mSquat;             break;
-    case 0x75493323: pSound = &mStand;             break;
-    case 0x70dc49d0: pSound = &mBodyFall;          break;
-    default:
-        return FoleyFXImpact::Read(chunk, uChunkID);
+    case 0x2a9f6673:
+        chunk._pFile->Read8();
+        mFootstepLeftWalk.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0xe79eb7c2:
+        chunk._pFile->Read8();
+        mFootstepRightWalk.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x640f6efb:
+        chunk._pFile->Read8();
+        mFootstepLeftRun.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0xa4df1b00:
+        chunk._pFile->Read8();
+        mFootstepRightRun.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0xb59a8702:
+        chunk._pFile->Read8();
+        mFootstepLeftStop.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x54e8af1f:
+        chunk._pFile->Read8();
+        mFootstepRightStop.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0xa73f5c0d:
+        chunk._pFile->Read8();
+        mJump.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x6dea369c:
+        chunk._pFile->Read8();
+        mLand.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x16ff3d1e:
+        chunk._pFile->Read8();
+        mRoll.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x6dd99a25:
+        chunk._pFile->Read8();
+        mProne.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x65bfa4e1:
+        chunk._pFile->Read8();
+        mSquat.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x75493323:
+        chunk._pFile->Read8();
+        mStand.SetID(chunk._pFile->Read32(), false, false);
+        return true;
+    case 0x70dc49d0:
+        chunk._pFile->Read8();
+        mBodyFall.SetID(chunk._pFile->Read32(), false, false);
+        return true;
     }
-
-    chunk._pFile->Read8();
-    pSound->SetID(chunk._pFile->Read32(), false, false);
-    return true;
+    return FoleyFXImpact::Read(chunk, uChunkID);
 }

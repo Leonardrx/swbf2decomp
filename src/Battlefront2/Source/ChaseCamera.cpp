@@ -297,7 +297,7 @@ void ChaseCamera::SetupCamera(RedCamera* pCamera, float fDeltaTime)
     }
 
     PblQuaternion qOld = PblQuaternion(mMatrix);
-    PblVector3 vOldPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
+    PblVector3 vOldPos = mMatrix.GetTranslation();
 
     float fAspectRatio = RedRenderer::GetScreenAspectRatio()
                          * ((float)FLRenderer::GetViewHeight(0) * (float)RedInterfaceScreen::GetScreenWidth())
@@ -326,54 +326,39 @@ void ChaseCamera::SetupCamera(RedCamera* pCamera, float fDeltaTime)
     Tracker* pTracker = mOwner->mTracker;
     if ((!pTracker || !pTracker->IsFirstPersonView()) && fBlend < 1.0f && fZoom == 1.0f)
     {
-        PblVector3 vPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
-        PblVector3 vDelta(vPos.x - vOldPos.x, vPos.y - vOldPos.y, vPos.z - vOldPos.z);
-        if (vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z < 900.0f)
+        PblVector3 vPos = mMatrix.GetTranslation();
+        PblVector3 vDelta = vPos - vOldPos;
+        if (SquaredLength(vDelta) < 900.0f)
         {
             PblQuaternion qNew = PblQuaternion(mMatrix);
 
             PblQuaternion qRot = Interpolate(qOld, qNew, fRotBlend);
-            PblMatrix mNew(qRot, vPos);
-            mMatrix = mNew;
+            mMatrix = PblMatrix(qRot, vPos);
 
-            vPos.x = (vOldPos.x + vPos.x) * 0.5f;
-            vPos.y = (vOldPos.y + vPos.y) * 0.5f;
-            vPos.z = (vOldPos.z + vPos.z) * 0.5f;
+            vPos += vOldPos;
+            vPos *= 0.5f;
             PblQuaternion qMid = Interpolate(qOld, qNew, 0.5f);
             PblMatrix mMid(qMid, vPos);
 
-            float fSwing = sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f
-                           * (1.0f - fBlend);
-            mMatrix.m[3][0] = mMid.m[3][0] + mMid.m[2][0] * fSwing;
-            mMatrix.m[3][1] = mMid.m[3][1] + mMid.m[2][1] * fSwing;
-            mMatrix.m[3][2] = mMid.m[3][2] + mMid.m[2][2] * fSwing;
-            mMatrix.m[3][3] = 1.0f;
+            float fSwing = Length(vDelta) * 0.5f * (1.0f - fBlend);
+            mMatrix.SetTranslation(mMid.GetTranslation() + mMid.GetZAxis() * fSwing);
 
-            mMatrix.m[3][0] = (mMatrix.m[3][0] - vOldPos.x) * fBlend + vOldPos.x;
-            mMatrix.m[3][1] = (mMatrix.m[3][1] - vOldPos.y) * fBlend + vOldPos.y;
-            mMatrix.m[3][2] = (mMatrix.m[3][2] - vOldPos.z) * fBlend + vOldPos.z;
-            mMatrix.m[3][3] = 1.0f;
+            mMatrix.SetTranslation((mMatrix.GetTranslation() - vOldPos) * fBlend + vOldPos);
 
             if (mOwner->GetGameObject())
             {
-                const PblMatrix& rOwner = GetCollisionObject(mOwner->GetGameObject())->GetMatrix();
-                PblVector3 vStart(rOwner.m[3][0] + 0.0f, rOwner.m[3][1] + 1.5f, rOwner.m[3][2] + 0.0f);
-                PblVector3 vToCamera(mMatrix.m[3][0] - vStart.x, mMatrix.m[3][1] - vStart.y,
-                                     mMatrix.m[3][2] - vStart.z);
-                float fDist = sqrtf(vToCamera.x * vToCamera.x + vToCamera.y * vToCamera.y
-                                    + vToCamera.z * vToCamera.z);
+                const PblMatrix& rOwner = mOwner->GetGameObject()->GetMatrix();
+                PblVector3 vStart = rOwner.GetTranslation() + PblVector3(0.0f, 1.5f, 0.0f);
+                PblVector3 vToCamera = mMatrix.GetTranslation() - vStart;
+                float fDist = Length(vToCamera);
                 if (fDist > 0.0f)
                 {
-                    float fInv = 1.0f / fDist;
-                    PblVector3 vDir(vToCamera.x * fInv, vToCamera.y * fInv, vToCamera.z * fInv);
+                    PblVector3 vDir = vToCamera * (1.0f / fDist);
                     const GameObject* pIgnore = mOwner->GetGameObject();
                     CollisionObject* pHitObject;
                     float fHit = CollisionManager::RayHit(vStart, vDir, fDist, pHitObject, 0, &pIgnore, 1, 0x90,
                                                           false) * fDist;
-                    mMatrix.m[3][0] = vDir.x * fHit + vStart.x;
-                    mMatrix.m[3][1] = vDir.y * fHit + vStart.y;
-                    mMatrix.m[3][2] = vDir.z * fHit + vStart.z;
-                    mMatrix.m[3][3] = 1.0f;
+                    mMatrix.SetTranslation(vDir * fHit + vStart);
                 }
             }
         }
@@ -382,10 +367,7 @@ void ChaseCamera::SetupCamera(RedCamera* pCamera, float fDeltaTime)
             if (gDemoMode || mDemoMode)
             {
                 ScreenTransition::sInstance->SetTransition(4, ScreenTransition::BLUR);
-                mMatrix.m[3][0] -= mMatrix.m[2][0] * 2.0f;
-                mMatrix.m[3][1] -= mMatrix.m[2][1] * 2.0f;
-                mMatrix.m[3][2] -= mMatrix.m[2][2] * 2.0f;
-                mMatrix.m[3][3] = 1.0f;
+                mMatrix.SetTranslation(mMatrix.GetTranslation() - mMatrix.GetZAxis() * 2.0f);
             }
             mTimer = 1.0f;
         }

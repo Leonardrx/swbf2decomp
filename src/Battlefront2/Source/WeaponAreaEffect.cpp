@@ -465,9 +465,9 @@ int WeaponAreaEffect::UpdateTargets(GameObject** ppTargets, int iNumTargets)
             {
                 continue;
             }
-            const float dx = vTarget.x - vCenter.x;
             const float dz = vTarget.z - vCenter.z;
-            const float fDistSq = dx * dx + dz * dz;
+            const float dx = vTarget.x - vCenter.x;
+            const float fDistSq = dz * dz + dx * dx;
 
             const float fReach = _GetClass()->m_fAreaRange + fTargetRadius;
             if (fDistSq > fReach * fReach)

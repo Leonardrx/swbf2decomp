@@ -851,21 +851,21 @@ int ScriptCB_SetPCVideoOptions(lua_State* L)
     opts.mNearSceneFadeFactor = luaL_checknumber(LuaHelper::mState, 20);
     bool bVSync = (int)luaL_checknumber(LuaHelper::mState, 21) - 1 != 0;
 
-    if (opts.mGammaBrightness < 0.2)
+    if (opts.mGammaBrightness < 0.2f)
     {
-        opts.mGammaBrightness = 0.2;
+        opts.mGammaBrightness = 0.2f;
     }
-    else if (opts.mGammaBrightness > 0.80000001)
+    else if (opts.mGammaBrightness > 0.8f)
     {
-        opts.mGammaBrightness = 0.80000001;
+        opts.mGammaBrightness = 0.8f;
     }
-    if (opts.mGammaContrast < 0.2)
+    if (opts.mGammaContrast < 0.2f)
     {
-        opts.mGammaContrast = 0.2;
+        opts.mGammaContrast = 0.2f;
     }
-    else if (opts.mGammaContrast > 0.80000001)
+    else if (opts.mGammaContrast > 0.8f)
     {
-        opts.mGammaContrast = 0.80000001;
+        opts.mGammaContrast = 0.8f;
     }
     if (opts.mFarSceneRangeFactor < 0.0f)
     {
@@ -892,9 +892,7 @@ int ScriptCB_SetPCVideoOptions(lua_State* L)
         return 0;
     }
 
-    PlayerProfile::tPCOpt& rPC = pProfile->mPCOptions;
-    RenderOptionsT& rOpts = rPC.renderOptions;
-    if (!RedVideoConfig::VidMode_Usable(rPC.mResolutionX, rPC.mResolutionY,
+    if (!RedVideoConfig::VidMode_Usable(pProfile->mPCOptions.mResolutionX, pProfile->mPCOptions.mResolutionY,
                                         eMultiSample, ulMultiSampleQuality))
     {
         ulMultiSampleQuality = 0;
@@ -902,32 +900,32 @@ int ScriptCB_SetPCVideoOptions(lua_State* L)
     }
 
     bool bChanged = false;
-    if (opts.masterQuality != rOpts.masterQuality) { rOpts.masterQuality = opts.masterQuality; bChanged = true; }
-    if (opts.mGraphicsTier != rOpts.mGraphicsTier) { rOpts.mGraphicsTier = opts.mGraphicsTier; bChanged = true; }
-    if (opts.textureDetail != rOpts.textureDetail) { rOpts.textureDetail = opts.textureDetail; bChanged = true; }
-    if (opts.textureQuality != rOpts.textureQuality) { rOpts.textureQuality = opts.textureQuality; bChanged = true; }
-    if (eMultiSample != rPC.mMultiSample) { rPC.mMultiSample = eMultiSample; bChanged = true; }
-    if (ulMultiSampleQuality != rPC.mMultiSampleQuality) { rPC.mMultiSampleQuality = ulMultiSampleQuality; bChanged = true; }
-    if (opts.waterQuality != rOpts.waterQuality) { rOpts.waterQuality = opts.waterQuality; bChanged = true; }
-    if (opts.terrainQuality != rOpts.terrainQuality) { rOpts.terrainQuality = opts.terrainQuality; bChanged = true; }
-    if (opts.particleQuality != rOpts.particleQuality) { rOpts.particleQuality = opts.particleQuality; bChanged = true; }
-    if (opts.shadowQuality != rOpts.shadowQuality) { rOpts.shadowQuality = opts.shadowQuality; bChanged = true; }
-    if (opts.specularQuality != rOpts.specularQuality) { rOpts.specularQuality = opts.specularQuality; bChanged = true; }
-    if (opts.mEnableHDR != rOpts.mEnableHDR) { rOpts.mEnableHDR = opts.mEnableHDR; bChanged = true; }
-    if (opts.bumpMapping != rOpts.bumpMapping) { rOpts.bumpMapping = opts.bumpMapping; bChanged = true; }
-    if (opts.motionBlur != rOpts.motionBlur) { rOpts.motionBlur = opts.motionBlur; bChanged = true; }
-    if (opts.distortion != rOpts.distortion) { rOpts.distortion = opts.distortion; bChanged = true; }
-    if (bWindowed != rPC.mWindowed) { rPC.mWindowed = bWindowed; bChanged = true; }
-    if (bVSync != rPC.mVSync) { rPC.mVSync = bVSync; bChanged = true; }
-    if (opts.mGammaBrightness != rOpts.mGammaBrightness) { rOpts.mGammaBrightness = opts.mGammaBrightness; bChanged = true; }
-    if (opts.mGammaContrast != rOpts.mGammaContrast) { rOpts.mGammaContrast = opts.mGammaContrast; bChanged = true; }
-    if (opts.mFarSceneRangeFactor != rOpts.mFarSceneRangeFactor) { rOpts.mFarSceneRangeFactor = opts.mFarSceneRangeFactor; bChanged = true; }
-    if (opts.mNearSceneFadeFactor != rOpts.mNearSceneFadeFactor) { rOpts.mNearSceneFadeFactor = opts.mNearSceneFadeFactor; bChanged = true; }
+    if (opts.masterQuality != pProfile->mPCOptions.renderOptions.masterQuality) { pProfile->mPCOptions.renderOptions.masterQuality = opts.masterQuality; bChanged = true; }
+    if (opts.mGraphicsTier != pProfile->mPCOptions.renderOptions.mGraphicsTier) { pProfile->mPCOptions.renderOptions.mGraphicsTier = opts.mGraphicsTier; bChanged = true; }
+    if (opts.textureDetail != pProfile->mPCOptions.renderOptions.textureDetail) { pProfile->mPCOptions.renderOptions.textureDetail = opts.textureDetail; bChanged = true; }
+    if (opts.textureQuality != pProfile->mPCOptions.renderOptions.textureQuality) { pProfile->mPCOptions.renderOptions.textureQuality = opts.textureQuality; bChanged = true; }
+    if (eMultiSample != pProfile->mPCOptions.mMultiSample) { pProfile->mPCOptions.mMultiSample = eMultiSample; bChanged = true; }
+    if (ulMultiSampleQuality != pProfile->mPCOptions.mMultiSampleQuality) { pProfile->mPCOptions.mMultiSampleQuality = ulMultiSampleQuality; bChanged = true; }
+    if (opts.waterQuality != pProfile->mPCOptions.renderOptions.waterQuality) { pProfile->mPCOptions.renderOptions.waterQuality = opts.waterQuality; bChanged = true; }
+    if (opts.terrainQuality != pProfile->mPCOptions.renderOptions.terrainQuality) { pProfile->mPCOptions.renderOptions.terrainQuality = opts.terrainQuality; bChanged = true; }
+    if (opts.particleQuality != pProfile->mPCOptions.renderOptions.particleQuality) { pProfile->mPCOptions.renderOptions.particleQuality = opts.particleQuality; bChanged = true; }
+    if (opts.shadowQuality != pProfile->mPCOptions.renderOptions.shadowQuality) { pProfile->mPCOptions.renderOptions.shadowQuality = opts.shadowQuality; bChanged = true; }
+    if (opts.specularQuality != pProfile->mPCOptions.renderOptions.specularQuality) { pProfile->mPCOptions.renderOptions.specularQuality = opts.specularQuality; bChanged = true; }
+    if (opts.mEnableHDR != pProfile->mPCOptions.renderOptions.mEnableHDR) { pProfile->mPCOptions.renderOptions.mEnableHDR = opts.mEnableHDR; bChanged = true; }
+    if (opts.bumpMapping != pProfile->mPCOptions.renderOptions.bumpMapping) { pProfile->mPCOptions.renderOptions.bumpMapping = opts.bumpMapping; bChanged = true; }
+    if (opts.motionBlur != pProfile->mPCOptions.renderOptions.motionBlur) { pProfile->mPCOptions.renderOptions.motionBlur = opts.motionBlur; bChanged = true; }
+    if (opts.distortion != pProfile->mPCOptions.renderOptions.distortion) { pProfile->mPCOptions.renderOptions.distortion = opts.distortion; bChanged = true; }
+    if (bWindowed != pProfile->mPCOptions.mWindowed) { pProfile->mPCOptions.mWindowed = bWindowed; bChanged = true; }
+    if (bVSync != pProfile->mPCOptions.mVSync) { pProfile->mPCOptions.mVSync = bVSync; bChanged = true; }
+    if (opts.mGammaBrightness != pProfile->mPCOptions.renderOptions.mGammaBrightness) { pProfile->mPCOptions.renderOptions.mGammaBrightness = opts.mGammaBrightness; bChanged = true; }
+    if (opts.mGammaContrast != pProfile->mPCOptions.renderOptions.mGammaContrast) { pProfile->mPCOptions.renderOptions.mGammaContrast = opts.mGammaContrast; bChanged = true; }
+    if (opts.mFarSceneRangeFactor != pProfile->mPCOptions.renderOptions.mFarSceneRangeFactor) { pProfile->mPCOptions.renderOptions.mFarSceneRangeFactor = opts.mFarSceneRangeFactor; bChanged = true; }
+    if (opts.mNearSceneFadeFactor != pProfile->mPCOptions.renderOptions.mNearSceneFadeFactor) { pProfile->mPCOptions.renderOptions.mNearSceneFadeFactor = opts.mNearSceneFadeFactor; bChanged = true; }
 
     if (bChanged)
     {
         pProfile->UpdateProfCRC();
-        rPC.ApplyPostLoadSettings();
+        pProfile->mPCOptions.ApplyPostLoadSettings();
     }
     return 0;
 }

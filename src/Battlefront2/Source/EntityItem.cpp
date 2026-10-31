@@ -133,7 +133,7 @@ void EntityItemClass::SetProperty(unsigned int uProperty, const char* pszValue)
     {
         if (*pszValue)
         {
-            mTrailEffect = FLEffect::s_EffectClasses.Find(PblHash(pszValue));
+            mTrailEffect = FLEffect::Get(PblHash(pszValue));
         }
         else
         {
@@ -198,11 +198,8 @@ void EntityItemClass::SetProperty(unsigned int uProperty, const char* pszValue)
         {
             const PblBox& box = mModel->_mModel->_TotalBoundingBox;
             CollisionPrimitive primitive;
-            float fX = box._vMax.x - box._vMin.x;
-            float fY = box._vMax.y - box._vMin.y;
-            float fZ = box._vMax.z - box._vMin.z;
-            float fLength = sqrtf(fY * fY + fX * fX + fZ * fZ);
-            primitive.SetBox(fX * 0.5f, fY * 0.5f, fZ * 0.5f, fLength * 0.5f);
+            primitive.SetBox((box._vMax.x - box._vMin.x) * 0.5f, (box._vMax.y - box._vMin.y) * 0.5f,
+                             (box._vMax.z - box._vMin.z) * 0.5f, Length(box._vMax - box._vMin) * 0.5f);
             PblMatrix matrix = gMatrixIdentity;
             matrix.m[3][0] = (box._vMin.x + box._vMax.x) * 0.5f;
             matrix.m[3][1] = (box._vMin.y + box._vMax.y) * 0.5f;
@@ -260,41 +257,35 @@ Entity* EntityItemClass::Build(const EntityDesc& desc)
 // FUNCTION: SWBF2 0x004cac40
 EntityItem::EntityItem(EntityItemClass* pClass, const EntityDesc& desc)
     : GameObject(pClass, desc, COLL_ITEM, &pClass->mModel->_mLodData)
+    , mVelocity(gVectorZero)
+    , mStationary(false)
+    , mClass(pClass)
+    , mLifeTimer(pClass->mLifeSpan)
+    , mOwner(0)
+    , m_pLight(0)
 {
-    mVelocity = gVectorZero;
-    mStationary = false;
-    mClass = pClass;
-    mLifeTimer = pClass->mLifeSpan;
-    mOwner = 0;
-    m_pLight = 0;
-
-    Activate();
+    static_cast<RedSceneObject&>(*this).Activate();
 
     if (!NetGame::IsEnabled() || NetGame::IsClient())
     {
-        if (mClass->m_uiLightOdfNameHash)
+        if (pClass->m_uiLightOdfNameHash)
         {
-            m_pLight = EntityLightClass::Build(mClass->m_uiLightOdfNameHash);
-            if (mClass->m_fRadiusLight > 0.0f)
+            m_pLight = EntityLightClass::Build(pClass->m_uiLightOdfNameHash);
+            if (pClass->m_fRadiusLight > 0.0f)
             {
-                m_pLight->SetOmniLightRadius(mClass->m_fRadiusLight);
+                m_pLight->SetOmniLightRadius(pClass->m_fRadiusLight);
             }
-            if (mClass->m_colorLight.a > 0)
+            if (pClass->m_colorLight.a > 0)
             {
-                m_pLight->SetColor(mClass->m_colorLight);
+                m_pLight->SetColor(pClass->m_colorLight);
             }
             PblMatrix matrix = gMatrixIdentity;
-            matrix.m[3][0] = mMatrix.m[3][0];
-            matrix.m[3][1] = mMatrix.m[3][1];
-            matrix.m[3][2] = mMatrix.m[3][2];
-            matrix.m[3][3] = 1.0f;
+            matrix.SetTranslation(mMatrix.GetTranslation());
             if (m_pLight->_fBeamLength > 0.0f)
             {
                 matrix[0] = gVectorUnitX;
                 matrix.m[0][3] = 0.0f;
-                matrix.m[1][0] = -gVectorUnitZ.x;
-                matrix.m[1][1] = -gVectorUnitZ.y;
-                matrix.m[1][2] = -gVectorUnitZ.z;
+                matrix[1] = -gVectorUnitZ;
                 matrix.m[1][3] = 0.0f;
                 matrix[2] = gVectorUnitY;
                 matrix.m[2][3] = 0.0f;
@@ -302,27 +293,24 @@ EntityItem::EntityItem(EntityItemClass* pClass, const EntityDesc& desc)
             m_pLight->SetMatrix(matrix);
             m_pLight->TurnOn();
         }
-        else if (mClass->m_fRadiusLight > 0.0f && mClass->m_colorLight.a > 0)
+        else if (pClass->m_fRadiusLight > 0.0f && pClass->m_colorLight.a > 0)
         {
             m_pLight = new EntityLight();
-            m_pLight->SetColor(mClass->m_colorLight);
-            m_pLight->SetOmniLightRadius(mClass->m_fRadiusLight);
+            m_pLight->SetColor(pClass->m_colorLight);
+            m_pLight->SetOmniLightRadius(pClass->m_fRadiusLight);
             m_pLight->SetHaloRadius(0.0f);
             m_pLight->SetFlareIntensity(0.0f);
             PblMatrix matrix = gMatrixIdentity;
-            matrix.m[3][0] = mMatrix.m[3][0];
-            matrix.m[3][1] = mMatrix.m[3][1];
-            matrix.m[3][2] = mMatrix.m[3][2];
-            matrix.m[3][3] = 1.0f;
+            matrix.SetTranslation(mMatrix.GetTranslation());
             m_pLight->SetMatrix(matrix);
             m_pLight->TurnOn();
         }
     }
 
-    if (mClass->mTrailEffect &&
+    if (pClass->mTrailEffect &&
         (!NetGame::IsEnabled() || NetGame::IsClient() || (NetGame::IsOneWorld() && NetGame::IsHost())))
     {
-        mTrailEmitterObj = mClass->mTrailEffect->BuildEffect();
+        mTrailEmitterObj = pClass->mTrailEffect->BuildEffect();
         if (mTrailEmitterObj)
         {
             mTrailEmitterObj->AttachEffectToVector((const PblVector3*)mMatrix.m[3], true);
@@ -378,16 +366,13 @@ void EntityItem::SetVelocity(const PblVector3& vVelocity)
 bool EntityItem::Update(float fDeltaTime)
 {
     mLifeTimer -= fDeltaTime;
-    if (mLifeTimer > -1.0f && IsAlive())
+    if (!(-1.0f >= mLifeTimer) && IsAlive())
     {
         if (!mStationary)
         {
             float fHalfDrop = mClass->mGravity * -9.8f * 0.5f * fDeltaTime;
             mVelocity.y += fHalfDrop;
-            const PblVector3& vPos = GetPosition();
-            PblVector3 vNew(vPos.x + mVelocity.x * fDeltaTime, vPos.y + mVelocity.y * fDeltaTime,
-                            vPos.z + mVelocity.z * fDeltaTime);
-            SetPosition(vNew);
+            SetPosition(GetPosition() + mVelocity * fDeltaTime);
             mVelocity.y += fHalfDrop;
             if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -1000.0f)
             {

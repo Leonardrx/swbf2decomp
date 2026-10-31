@@ -207,8 +207,9 @@ bool ActiveRegion::Update(float fDeltaTime)
     PblBitVector<600> oldPlayers(mPlayers);
     mPlayers = GetPlayersInRegion();
 
+    PblBitVector<600> notOld(~oldPlayers);
     PblBitVector<600> entered(mPlayers);
-    entered.And(~oldPlayers);
+    entered.And(notOld);
     PblBitVector<600> left(~mPlayers);
     left.And(oldPlayers);
 
@@ -217,7 +218,7 @@ bool ActiveRegion::Update(float fDeltaTime)
         if (entered.IsBitSet(i))
         {
             Character* pChr = Character::GetPtr(i);
-            if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+            if (!(NetGame::IsEnabled() && NetGame::OnClient()))
             {
                 EventManager::RegionEvent::mEnterRegion.mRoot.Trigger(mRegion, *pChr);
             }
@@ -225,7 +226,7 @@ bool ActiveRegion::Update(float fDeltaTime)
         else if (left.IsBitSet(i))
         {
             Character* pChr = Character::GetPtr(i);
-            if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+            if (!(NetGame::IsEnabled() && NetGame::OnClient()))
             {
                 EventManager::RegionEvent::mLeaveRegion.mRoot.Trigger(mRegion, *pChr);
             }

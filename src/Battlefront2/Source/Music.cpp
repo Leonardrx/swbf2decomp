@@ -119,14 +119,14 @@ void Music::Update(float fDeltaTime)
             {
                 Stop();
             }
-            if (mStream->GetPlayState() != Snd::SourceTransport::playState_stopped)
-            {
-                mPlaybackTime += fDeltaTime;
-                break;
-            }
         }
-        mPlayStateDesired = playState_stopped;
-        mPlayStateCurrent = playState_stopping;
+        if (!mStream || mStream->GetPlayState() == Snd::SourceTransport::playState_stopped)
+        {
+            mPlayStateDesired = playState_stopped;
+            mPlayStateCurrent = playState_stopping;
+        }
+        mPlaybackTime += fDeltaTime;
+        break;
 
     case playState_stopping:
         mPlaybackTime += fDeltaTime;
@@ -169,7 +169,8 @@ void Music::Update(float fDeltaTime)
                     mStream->Lock(true);
                     pProps->SetupStream(mStream, 0);
                     mStream->SetPitch(pProps->SourceVariation::CalculatePitch(pProps->mPitch));
-                    mStream->SetGain(pProps->SourceVariation::CalculateGain(pProps->mGain));
+                    float fGain = pProps->SourceVariation::CalculateGain(pProps->mGain);
+                    mStream->SetGain(fGain);
                     mStream->GetBus()->Fade(mFadeInTime, 1.0f, 0.0f);
                     mStream->Play(false);
                     mStream->SetPlaybackPosition(mPlaybackPosition);
@@ -189,13 +190,16 @@ void Music::Update(float fDeltaTime)
         case playState_playing:
             if (mStream)
             {
-                if (mPlaybackTime < mMinPlaybackTime)
+                if (mPlaybackTime >= mMinPlaybackTime)
                 {
-                    break;
+                    mStream->GetBus()->Fade(mFadeOutTime, 0.0f, -1.0f);
+                    mPlayStateCurrent = playState_stopping;
                 }
-                mStream->GetBus()->Fade(mFadeOutTime, 0.0f, -1.0f);
             }
-            mPlayStateCurrent = playState_stopping;
+            else
+            {
+                mPlayStateCurrent = playState_stopping;
+            }
             break;
 
         case playState_stopping:

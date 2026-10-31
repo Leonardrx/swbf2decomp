@@ -265,24 +265,27 @@ bool BootDisplay::Update(float fDeltaTime)
     }
 
     Character* pPlayer = Character::FindPlayer(NetGame::GetLocalIndex(mJoystickIndex));
-    if (!pPlayer)
+    if (pPlayer)
     {
-        Hide();
-    }
-    else if (mSpawnMode || pPlayer->mUnit)
-    {
-        if (!mVisible)
+        if (mSpawnMode || pPlayer->mUnit)
         {
-            Show(pPlayer);
+            if (!mVisible)
+            {
+                Show(pPlayer);
+            }
+        }
+        else
+        {
+            if (!mVisible)
+            {
+                return true;
+            }
+            Hide(pPlayer);
         }
     }
     else
     {
-        if (!mVisible)
-        {
-            return true;
-        }
-        Hide(pPlayer);
+        Hide();
     }
     if (!mVisible)
     {
@@ -291,28 +294,30 @@ bool BootDisplay::Update(float fDeltaTime)
 
     int iBootPlayer = NetGame::GetBootPlayer();
     float fTimeLeft;
-    if (iBootPlayer < 0 || (fTimeLeft = NetGame::GetBootTime() - NetComm::GetTime()) <= 0.0f)
+    if (iBootPlayer < 0 || !((fTimeLeft = NetGame::GetBootTime() - NetComm::GetTime()) > 0.0f))
     {
         NetGame::SetBootVoted(NetGame::GetJoystickIndex(pPlayer->mPlayerId), false);
         return true;
     }
 
-    RedColor color;
     if (NetGame::IsBootVoted(mJoystickIndex))
     {
-        color = RedColor::GREEN;
+        mStatusText0.SetColor(RedColor::GREEN);
+        mStatusText1.SetColor(RedColor::GREEN);
+        mStatusText2.SetColor(RedColor::GREEN);
     }
     else if (fTimeLeft > 15.0f)
     {
-        color = RedColor::WHITE;
+        mStatusText0.SetColor(RedColor::WHITE);
+        mStatusText1.SetColor(RedColor::WHITE);
+        mStatusText2.SetColor(RedColor::WHITE);
     }
     else
     {
-        color = RedColor::RED;
+        mStatusText0.SetColor(RedColor::RED);
+        mStatusText1.SetColor(RedColor::RED);
+        mStatusText2.SetColor(RedColor::RED);
     }
-    mStatusText0.SetColor(color);
-    mStatusText1.SetColor(color);
-    mStatusText2.SetColor(color);
 
     unsigned short text[256];
     unsigned short name[64];
@@ -326,11 +331,13 @@ bool BootDisplay::Update(float fDeltaTime)
     iNeeded -= NetGame::GetBootVotes();
 
     const unsigned short* pReason = GetBootReasonString(NetGame::GetBootReason());
-    PblUnicode::usnprintf(text, 256, RedLocalizeDB::Find(0xd9a2b95au, false), name, pReason);
+    const unsigned short* pReasonFormat = RedLocalizeDB::Find(0xd9a2b95au, false);
+    PblUnicode::usnprintf(text, 256, pReasonFormat, name, pReason);
     pText0->SetText(text, true);
     pText0->Enable(true);
 
-    PblUnicode::usnprintf(text, 256, RedLocalizeDB::Find(0xd8a2b7c7u, false), iSeconds, iNeeded);
+    const unsigned short* pTimeFormat = RedLocalizeDB::Find(0xd8a2b7c7u, false);
+    PblUnicode::usnprintf(text, 256, pTimeFormat, iSeconds, iNeeded);
     pText1->SetText(text, true);
     pText1->Enable(true);
 

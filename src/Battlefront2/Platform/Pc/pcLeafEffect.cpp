@@ -66,14 +66,13 @@ pcRedPrimitive* FallingLeafParticle::CreateGeometry(float fSize, RedColor color)
 pcRedPrimitive* FallingLeafParticle::CreateCompressedGeometry(float fSize, RedColor color)
 {
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x9282, 16, 4, 0, false);
-    pPrimitive->m_bbox = PblBox(-0.25f, -0.25f, -0.25f, 0.25f, 0.25f, 0.25f);
+    const PblBox bbox(-0.25f, -0.25f, -0.25f, 0.25f, 0.25f, 0.25f);
+    pPrimitive->m_bbox = bbox;
 
-    CompressedPos::s_vMin.x = pPrimitive->m_bbox._vMin.x;
-    CompressedPos::s_vMin.y = pPrimitive->m_bbox._vMin.y;
-    CompressedPos::s_vMin.z = pPrimitive->m_bbox._vMin.z;
-    CompressedPos::s_vScale.x = (pPrimitive->m_bbox._vMax.x - pPrimitive->m_bbox._vMin.x) * (1.0f / 65535.0f);
-    CompressedPos::s_vScale.y = (pPrimitive->m_bbox._vMax.y - pPrimitive->m_bbox._vMin.y) * (1.0f / 65535.0f);
-    CompressedPos::s_vScale.z = (pPrimitive->m_bbox._vMax.z - pPrimitive->m_bbox._vMin.z) * (1.0f / 65535.0f);
+    CompressedPos::s_vMin = bbox._vMin;
+    CompressedPos::s_vScale.x = (bbox._vMax.x - bbox._vMin.x) * (1.0f / 65535.0f);
+    CompressedPos::s_vScale.y = (bbox._vMax.y - bbox._vMin.y) * (1.0f / 65535.0f);
+    CompressedPos::s_vScale.z = (bbox._vMax.z - bbox._vMin.z) * (1.0f / 65535.0f);
     CompressedPos::s_vScaleInv.x = 1.0f / CompressedPos::s_vScale.x;
     CompressedPos::s_vScaleInv.y = 1.0f / CompressedPos::s_vScale.y;
     CompressedPos::s_vScaleInv.z = 1.0f / CompressedPos::s_vScale.z;
@@ -81,19 +80,32 @@ pcRedPrimitive* FallingLeafParticle::CreateCompressedGeometry(float fSize, RedCo
     CompressedLeafVertex* pVertices = (CompressedLeafVertex*)pPrimitive->BeginVertexData();
     if (pVertices)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            const float x = (i & 2) ? fSize : -fSize;
-            const float z = (i & 1) ? fSize : -fSize;
-            pVertices[i].x = (short)(int)((x - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
-            pVertices[i].y = (short)(int)((0.0f - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
-            pVertices[i].z = (short)(int)((z - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
-            pVertices[i].color = color;
-        }
+        const float fNegSize = -fSize;
+
+        pVertices[0].x = (short)(int)((fNegSize - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+        pVertices[0].y = (short)(int)((0.0f - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+        pVertices[0].z = (short)(int)((fNegSize - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+        pVertices[0].color = color;
         pVertices[0].uv = 0;
+
+        pVertices[1].x = (short)(int)((fNegSize - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+        pVertices[1].y = (short)(int)((0.0f - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+        pVertices[1].z = (short)(int)((fSize - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+        pVertices[1].color = color;
         pVertices[1].uv = 0x800;
+
+        pVertices[2].x = (short)(int)((fSize - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+        pVertices[2].y = (short)(int)((0.0f - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+        pVertices[2].z = (short)(int)((fNegSize - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+        pVertices[2].color = color;
         pVertices[2].uv = 0x08000000;
+
+        pVertices[3].x = (short)(int)((fSize - CompressedPos::s_vMin.x) * CompressedPos::s_vScaleInv.x - 32767.5f);
+        pVertices[3].y = (short)(int)((0.0f - CompressedPos::s_vMin.y) * CompressedPos::s_vScaleInv.y - 32767.5f);
+        pVertices[3].z = (short)(int)((fSize - CompressedPos::s_vMin.z) * CompressedPos::s_vScaleInv.z - 32767.5f);
+        pVertices[3].color = color;
         pVertices[3].uv = 0x08000800;
+
         pPrimitive->EndVertexData();
     }
     return pPrimitive;

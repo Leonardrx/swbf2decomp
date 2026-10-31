@@ -329,24 +329,20 @@ MountedTurret::MountedTurret(GameObject* pParent, MountedTurretClass* pClass, Re
 
     mYaw = 0.0f;
     mPitch = 0.0f;
-    if (mClass->mMinYaw > 0.0f || mClass->mMaxYaw < 0.0f)
+    if (pClass->mMinYaw > 0.0f || pClass->mMaxYaw < 0.0f)
     {
-        mYaw = (mClass->mMaxYaw + mClass->mMinYaw) * 0.5f;
+        mYaw = (pClass->mMaxYaw + pClass->mMinYaw) * 0.5f;
     }
-    if (mClass->mMinPitch > 0.0f || mClass->mMaxPitch < 0.0f)
+    if (pClass->mMinPitch > 0.0f || pClass->mMaxPitch < 0.0f)
     {
-        mPitch = (mClass->mMaxPitch + mClass->mMinPitch) * 0.5f;
+        mPitch = (pClass->mMaxPitch + pClass->mMinPitch) * 0.5f;
     }
     mOmegaPitch = 0.0f;
     mOmegaYaw = 0.0f;
 
-    for (int i = 0; i < 4; ++i)
-    {
-        mAimer[i] = 0;
-        mWeapon[i] = 0;
-    }
+    memset(mAimer, 0, sizeof(mAimer) + sizeof(mWeapon));
 
-    mRootMatrix = mParent->GetMatrix();
+    mRootMatrix = pParent->GetMatrix();
     mAimMatrix = mParent->GetMatrix();
     mEyeDir = mAimMatrix.GetZAxis();
     mEyePoint = mClass->mCameraSettings.CalcEyePoint(mAimMatrix);
@@ -358,8 +354,8 @@ MountedTurret::MountedTurret(GameObject* pParent, MountedTurretClass* pClass, Re
             continue;
         }
 
-        mAimer[i] = new Aimer(&mClass->mAimerClass[i], this,
-                              mClass->mMountHash ? &mAimMatrix : &mParent->GetMatrix(),
+        mAimer[i] = new Aimer(&pClass->mAimerClass[i], this,
+                              pClass->mMountHash ? &mAimMatrix : &pParent->GetMatrix(),
                               mPose, 0);
 
         WeaponDesc desc;
@@ -559,7 +555,8 @@ bool MountedTurret::PostCollisionUpdate(float)
 void MountedTurret::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
 {
     RedPose* pPose = mPose;
-    if (!mPilot)
+    Controllable* pPilot = mPilot;
+    if (!pPilot)
     {
         return;
     }
@@ -573,7 +570,7 @@ void MountedTurret::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
 
     PblMatrix mMatrix;
     PblMatrix mOldRoot;
-    mOldRoot.m[3][0] = mOldRoot.m[3][1] = mOldRoot.m[3][2] = mOldRoot.m[3][3] = 0.0f;
+    memset(mOldRoot.m[3], 0, sizeof(mOldRoot.m[3]));
     const PblMatrix* pBone = 0;
 
     if (pPose && pClass->mPilotParentNodeHash)
@@ -586,7 +583,7 @@ void MountedTurret::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
             if (!netFrameLock && NetGame::IsEnabled())
             {
                 int iIndex = mInterpIndex;
-                if (netInterpolator.GetIndex(iIndex, 1, static_cast<EntitySoldier*>(mPilot)->mHandleId) &&
+                if (netInterpolator.GetIndex(iIndex, 1, static_cast<EntitySoldier*>(pPilot)->mHandleId) &&
                     iIndex == mInterpIndex)
                 {
                     netInterpolator.GetMat(mInterpIndex, mMatrix);
@@ -1257,18 +1254,26 @@ void MountedTurret::UpdateSound(int prevAngle, int angle, float fAngle, float fA
     else if (controllable.GetPlaying())
     {
         Snd::VoiceVirtualBus* pVoice = static_cast<Snd::VoiceVirtualBus*>(controllable.GetVoiceVirtual());
-        if (pVoice && pVoice->GetGain() > 0.0001f)
+        if (pVoice)
         {
-            float fGain = pVoice->GetGain() - pVoice->GetGain() * 0.4f;
-            if (0.0f > fGain)
+            Snd::SourceBus* pBus = pVoice;
+            if (pBus->GetGain() > 0.0001f)
             {
-                fGain = 0.0f;
+                float fGain = pBus->GetGain() - pBus->GetGain() * 0.4f;
+                if (0.0f > fGain)
+                {
+                    fGain = 0.0f;
+                }
+                else if (fGain > 1.0f)
+                {
+                    fGain = 1.0f;
+                }
+                pVoice->SetGain(fGain);
             }
-            else if (fGain > 1.0f)
+            else
             {
-                fGain = 1.0f;
+                controllable.Stop(true);
             }
-            pVoice->SetGain(fGain);
         }
         else
         {

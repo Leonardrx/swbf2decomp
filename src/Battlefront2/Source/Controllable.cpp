@@ -747,27 +747,19 @@ bool ControllableClass::SetProperty(unsigned int uProperty, const char* pszValue
         return true;
     case 0xEF20A0A0:
         sscanf(pszValue, "%i %f %f %f", &iIndex, &fX, &fY, &fZ);
-        mBobPath.Vec[iIndex].x = fX;
-        mBobPath.Vec[iIndex].y = fY;
-        mBobPath.Vec[iIndex].z = fZ;
+        mBobPath.Vec[iIndex] = PblVector3(fX, fY, fZ);
         return true;
     case 0x49824403:
         sscanf(pszValue, "%i %f %f %f", &iIndex, &fX, &fY, &fZ);
-        mBobPath.Slope[iIndex].x = fX;
-        mBobPath.Slope[iIndex].y = fY;
-        mBobPath.Slope[iIndex].z = fZ;
+        mBobPath.Slope[iIndex] = PblVector3(fX, fY, fZ);
         return true;
     case 0x35341815:
         sscanf(pszValue, "%i %f %f %f", &iIndex, &fX, &fY, &fZ);
-        mBobPath.Ore[iIndex].x = fX;
-        mBobPath.Ore[iIndex].y = fY;
-        mBobPath.Ore[iIndex].z = fZ;
+        mBobPath.Ore[iIndex] = PblVector3(fX, fY, fZ);
         return true;
     case 0xD67D9BA2:
         sscanf(pszValue, "%i %f %f %f", &iIndex, &fX, &fY, &fZ);
-        mBobPath.RSlope[iIndex].x = fX;
-        mBobPath.RSlope[iIndex].y = fY;
-        mBobPath.RSlope[iIndex].z = fZ;
+        mBobPath.RSlope[iIndex] = PblVector3(fX, fY, fZ);
         return true;
     case 0xBADF3672:
         sscanf(pszValue, "%i %f", &iIndex, &fX);
@@ -824,28 +816,23 @@ void ControllableClass::UpdatePilotAnimation(Controllable* pPilot, const RedPose
         return;
     }
 
-    if (mPilotAnimation == SoldierAnimationBank::INVALID_ANIMATION)
-    {
-        pPilot->SetPilotInfo(mMatrix, vOffset, SoldierAnimationBank::INVALID_ANIMATION, false,
-                             f1, f2, f3, fDeltaTime);
-    }
-    else
+    if (mPilotAnimation != SoldierAnimationBank::INVALID_ANIMATION)
     {
         const PblMatrix* pNode = 0;
         if (pPose && mPilotParentNodeHash)
         {
             pNode = pPose->Find(mPilotParentNodeHash);
         }
+        PblMatrix mPilot;
         if (mAnimatedPilotNodeFlag)
         {
-            PblMatrix mPilot;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mPilot), reinterpret_cast<const D3DXMATRIX*>(pNode), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-            pPilot->SetPilotInfo(mPilot, vOffset, mPilotAnimation, mIsPilotExposed,
+            PblMatrix mNode;
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mNode), reinterpret_cast<const D3DXMATRIX*>(pNode), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+            pPilot->SetPilotInfo(mNode, vOffset, mPilotAnimation, mIsPilotExposed,
                                  f1, f2, f3, fDeltaTime);
         }
         else
         {
-            PblMatrix mPilot;
             if (pNode)
             {
                 PblMatrix mSeat;
@@ -859,6 +846,11 @@ void ControllableClass::UpdatePilotAnimation(Controllable* pPilot, const RedPose
             pPilot->SetPilotInfo(mPilot, vOffset, mPilotAnimation, mIsPilotExposed,
                                  f1, f2, f3, fDeltaTime);
         }
+    }
+    else
+    {
+        pPilot->SetPilotInfo(mMatrix, vOffset, SoldierAnimationBank::INVALID_ANIMATION, false,
+                             f1, f2, f3, fDeltaTime);
     }
 
     if (mControlsUnit || mAnimatesUnitAsTurret)

@@ -774,12 +774,15 @@ void AttackPatterns::DoMelee()
 
     mOwner->FaceTarget(HEIGHT_STAND);
 
-    if (GetMe()->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) && GetAcklayData(GetMe()->GetEntity()))
+    if (GetMe()->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) &&
+        static_cast<const EntitySoldier*>(GetMe()->GetEntity())->mAcklayData)
     {
-        const PblMatrix& mTarget = GetGeometryCollision(GetAttackHelper()->GetTarget())->GetMatrix();
+        const CollisionObject& rTarget = *GetAttackHelper()->GetTarget();
+        const PblMatrix& mTarget = rTarget.GetMatrix();
         const PblMatrix& mMe = GetMe()->GetMatrix();
         PblVector3 vDiff(mMe.m[3][0] - mTarget.m[3][0], mMe.m[3][1] - mTarget.m[3][1], mMe.m[3][2] - mTarget.m[3][2]);
-        float fRadius = GetGeometryCollision(GetMe()->GetGameObject())->GetCollisionRadius();
+        const CollisionObject& rMe = *GetMe()->GetGameObject();
+        float fRadius = rMe.GetCollisionRadius();
         if (fRadius * 2.25f * fRadius >= vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z)
         {
             return;
@@ -789,31 +792,35 @@ void AttackPatterns::DoMelee()
     {
         const PblVector3& vPos = GetMe()->GetMatrix().GetTranslation();
         const PblVector3& vTarget = GetAttackHelper()->GetLastSeenTargetPos();
-        float dx = vTarget.x - vPos.x;
-        float dz = vTarget.z - vPos.z;
-        PblVector3 vFlat(dx, 0.0f, dz);
-        PblVector3 vDir;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
-
-        PblVector3 vJump(vDir.x * 0.70710677f, 0.70710677f, vDir.z * 0.70710677f);
+        PblVector3 vJump = vTarget - vPos;
+        vJump.y = 0.0f;
+        const float dx = vJump.x;
+        const float dz = vJump.z;
+        vJump = Normalize(vJump);
+        vJump.x *= 0.70710677f;
+        vJump.y = 0.70710677f;
+        vJump.z *= 0.70710677f;
         if (!(dx * dx + dz * dz > 25.0f))
         {
             int iPick = AIUtil::GetRandomInt(0, 2);
             switch (iPick)
             {
             case 0:
+                vJump = PblVector3(vJump.z, vJump.y, vJump.x);
+                break;
+            case 1:
             {
-                float fX = vJump.x;
-                vJump.x = vJump.z;
-                vJump.z = fX;
+                float fSin, fCos;
+                PblMath::SinCos(&fSin, &fCos, PblMath::fPi / 2.0f);
+                float fX = fCos * vJump.x - vJump.z * fSin;
+                vJump.z = vJump.z * fCos + fSin * vJump.x;
+                vJump.x = fX;
                 break;
             }
-            case 1:
             case 2:
             {
-                float fAngle = (iPick == 1) ? PblMath::fPi / 2.0f : -PblMath::fPi / 2.0f;
                 float fSin, fCos;
-                PblMath::SinCos(&fSin, &fCos, fAngle);
+                PblMath::SinCos(&fSin, &fCos, -PblMath::fPi / 2.0f);
                 float fX = fCos * vJump.x - vJump.z * fSin;
                 vJump.z = vJump.z * fCos + fSin * vJump.x;
                 vJump.x = fX;
@@ -822,14 +829,9 @@ void AttackPatterns::DoMelee()
             }
         }
 
-        PblVector3 vJumpFlat(vJump.x, 0.0f, vJump.z);
-        PblVector3 vLand;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vLand), reinterpret_cast<const D3DXVECTOR3*>(&vJumpFlat));
-        vLand.x *= 25.0f;
-        vLand.y *= 25.0f;
-        vLand.z *= 25.0f;
-        const PblVector3& vMe = GetMe()->GetMatrix().GetTranslation();
-        PblVector3 vDest(vLand.x + vMe.x, vMe.y + vLand.y, vMe.z + vLand.z);
+        PblVector3 vLand(vJump.x, 0.0f, vJump.z);
+        vLand = Normalize(vLand);
+        PblVector3 vDest = vLand * 25.0f + GetMe()->GetMatrix().GetTranslation();
 
         if (AIUtil::DirectLineToTarget(GetMe()->GetGameObject(), vDest))
         {
@@ -857,35 +859,27 @@ void AttackPatterns::SetGlanceDest()
 {
     const GameObject* pTarget = GetAttackHelper()->GetTarget();
     PblVector3 vPos = GetMe()->GetMatrix().GetTranslation();
-    const PblMatrix& m = GetMe()->GetMatrix();
-    PblVector3 vFwd(m.m[2][0], m.m[2][1], m.m[2][2]);
+    PblVector3 vFwd = GetMe()->GetMatrix().GetZAxis();
     float fSpeed = GetMaxSpeed(GetMe()->GetGameObject());
 
     if (mOnApproach)
     {
         PblVector3 vTarget = GetAttackHelper()->GetLastSeenTargetPos();
-        PblVector3 vDir = AIUtil::GetSafeNormalXZ(PblVector3(vTarget.x - vPos.x, vTarget.y - vPos.y, vTarget.z - vPos.z));
+        PblVector3 vDir = AIUtil::GetSafeNormalXZ(vTarget - vPos);
         float fDot = vDir.x * vFwd.x + vFwd.y * vDir.y + vFwd.z * vDir.z;
-        PblVector3 vSide = AIUtil::GetSafeNormalXZ(PblVector3(vFwd.x - vDir.x * fDot, vFwd.y - vDir.y * fDot, vFwd.z - vDir.z * fDot));
+        PblVector3 vSide = AIUtil::GetSafeNormalXZ(vFwd - vDir * fDot);
 
         float fMyRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius();
         float fDist = GetCollisionObject(pTarget)->GetCollisionRadius() + fMyRadius + 2.0f;
-        mGlancePos.x = vSide.x * fDist + vTarget.x;
-        mGlancePos.y = vSide.y * fDist + vTarget.y;
-        mGlancePos.z = vSide.z * fDist + vTarget.z;
+        mGlancePos = vSide * fDist + vTarget;
 
-        PblVector3 vOn = AIUtil::GetSafeNormalXZ(PblVector3(mGlancePos.x - vPos.x, mGlancePos.y - vPos.y, mGlancePos.z - vPos.z));
         float fOn = fSpeed * 0.5f;
-        mGlancePos.x += fOn * vOn.x;
-        mGlancePos.y += vOn.y * fOn;
-        mGlancePos.z += vOn.z * fOn;
+        mGlancePos += AIUtil::GetSafeNormalXZ(mGlancePos - vPos) * fOn;
     }
     else
     {
         float fAhead = fSpeed * 3.0f;
-        mGlancePos.x = fAhead * vFwd.x + vPos.x;
-        mGlancePos.y = vFwd.y * fAhead + vPos.y;
-        mGlancePos.z = vFwd.z * fAhead + vPos.z;
+        mGlancePos = vFwd * fAhead + vPos;
     }
 
     mOwner->GetLowLevel().SetNavigator_Slide(mGlancePos, NULL);

@@ -279,13 +279,14 @@ bool WeaponShield::Update(float fDeltaTime)
     if (bShielded)
     {
         mOwner->GetGameObject()->SetAddShield(static_cast<const WeaponShieldClass*>(mClass)->mAddShield);
-        if (!mShieldEffect && static_cast<const WeaponShieldClass*>(mClass)->mShieldEffect)
+        FLEffectClass* pShieldEffectClass = static_cast<const WeaponShieldClass*>(mClass)->mShieldEffect;
+        if (!mShieldEffect && pShieldEffectClass)
         {
             mSoundControl.Play(&static_cast<const WeaponShieldClass*>(mClass)->mSoundShield,
                                &mOwner->GetGameObject()->GetMatrix().GetTranslation(),
                                &mOwner->GetGameObject()->GetVelocity(), true);
             PlayFireSound(false);
-            mShieldEffect = static_cast<const WeaponShieldClass*>(mClass)->mShieldEffect->BuildEffect();
+            mShieldEffect = pShieldEffectClass->BuildEffect();
             if (mShieldEffect)
             {
                 mShieldEffect->AttachEffectToObject(mOwner->GetGameObject(),

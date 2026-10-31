@@ -41,18 +41,19 @@ SoundDebugDisplay* SoundDebugDisplay::sInstance;
 void SoundDebugDisplay::DisplayVoiceChatInfo()
 {
     GameVoiceChat::Transport* pTransport = GameVoiceChat::GetTransport();
-    const unsigned char ucNodes = pTransport->mNumNodes;
+    const unsigned char ucNodes = pTransport->GetNumNodes();
     const unsigned int uiEnabledNodes = GameVoiceChat::GetNumEnabledNodes();
-    for (unsigned int uiEnabled = 0; uiEnabled < uiEnabledNodes; ++uiEnabled)
+    for (unsigned char uiEnabled = 0; uiEnabled < uiEnabledNodes; ++uiEnabled)
     {
         GameVoiceChat::Node* pNode = GameVoiceChat::GetEnabledNode(uiEnabled);
-        const unsigned char ucNodeID = pNode->mNodeID;
-        char* const pEncoder = (char*)pNode->mEncoder;
-        GameVoiceChat::Decoder* const pDecoder = pNode->mDecoder ?
-            static_cast<GameVoiceChat::Decoder*>(pNode->mDecoder) : 0;
+        const unsigned char ucNodeID = pNode->GetID();
+        char* const pEncoder = (char*)&pNode->GetEncoder();
+        VoiceChat::Decoder* const pBaseDecoder = &pNode->GetDecoder();
+        GameVoiceChat::Decoder* const pDecoder = pBaseDecoder ?
+            static_cast<GameVoiceChat::Decoder*>(pBaseDecoder) : 0;
         Printf("Headset %d (player id=%d)\n", uiEnabled, ucNodeID);
 
-        unsigned int uiConnections = 0;
+        unsigned char ucConnections = 0;
         float fTotalOut = 0.0f;
         for (unsigned char ucOther = 0; ucOther < ucNodes; ++ucOther)
         {
@@ -66,7 +67,7 @@ void SoundDebugDisplay::DisplayVoiceChatInfo()
                    metrics.sendCount, metrics.lastSendTime, metrics.droppedCount,
                    metrics.bandwidth, metrics.bandwidthAverage);
             fTotalOut += metrics.bandwidthAverage;
-            ++uiConnections;
+            ++ucConnections;
         }
         Printf("total out %2.02f\n", fTotalOut);
 
@@ -91,23 +92,22 @@ void SoundDebugDisplay::DisplayVoiceChatInfo()
                    metrics.starvedFrequency, metrics.starvedCount, metrics.outOfOrderCount,
                    pcReceive, pcSend, uiDecoded);
         }
-        if (!uiConnections)
+        if (!ucConnections)
         {
             Printf("No other players connected\n");
         }
 
-        const char* pcEncoder = GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x78))->GetPlayState());
-        const char* pcVAD = GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x478))->GetPlayState());
-        const char* pcAGC = GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x4b8))->GetPlayState());
-        const char* pcSource = GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x08))->GetPlayState());
-        Printf("capture: src %s, agc %s, vad %s, enc %s", pcSource, pcAGC, pcVAD, pcEncoder);
+        Printf("capture: src %s, agc %s, vad %s, enc %s",
+               GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x08))->GetPlayState()),
+               GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x4b8))->GetPlayState()),
+               GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x478))->GetPlayState()),
+               GetPlayStateStringShort(((Snd::SourceTransport*)(pEncoder + 0x78))->GetPlayState()));
 
-        Snd::StreamNode* pRenderer = &static_cast<Snd::StreamNode&>(pDecoder->mAuxRenderer);
-        const char* pcStarving = pRenderer->IsStarving() ? "stv" : "ok ";
-        const char* pcPlayState = GetPlayStateStringShort(((Snd::SourceTransport*)pRenderer)->GetPlayState());
-        Snd::StreamMixer* pMixer = &pDecoder->mMixer;
+        Snd::StreamNode& rRenderer = pDecoder->mAuxRenderer;
         Printf("render : mix %s, aux %s %s %2d:%2d\n",
-               pMixer->IsActive() ? "ply" : "stp", pcPlayState, pcStarving, 0, 0);
+               pDecoder->mMixer.IsActive() ? "ply" : "stp",
+               GetPlayStateStringShort(rRenderer.GetPlayState()),
+               rRenderer.IsStarving() ? "stv" : "ok ", 0, 0);
     }
 }
 
@@ -346,74 +346,73 @@ void SoundDebugDisplay::DisplayChaseInfo(float fDeltaTime)
         return;
     }
     GameObject* pObject = pOwner->GetGameObject();
-    if (!pObject)
+    if (pObject)
     {
-        mGameObjectPrev = 0;
-        return;
-    }
+        const PblVector3& vVelocity = pObject->GetVelocity();
+        const float fSpeed = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
+                                   vVelocity.z * vVelocity.z);
+        const float fAccel = (fSpeed - mSpeedPrev) / fDeltaTime;
+        Printf("Speed %03.03f", fSpeed);
+        if (fDeltaTime > 0.0f)
+        {
+            if (mGameObjectPrev == pObject)
+            {
+                Printf("Acceleration %03.03f", fAccel);
+            }
+            else
+            {
+                mSpeedPrev = 0.0f;
+            }
+        }
+        mSpeedPrev = fSpeed;
 
-    const PblVector3& vVelocity = pObject->GetVelocity();
-    const float fSpeed = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
-                               vVelocity.z * vVelocity.z);
-    const float fAccel = (fSpeed - mSpeedPrev) / fDeltaTime;
-    Printf("Speed %03.03f", fSpeed);
-    if (fDeltaTime > 0.0f)
-    {
-        if (mGameObjectPrev == pObject)
+        if (pObject->IsRtti(0x8b3e2650 /* "EntityWalker" */))
         {
-            Printf("Acceleration %03.03f", fAccel);
+            EntityWalker* pWalker = (EntityWalker*)pObject;
+            const unsigned int uiFeet = 2 * pWalker->mLegPairCount;
+            for (unsigned int i = 0; i < uiFeet; ++i)
+            {
+                Printf("FH %d %d %d %03.03f", (pWalker->mFootState >> i) & 1,
+                       (pWalker->mFootState >> (i + 8)) & 1,
+                       (pWalker->mFootState >> (i + 16)) & 1,
+                       pWalker->mLastFootHeight[i]);
+            }
         }
-        else
+        else if (pObject->IsRtti(0x3639fed7 /* "EntityDroideka" */))
         {
-            mSpeedPrev = 0.0f;
+            EntityDroideka* pDroideka = (EntityDroideka*)pObject;
+            const unsigned int uiFeet = pDroideka->mClass->mNumFeet;
+            for (unsigned int i = 0; i < uiFeet; ++i)
+            {
+                Printf("FH %d %d %d %03.03f", (pDroideka->mFootState >> i) & 1,
+                       (pDroideka->mFootState >> (i + 8)) & 1,
+                       (pDroideka->mFootState >> (i + 16)) & 1,
+                       pDroideka->mLastFootHeight[i]);
+            }
         }
-    }
-    mSpeedPrev = fSpeed;
-
-    if (pObject->IsRtti(EntityWalker::rttiHashEntityWalker))
-    {
-        EntityWalker* pWalker = (EntityWalker*)pObject;
-        for (unsigned int i = 0; i < (unsigned int)(2 * pWalker->mLegPairCount); ++i)
+        else if (pObject->IsRtti(0x26395ec0 /* "EntityFlyer" */))
         {
-            Printf("FH %d %d %d %03.03f", (pWalker->mFootState >> i) & 1,
-                   (pWalker->mFootState >> (i + 8)) & 1,
-                   (pWalker->mFootState >> (i + 16)) & 1,
-                   pWalker->mLastFootHeight[i]);
+            EntityFlyer* pFlyer = (EntityFlyer*)pObject;
+            Printf("Speed %03.03f", pFlyer->mSpeedPrev);
+            float fClassAccel = pFlyer->mClass->mAcceleration;
+            if (fClassAccel == 0.0f)
+            {
+                fClassAccel = 1.0f;
+            }
+            Printf("Acceleration %03.03f", fAccel / fClassAccel);
         }
-    }
-    else if (pObject->IsRtti(EntityDroideka::rttiHashEntityDroideka))
-    {
-        EntityDroideka* pDroideka = (EntityDroideka*)pObject;
-        for (unsigned int i = 0; i < pDroideka->mClass->mNumFeet; ++i)
+        else if (pObject->IsRtti(0xc6cd61cc /* "EntityHover" */))
         {
-            Printf("FH %d %d %d %03.03f", (pDroideka->mFootState >> i) & 1,
-                   (pDroideka->mFootState >> (i + 8)) & 1,
-                   (pDroideka->mFootState >> (i + 16)) & 1,
-                   pDroideka->mLastFootHeight[i]);
+            EntityHover* pHover = (EntityHover*)pObject;
+            Printf("Speed %03.03f", pHover->mSpeedPrev);
+            float fClassAccel = pHover->mClass->mAcceleration;
+            if (fClassAccel == 0.0f)
+            {
+                fClassAccel = 1.0f;
+            }
+            Printf("Acceleration %03.03f", fAccel / fClassAccel);
+            Printf("Height %03.03f", 1.0f - pHover->mGroundRatio);
         }
-    }
-    else if (pObject->IsRtti(EntityFlyer::rttiHashEntityFlyer))
-    {
-        EntityFlyer* pFlyer = (EntityFlyer*)pObject;
-        Printf("Speed %03.03f", pFlyer->mSpeedPrev);
-        float fClassAccel = pFlyer->mClass->mAcceleration;
-        if (fClassAccel == 0.0f)
-        {
-            fClassAccel = 1.0f;
-        }
-        Printf("Acceleration %03.03f", fAccel / fClassAccel);
-    }
-    else if (pObject->IsRtti(EntityHover::rttiHashEntityHover))
-    {
-        EntityHover* pHover = (EntityHover*)pObject;
-        Printf("Speed %03.03f", pHover->mSpeedPrev);
-        float fClassAccel = pHover->mClass->mAcceleration;
-        if (fClassAccel == 0.0f)
-        {
-            fClassAccel = 1.0f;
-        }
-        Printf("Acceleration %03.03f", fAccel / fClassAccel);
-        Printf("Height %03.03f", 1.0f - pHover->mGroundRatio);
     }
     mGameObjectPrev = pObject;
 }

@@ -152,20 +152,21 @@ void HUD::ElementBitmap::SetTexture(unsigned int uiTextureHash)
 bool HUD::ElementBitmapBase::SetProperty(const unsigned int uHashID, const void* const pValue)
 {
     RedBitmapElement* const pBitmap = (RedBitmapElement*)mElement;
-    if (uHashID == kTexCoordsHash)
+    switch (uHashID)
+    {
+    case kTexCoordsHash:
     {
         const float* pCoords = (const float*)pValue;
         pBitmap->SetTexCoords(pCoords[0], pCoords[1], pCoords[2], pCoords[3], false);
+        break;
     }
-    else if (uHashID == kRelativeWidthHeightHash)
-    {
+    case kRelativeWidthHeightHash:
         mRelativeMode = (unsigned char)*(const unsigned int*)pValue;
-    }
-    else if (uHashID == kBitmapHash)
-    {
+        break;
+    case kBitmapHash:
         pBitmap->SetTexture((*(const RedTexture* const*)pValue)->m_uiNameHash);
-    }
-    else if (uHashID == kBitmapHAlignHash)
+        break;
+    case kBitmapHAlignHash:
     {
         float fLeft, fTop, fRight, fBottom;
         pBitmap->GetRect(fLeft, fTop, fRight, fBottom);
@@ -173,12 +174,12 @@ bool HUD::ElementBitmapBase::SetProperty(const unsigned int uHashID, const void*
         pBitmap->SetRect(fRight - fLeft, fBottom - fTop,
                          (RedBitmapElement::BitmapHAlignT)mHAlign,
                          (RedBitmapElement::BitmapVAlignT)mVAlign);
+        break;
     }
-    else if (uHashID == kEventBitmapHash)
-    {
+    case kEventBitmapHash:
         Item::SetEvent(*(const char* const*)pValue, mEventBitmap);
-    }
-    else if (uHashID == kBitmapVAlignHash)
+        break;
+    case kBitmapVAlignHash:
     {
         float fLeft, fTop, fRight, fBottom;
         pBitmap->GetRect(fLeft, fTop, fRight, fBottom);
@@ -186,19 +187,19 @@ bool HUD::ElementBitmapBase::SetProperty(const unsigned int uHashID, const void*
         pBitmap->SetRect(fRight - fLeft, fBottom - fTop,
                          (RedBitmapElement::BitmapHAlignT)mHAlign,
                          (RedBitmapElement::BitmapVAlignT)mVAlign);
+        break;
     }
-    else if (uHashID == kBitmapWidthHeightHash)
+    case kBitmapWidthHeightHash:
     {
         const float* pSize = (const float*)pValue;
         pBitmap->SetRect(pSize[0], pSize[1], (RedBitmapElement::BitmapHAlignT)mHAlign,
                          (RedBitmapElement::BitmapVAlignT)mVAlign);
+        break;
     }
-    else if (uHashID == kBitmapStyleHash)
-    {
+    case kBitmapStyleHash:
         pBitmap->SetStyle(*(const RedBitmapElement::BitmapStyleT*)pValue);
-    }
-    else
-    {
+        break;
+    default:
         return HUD::Element::SetProperty(uHashID, pValue);
     }
     return true;
@@ -319,23 +320,33 @@ void HUD::ElementBitmapBase::PostReadSetup()
 bool HUD::ElementBitmapBase::ReadData(PblConfig& config, PblConfig::Data& data)
 {
     RedBitmapElement* pBitmap = (RedBitmapElement*)mElement;
-    const unsigned int uId = data.GetId();
-    if (uId == kBitmapHash)
+    switch (data.GetId())
     {
+    case kBitmapHash:
         pBitmap->SetTexture((unsigned int)PblHash(data.GetStringArg(0)));
         FreeName(&mBitmapName);
         CopyName(&mBitmapName, data.GetStringArg(0), 0);
-    }
-    else if (uId == kTexCoordsHash)
-    {
+        break;
+    case kTexCoordsHash:
         pBitmap->SetTexCoords(data.GetFloatArg(0), data.GetFloatArg(1), data.GetFloatArg(2),
                               data.GetFloatArg(3), false);
-    }
-    else if (uId == kEventBitmapHash)
-    {
+        break;
+    case kEventBitmapHash:
         Item::ReadEvent(data, mEventBitmap);
+        break;
+    default:
+        return HUD::Element::ReadData(config, data);
+    case kBitmapStyleHash:
+    {
+        const unsigned int uStyle =
+            TranslateString(Factory::sBitmapStyleStrings, 2, data.GetStringArg(0));
+        if (uStyle < 2)
+        {
+            pBitmap->SetStyle((RedBitmapElement::BitmapStyleT)uStyle);
+        }
+        break;
     }
-    else if (uId == kBitmapRectHash)
+    case kBitmapRectHash:
     {
         const unsigned int uNumArgs = data.GetNumArgs();
         unsigned int uHAlign = 0;
@@ -381,19 +392,8 @@ bool HUD::ElementBitmapBase::ReadData(PblConfig& config, PblConfig::Data& data)
         mHAlign = (unsigned char)uHAlign;
         mVAlign = (unsigned char)uVAlign;
         mRelativeMode = (unsigned char)iMode;
+        break;
     }
-    else if (uId == kBitmapStyleHash)
-    {
-        const unsigned int uStyle =
-            TranslateString(Factory::sBitmapStyleStrings, 2, data.GetStringArg(0));
-        if (uStyle < 2)
-        {
-            pBitmap->SetStyle((RedBitmapElement::BitmapStyleT)uStyle);
-        }
-    }
-    else
-    {
-        return HUD::Element::ReadData(config, data);
     }
     return true;
 }
@@ -465,7 +465,7 @@ void HUD::ElementBitmap::CopyToBitmaps(RedBitmapElement* const pBitmaps, unsigne
     for (unsigned int i = 0; i < uCount; ++i)
     {
         RedBitmapElement& bitmap = pBitmaps[i];
-        bitmap.m_color = m_color;
+        bitmap.SetColor(m_color);
         bitmap.m_color.a = uAlpha;
         bitmap.SetBlendMode(GetBlendMode());
 

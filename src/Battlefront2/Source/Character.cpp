@@ -682,9 +682,8 @@ bool Character::Update(float fDeltaTime)
                     {
                         pFirstAI->mUnit->ExitVehicle(true, true);
                     }
-                    Damageable* pDamageable = GetDamageable(pObject);
-                    pDamageable->mIsAlive = false;
-                    pDamageable->mVanishing = true;
+                    pObject->mIsAlive = false;
+                    pObject->mVanishing = true;
                 }
             }
             else if (iPlayersAlive + iAIAlive >= SpawnManager::Instance()->GetUnitCount(mTeamNumber))
@@ -710,11 +709,11 @@ bool Character::Update(float fDeltaTime)
                 pMember->GetControllable() && pMember->GetControllable()->GetGameObject())
             {
                 GameObject* pObject = pMember->GetControllable()->GetGameObject();
-                const PblVector3& vPost = mPost->GetMatrix().GetTranslation();
-                const PblVector3& vPos = GetPosition(pObject);
-                float fX = vPost.x - vPos.x;
-                float fY = vPost.y - vPos.y;
-                float fZ = vPost.z - vPos.z;
+                const PblMatrix& mPostMatrix = mPost->GetMatrix();
+                const PblVector3& vPos = pObject->GetPosition();
+                float fX = mPostMatrix.GetTranslation().x - vPos.x;
+                float fY = mPostMatrix.GetTranslation().y - vPos.y;
+                float fZ = mPostMatrix.GetTranslation().z - vPos.z;
                 float fDist = sqrtf(fX * fX + fY * fY + fZ * fZ);
                 Damageable* pDamageable = GetDamageable(pObject);
                 float fWeight = pDamageable->mMaxHealth > 0.0f
@@ -743,6 +742,12 @@ bool Character::Update(float fDeltaTime)
     mTakeoverFirstTime = false;
     Spawn(mPost->GetMatrixOnSpawnPath(mTeamNumber != GetTeam(GetPostObject(mPost))));
     return true;
+}
+
+namespace
+{
+inline int GetWeaponChannelByWeaponIndex(Entity* pSoldier, int iIndex);
+inline AmmoCounter* GetAmmoCounter(Weapon* pWeapon);
 }
 
 // FUNCTION: SWBF2 0x00451520
@@ -848,7 +853,7 @@ void Character::ChangeClass(int iClassIndex)
         int iCount = pControllable->GetWeaponCount();
         for (int i = 0; i < iCount; ++i)
         {
-            Weapon* pWeapon = GetSoldierControllable(pEntity)->GetWeaponPtr(i);
+            Weapon* pWeapon = pControllable->GetWeaponPtr(i);
             const WeaponClass* pWeaponClass = GetWeaponClass(pWeapon);
             bool bAvailable;
             if (pMedals)

@@ -149,8 +149,12 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
     mClass = pClass;
 
     PblBox box;
-    box._vMin = PblVector3(FLT_MAX, FLT_MAX, FLT_MAX);
-    box._vMax = PblVector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    box._vMin.x = FLT_MAX;
+    box._vMin.y = FLT_MAX;
+    box._vMin.z = FLT_MAX;
+    box._vMax.x = -FLT_MAX;
+    box._vMax.y = -FLT_MAX;
+    box._vMax.z = -FLT_MAX;
     bool bHaveBody = false;
     for (int i = 0; i < mCollisionModel->GetNumBodies(); ++i)
     {
@@ -160,23 +164,28 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
             continue;
         }
         bHaveBody = true;
-        PblBox bodyBox;
         if (pBody->bIsMesh)
         {
-            bodyBox = static_cast<CollisionBodyMesh*>(pBody)->mMesh->GetWorldspaceAABB(
+            PblBox bodyBox = static_cast<CollisionBodyMesh*>(pBody)->mMesh->GetWorldspaceAABB(
                 pBody->GetWorldMatrix(mMatrix, 0));
+            box._vMin.x = bodyBox._vMin.x > box._vMin.x ? box._vMin.x : bodyBox._vMin.x;
+            box._vMin.y = bodyBox._vMin.y > box._vMin.y ? box._vMin.y : bodyBox._vMin.y;
+            box._vMin.z = bodyBox._vMin.z > box._vMin.z ? box._vMin.z : bodyBox._vMin.z;
+            box._vMax.x = box._vMax.x > bodyBox._vMax.x ? box._vMax.x : bodyBox._vMax.x;
+            box._vMax.y = box._vMax.y > bodyBox._vMax.y ? box._vMax.y : bodyBox._vMax.y;
+            box._vMax.z = box._vMax.z > bodyBox._vMax.z ? box._vMax.z : bodyBox._vMax.z;
         }
         else
         {
-            bodyBox = static_cast<CollisionBodyPrimitive*>(pBody)->mPrimitive.GetWorldspaceAABB(
+            PblBox bodyBox = static_cast<CollisionBodyPrimitive*>(pBody)->mPrimitive.GetWorldspaceAABB(
                 pBody->GetWorldMatrix(mMatrix, 0));
+            box._vMin.x = bodyBox._vMin.x > box._vMin.x ? box._vMin.x : bodyBox._vMin.x;
+            box._vMin.y = bodyBox._vMin.y > box._vMin.y ? box._vMin.y : bodyBox._vMin.y;
+            box._vMin.z = bodyBox._vMin.z > box._vMin.z ? box._vMin.z : bodyBox._vMin.z;
+            box._vMax.x = box._vMax.x > bodyBox._vMax.x ? box._vMax.x : bodyBox._vMax.x;
+            box._vMax.y = box._vMax.y > bodyBox._vMax.y ? box._vMax.y : bodyBox._vMax.y;
+            box._vMax.z = box._vMax.z > bodyBox._vMax.z ? box._vMax.z : bodyBox._vMax.z;
         }
-        box._vMin.x = bodyBox._vMin.x > box._vMin.x ? box._vMin.x : bodyBox._vMin.x;
-        box._vMin.y = bodyBox._vMin.y > box._vMin.y ? box._vMin.y : bodyBox._vMin.y;
-        box._vMin.z = bodyBox._vMin.z > box._vMin.z ? box._vMin.z : bodyBox._vMin.z;
-        box._vMax.x = box._vMax.x > bodyBox._vMax.x ? box._vMax.x : bodyBox._vMax.x;
-        box._vMax.y = box._vMax.y > bodyBox._vMax.y ? box._vMax.y : bodyBox._vMax.y;
-        box._vMax.z = box._vMax.z > bodyBox._vMax.z ? box._vMax.z : bodyBox._vMax.z;
     }
     if (bHaveBody)
     {
@@ -185,7 +194,7 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
 
     float fHalfX = (mAABB._vMax.x - mAABB._vMin.x) * 0.5f;
     float fHalfZ = (mAABB._vMax.z - mAABB._vMin.z) * 0.5f;
-    float f2dRadius = sqrtf(fHalfX * fHalfX + fHalfZ * fHalfZ);
+    float f2dRadius = sqrtf(fHalfX * fHalfX + 0.0f + fHalfZ * fHalfZ);
     if (GetCollisionRadius() > f2dRadius)
     {
         Set2DCollisionRadius(f2dRadius);

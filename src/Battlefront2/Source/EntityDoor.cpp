@@ -21,30 +21,31 @@ extern bool netFrameLock;
 // FUNCTION: SWBF2 0x00498460
 void EntityDoor::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
-    if (mAnimatedClass->m_bDynamicLighting)
-    {
-        uiFlags &= ~0x80u;
-    }
-    else
+    if (!mAnimatedClass->m_bDynamicLighting)
     {
         uiFlags |= 0x80u;
     }
+    else
+    {
+        uiFlags &= ~0x80u;
+    }
     SetupShadow(0, mModel, ucViewport, uiFlags, 0);
 
-    bool bNetwork = netInShell ? netEnabled : netEnabledNext;
-    bool bInterpolate = bNetwork && !netFrameLock && !mIsLocked;
     float fPoseTime = mZephyrPoseDyn.m_fCurT;
-    if (bInterpolate)
+    if (NetGame::IsEnabled() && !netFrameLock && !mIsLocked)
     {
-        float fStep = NetGame::GetTurnRatio() * mRenderDt;
-        float fInterpolated = mIsOpen ? mLastAnimTime + fStep : mLastAnimTime - fStep;
-        if (mIsOpen && fInterpolated > 1.0f)
+        const float fRenderDt = mRenderDt;
+        float fStep = fRenderDt * NetGame::GetTurnRatio();
+        float fInterpolated;
+        if (mIsOpen)
         {
-            fInterpolated = 1.0f;
+            fInterpolated = mLastAnimTime + fStep;
+            fInterpolated = 1.0f > fInterpolated ? fInterpolated : 1.0f;
         }
-        if (!mIsOpen && fInterpolated < 0.0f)
+        else
         {
-            fInterpolated = 0.0f;
+            fInterpolated = mLastAnimTime - fStep;
+            fInterpolated = fInterpolated > 0.0f ? fInterpolated : 0.0f;
         }
         mZephyrPoseDyn.SetCurTime(fInterpolated);
         mZephyrPoseDyn.Update(0.0f);
@@ -57,21 +58,21 @@ void EntityDoor::Render(unsigned char ucViewport, float fDist, unsigned int uiFl
     }
 
     const GameModel* pModel = GetModel();
-    pModel->Render(ucViewport, fDist, &mMatrix, &mPose, RedColor::WHITE,
+    const RedColor kWhite(255, 255, 255, 255);
+    pModel->Render(ucViewport, fDist, &mMatrix, &mPose, kWhite,
                    uiFlags | 0x01000000u, 0);
     if (!(uiFlags & 0x00200000u))
     {
         PblMatrix reflection;
         if (FLRenderer::IsReflected(GetCollisionCenter(), GetCollisionRadius(), reflection, false))
         {
-            PblMatrix reflected;
-            reflected = mMatrix * reflection;
-            pModel->Render(ucViewport, fDist, &reflected, &mPose, RedColor::WHITE,
+            reflection = mMatrix * reflection;
+            pModel->Render(ucViewport, fDist, &reflection, &mPose, RedColor::WHITE,
                            (uiFlags & 0xeffefeffu) | 0x10000100u, 0);
         }
     }
 
-    if (bInterpolate)
+    if (NetGame::IsEnabled() && !netFrameLock && !mIsLocked)
     {
         mZephyrPoseDyn.SetCurTime(fPoseTime);
         mZephyrPoseDyn.Update(0.0f);
@@ -284,9 +285,9 @@ bool EntityDoor::Update(float fDeltaTime)
 {
     if (hasPortal_ && !portal_)
     {
-        const PblSphere& rSphere = GetCollisionSphere();
-        portal_ = pvs::IManager::GetInstance().FindNearestPortal(
-            geo::Sphere(geo::Vector3<float>(rSphere.x, rSphere.y, rSphere.z), rSphere.w), 10.5f);
+        const PblSphere sphere = GetCollisionSphere();
+        const geo::Sphere kSphere(geo::Vector3<float>(sphere.x, sphere.y, sphere.z), sphere.w);
+        portal_ = pvs::IManager::GetInstance().FindNearestPortal(kSphere, 10.5f);
         hasPortal_ = portal_ != 0;
     }
 
@@ -302,29 +303,29 @@ bool EntityDoor::Update(float fDeltaTime)
     {
         for (int i = 0; i < 3; ++i)
         {
-            const EntityDoorClass::AnimationTrigger& rTrigger = mAnimatedClass->mAnimationTriggers[i];
-            if (!rTrigger.mTriggerPoint)
+            if (!mAnimatedClass->mAnimationTriggers[i].mTriggerPoint)
             {
                 continue;
             }
             PblMatrix mBone;
-            if (!GetModel()->GetRedModel(0)->GetBoneMatrix(rTrigger.mTriggerPoint, mBone))
+            if (!GetModel()->GetRedModel(0)->GetBoneMatrix(mAnimatedClass->mAnimationTriggers[i].mTriggerPoint, mBone))
             {
                 continue;
             }
-            PblMatrix mWorld;
-            mWorld = mBone * mMatrix;
+            const PblMatrix mWorld = mBone * mMatrix;
 
             GameObject* apUnits[20];
             int iCount;
             if (NetGame::IsEnabled() && netEnabledNext && netClientActive)
             {
-                iCount = NetGame::GetObjectsInRange(mWorld.GetTranslation(), rTrigger.mTriggerRadius, apUnits, 20, 0,
+                iCount = NetGame::GetObjectsInRange(mWorld.GetTranslation(),
+                                    mAnimatedClass->mAnimationTriggers[i].mTriggerRadius, apUnits, 20, 0,
                                     COLL_SOFT);
             }
             else
             {
-                iCount = ControllerManager::GetUnitsInRange(mWorld.GetTranslation(), rTrigger.mTriggerRadius,
+                iCount = ControllerManager::GetUnitsInRange(mWorld.GetTranslation(),
+                                                            mAnimatedClass->mAnimationTriggers[i].mTriggerRadius,
                                                             apUnits, 20, 0, AI::AFFIL_ALL);
             }
             for (int j = 0; j < iCount; ++j)

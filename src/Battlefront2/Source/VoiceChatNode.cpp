@@ -198,85 +198,78 @@ unsigned int VoiceChat::Node::UpdateReceiveStreamLatency(unsigned char ucIndex)
 // FUNCTION: SWBF2 0x00672b70
 bool VoiceChat::Node::Open(unsigned int captureDeviceIndex, unsigned int renderDeviceIndex, unsigned char numDecoderInputs)
 {
-
-    if (!mEncoder->Open(captureDeviceIndex, sBufferSizeMs, 2))
+    if (mEncoder->Open(captureDeviceIndex, sBufferSizeMs, 2))
     {
-        return false;
-    }
-
-    if (!mDecoder->Open(renderDeviceIndex, mEncoder->GetMaxOutputPacketSizeMs(), 2, numDecoderInputs))
-    {
-        mEncoder->Close();
-        return false;
-    }
-
-    const float fSeconds = mEncoder->GetMaxOutputPacketSizeMs() / 1000.0f;
-    const unsigned int uiPackets =
-        (unsigned short)(int)(VoiceChat::Node::sReceiveBufferSize / fSeconds);
-
-    const unsigned int uiBytes = mEncoder->GetMaxOutputPacketSizeBytes();
-    const unsigned int uiNodes = VoiceChat::Node::sTransport->GetNumNodes();
-    const unsigned int uiAlignedBytes = (uiBytes + 3u) & ~3u;
-
-    char* const pBlock = (char*)VoiceChat::Alloc(
-        ((uiAlignedBytes + 0x10u) * uiPackets + 0x1Cu) * uiNodes + 0x0Cu);
-    mReceiveStreams = (ReceiveStream*)pBlock;
-
-    if (!pBlock)
-    {
-        mDecoder->Close();
-        mEncoder->Close();
-        return false;
-    }
-
-    mIsOpen = true;
-    mEncoderPacketSizeSec = fSeconds;
-    mMaxReceiveSize = uiBytes;
-    mMaxReceivePackets = (unsigned short)uiPackets;
-    mLastCaptureTime = 0;
-    mLastSendTime = 0;
-    mLastReceiveTime = 0;
-    mBufferUpdateTime = 0;
-    mSendSeq = 0;
-    mNumDecoderInputs = numDecoderInputs;
-
-    char* pEntryBuf = pBlock + uiNodes * 0x18;
-    char* pData = (char*)((((unsigned long)(pEntryBuf) +
-                            uiPackets * uiNodes * 0x10u) + 3u) & ~3u);
-
-    for (unsigned int i = 0; i < uiNodes; ++i)
-    {
-        ReceiveStream& entry = mReceiveStreams[i];
-        unsigned char* const pEntry = (unsigned char*)&entry;
-
-        pEntry[0x17] &= 0xFC;
-        *(unsigned int*)(pEntry + 0x12) = 0;
-        entry.packet = (AudioPacket*)pEntryBuf;
-        *(unsigned int*)(pEntry + 0x04) = 0;
-        *(unsigned int*)(pEntry + 0x08) = 0;
-        *(unsigned int*)(pEntry + 0x0C) = 0;
-        pEntry[0x16] = (char)0xFF;
-
-        UpdateReceiveStreamLatency((unsigned char)i);
-
-        for (unsigned int p = uiPackets; p != 0; --p)
+        if (mDecoder->Open(renderDeviceIndex, mEncoder->GetMaxOutputPacketSizeMs(), 2, numDecoderInputs))
         {
-            pEntryBuf[0x0C] &= 0xFE;
-            ((AudioPacket*)pEntryBuf)->mData = pData;
-            pData += uiAlignedBytes;
-            *(unsigned int*)(pEntryBuf + 0x04) = 0;
-            *(unsigned int*)(pEntryBuf + 0x08) = 0;
-            pEntryBuf += 0x10;
+            const float fSeconds = mEncoder->GetMaxOutputPacketSizeMs() / 1000.0f;
+            const unsigned short uiPackets =
+                (unsigned short)(int)(VoiceChat::Node::sReceiveBufferSize / fSeconds);
+
+            const unsigned int uiBytes = mEncoder->GetMaxOutputPacketSizeBytes();
+            const unsigned char uiNodes = ((const VoiceChat::Transport*)(VoiceChat::Node::sTransport))->GetNumNodes();
+            const unsigned int uiAlignedBytes = (uiBytes + 3u) & ~3u;
+
+            char* const pBlock = (char*)VoiceChat::Alloc(
+                ((uiAlignedBytes + 0x10u) * uiPackets + 0x1Cu) * uiNodes + 0x0Cu);
+            mReceiveStreams = (ReceiveStream*)pBlock;
+
+            if (pBlock)
+            {
+                mIsOpen = true;
+                mEncoderPacketSizeSec = fSeconds;
+                mMaxReceiveSize = uiBytes;
+                mMaxReceivePackets = uiPackets;
+                mLastCaptureTime = 0;
+                mLastSendTime = 0;
+                mLastReceiveTime = 0;
+                mBufferUpdateTime = 0;
+                mSendSeq = 0;
+                mNumDecoderInputs = numDecoderInputs;
+
+                char* pEntryBuf = pBlock + uiNodes * 0x18;
+                char* pData = (char*)((((unsigned long)(pEntryBuf) +
+                                        uiPackets * uiNodes * 0x10u) + 3u) & ~3u);
+
+                for (unsigned char i = 0; i < uiNodes; ++i)
+                {
+                    ReceiveStream& entry = mReceiveStreams[i];
+                    unsigned char* const pEntry = (unsigned char*)&entry;
+
+                    pEntry[0x17] &= 0xFC;
+                    *(unsigned int*)(pEntry + 0x12) = 0;
+                    entry.packet = (AudioPacket*)pEntryBuf;
+                    *(unsigned int*)(pEntry + 0x04) = 0;
+                    *(unsigned int*)(pEntry + 0x08) = 0;
+                    *(unsigned int*)(pEntry + 0x0C) = 0;
+                    pEntry[0x16] = (char)0xFF;
+
+                    UpdateReceiveStreamLatency(i);
+
+                    for (unsigned int p = uiPackets; p != 0; --p)
+                    {
+                        pEntryBuf[0x0C] &= 0xFE;
+                        ((AudioPacket*)pEntryBuf)->mData = pData;
+                        pData += uiAlignedBytes;
+                        *(unsigned int*)(pEntryBuf + 0x04) = 0;
+                        *(unsigned int*)(pEntryBuf + 0x08) = 0;
+                        pEntryBuf += 0x10;
+                    }
+                }
+
+                mAllocatedInputs = (unsigned char*)pData;
+                for (unsigned char b = 0; b < mNumDecoderInputs; ++b)
+                {
+                    mAllocatedInputs[b] = (unsigned char)0xFF;
+                }
+
+                return true;
+            }
+            mDecoder->Close();
         }
+        mEncoder->Close();
     }
-
-    mAllocatedInputs = (unsigned char*)pData;
-    for (unsigned int b = 0; b < mNumDecoderInputs; ++b)
-    {
-        mAllocatedInputs[b] = (unsigned char)0xFF;
-    }
-
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00672d50
@@ -513,11 +506,11 @@ bool VoiceChat::Node::DecoderReceiveAudioPacket(unsigned char stream,
 // FUNCTION: SWBF2 0x006731a0
 void VoiceChat::Node::Decode(float fDeltaTime)
 {
-    Transport* const pTransport = VoiceChat::Node::sTransport;
-    const unsigned char numStreams = ((const VoiceChat::Transport*)(pTransport))->GetNumNodes();
+    const unsigned char numStreams = ((const VoiceChat::Transport*)(VoiceChat::Node::sTransport))->GetNumNodes();
+    unsigned char i;
     bool bStarving = false;
 
-    for (unsigned char i = 0; i < numStreams; ++i)
+    for (i = 0; i < numStreams; ++i)
     {
         ReceiveStream& stream = mReceiveStreams[i];
         if (stream.activated)
@@ -525,7 +518,7 @@ void VoiceChat::Node::Decode(float fDeltaTime)
             DecodeQueue(i, false);
             if (stream.bufferedData == 0.0f)
             {
-                bStarving |= stream.decoderInput != 0xFF && pTransport->GetReceivePossible(mNodeID, i) &&
+                bStarving |= mReceiveStreams[i].decoderInput != 0xFF && VoiceChat::Node::sTransport->GetReceivePossible(mNodeID, i) &&
                              CalculateNumPackets(stream) == 0;
             }
         }
@@ -539,9 +532,9 @@ void VoiceChat::Node::Decode(float fDeltaTime)
         }
     }
 
-    const bool bWasReceiving = pTransport->IsConnectedReceive(mNodeID);
+    const bool bWasReceiving = VoiceChat::Node::sTransport->IsConnectedReceive(mNodeID);
     const bool bDecoderEnabled = mDecoder->IsEnabled();
-    pTransport->SetLocalNode(mNodeID, true, bDecoderEnabled, ((VoiceChat::Encoder*)mEncoder)->IsEnabled() != 0);
+    VoiceChat::Node::sTransport->SetLocalNode(mNodeID, true, bDecoderEnabled, ((VoiceChat::Encoder*)mEncoder)->IsEnabled() != 0);
     if (bDecoderEnabled != bWasReceiving)
     {
         AudioPacket packet;
@@ -562,7 +555,7 @@ void VoiceChat::Node::Decode(float fDeltaTime)
         packet.mData = 0;
         packet.mSize = 0;
         packet.mAppData = 0;
-        for (unsigned char i = 0; i < numStreams; ++i)
+        for (i = 0; i < numStreams; ++i)
         {
             ReceiveStream& stream = mReceiveStreams[i];
             if (DecoderIsStarving(i, bStarving) && stream.activated)

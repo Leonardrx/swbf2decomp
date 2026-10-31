@@ -731,7 +731,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             PblVector3& vIn = point.mSlopeIn;
-            float fLength = sqrtf(vIn.x * vIn.x + vIn.y * vIn.y + vIn.z * vIn.z);
+            float fLength = sqrt(vIn.x * vIn.x + vIn.y * vIn.y + vIn.z * vIn.z);
             float fStep = fDeltaTime * 30.0f;
             if (fLength <= fStep)
             {
@@ -745,7 +745,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             PblVector3& vOut = mAttachPoints[i - 1].mSlopeOut;
-            fLength = sqrtf(vOut.x * vOut.x + vOut.y * vOut.y + vOut.z * vOut.z);
+            fLength = sqrt(vOut.x * vOut.x + vOut.y * vOut.y + vOut.z * vOut.z);
             if (fLength <= fStep)
             {
                 vOut = gVectorZero;
@@ -764,7 +764,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             vDiff.x = vTarget.x - point.mBodyOffset.x;
             vDiff.y = vTarget.y - point.mBodyOffset.y;
             vDiff.z = vTarget.z - point.mBodyOffset.z;
-            fLength = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+            fLength = sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
             if (fLength <= fStep)
             {
                 point.mBodyOffset = vTarget;
@@ -805,9 +805,9 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             const PblVector3& vFinal = point.mFinalSlope;
-            float fLength = sqrtf(vFinal.y * vFinal.y + vFinal.x * vFinal.x + vFinal.z * vFinal.z);
+            float fLength = sqrt(vFinal.y * vFinal.y + vFinal.x * vFinal.x + vFinal.z * vFinal.z);
             PblVector3& vIn = point.mSlopeIn;
-            if (sqrtf(vIn.y * vIn.y + vIn.x * vIn.x + vIn.z * vIn.z) + fDeltaTime > fLength)
+            if (sqrt(vIn.y * vIn.y + vIn.x * vIn.x + vIn.z * vIn.z) + fDeltaTime > fLength)
             {
                 vIn = vFinal;
             }
@@ -819,7 +819,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             PblVector3& vOut = point.mSlopeOut;
-            fLength = sqrtf(vOut.y * vOut.y + vOut.x * vOut.x + vOut.z * vOut.z);
+            fLength = sqrt(vOut.y * vOut.y + vOut.x * vOut.x + vOut.z * vOut.z);
             if (fDeltaTime + fLength > fLength)
             {
                 vOut = vFinal;
@@ -835,7 +835,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             vDiff.x = point.mInitialBodyOffset.x - point.mBodyOffset.x;
             vDiff.y = point.mInitialBodyOffset.y - point.mBodyOffset.y;
             vDiff.z = point.mInitialBodyOffset.z - point.mBodyOffset.z;
-            fLength = sqrtf(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+            fLength = sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
             if (fLength <= fDeltaTime)
             {
                 point.mBodyOffset = point.mInitialBodyOffset;

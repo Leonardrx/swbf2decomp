@@ -334,35 +334,28 @@ const ConnectivityArc* ConnectivityGraph::GetNextArc(const ConnectivityArc* pCur
     }
 
     unsigned char* const* ppTables = from.mBranchingTable[iType];
-    bool bAny = false;
+    if (!((ppTables[0] && ppTables[0][iTo]) || (ppTables[1] && ppTables[1][iTo])
+          || (ppTables[2] && ppTables[2][iTo]) || (ppTables[3] && ppTables[3][iTo])))
+    {
+        return 0;
+    }
+    int iPick = PblRandom::GetSim().GetInt() % iTotal;
     for (int i = 0; i < 4; ++i)
     {
-        if (ppTables[i] && ppTables[i][iTo])
+        const unsigned char* pTable = ppTables[i];
+        if (!pTable)
         {
-            bAny = true;
             break;
         }
-    }
-    if (bAny)
-    {
-        int iPick = PblRandom::GetSim().GetInt() % iTotal;
-        for (int i = 0; i < 4; ++i)
+        const unsigned int uEntry = pTable[iTo];
+        if (!uEntry)
         {
-            const unsigned char* pTable = ppTables[i];
-            if (!pTable)
-            {
-                break;
-            }
-            const unsigned int uEntry = pTable[iTo];
-            if (!uEntry)
-            {
-                break;
-            }
-            iPick -= uEntry >> 3;
-            if (iPick <= 0 && (uEntry & 7) != uCurSlot)
-            {
-                return &mArcs[from.mArcs[uEntry & 7]];
-            }
+            break;
+        }
+        iPick -= uEntry >> 3;
+        if (iPick <= 0 && (uEntry & 7) != uCurSlot)
+        {
+            return &mArcs[from.mArcs[uEntry & 7]];
         }
     }
     return 0;

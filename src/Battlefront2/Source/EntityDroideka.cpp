@@ -820,28 +820,46 @@ void EntityDroideka::UpdateWalkingGroundNormal()
     float fCos = fCos3 * fCos3 - fSin3 * fSin3;
     float fSin = fCos3 * 2.0f * fSin3;
 
-    PblVector3 vFoot[3];
-    vFoot[0] = PblVector3(fCos * 0.7071f + fSin * 0.5f, 1.0f, fCos * 0.5f - fSin * 0.7071f);
-    vFoot[1] = PblVector3(fSin * -0.9142f, 1.0f, fCos * -0.9142f);
-    vFoot[2] = PblVector3(fSin * 0.5f - fCos * 0.7071f, 1.0f, fCos * 0.5f + fSin * 0.7071f);
-    for (int i = 0; i < 3; ++i)
-    {
-        PblVector3 vWorld;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vFoot[i]), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-        vFoot[i] = vWorld;
-    }
+    PblVector3 vFoot0;
+    PblVector3 vFoot1;
+    PblVector3 vFoot2;
+    vFoot0.x = fCos * 0.7071f + fSin * 0.5f;
+    vFoot0.y = 1.0f;
+    vFoot0.z = fCos * 0.5f - fSin * 0.7071f;
+    vFoot1.x = fSin * -0.9142f;
+    vFoot1.y = 1.0f;
+    vFoot1.z = fCos * -0.9142f;
+    vFoot2.x = fSin * 0.5f - fCos * 0.7071f;
+    vFoot2.y = 1.0f;
+    vFoot2.z = fCos * 0.5f + fSin * 0.7071f;
+    PblVector3 vWorld;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vFoot0), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    vFoot0 = vWorld;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vFoot1), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    vFoot1 = vWorld;
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vFoot2), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    vFoot2 = vWorld;
 
     const GameObject* pIgnore = GetGameObject();
-    for (int i = 0; i < 3; ++i)
+    CollisionObject* pHit;
     {
-        CollisionObject* pHit;
         PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
-        float fHit = CollisionManager::RayHit(vFoot[i], vDown, 2.0f, pHit, 0, &pIgnore, 1, 0x98, false);
-        vFoot[i].y = 1.0f - fHit * 2.0f;
+        float fHit = CollisionManager::RayHit(vFoot0, vDown, 2.0f, pHit, 0, &pIgnore, 1, 0x98, false);
+        vFoot0.y = 1.0f - fHit * 2.0f;
+    }
+    {
+        PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
+        float fHit = CollisionManager::RayHit(vFoot1, vDown, 2.0f, pHit, 0, &pIgnore, 1, 0x98, false);
+        vFoot1.y = 1.0f - fHit * 2.0f;
+    }
+    {
+        PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
+        float fHit = CollisionManager::RayHit(vFoot2, vDown, 2.0f, pHit, 0, &pIgnore, 1, 0x98, false);
+        vFoot2.y = 1.0f - fHit * 2.0f;
     }
 
-    PblVector3 vA(vFoot[2].x - vFoot[1].x, vFoot[2].y - vFoot[1].y, vFoot[2].z - vFoot[1].z);
-    PblVector3 vB(vFoot[0].x - vFoot[1].x, vFoot[0].y - vFoot[1].y, vFoot[0].z - vFoot[1].z);
+    PblVector3 vA(vFoot2.x - vFoot1.x, vFoot2.y - vFoot1.y, vFoot2.z - vFoot1.z);
+    PblVector3 vB(vFoot0.x - vFoot1.x, vFoot0.y - vFoot1.y, vFoot0.z - vFoot1.z);
     PblVector3 vPlane(vA.y * vB.z - vA.z * vB.y, vA.z * vB.x - vA.x * vB.z, vA.x * vB.y - vA.y * vB.x);
     PblVector3 vNormal;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vPlane));
@@ -990,8 +1008,8 @@ EntityDroidekaClass::EntityDroidekaClass(EntityDroidekaClass* pSrc, unsigned int
     mUprightLowRes = pSrc->mUprightLowRes;
     mBallLowRes = pSrc->mBallLowRes;
     mAnimObj = pSrc->mAnimObj;
-    mAnimationCount = pSrc->mAnimationCount;
     mAnimations = pSrc->mAnimations;
+    mAnimationCount = pSrc->mAnimationCount;
     mTimeTotals = pSrc->mTimeTotals;
     mAnimSpeeds = pSrc->mAnimSpeeds;
     mAnimRates = pSrc->mAnimRates;
@@ -1010,32 +1028,17 @@ EntityDroidekaClass::EntityDroidekaClass(EntityDroidekaClass* pSrc, unsigned int
     mMaxYaw = pSrc->mMaxYaw;
     mMinPitch = pSrc->mMinPitch;
     mMaxPitch = pSrc->mMaxPitch;
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionThreshold[i] = pSrc->mCollisionThreshold[i];
-    }
-    for (int i = 0; i < 3; ++i)
-    {
-        mCollisionScale[i] = pSrc->mCollisionScale[i];
-    }
+    memcpy(mCollisionThreshold, pSrc->mCollisionThreshold, sizeof(mCollisionThreshold));
+    memcpy(mCollisionScale, pSrc->mCollisionScale, sizeof(mCollisionScale));
     mCollisionInflict = pSrc->mCollisionInflict;
 
     for (int i = 0; i < 4; ++i)
     {
         mAimerClass[i] = pSrc->mAimerClass[i];
     }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponClass[i] = pSrc->mWeaponClass[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponAmmo[i] = pSrc->mWeaponAmmo[i];
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        mWeaponChannel[i] = pSrc->mWeaponChannel[i];
-    }
+    memcpy(mWeaponClass, pSrc->mWeaponClass, sizeof(mWeaponClass));
+    memcpy(mWeaponAmmo, pSrc->mWeaponAmmo, sizeof(mWeaponAmmo));
+    memcpy(mWeaponChannel, pSrc->mWeaponChannel, sizeof(mWeaponChannel));
     mWeaponCount = pSrc->mWeaponCount;
     mStompEffect = pSrc->mStompEffect;
     mVehicleType = pSrc->mVehicleType;
@@ -1045,10 +1048,7 @@ EntityDroidekaClass::EntityDroidekaClass(EntityDroidekaClass* pSrc, unsigned int
     mTurnThreshold = pSrc->mTurnThreshold;
     mMaxTerrainAngle = pSrc->mMaxTerrainAngle;
 
-    for (int i = 0; i < 3; ++i)
-    {
-        mCameraSettings[i] = pSrc->mCameraSettings[i];
-    }
+    memcpy(mCameraSettings, pSrc->mCameraSettings, sizeof(mCameraSettings));
     mExplosion = pSrc->mExplosion;
     mNoDeathExplosions = pSrc->mNoDeathExplosions;
     mDeathDustClassHash = pSrc->mDeathDustClassHash;
@@ -1210,12 +1210,11 @@ void EntityDroidekaClass::SetProperty(unsigned int uProperty, const char* pszVal
     {
         int iAmmo = 0;
         sscanf(pszValue, "%d", &iAmmo);
-        WeaponAmmoDesc& ammo = mWeaponAmmo[sWeaponSection];
-        ammo.bFlagShareAmmo = 0;
-        ammo.bFlagAmmoInfinite = iAmmo <= 0;
-        if (!ammo.bFlagAmmoInfinite)
+        mWeaponAmmo[sWeaponSection].bFlagShareAmmo = 0;
+        mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite = iAmmo <= 0;
+        if (!mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite)
         {
-            ammo.uiAmmo = iAmmo;
+            mWeaponAmmo[sWeaponSection].uiAmmo = iAmmo;
         }
         break;
     }
@@ -1233,6 +1232,7 @@ void EntityDroidekaClass::SetProperty(unsigned int uProperty, const char* pszVal
         else
         {
             ammo.bFlagShareAmmo = 0;
+            ammo.bFlagAmmoInfinite = 0;
             ammo.bFlagAmmoInfinite = 1;
         }
         break;
@@ -1369,7 +1369,7 @@ void EntityDroidekaClass::SetProperty(unsigned int uProperty, const char* pszVal
             const RedSkeleton* pSkeleton = mModel->GetRedModel(0)->GetSkeleton();
             if (pSkeleton)
             {
-                for (unsigned int i = 0; i < 128; ++i)
+                for (int i = 0; i < 128; ++i)
                 {
                     if (pSkeleton->GetBoneNameHash(i) == uHash)
                     {
@@ -2595,13 +2595,17 @@ void EntityDroideka::DoFootImpactEffects()
 // FUNCTION: SWBF2 0x004a2370
 void EntityDroideka::UpdateState(float fDeltaTime, float fMove, float fStrafe, float fTurn)
 {
-    float fDistance = 0.0f;
     bool bMoving = fMove * fMove + fStrafe * fStrafe > 0.01f;
+    float fDistance = 0.0f;
 
-    float fTurnSpeed = mClass->mMaxTurnSpeed;
+    float fTurnSpeed;
     if (mPlayerId >= 0 && !NetGame::IsMouseMode(mPlayerId))
     {
         fTurnSpeed = (mClass->mMaxTurnSpeed - mClass->mMaxPitchSpeed) * mTurnBuildup + mClass->mMaxPitchSpeed;
+    }
+    else
+    {
+        fTurnSpeed = mClass->mMaxTurnSpeed;
     }
     if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] && mPlayerId >= 0)
     {
@@ -2629,7 +2633,14 @@ void EntityDroideka::UpdateState(float fDeltaTime, float fMove, float fStrafe, f
         else if (bMoving)
         {
             bForward = fMove >= 0.0f;
-            NextState(bForward ? 2 : 3);
+            if (bForward)
+            {
+                NextState(2);
+            }
+            else
+            {
+                NextState(3);
+            }
         }
         mStompTime = 0.0f;
     }
@@ -2675,7 +2686,9 @@ void EntityDroideka::UpdateState(float fDeltaTime, float fMove, float fStrafe, f
             {
                 fDiff = -fMax;
             }
-            mTurnOffset = PblAngle((fDiff + fCurrent) * (1.0f / 6.0f));
+            PblAngle kTurn((fDiff + fCurrent) * (1.0f / 6.0f));
+            mTurnOffset.mCos = kTurn.mCos;
+            mTurnOffset.mSin = kTurn.mSin;
         }
         mStompTime += fDeltaTime;
         DoFootImpactEffects();
@@ -2749,7 +2762,14 @@ void EntityDroideka::UpdateState(float fDeltaTime, float fMove, float fStrafe, f
         }
         else if (bMoving)
         {
-            NextState(bForward ? 2 : 3);
+            if (bForward)
+            {
+                NextState(2);
+            }
+            else
+            {
+                NextState(3);
+            }
         }
         else
         {
@@ -2812,21 +2832,22 @@ void EntityDroideka::UpdateStateRolling(float fDeltaTime, float fMove, float fTu
     if (m_bSprint)
     {
         fTurnRate = mClass->mBallSprintTurnSpeed;
+        mStompTime += fDeltaTime;
     }
     else
     {
-        fTurnRate = (fabs(fMove) * (mClass->mBallTurnSpeed - mClass->mBallStoppedTurnSpeed) +
+        fTurnRate = ((float)fabs((double)fMove) * (mClass->mBallTurnSpeed - mClass->mBallStoppedTurnSpeed) +
                      mClass->mBallStoppedTurnSpeed) /
                     1.53f;
-    }
-    if (m_bSprint || mVelocity.x * mVelocity.x + mVelocity.z * mVelocity.z >
-                         mClass->mBallMoveSpeed * 1.1f * mClass->mBallMoveSpeed)
-    {
-        mStompTime += fDeltaTime;
-    }
-    else if (mStompTime > 0.0f)
-    {
-        mStompTime = 0.0f;
+        if (mVelocity.x * mVelocity.x + mVelocity.z * mVelocity.z >
+            mClass->mBallMoveSpeed * 1.1f * mClass->mBallMoveSpeed)
+        {
+            mStompTime += fDeltaTime;
+        }
+        else if (mStompTime > 0.0f)
+        {
+            mStompTime = 0.0f;
+        }
     }
 
     RotateY(PblAngle(-(fTurnRate * fTurn * fDeltaTime)));
@@ -2912,7 +2933,8 @@ void EntityDroideka::UpdateStateRolling(float fDeltaTime, float fMove, float fTu
     PblAngle kOrientation(mBallOrientation.mCos - mBallAngularVelocity * mBallOrientation.mSin * fHalfStep,
                           mBallAngularVelocity * mBallOrientation.mCos * fHalfStep + mBallOrientation.mSin);
     kOrientation.Normalize();
-    mBallOrientation = kOrientation;
+    mBallOrientation.mCos = kOrientation.mCos;
+    mBallOrientation.mSin = kOrientation.mSin;
 }
 
 // FUNCTION: SWBF2 0x004a3060
@@ -3335,14 +3357,10 @@ bool EntityDroideka::PostCollisionUpdate(float fDeltaTime)
             qTilt._fY = fSin * gVectorUnitX.y;
             qTilt._fZ = fSin * gVectorUnitX.z;
             qTilt._fS = fCos;
-            PblQuaternion qCamera = qLook * qTilt;
-
-            PblMatrix mCamera(qCamera, gVectorZero);
+            PblMatrix mCamera(qLook * qTilt, gVectorZero);
 
             mTargetInfo.mAimStart = GetCameraTrackSettings()->CalcCameraPoint(mMatrix, mCamera);
-            float fAlong = mEyeDir.y * (mEyePoint.y - mTargetInfo.mAimStart.y) +
-                           mEyeDir.x * (mEyePoint.x - mTargetInfo.mAimStart.x) +
-                           mEyeDir.z * (mEyePoint.z - mTargetInfo.mAimStart.z);
+            float fAlong = DotProduct(mEyeDir, mEyePoint - mTargetInfo.mAimStart);
             mTargetInfo.mAimStart.x = fAlong * mEyeDir.x + mTargetInfo.mAimStart.x;
             mTargetInfo.mAimStart.y = mTargetInfo.mAimStart.y + mEyeDir.y * fAlong;
             mTargetInfo.mAimStart.z = mTargetInfo.mAimStart.z + mEyeDir.z * fAlong;
@@ -3352,9 +3370,7 @@ bool EntityDroideka::PostCollisionUpdate(float fDeltaTime)
         float fDist =
             CollisionManager::RayHit(mTargetInfo.mAimStart, mEyeDir, 512.0f, pHit, 0, &pIgnore, 1, 0x9a, true) *
             512.0f;
-        mTargetInfo.mAimPoint = PblVector3(mTargetInfo.mAimStart.x + mEyeDir.x * fDist,
-                                           mTargetInfo.mAimStart.y + mEyeDir.y * fDist,
-                                           mTargetInfo.mAimStart.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + mEyeDir * fDist;
     }
     else
     {
@@ -3368,8 +3384,7 @@ bool EntityDroideka::PostCollisionUpdate(float fDeltaTime)
                           (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                           (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = PblVector3(mEyeDir.x * fDist + mEyePoint.x, mEyePoint.y + mEyeDir.y * fDist,
-                                           mEyePoint.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mEyeDir * fDist + mEyePoint;
     }
 
     if (!mIsDead)
@@ -3398,7 +3413,7 @@ bool EntityDroideka::PostCollisionUpdate(float fDeltaTime)
         PblVector3 vMin = GetModel()->_mModel->_TotalBoundingBox._vMin;
         FLEffectClass* pWake;
         if (mClass->mWakeEffect && (pWake = FLEffect::Get(mClass->mWakeEffect)) != 0 &&
-            fabs(mControlMove) + fabs(mControlStrafe) > 0.01f)
+            (mControlMove < 0.0f ? -mControlMove : mControlMove) + (mControlStrafe < 0.0f ? -mControlStrafe : mControlStrafe) > 0.01f)
         {
             PblMatrix mLocal = mCollisionModel->GetLocalMatrix(0, GetPose());
             PblMatrix mOffset = mMatrix;
@@ -3981,41 +3996,39 @@ bool EntityDroideka::CanUnroll()
         return false;
     }
 
+    PblVector3 vDir(1.0f, 0.0f, 0.0f);
     const PblVector3& vTrans = mMatrix.GetTranslation();
     PblVector3 vPos(vTrans.x + 0.0f, vTrans.y + 1.5f, vTrans.z + 0.0f);
 
     {
-        PblVector3 vDir(1.0f, 0.0f, 0.0f);
-        PblVector3 vBack(-vDir.x, -vDir.y, -vDir.z);
         if (CollisionManager::RayTest(vPos, vDir, 1.5f, 0, 0, 0x18) &&
-            CollisionManager::RayTest(vPos, vBack, 1.5f, 0, 0, 0x18))
+            CollisionManager::RayTest(vPos, -vDir, 1.5f, 0, 0, 0x18))
         {
             return false;
         }
     }
     {
-        PblVector3 vDir(0.0f, 0.0f, 1.0f);
-        PblVector3 vBack(-vDir.x, -vDir.y, -vDir.z);
+        vDir.x = 0.0f;
+        vDir.y = 0.0f;
+        vDir.z = 1.0f;
         if (CollisionManager::RayTest(vPos, vDir, 1.5f, 0, 0, 0x18) &&
-            CollisionManager::RayTest(vPos, vBack, 1.5f, 0, 0, 0x18))
+            CollisionManager::RayTest(vPos, -vDir, 1.5f, 0, 0, 0x18))
         {
             return false;
         }
     }
     {
-        PblVector3 vDir(0.7f, 0.0f, 0.7f);
-        PblVector3 vBack(-vDir.x, -vDir.y, -vDir.z);
+        vDir = PblVector3(0.7f, 0.0f, 0.7f);
         if (CollisionManager::RayTest(vPos, vDir, 1.5f, 0, 0, 0x18) &&
-            CollisionManager::RayTest(vPos, vBack, 1.5f, 0, 0, 0x18))
+            CollisionManager::RayTest(vPos, -vDir, 1.5f, 0, 0, 0x18))
         {
             return false;
         }
     }
     {
-        PblVector3 vDir(-0.7f, 0.0f, 0.7f);
-        PblVector3 vBack(-vDir.x, -vDir.y, -vDir.z);
+        vDir = PblVector3(-0.7f, 0.0f, 0.7f);
         if (CollisionManager::RayTest(vPos, vDir, 1.5f, 0, 0, 0x18) &&
-            CollisionManager::RayTest(vPos, vBack, 1.5f, 0, 0, 0x18))
+            CollisionManager::RayTest(vPos, -vDir, 1.5f, 0, 0, 0x18))
         {
             return false;
         }

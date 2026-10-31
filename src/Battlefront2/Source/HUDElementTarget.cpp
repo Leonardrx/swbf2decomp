@@ -553,12 +553,13 @@ void HUD::ElementTarget::Update(const float fDeltaTime)
         for (i = 0; i < 64; ++i)
         {
             const TargetPlayerState eState = TranslatePlayerTargetInfo(pInfos[i]);
+            const bool bStateChanged = eState != mTargetPlayerState[i];
             const bool bLocked = eState == targetPlayerState_LockedOnScreen ||
                                  eState == targetPlayerState_LockedOnScreenBehind;
             bAnyLocked |= bLocked;
             mTargetPlayerAll[eState].Update(fDeltaTime, mTargetPlayer[i], pManager, pTargets[i],
                                             pInfos[i], fWidth, fHeight,
-                                            eState != mTargetPlayerState[i],
+                                            bStateChanged,
                                             mFourSegmentLockOn && bLocked ? mTargetLockOn : 0);
             if (mFourSegmentLockOn && (eState == targetPlayerState_LockedOnScreen ||
                                        eState == targetPlayerState_LockedOnScreenBehind))

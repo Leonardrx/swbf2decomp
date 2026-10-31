@@ -294,90 +294,6 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
 
     switch (mCurState)
     {
-    case STATE_Goto:
-    {
-        if (CheckForVehicleConvoy())
-        {
-            break;
-        }
-        if (mSnipeHelper.LookForSnipeHintAndInit())
-        {
-            SetNextState(STATE_Snipe);
-            break;
-        }
-        if (mRepairHelper.CheckForRecipientAndInit())
-        {
-            SetNextState(STATE_Aid);
-            break;
-        }
-        if (GetLowLevel().IsAtDest() && GetLowLevel().IsNavigatorFailedPath())
-        {
-            SetNextState(100);
-            break;
-        }
-        if (AIUtil::IsNearPost(mCtrl->mOwner, mPost, mCPOffset) || GetLowLevel().IsAtDest())
-        {
-            SetNextState(STATE_Patrol);
-            break;
-        }
-
-        if (AIUtil::IsVehicle(static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject()))
-        {
-            const PblVector3& pos = mCtrl->mOwner->GetMatrix().GetTranslation();
-            PblVector3 vDest = GetLowLevel().GetGlobalDest();
-            float dx = pos.x - vDest.x;
-            float dy = pos.y - vDest.y;
-            float dz = pos.z - vDest.z;
-            if (mCtrl->mOwner->GetCurWpn())
-            {
-                float fRange = CombatUtil::GetWeaponOptimalRange(mCtrl->mOwner);
-                if (fRange * fRange > dx * dx + dy * dy + dz * dz)
-                {
-                    const PblVector3& from = mCtrl->mOwner->GetMatrix().GetTranslation();
-                    if (!PathFinder::TestTrivialStraightLineHit(
-                            from, GetLowLevel().GetGlobalDest(),
-                            static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject()))
-                    {
-                        GetLowLevel().Navigator_Wait(5.0f);
-                    }
-                }
-            }
-        }
-
-        if (AIUtil::HasCPMoved(mPost, mCtrl->mOwner, mCPPos, mCPTime, mSrcPos))
-        {
-            SetNextState(STATE_Goto);
-        }
-        else if (mMineHelper.CheckForHintsAndInit())
-        {
-            SetNextState(STATE_MineLaying);
-        }
-        else
-        {
-            FaceTarget(HEIGHT_STAND);
-        }
-        break;
-    }
-
-    case STATE_Convoy:
-    {
-        if (!static_cast<GameObject*>(mConvoyParent) || !mConvoyParent->GetControllable()
-            || !mConvoyParent->GetControllable()->mCtrl)
-        {
-            SetNextState(STATE_Goto);
-            break;
-        }
-        float fDist = (AIUtil::GetCollisionRadius(static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject())
-                       + AIUtil::GetCollisionRadius(static_cast<GameObject*>(mConvoyParent)))
-                      * 2.5f;
-        PblVector3 vOffset = ReserveManager::ReserveOffset(
-            static_cast<GameObject*>(mConvoyParent), static_cast<Trackable*>(mCtrl->mOwner)->GetGameObject(),
-            FT_CONVOY);
-        PblVector3 vFollow(vOffset.x * fDist, vOffset.y * fDist, vOffset.z * fDist * 0.3f);
-        GetLowLevel().SetNavigator_FollowTarget(static_cast<GameObject*>(mConvoyParent), vFollow);
-        break;
-    }
-
     case STATE_Patrol:
     {
         if (mCtrl->mOwner->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker)
@@ -409,6 +325,92 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
         break;
     }
 
+    case STATE_Goto:
+    {
+        if (CheckForVehicleConvoy())
+        {
+            break;
+        }
+        if (mSnipeHelper.LookForSnipeHintAndInit() == true)
+        {
+            SetNextState(STATE_Snipe);
+            break;
+        }
+        if (mRepairHelper.CheckForRecipientAndInit())
+        {
+            SetNextState(STATE_Aid);
+            break;
+        }
+        if (GetLowLevel().IsAtDest() && GetLowLevel().IsNavigatorFailedPath())
+        {
+            SetNextState(100);
+            break;
+        }
+        if (AIUtil::IsNearPost(mCtrl->mOwner, mPost, mCPOffset) || GetLowLevel().IsAtDest())
+        {
+            SetNextState(STATE_Patrol);
+            break;
+        }
+
+        if (AIUtil::IsVehicle(static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject()))
+        {
+            AILowLevel& lowLevel = GetLowLevel();
+            const PblVector3& pos = mCtrl->mOwner->GetMatrix().GetTranslation();
+            const PblVector3& vDest = lowLevel.GetGlobalDest();
+            float dx = pos.x - vDest.x;
+            float dy = pos.y - vDest.y;
+            float dz = pos.z - vDest.z;
+            if (mCtrl->mOwner->GetCurWpn())
+            {
+                float fRange = CombatUtil::GetWeaponOptimalRange(mCtrl->mOwner);
+                if (fRange * fRange > dx * dx + dy * dy + dz * dz)
+                {
+                    AILowLevel& pathLowLevel = GetLowLevel();
+                    const PblVector3& from = mCtrl->mOwner->GetMatrix().GetTranslation();
+                    if (!PathFinder::TestTrivialStraightLineHit(
+                            from, pathLowLevel.GetGlobalDest(),
+                            static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject()))
+                    {
+                        GetLowLevel().Navigator_Wait(5.0f);
+                    }
+                }
+            }
+        }
+
+        if (AIUtil::HasCPMoved(mPost, mCtrl->mOwner, mCPPos, mCPTime, mSrcPos))
+        {
+            SetNextState(STATE_Goto);
+        }
+        else if (mMineHelper.CheckForHintsAndInit())
+        {
+            SetNextState(STATE_MineLaying);
+        }
+        else
+        {
+            FaceTarget(HEIGHT_STAND);
+        }
+        break;
+    }
+
+    case STATE_Convoy:
+    {
+        if (!static_cast<GameObject*>(mConvoyParent) || !mConvoyParent->GetControllable()
+            || !mConvoyParent->GetControllable()->mCtrl)
+        {
+            SetNextState(STATE_Goto);
+            break;
+        }
+        float fDist = (AIUtil::GetCollisionRadius(static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject())
+                       + AIUtil::GetCollisionRadius(static_cast<GameObject*>(mConvoyParent)))
+                      * 2.5f;
+        const PblVector3& vOffset = ReserveManager::ReserveOffset(
+            static_cast<GameObject*>(mConvoyParent), static_cast<Trackable&>(*mCtrl->mOwner).GetGameObject(),
+            FT_CONVOY);
+        PblVector3 vFollow(vOffset.x * fDist, vOffset.y * fDist, vOffset.z * fDist * 0.3f);
+        GetLowLevel().SetNavigator_FollowTarget(static_cast<GameObject*>(mConvoyParent), vFollow);
+        break;
+    }
+
     case STATE_MineLaying:
         mMineHelper.FSMUpdate(dt, false);
         if (mRepairHelper.CheckForRecipientAndInit())
@@ -426,13 +428,6 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
         }
         break;
 
-    case STATE_Aid:
-        if (!mRepairHelper.Update(dt))
-        {
-            SetNextState(STATE_Goto);
-        }
-        break;
-
     case STATE_Snipe:
         mSnipeHelper.FSMUpdate(dt, false);
         if (mSnipeHelper.IsDone())
@@ -442,6 +437,13 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
         else
         {
             attack.Fire();
+        }
+        break;
+
+    case STATE_Aid:
+        if (!mRepairHelper.Update(dt))
+        {
+            SetNextState(STATE_Goto);
         }
         break;
     }
@@ -455,45 +457,51 @@ int UnitTrooperAgent::EventHandler(AI::EventInfo* pInfo)
     switch (pInfo->mType)
     {
     case AI::EVT_EmptyVehicle:
-        switch (mCurState)
+        if (mCurState == STATE_Patrol)
         {
-        case STATE_Patrol:
             bInterrupt = mPatrolHelper.HELPERVehicleNearbyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_MineLaying:
+        }
+        else if (mCurState == STATE_MineLaying)
+        {
             bInterrupt = mMineHelper.HELPERVehicleNearbyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_Snipe:
+        }
+        else if (mCurState == STATE_Snipe)
+        {
             bInterrupt = mSnipeHelper.HELPERVehicleNearbyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        default:
+        }
+        else
+        {
             return UnitAgent::EventHandler(pInfo);
         }
-        if (!bInterrupt)
+        if (bInterrupt)
         {
-            return 0;
+            return UnitAgent::EventHandler(pInfo);
         }
-        return UnitAgent::EventHandler(pInfo);
+        return 0;
 
     case AI::EVT_Grenade:
-        switch (mCurState)
+        if (mCurState == STATE_Patrol)
         {
-        case STATE_Patrol:
             bInterrupt = mPatrolHelper.HELPERGrenadeEventInterrupt();
-            break;
-        case STATE_MineLaying:
+        }
+        else if (mCurState == STATE_MineLaying)
+        {
             bInterrupt = mMineHelper.HELPERGrenadeEventInterrupt();
-            break;
-        case STATE_Snipe:
+        }
+        else if (mCurState == STATE_Snipe)
+        {
             bInterrupt = mSnipeHelper.HELPERGrenadeEventInterrupt();
-            break;
-        case STATE_Goto:
+        }
+        else if (mCurState == STATE_Goto)
+        {
             if (AreNearbyUnitsInCombat())
             {
                 return 0;
             }
             return UnitAgent::EventHandler(pInfo);
-        default:
+        }
+        else
+        {
             return UnitAgent::EventHandler(pInfo);
         }
         if (bInterrupt)
@@ -504,21 +512,28 @@ int UnitTrooperAgent::EventHandler(AI::EventInfo* pInfo)
     case AI::EVT_Damaged:
     {
         const AI::EventInfo_Damaged* pDamaged = static_cast<const AI::EventInfo_Damaged*>(pInfo);
-        switch (mCurState)
+        if (mCurState == STATE_Patrol)
         {
-        case STATE_Patrol:
             bInterrupt = mPatrolHelper.HELPERDamagedInterrupt(pDamaged->mIsShot, pInfo->mPos);
-            break;
-        case STATE_MineLaying:
+        }
+        else if (mCurState == STATE_MineLaying)
+        {
             bInterrupt = mMineHelper.HELPERDamagedInterrupt(pDamaged->mIsShot, pInfo->mPos);
-            break;
-        case STATE_Snipe:
+        }
+        else if (mCurState == STATE_Snipe)
+        {
             bInterrupt = mSnipeHelper.HELPERDamagedInterrupt(pDamaged->mIsShot, pInfo->mPos);
-            break;
-        case STATE_Goto:
-            bInterrupt = !AreNearbyUnitsInCombat();
-            break;
-        default:
+        }
+        else if (mCurState == STATE_Goto)
+        {
+            if (!AreNearbyUnitsInCombat())
+            {
+                return UnitAgent::EventHandler(pInfo);
+            }
+            bInterrupt = false;
+        }
+        else
+        {
             return UnitAgent::EventHandler(pInfo);
         }
         if (bInterrupt)
@@ -531,24 +546,28 @@ int UnitTrooperAgent::EventHandler(AI::EventInfo* pInfo)
     }
 
     case AI::EVT_Vision_CanSeeEnemy:
-        switch (mCurState)
+        if (mCurState == STATE_Patrol)
         {
-        case STATE_Patrol:
             bInterrupt = mPatrolHelper.HELPERSeeEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_MineLaying:
+        }
+        else if (mCurState == STATE_MineLaying)
+        {
             bInterrupt = mMineHelper.HELPERSeeEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_Snipe:
+        }
+        else if (mCurState == STATE_Snipe)
+        {
             bInterrupt = mSnipeHelper.HELPERSeeEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_Goto:
+        }
+        else if (mCurState == STATE_Goto)
+        {
             if (AreNearbyUnitsInCombat())
             {
                 return 0;
             }
             return UnitAgent::EventHandler(pInfo);
-        default:
+        }
+        else
+        {
             return UnitAgent::EventHandler(pInfo);
         }
         if (bInterrupt)
@@ -557,31 +576,35 @@ int UnitTrooperAgent::EventHandler(AI::EventInfo* pInfo)
         }
 
     case AI::EVT_Audible_CanHearEnemy:
-        switch (mCurState)
+        if (mCurState == STATE_Patrol)
         {
-        case STATE_Patrol:
             bInterrupt = mPatrolHelper.HELPERHearEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_MineLaying:
+        }
+        else if (mCurState == STATE_MineLaying)
+        {
             bInterrupt = mMineHelper.HELPERHearEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_Snipe:
+        }
+        else if (mCurState == STATE_Snipe)
+        {
             bInterrupt = mSnipeHelper.HELPERHearEnemyInterrupt(static_cast<GameObject*>(pInfo->mGameObject));
-            break;
-        case STATE_Goto:
+        }
+        else if (mCurState == STATE_Goto)
+        {
             if (AreNearbyUnitsInCombat())
             {
                 return 0;
             }
             return UnitAgent::EventHandler(pInfo);
-        default:
+        }
+        else
+        {
             return UnitAgent::EventHandler(pInfo);
         }
-        if (!bInterrupt)
+        if (bInterrupt)
         {
-            return 0;
+            return UnitAgent::EventHandler(pInfo);
         }
-        return UnitAgent::EventHandler(pInfo);
+        return 0;
 
     default:
         return UnitAgent::EventHandler(pInfo);

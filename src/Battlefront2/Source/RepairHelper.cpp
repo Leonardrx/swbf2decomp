@@ -212,7 +212,7 @@ bool RepairHelper::CheckForRecipientAndInit()
         {
             continue;
         }
-        if (pObj->GetEntityType() == ENT_SOLDIER && GetSoldierInvisibilityFactor(pObj) > 0.0f)
+        if (pObj->GetEntityType() == ENT_SOLDIER && static_cast<const EntitySoldier*>(pObj)->GetInvisibilityFactor() > 0.0f)
         {
             continue;
         }
@@ -226,12 +226,11 @@ bool RepairHelper::CheckForRecipientAndInit()
         PblVector3 vDiff(vMyPos.x - vHisPos.x, vMyPos.y - vHisPos.y, vMyPos.z - vHisPos.z);
         float fDistSq = vDiff.y * vDiff.y + vDiff.x * vDiff.x + vDiff.z * vDiff.z;
         PblVector3 vVel = pObj->GetVelocity();
-        float fVelSq = vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z;
         if (pObj->GetControllable() && pObj->GetControllable()->GetPlayerId() >= 0 && fDistSq < 900.0f)
         {
             const PblMatrix& matrix = pObj->GetMatrix();
-            PblVector3 vDir = AIUtil::GetSafeNormal(vDiff);
-            if (fVelSq < 0.25f ||
+            const PblVector3& vDir = AIUtil::GetSafeNormal(vDiff);
+            if (vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z < 0.25f ||
                 matrix.m[2][1] * vDir.y + matrix.m[2][0] * vDir.x + matrix.m[2][2] * vDir.z > (float)cos(15.0))
             {
                 pBest = pObj;
@@ -240,11 +239,12 @@ bool RepairHelper::CheckForRecipientAndInit()
             }
         }
 
-        if (pObj->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) && GetSoldierPlayerId(pObj) < 0)
+        if (pObj->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) &&
+            static_cast<const EntitySoldier*>(pObj)->mPlayerId < 0)
         {
             continue;
         }
-        if (fVelSq < 0.25f && fDistSq < fBestDistSq)
+        if (vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z < 0.25f && fDistSq < fBestDistSq)
         {
             pBest = pObj;
             bestAid = aid;
@@ -325,30 +325,157 @@ void RepairHelper::CalcMyAidTypes(unsigned int* pHealth, unsigned int* pAmmo)
     // GLOBAL: SWBF2 0x007ec54c
     static int iii = 1;
 
-    *pAmmo = 0;
     *pHealth = 0;
+    *pAmmo = 0;
     for (int i = 0; i < GetMe()->GetWeaponCount(); ++i)
     {
         Weapon* pWeapon = GetMe()->GetWeaponPtr(i);
-        if (pWeapon->m_pAmmoCounter->GetNumRounds() <= 0)
+        if (pWeapon->m_pAmmoCounter->GetNumRounds() > 0)
+        {
+            if (pWeapon->IsRtti(WeaponRepair::rttiHashWeaponRepair))
+            {
+                const WeaponRepairClass* pClass = static_cast<const WeaponRepairClass*>(pWeapon->mClass);
+                if (pClass->mAddHealth[0] > 0.0f)
+                {
+                    *pHealth |= 1;
+                }
+                if (pClass->mAddAmmo[0] > 0.0f)
+                {
+                    *pAmmo |= 1;
+                }
+                if (pClass->mAddHealth[1] > 0.0f)
+                {
+                    *pHealth |= 2;
+                }
+                if (pClass->mAddAmmo[1] > 0.0f)
+                {
+                    *pAmmo |= 2;
+                }
+                if (pClass->mAddHealth[2] > 0.0f)
+                {
+                    *pHealth |= 4;
+                }
+                if (pClass->mAddAmmo[2] > 0.0f)
+                {
+                    *pAmmo |= 4;
+                }
+                if (pClass->mAddHealth[3] > 0.0f)
+                {
+                    *pHealth |= 8;
+                }
+                if (pClass->mAddAmmo[3] > 0.0f)
+                {
+                    *pAmmo |= 8;
+                }
+                if (pClass->mAddHealth[4] > 0.0f)
+                {
+                    *pHealth |= 16;
+                }
+                if (pClass->mAddAmmo[4] > 0.0f)
+                {
+                    *pAmmo |= 16;
+                }
+                if (pClass->mAddHealth[5] > 0.0f)
+                {
+                    *pHealth |= 32;
+                }
+                if (pClass->mAddAmmo[5] > 0.0f)
+                {
+                    *pAmmo |= 32;
+                }
+                if (pClass->mAddHealth[6] > 0.0f)
+                {
+                    *pHealth |= 64;
+                }
+                if (pClass->mAddAmmo[6] > 0.0f)
+                {
+                    *pAmmo |= 64;
+                }
+                if (pClass->mAddHealth[7] > 0.0f)
+                {
+                    *pHealth |= 128;
+                }
+                if (pClass->mAddAmmo[7] > 0.0f)
+                {
+                    *pAmmo |= 128;
+                }
+            }
+            else if (pWeapon->IsRtti(WeaponDispenser::rttiHashWeaponDispenser))
+            {
+                EntityClass* pDispense = static_cast<const WeaponDispenserClass*>(pWeapon->mClass)->mDispenseClass;
+                if (pDispense && pDispense->IsRtti(PowerupItemClass::rttiHashPowerupItemClass))
+                {
+                    PowerupItemClass* pPowerup = static_cast<PowerupItemClass*>(pDispense);
+                    if (pPowerup->mAddHealth[0] > 0.0f)
+                    {
+                        *pHealth |= 1;
+                    }
+                    if (pPowerup->mAddAmmo[0] > 0.0f)
+                    {
+                        *pAmmo |= 1;
+                    }
+                    if (pPowerup->mAddHealth[1] > 0.0f)
+                    {
+                        *pHealth |= 2;
+                    }
+                    if (pPowerup->mAddAmmo[1] > 0.0f)
+                    {
+                        *pAmmo |= 2;
+                    }
+                    if (pPowerup->mAddHealth[2] > 0.0f)
+                    {
+                        *pHealth |= 4;
+                    }
+                    if (pPowerup->mAddAmmo[2] > 0.0f)
+                    {
+                        *pAmmo |= 4;
+                    }
+                    if (pPowerup->mAddHealth[3] > 0.0f)
+                    {
+                        *pHealth |= 8;
+                    }
+                    if (pPowerup->mAddAmmo[3] > 0.0f)
+                    {
+                        *pAmmo |= 8;
+                    }
+                    if (pPowerup->mAddHealth[4] > 0.0f)
+                    {
+                        *pHealth |= 16;
+                    }
+                    if (pPowerup->mAddAmmo[4] > 0.0f)
+                    {
+                        *pAmmo |= 16;
+                    }
+                    if (pPowerup->mAddHealth[5] > 0.0f)
+                    {
+                        *pHealth |= 32;
+                    }
+                    if (pPowerup->mAddAmmo[5] > 0.0f)
+                    {
+                        *pAmmo |= 32;
+                    }
+                    if (pPowerup->mAddHealth[6] > 0.0f)
+                    {
+                        *pHealth |= 64;
+                    }
+                    if (pPowerup->mAddAmmo[6] > 0.0f)
+                    {
+                        *pAmmo |= 64;
+                    }
+                    if (pPowerup->mAddHealth[7] > 0.0f)
+                    {
+                        *pHealth |= 128;
+                    }
+                    if (pPowerup->mAddAmmo[7] > 0.0f)
+                    {
+                        *pAmmo |= 128;
+                    }
+                }
+            }
+        }
+        else
         {
             ++iii;
-            continue;
-        }
-
-        if (pWeapon->IsRtti(WeaponRepair::rttiHashWeaponRepair))
-        {
-            const WeaponRepairClass* pClass = static_cast<const WeaponRepairClass*>(pWeapon->mClass);
-            AddAidTypes(pClass->mAddHealth, pClass->mAddAmmo, pHealth, pAmmo);
-        }
-        else if (pWeapon->IsRtti(WeaponDispenser::rttiHashWeaponDispenser))
-        {
-            EntityClass* pDispense = static_cast<const WeaponDispenserClass*>(pWeapon->mClass)->mDispenseClass;
-            if (pDispense && pDispense->IsRtti(PowerupItemClass::rttiHashPowerupItemClass))
-            {
-                PowerupItemClass* pPowerup = static_cast<PowerupItemClass*>(pDispense);
-                AddAidTypes(pPowerup->mAddHealth, pPowerup->mAddAmmo, pHealth, pAmmo);
-            }
         }
     }
 }

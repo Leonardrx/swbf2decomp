@@ -1866,38 +1866,59 @@ static const unsigned __int64 kSha512RoundConstants[80] = {
 };
 
 // FUNCTION: SWBF2 0x00634910
+#define SHA512_SHR(x, n) ((x) >> (n))
+#define SHA512_ROTR(x, n) (SHA512_SHR(x, n) | ((x) << (64 - (n))))
+#define SHA512_S0(x) (SHA512_ROTR(x, 1) ^ SHA512_ROTR(x, 8) ^ SHA512_SHR(x, 7))
+#define SHA512_S1(x) (SHA512_ROTR(x, 19) ^ SHA512_ROTR(x, 61) ^ SHA512_SHR(x, 6))
+#define SHA512_S2(x) (SHA512_ROTR(x, 28) ^ SHA512_ROTR(x, 34) ^ SHA512_ROTR(x, 39))
+#define SHA512_S3(x) (SHA512_ROTR(x, 14) ^ SHA512_ROTR(x, 18) ^ SHA512_ROTR(x, 41))
+#define SHA512_F0(x, y, z) (((x) & (y)) | ((z) & ((x) | (y))))
+#define SHA512_F1(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
+#define SHA512_ROUND(a, b, c, d, e, f, g, h, x, k) \
+    (temp1 = h + SHA512_S3(e) + SHA512_F1(e, f, g) + k + x, \
+     temp2 = SHA512_S2(a) + SHA512_F0(a, b, c), \
+     d += temp1, \
+     h = temp1 + temp2)
+
 void Sha512TransformBlock(Sha512Context* ctx, const unsigned char* block)
 {
-    unsigned __int64 w[80];
-    for (int i = 0; i < 16; ++i)
+    unsigned __int64 temp1, temp2, w[80];
+    unsigned __int64 a, b, c, d, e, f, g, h;
+    int i;
+
+    for (i = 0; i < 16; ++i)
     {
-        w[i] = 0;
+        unsigned __int64 word = 0;
         for (int j = 0; j < 8; ++j)
         {
-            w[i] = (w[i] << 8) | block[i * 8 + j];
+            word = (word << 8) | block[i * 8 + j];
         }
+        w[i] = word;
     }
-    for (int i = 16; i < 80; ++i)
+    for (; i < 80; ++i)
     {
-        unsigned __int64 x = w[i - 15], y = w[i - 2];
-        w[i] = w[i - 16] + (ShaRotate(x, 1) ^ ShaRotate(x, 8) ^ (x >> 7))
-             + w[i - 7] + (ShaRotate(y, 19) ^ ShaRotate(y, 61) ^ (y >> 6));
+        w[i] = SHA512_S1(w[i - 2]) + w[i - 7] + SHA512_S0(w[i - 15]) + w[i - 16];
     }
-    unsigned __int64 a = ctx->state[0], b = ctx->state[1], c = ctx->state[2], d = ctx->state[3];
-    unsigned __int64 e = ctx->state[4], f = ctx->state[5], g = ctx->state[6], h = ctx->state[7];
-    for (int i = 0; i < 80; ++i)
+
+    a = ctx->state[0]; b = ctx->state[1]; c = ctx->state[2]; d = ctx->state[3];
+    e = ctx->state[4]; f = ctx->state[5]; g = ctx->state[6]; h = ctx->state[7];
+
+    i = 0;
+    do
     {
-        unsigned __int64 t1 = h + (ShaRotate(e, 14) ^ ShaRotate(e, 18) ^ ShaRotate(e, 41))
-            + (g ^ (e & (f ^ g))) + kSha512RoundConstants[i] + w[i];
-        unsigned __int64 t2 = (ShaRotate(a, 28) ^ ShaRotate(a, 34) ^ ShaRotate(a, 39))
-            + ((a & b) | (c & (a | b)));
-        h = g; g = f; f = e; e = d + t1;
-        d = c; c = b; b = a; a = t1 + t2;
-    }
+        SHA512_ROUND(a, b, c, d, e, f, g, h, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(h, a, b, c, d, e, f, g, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(g, h, a, b, c, d, e, f, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(f, g, h, a, b, c, d, e, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(e, f, g, h, a, b, c, d, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(d, e, f, g, h, a, b, c, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(c, d, e, f, g, h, a, b, w[i], kSha512RoundConstants[i]); i++;
+        SHA512_ROUND(b, c, d, e, f, g, h, a, w[i], kSha512RoundConstants[i]); i++;
+    } while (i < 80);
+
     ctx->state[0] += a; ctx->state[1] += b; ctx->state[2] += c; ctx->state[3] += d;
     ctx->state[4] += e; ctx->state[5] += f; ctx->state[6] += g; ctx->state[7] += h;
 }
-
 // FUNCTION: SWBF2 0x00635500
 void Sha512Update(Sha512Context* ctx, const unsigned char* input, unsigned int size)
 {
@@ -1941,20 +1962,95 @@ void Sha512Finish(Sha512Context* ctx, unsigned char* output)
     unsigned __int64 high = (ctx->total[1] << 3) | (ctx->total[0] >> 61);
     unsigned __int64 low = ctx->total[0] << 3;
     unsigned char length[16];
-    for (int i = 0; i < 8; ++i)
-    {
-        length[i] = static_cast<unsigned char>(high >> (56 - i * 8));
-        length[i + 8] = static_cast<unsigned char>(low >> (56 - i * 8));
-    }
-    unsigned int left = static_cast<unsigned int>(ctx->total[0]) & 127;
-    Sha512Update(ctx, kSha512Padding, (left < 112 ? 112 : 240) - left);
+    length[0] = static_cast<unsigned char>(high >> 56);
+    length[1] = static_cast<unsigned char>(high >> 48);
+    length[2] = static_cast<unsigned char>(high >> 40);
+    length[3] = static_cast<unsigned char>(high >> 32);
+    length[4] = static_cast<unsigned char>(high >> 24);
+    length[5] = static_cast<unsigned char>(high >> 16);
+    length[6] = static_cast<unsigned char>(high >> 8);
+    length[7] = static_cast<unsigned char>(high >> 0);
+    length[8] = static_cast<unsigned char>(low >> 56);
+    length[9] = static_cast<unsigned char>(low >> 48);
+    length[10] = static_cast<unsigned char>(low >> 40);
+    length[11] = static_cast<unsigned char>(low >> 32);
+    length[12] = static_cast<unsigned char>(low >> 24);
+    length[13] = static_cast<unsigned char>(low >> 16);
+    length[14] = static_cast<unsigned char>(low >> 8);
+    length[15] = static_cast<unsigned char>(low >> 0);
+
+    unsigned int last = static_cast<unsigned int>(ctx->total[0]) & 127;
+    unsigned int padn = (last < 112) ? (112 - last) : (240 - last);
+    Sha512Update(ctx, kSha512Padding, padn);
     Sha512Update(ctx, length, 16);
-    for (int i = 0; i < (ctx->mode ? 6 : 8); ++i)
+
+    output[0] = static_cast<unsigned char>(ctx->state[0] >> 56);
+    output[1] = static_cast<unsigned char>(ctx->state[0] >> 48);
+    output[2] = static_cast<unsigned char>(ctx->state[0] >> 40);
+    output[3] = static_cast<unsigned char>(ctx->state[0] >> 32);
+    output[4] = static_cast<unsigned char>(ctx->state[0] >> 24);
+    output[5] = static_cast<unsigned char>(ctx->state[0] >> 16);
+    output[6] = static_cast<unsigned char>(ctx->state[0] >> 8);
+    output[7] = static_cast<unsigned char>(ctx->state[0] >> 0);
+    output[8] = static_cast<unsigned char>(ctx->state[1] >> 56);
+    output[9] = static_cast<unsigned char>(ctx->state[1] >> 48);
+    output[10] = static_cast<unsigned char>(ctx->state[1] >> 40);
+    output[11] = static_cast<unsigned char>(ctx->state[1] >> 32);
+    output[12] = static_cast<unsigned char>(ctx->state[1] >> 24);
+    output[13] = static_cast<unsigned char>(ctx->state[1] >> 16);
+    output[14] = static_cast<unsigned char>(ctx->state[1] >> 8);
+    output[15] = static_cast<unsigned char>(ctx->state[1] >> 0);
+    output[16] = static_cast<unsigned char>(ctx->state[2] >> 56);
+    output[17] = static_cast<unsigned char>(ctx->state[2] >> 48);
+    output[18] = static_cast<unsigned char>(ctx->state[2] >> 40);
+    output[19] = static_cast<unsigned char>(ctx->state[2] >> 32);
+    output[20] = static_cast<unsigned char>(ctx->state[2] >> 24);
+    output[21] = static_cast<unsigned char>(ctx->state[2] >> 16);
+    output[22] = static_cast<unsigned char>(ctx->state[2] >> 8);
+    output[23] = static_cast<unsigned char>(ctx->state[2] >> 0);
+    output[24] = static_cast<unsigned char>(ctx->state[3] >> 56);
+    output[25] = static_cast<unsigned char>(ctx->state[3] >> 48);
+    output[26] = static_cast<unsigned char>(ctx->state[3] >> 40);
+    output[27] = static_cast<unsigned char>(ctx->state[3] >> 32);
+    output[28] = static_cast<unsigned char>(ctx->state[3] >> 24);
+    output[29] = static_cast<unsigned char>(ctx->state[3] >> 16);
+    output[30] = static_cast<unsigned char>(ctx->state[3] >> 8);
+    output[31] = static_cast<unsigned char>(ctx->state[3] >> 0);
+    output[32] = static_cast<unsigned char>(ctx->state[4] >> 56);
+    output[33] = static_cast<unsigned char>(ctx->state[4] >> 48);
+    output[34] = static_cast<unsigned char>(ctx->state[4] >> 40);
+    output[35] = static_cast<unsigned char>(ctx->state[4] >> 32);
+    output[36] = static_cast<unsigned char>(ctx->state[4] >> 24);
+    output[37] = static_cast<unsigned char>(ctx->state[4] >> 16);
+    output[38] = static_cast<unsigned char>(ctx->state[4] >> 8);
+    output[39] = static_cast<unsigned char>(ctx->state[4] >> 0);
+    output[40] = static_cast<unsigned char>(ctx->state[5] >> 56);
+    output[41] = static_cast<unsigned char>(ctx->state[5] >> 48);
+    output[42] = static_cast<unsigned char>(ctx->state[5] >> 40);
+    output[43] = static_cast<unsigned char>(ctx->state[5] >> 32);
+    output[44] = static_cast<unsigned char>(ctx->state[5] >> 24);
+    output[45] = static_cast<unsigned char>(ctx->state[5] >> 16);
+    output[46] = static_cast<unsigned char>(ctx->state[5] >> 8);
+    output[47] = static_cast<unsigned char>(ctx->state[5] >> 0);
+
+    if (ctx->mode == 0)
     {
-        for (int j = 0; j < 8; ++j)
-        {
-            output[i * 8 + j] = static_cast<unsigned char>(ctx->state[i] >> (56 - j * 8));
-        }
+        output[48] = static_cast<unsigned char>(ctx->state[6] >> 56);
+        output[49] = static_cast<unsigned char>(ctx->state[6] >> 48);
+        output[50] = static_cast<unsigned char>(ctx->state[6] >> 40);
+        output[51] = static_cast<unsigned char>(ctx->state[6] >> 32);
+        output[52] = static_cast<unsigned char>(ctx->state[6] >> 24);
+        output[53] = static_cast<unsigned char>(ctx->state[6] >> 16);
+        output[54] = static_cast<unsigned char>(ctx->state[6] >> 8);
+        output[55] = static_cast<unsigned char>(ctx->state[6] >> 0);
+        output[56] = static_cast<unsigned char>(ctx->state[7] >> 56);
+        output[57] = static_cast<unsigned char>(ctx->state[7] >> 48);
+        output[58] = static_cast<unsigned char>(ctx->state[7] >> 40);
+        output[59] = static_cast<unsigned char>(ctx->state[7] >> 32);
+        output[60] = static_cast<unsigned char>(ctx->state[7] >> 24);
+        output[61] = static_cast<unsigned char>(ctx->state[7] >> 16);
+        output[62] = static_cast<unsigned char>(ctx->state[7] >> 8);
+        output[63] = static_cast<unsigned char>(ctx->state[7] >> 0);
     }
 }
 

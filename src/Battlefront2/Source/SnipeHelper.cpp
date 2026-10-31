@@ -189,26 +189,23 @@ void SnipeHelper::UpdateState(float dt)
         PblVector3 vZ = AIUtil::GetSafeNormal(mHint->GetZAxis());
         PblVector3 vMyPos = GetMe()->GetMatrix().GetTranslation();
 
-        PblVector3 vFace(vZ.x * 10.0f + vMyPos.x, vZ.y * 10.0f + vMyPos.y, vZ.z * 10.0f + vMyPos.z);
-
         PblVector3 vTarget;
-        const AttackHelper* pAttack = GetAttackHelper();
-        if (pAttack->GetVisibleTarget())
+        if (GetAttackHelper()->GetVisibleTarget())
         {
-            vTarget = (GetCollisionObject(pAttack->GetVisibleTarget())->GetMatrix()).GetTranslation();
+            vTarget = (GetCollisionObject(GetAttackHelper()->GetVisibleTarget())->GetMatrix()).GetTranslation();
         }
-        else if (pAttack->HasTarget())
+        else if (GetAttackHelper()->HasTarget())
         {
-            vTarget = pAttack->GetLastSeenTargetPos();
+            vTarget = GetAttackHelper()->GetLastSeenTargetPos();
         }
         else
         {
-            vTarget = vFace;
+            vTarget = PblVector3(vZ.x * 10.0f + vMyPos.x, vZ.y * 10.0f + vMyPos.y, vZ.z * 10.0f + vMyPos.z);
         }
 
         if (IsWithinSnipeFOV(vTarget))
         {
-            mDefaultFacePos = vFace;
+            mDefaultFacePos = PblVector3(vZ.x * 10.0f + vMyPos.x, vZ.y * 10.0f + vMyPos.y, vZ.z * 10.0f + vMyPos.z);
             mOverrideFaceTarget = false;
             mOverrideDefaultFacePos = true;
         }
@@ -216,7 +213,8 @@ void SnipeHelper::UpdateState(float dt)
         {
             mOverrideFaceTarget = true;
             mOwner->GetLowLevel().SetHeight(mHeight);
-            mOwner->GetLowLevel().SetHeading(vFace, 0.0f);
+            mOwner->GetLowLevel().SetHeading(
+                PblVector3(vZ.x * 10.0f + vMyPos.x, vZ.y * 10.0f + vMyPos.y, vZ.z * 10.0f + vMyPos.z), 0.0f);
         }
         GetMe()->SetWpnDistFactor(2.0f);
         break;

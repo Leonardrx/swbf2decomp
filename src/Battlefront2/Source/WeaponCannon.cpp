@@ -746,11 +746,8 @@ bool WeaponCannon::Fire()
     desc.mFireWeapon = this;
 
     pClass = static_cast<const WeaponCannonClass*>(mClass);
-    bool bSecondary = false;
-    if (pClass->mSecondaryOrdnancePeriod && pClass->mSecondaryOrdnanceClass)
-    {
-        bSecondary = mOrdCounter++ % pClass->mSecondaryOrdnancePeriod == 0;
-    }
+    const bool bSecondary = pClass->mSecondaryOrdnancePeriod && pClass->mSecondaryOrdnanceClass &&
+                            (mOrdCounter++ % pClass->mSecondaryOrdnancePeriod == 0);
 
     bool bFlash = true;
     if (NetGame::IsEnabled())

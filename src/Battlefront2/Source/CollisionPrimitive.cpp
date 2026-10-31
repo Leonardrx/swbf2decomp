@@ -108,6 +108,8 @@ void CollisionPrimitive::SetBox(float fWidth, float fHeight, float fDepth, float
 // FUNCTION: SWBF2 0x00464860
 PblBox CollisionPrimitive::GetWorldspaceAABB(const PblMatrix& matrix) const
 {
+    PblVector3 vMin(FLT_MAX, FLT_MAX, FLT_MAX);
+    PblVector3 vMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
     PblVector3 corners[8];
     for (int i = 0; i < 8; ++i)
     {
@@ -117,31 +119,46 @@ PblBox CollisionPrimitive::GetWorldspaceAABB(const PblMatrix& matrix) const
     switch (mType)
     {
     case BOX:
-        AddCorners(corners,
-                   ApplyRotation(matrix, PblVector3(mWidth, 0.0f, 0.0f)),
-                   ApplyRotation(matrix, PblVector3(0.0f, mHeight, 0.0f)),
-                   ApplyRotation(matrix, PblVector3(0.0f, 0.0f, mDepth)));
+    {
+        PblVector3 x = ApplyRotation(matrix, PblVector3(mWidth, 0.0f, 0.0f));
+        PblVector3 y = ApplyRotation(matrix, PblVector3(0.0f, mHeight, 0.0f));
+        PblVector3 z = ApplyRotation(matrix, PblVector3(0.0f, 0.0f, mDepth));
+        corners[0] += x + y + z;
+        corners[1] += x + y + -z;
+        corners[2] += x + -y + z;
+        corners[3] += x + -y + -z;
+        corners[4] += -x + y + z;
+        corners[5] += -x + y + -z;
+        corners[6] += -x + -y + z;
+        corners[7] += -x + -y + -z;
         break;
+    }
     case AXIS_ALIGNED_CYLINDER:
         break;
     case CYLINDER:
-        AddCorners(corners,
-                   ApplyRotation(matrix, PblVector3(mRadius, 0.0f, 0.0f)),
-                   ApplyRotation(matrix, PblVector3(0.0f, mHeight * 0.5f, 0.0f)),
-                   ApplyRotation(matrix, PblVector3(0.0f, 0.0f, mRadius)));
-        break;
-    default:
-        corners[0].x += mRadius;
-        corners[0].y += mRadius;
-        corners[0].z += mRadius;
-        corners[1].x -= mRadius;
-        corners[1].y -= mRadius;
-        corners[1].z -= mRadius;
+    {
+        PblVector3 x = ApplyRotation(matrix, PblVector3(mRadius, 0.0f, 0.0f));
+        PblVector3 y = ApplyRotation(matrix, PblVector3(0.0f, mHeight * 0.5f, 0.0f));
+        PblVector3 z = ApplyRotation(matrix, PblVector3(0.0f, 0.0f, mRadius));
+        corners[0] += x + y + z;
+        corners[1] += x + y + -z;
+        corners[2] += x + -y + z;
+        corners[3] += x + -y + -z;
+        corners[4] += -x + y + z;
+        corners[5] += -x + y + -z;
+        corners[6] += -x + -y + z;
+        corners[7] += -x + -y + -z;
         break;
     }
+    default:
+    {
+        PblVector3 vRadius(mRadius, mRadius, mRadius);
+        corners[0] += vRadius;
+        corners[1] -= vRadius;
+        break;
+    }
+    }
 
-    PblVector3 vMin(FLT_MAX, FLT_MAX, FLT_MAX);
-    PblVector3 vMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
     for (int i = 0; i < 8; ++i)
     {
         if (vMin.x > corners[i].x)
@@ -472,28 +489,52 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
 
     sRadius = mMeshCollisionRadius;
     sWorld2Collision = meshMatrix.GetInverseFast();
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&sLocalPos, (const D3DXVECTOR3*)&matrix.GetTranslation(),
+    PblVector3 vLocalPos;
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocalPos, (const D3DXVECTOR3*)&matrix.GetTranslation(),
                            (const D3DXMATRIX*)&sWorld2Collision);
-    for (int iRow = 0; iRow < 3; ++iRow)
-    {
-        D3DXVec3TransformNormal((D3DXVECTOR3*)&sPrimitiveInCollision.m[iRow][0],
-                                (const D3DXVECTOR3*)&matrix.m[iRow][0], (const D3DXMATRIX*)&sWorld2Collision);
-        sPrimitiveInCollision.m[iRow][3] = 0.0f;
-    }
+    sLocalPos = vLocalPos;
+    PblVector3 vRow;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[0][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[0] = vRow;
+    sPrimitiveInCollision.m[0][3] = 0.0f;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[1][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[1] = vRow;
+    sPrimitiveInCollision.m[1][3] = 0.0f;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[2][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[2] = vRow;
+    sPrimitiveInCollision.m[2][3] = 0.0f;
     sPrimitiveInCollision.SetTranslation(sLocalPos);
 
     if (!CollisionObject::sCollidingWithMesh)
     {
-
         const PblVector3& vBoxMin = pObject->mAABB._vMin;
         const PblVector3& vBoxMax = pObject->mAABB._vMax;
         PblVector3 aCorners[8];
         int i;
-        for (i = 0; i < 8; ++i)
-        {
-            aCorners[i] = PblVector3((i & 4) ? vBoxMax.x : vBoxMin.x, (i & 2) ? vBoxMax.y : vBoxMin.y,
-                                     (i & 1) ? vBoxMax.z : vBoxMin.z);
-        }
+        aCorners[0].x = vBoxMin.x;
+        aCorners[0].y = vBoxMin.y;
+        aCorners[0].z = vBoxMin.z;
+        aCorners[1].x = vBoxMin.x;
+        aCorners[1].y = vBoxMin.y;
+        aCorners[1].z = vBoxMax.z;
+        aCorners[2].x = vBoxMin.x;
+        aCorners[2].y = vBoxMax.y;
+        aCorners[2].z = vBoxMin.z;
+        aCorners[3].x = vBoxMin.x;
+        aCorners[3].y = vBoxMax.y;
+        aCorners[3].z = vBoxMax.z;
+        aCorners[4].x = vBoxMax.x;
+        aCorners[4].y = vBoxMin.y;
+        aCorners[4].z = vBoxMin.z;
+        aCorners[5].x = vBoxMax.x;
+        aCorners[5].y = vBoxMin.y;
+        aCorners[5].z = vBoxMax.z;
+        aCorners[6].x = vBoxMax.x;
+        aCorners[6].y = vBoxMax.y;
+        aCorners[6].z = vBoxMin.z;
+        aCorners[7].x = vBoxMax.x;
+        aCorners[7].y = vBoxMax.y;
+        aCorners[7].z = vBoxMax.z;
         for (i = 0; i < 8; ++i)
         {
             PblVector3 v;

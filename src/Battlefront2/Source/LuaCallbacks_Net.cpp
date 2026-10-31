@@ -494,8 +494,25 @@ int ScriptCB_LobbyAction(lua_State* L)
         luaL_checkstring(LuaHelper::mState, 2);
         const unsigned int uiAction = PblHash(luaL_checkstring(LuaHelper::mState, iTop));
 
-        if (uiAction == 0x789A24E4u /* "forceboot" */)
+        switch (uiAction)
         {
+        case 0xD6069F54u: /* "mute" */
+            if (iIndex >= 0 && iIndex < iCount)
+            {
+                GameVoiceChat::Transport* pTransport = GameVoiceChat::GetTransport();
+                const unsigned char ucLocal = (unsigned char)NetGame::GetLocalIndex(PauseMenu::GetPausingViewport());
+                const bool bMuted = pTransport->GetReceiveEnable(ucLocal, (unsigned char)iIndex);
+                pTransport->SetReceiveEnable(ucLocal, (unsigned char)iIndex, !bMuted, false);
+            }
+            break;
+        case 0xA2FD7D0Cu: /* "team" */
+            if (iIndex >= 0 && iIndex < iCount)
+            {
+                NetGame::SetStartTeam(iIndex, 3 - NetGame::GetStartTeam(iIndex));
+            }
+            ScriptCB_GetLobbyPlayerlist(0);
+            break;
+        case 0x789A24E4u: /* "forceboot" */
             if (hostGame)
             {
                 hostGame->BootPlayer(iIndex);
@@ -504,24 +521,7 @@ int ScriptCB_LobbyAction(lua_State* L)
             {
                 NetGame::ForceBootPlayer(iIndex);
             }
-        }
-        else if (uiAction == 0xA2FD7D0Cu /* "team" */)
-        {
-            if (iIndex >= 0 && iIndex < iCount)
-            {
-                NetGame::SetStartTeam(iIndex, 3 - NetGame::GetStartTeam(iIndex));
-            }
-            ScriptCB_GetLobbyPlayerlist(0);
-        }
-        else if (uiAction == 0xD6069F54u /* "mute" */)
-        {
-            if (iIndex >= 0 && iIndex < iCount)
-            {
-                GameVoiceChat::Transport* pTransport = GameVoiceChat::GetTransport();
-                const unsigned char ucLocal = (unsigned char)NetGame::GetLocalIndex(PauseMenu::GetPausingViewport());
-                const bool bMuted = pTransport->GetReceiveEnable(ucLocal, (unsigned char)iIndex);
-                pTransport->SetReceiveEnable(ucLocal, (unsigned char)iIndex, !bMuted, false);
-            }
+            break;
         }
         return 0;
     }
@@ -2427,15 +2427,15 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
 
     char* pcName = 0;
     char* pcMission = 0;
+    char* pcVersion = 0;
+    bool bLocked = false;
+    float fPing = 9.999f;
     int iNumPlayers = 0;
+    int iServerType = 0;
     int iMaxPlayers;
     bool bPassword;
-    float fPing = 9.999f;
-    int iServerType = 0;
     int iSortPos;
-    bool bLocked = false;
     bool bRightVersion;
-    char* pcVersion = 0;
     bool bFavorite;
 
     findGame->SelectFirst();
@@ -2556,17 +2556,17 @@ int ScriptCB_GetExtraSessionInfo(lua_State*)
 
             lua_newtable(LuaHelper::mState);
             pusFormat = RedLocalizeDB::Find(0x61828675, false);
-            if (rules.mAIDifficulty == 1)
+            switch (rules.mAIDifficulty)
             {
+            case 1:
                 PblUnicode::usnprintf(ausText, 256, pusFormat, pusEasy);
-            }
-            else if (rules.mAIDifficulty == 3)
-            {
+                break;
+            case 3:
                 PblUnicode::usnprintf(ausText, 256, pusFormat, pusHard);
-            }
-            else
-            {
+                break;
+            default:
                 PblUnicode::usnprintf(ausText, 256, pusFormat, pusMedium);
+                break;
             }
             LuaHelper::TableWriteVal("text", ausText);
             lua_rawseti(LuaHelper::mState, -2, 7);
@@ -2740,16 +2740,20 @@ void ResortSessions(bool bForward)
     SessionSortKey* pKey = sessions;
     for (int i = 0; i < iCount; ++i)
     {
+        char* pcMap;
+        bool bPresent;
         bool bPassword;
         int iType;
         int iSortPos;
         bool bLocked;
         bool bRightVersion;
         char* pcVersion;
-        findGame->GetInfo(pKey->name, pKey->map, pKey->first, pKey->second, bPassword,
+        findGame->GetInfo(pKey->name, pcMap, pKey->first, pKey->second, bPassword,
                           pKey->ping, iType, iSortPos, bLocked, bRightVersion, pcVersion,
-                          pKey->present);
+                          bPresent);
         pKey->sessionIndex = i;
+        pKey->map = pcMap;
+        pKey->present = bPresent;
         switch (iType)
         {
         case 2: pKey->serverRank = 6; break;
@@ -2876,26 +2880,28 @@ int ScriptCB_GetSessionList(lua_State*)
     }
 
     LuaHelper::CallTableProcWThis("ifs_mp_sessionlist", "ClearListbox");
-    const char* contentNames[3] = {
-        "mpsessionlist_listbox_contents", "mpsessionlist_serverinfo_contents",
-        "mpsessionlist_playerlist_contents"
-    };
-    for (int i = 0; i < 3; ++i)
-    {
-        lua_newtable(LuaHelper::mState);
-        lua_pushstring(LuaHelper::mState, contentNames[i]);
-        lua_insert(LuaHelper::mState, -2);
-        lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
-    }
+    lua_newtable(LuaHelper::mState);
+    lua_pushstring(LuaHelper::mState, "mpsessionlist_listbox_contents");
+    lua_insert(LuaHelper::mState, -2);
+    lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
+    lua_newtable(LuaHelper::mState);
+    lua_pushstring(LuaHelper::mState, "mpsessionlist_serverinfo_contents");
+    lua_insert(LuaHelper::mState, -2);
+    lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
+    lua_newtable(LuaHelper::mState);
+    lua_pushstring(LuaHelper::mState, "mpsessionlist_playerlist_contents");
+    lua_insert(LuaHelper::mState, -2);
+    lua_settable(LuaHelper::mState, LUA_GLOBALSINDEX);
     DoPeriodicLuaGC(true);
     lua_newtable(LuaHelper::mState);
     const int count = lastSessionCount;
+    bool locked = false;
     if (findGame->GetDirty())
     {
         ResortSessions(false);
     }
-    findGame->SelectFirst();
     int selected = -1;
+    findGame->SelectFirst();
     int visible = 0;
     int players = 0;
     int maxPlayers = 0;
@@ -2903,18 +2909,17 @@ int ScriptCB_GetSessionList(lua_State*)
     {
         if (!findGame->GetFiltered())
         {
-            char* name = 0;
-            char* map = 0;
-            int numPlayers = 0;
-            int maxSessionPlayers = 0;
-            bool passworded = false;
-            float ping = 0.0f;
-            int serverType = 0;
-            int sortPosition = 0;
-            bool locked = false;
-            bool rightVersion = false;
-            char* unusedName = 0;
-            bool favorite = false;
+            char* name;
+            char* map;
+            int numPlayers;
+            int maxSessionPlayers;
+            bool passworded;
+            float ping;
+            int serverType;
+            int sortPosition;
+            bool rightVersion;
+            char* unusedName;
+            bool favorite;
             if (!findGame->GetInfo(name, map, numPlayers, maxSessionPlayers, passworded,
                                    ping, serverType, sortPosition, locked, rightVersion,
                                    unusedName, favorite))
@@ -3397,51 +3402,47 @@ int ScriptCB_GetVoiceReceiveStatus(lua_State*)
     int status = 0;
     if (GameVoiceChat::IsOpen())
     {
-        const int player = lua_gettop(LuaHelper::mState) >= 1
+        const unsigned char selected = (unsigned char)(lua_gettop(LuaHelper::mState) >= 1
             ? GetLobbyPlayerIndex(LuaHelper::GetInt(1))
-            : PauseMenu::GetPausingJoystick();
-        const unsigned char selected = (unsigned char)player;
-        VoiceChat::Node* node = (VoiceChat::Node*)GameVoiceChat::FindNodeByDeviceID(PauseMenu::GetPausingJoystick());
+            : PauseMenu::GetPausingJoystick());
+        VoiceChat::Node* node = (VoiceChat::Node*)GameVoiceChat::FindNodeByDeviceID(selected);
         GameVoiceChat::Transport* transport = GameVoiceChat::GetTransport();
-        if (!node || node->GetID() == 0xff)
+        const unsigned char local = node ? node->GetID() : 0xff;
+        if (local == 0xff)
         {
             status = 1;
         }
-        else
+        else if (selected == local)
         {
-            const unsigned char local = node->GetID();
-            if (selected == local)
+            if (transport->IsConnectedSend(local))
             {
-                if (transport->IsConnectedSend(local))
-                {
-                    status = 4 + node->IsReceiving();
-                }
-                else
+                status = node->IsReceiving() ? 5 : 4;
+            }
+            else
+            {
+                status = transport->IsConnectedReceive(selected) ? 6 : 0;
+            }
+        }
+        else if (transport->IsConnectedReceive(selected))
+        {
+            if (transport->GetSendPossible(local, selected))
+            {
+                if (!transport->IsConnectedSend(selected))
                 {
                     status = transport->IsConnectedReceive(selected) ? 6 : 0;
                 }
-            }
-            else if (transport->IsConnectedReceive(selected))
-            {
-                if (transport->GetSendPossible(local, selected))
-                {
-                    if (transport->IsConnectedSend(selected))
-                    {
-                        status = 4 + transport->GetSending(local);
-                    }
-                    else
-                    {
-                        status = transport->IsConnectedReceive(selected) ? 6 : 0;
-                    }
-                }
-                else if (transport->GetSendEnable(local, selected))
-                {
-                    status = 3;
-                }
                 else
                 {
-                    status = 1 + transport->GetReceiveEnable(selected, local);
+                    status = transport->GetSending(local) ? 5 : 4;
                 }
+            }
+            else if (transport->GetSendEnable(local, selected))
+            {
+                status = 3;
+            }
+            else
+            {
+                status = transport->GetReceiveEnable(selected, local) ? 2 : 1;
             }
         }
     }

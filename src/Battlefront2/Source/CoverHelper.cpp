@@ -475,15 +475,7 @@ float CoverHelper::IsHintSuitable(const BaseHint* pHint) const
 float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
 {
     const PblVector3& vHint = pHint->GetCollisionCenter();
-    const GameObject* pTarget = mCoverTarget.mObject;
-    if (pTarget && pTarget->mHandleId != mCoverTarget.mSavedHandleId)
-    {
-        CoverHelper* pMutable = const_cast<CoverHelper*>(this);
-        pMutable->mCoverTarget.mObject = NULL;
-        pMutable->mCoverTarget.mSavedHandleId = 0;
-        pTarget = NULL;
-    }
-    const PblVector3& vTarget = pTarget->GetMatrix().GetTranslation();
+    const PblVector3& vTarget = mCoverTarget->GetMatrix().GetTranslation();
     float dx = vHint.x - vTarget.x;
     float dy = vHint.y - vTarget.y;
     float dz = vHint.z - vTarget.z;
@@ -493,10 +485,10 @@ float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
         return FLT_MAX;
     }
 
-    const PblMatrix& mTarget = pTarget->GetMatrix();
+    const PblMatrix& mTarget = mCoverTarget->GetMatrix();
     const PblVector3& vMe = GetMe()->GetMatrix().GetTranslation();
-    PblVector3 vTargetToMe(vTarget.x - vMe.x, vTarget.y - vMe.y, vTarget.z - vMe.z);
-    PblVector3 vTargetToHint(vTarget.x - vHint.x, vTarget.y - vHint.y, vTarget.z - vHint.z);
+    PblVector3 vTargetToMe = vTarget - vMe;
+    PblVector3 vTargetToHint = vTarget - vHint;
     const PblVector3& vForward = mTarget.GetXAxis();
     float fMeSide = vForward.x * vTargetToMe.x + vForward.y * vTargetToMe.y + vForward.z * vTargetToMe.z;
     float fHintSide = vForward.x * vTargetToHint.x + vForward.y * vTargetToHint.y + vForward.z * vTargetToHint.z;
@@ -506,9 +498,9 @@ float CoverHelper::IsHintSuitable_ForwardCover(const BaseHint* pHint) const
     }
 
     PblVector3 vNormal;
-    PblVector3 vHintFromTarget(vHint.x - vTarget.x, vHint.y - vTarget.y, vHint.z - vTarget.z);
+    const PblVector3& vSide = mCoverTarget->GetMatrix().GetZAxis();
+    PblVector3 vHintFromTarget = vHint - vTarget;
     D3DXVec3Normalize((D3DXVECTOR3*)&vNormal, (const D3DXVECTOR3*)&vHintFromTarget);
-    const PblVector3& vSide = mTarget.GetZAxis();
     float fDot = vSide.x * vNormal.x + vSide.y * vNormal.y + vSide.z * vNormal.z;
     if (fDot > 0.99619401f || fDot < 0.93969202f)
     {

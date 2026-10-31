@@ -180,9 +180,7 @@ void FlushParticleCache()
     {
         --mNumCachedParticles;
         CacheParticle& particle = sCachedParticles[mNumCachedParticles];
-        const float fDist = mCamera.m[2][0] * (mCamera.m[3][0] - particle.mPos.x) +
-                            mCamera.m[2][1] * (mCamera.m[3][1] - particle.mPos.y) +
-                            mCamera.m[2][2] * (mCamera.m[3][2] - particle.mPos.z) - 1.0f;
+        const float fDist = DotProduct(mCamera.GetZAxis(), mCamera.GetTranslation() - particle.mPos) - 1.0f;
         if (fDist > 0.0f)
         {
             if (particle.mSize > fDist)
@@ -197,21 +195,20 @@ void FlushParticleCache()
     {
         const unsigned int i = heap.Get(0);
         heap.Pop();
-        const CacheParticle& particle = sCachedParticles[i];
 
         RedColor color;
-        color.a = (unsigned char)(int)(particle.mColor.a * 255.0f);
-        color.b = (unsigned char)(int)(particle.mColor.b * 255.0f);
-        color.g = (unsigned char)(int)(particle.mColor.g * 255.0f);
-        color.r = (unsigned char)(int)(particle.mColor.r * 255.0f);
+        color.a = (unsigned char)(int)(sCachedParticles[i].mColor.a * 255.0f);
+        color.b = (unsigned char)(int)(sCachedParticles[i].mColor.b * 255.0f);
+        color.g = (unsigned char)(int)(sCachedParticles[i].mColor.g * 255.0f);
+        color.r = (unsigned char)(int)(sCachedParticles[i].mColor.r * 255.0f);
 
         RedParticleRenderer::TexCoords texCoords;
         texCoords.u0 = 0;
         texCoords.v0 = 0;
         texCoords.u1 = 255;
         texCoords.v1 = 255;
-        RedParticleRenderer::SubmitParticle(PIT_PARTICLE, particle.mPos, color, particle.mSize,
-                                            particle.mRotation, texCoords, gVectorUnitX, gVectorUnitY);
+        RedParticleRenderer::SubmitParticle(PIT_PARTICLE, sCachedParticles[i].mPos, color, sCachedParticles[i].mSize,
+                                            sCachedParticles[i].mRotation, texCoords, gVectorUnitX, gVectorUnitY);
     }
 }
 

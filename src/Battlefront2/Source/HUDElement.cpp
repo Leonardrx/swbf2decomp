@@ -642,7 +642,7 @@ void HUD::Element::SetRuntimeScale(float fScale)
     for (int i = 0; i < 3; ++i)
     {
         const float* pRow = matrix.m[i];
-        afScale[i] = sqrtf(pRow[0] * pRow[0] + pRow[1] * pRow[1] + pRow[2] * pRow[2])
+        afScale[i] = PblMath::Sqrt(pRow[0] * pRow[0] + pRow[1] * pRow[1] + pRow[2] * pRow[2])
                    / mRuntimeScale * fScale;
     }
     mRuntimeScale = fScale;
@@ -663,7 +663,6 @@ void HUD::Element::SetRuntimeScale(float fScale)
 bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
 {
     const float* pfValue = (const float*)pValue;
-    PblMatrix matrix;
 
     switch (uHashID)
     {
@@ -674,23 +673,24 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
         Item::SetEvent(*(const char* const*)pValue, mEventChanged);
         return true;
     case kRotation:
-        matrix = mElement->m_mLocal;
+    {
+        PblMatrix matrix(mElement->m_mLocal);
         mMatrix.SetMatrix(&matrix);
         mMatrix.SetRotation(pfValue[0], pfValue[1], pfValue[2]);
-        break;
+        mMatrix.ApplyScale();
+        mElement->SetMatrix(matrix);
+        mMatrix.SetMatrix(0);
+        return true;
+    }
     case kColorChange:
         mColorChanged = *(const RedColor*)pValue;
         return true;
     case kColor:
     {
         const RedColor* pColor = (const RedColor*)pValue;
-        RedColor color;
-        color.a = 0xff;
-        color.b = pColor->b;
-        color.g = pColor->g;
-        color.r = pColor->r;
+        const RedColor color(*pColor, 0xff);
         mElement->SetColor(color);
-        mColorDefault = mElement->m_color;
+        mColorDefault = RedColor(mElement->m_color);
         return true;
     }
     case kEventColor:
@@ -706,11 +706,16 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
         SetRuntimeScaleAll(*pfValue);
         return true;
     case kScaleUniform:
-        matrix = mElement->m_mLocal;
+    {
+        PblMatrix matrix(mElement->m_mLocal);
         mMatrix.SetMatrix(&matrix);
         mMatrix.ApplyRotation();
         mMatrix.SetScale(*pfValue, *pfValue, *pfValue);
-        break;
+        mMatrix.ApplyScale();
+        mElement->SetMatrix(matrix);
+        mMatrix.SetMatrix(0);
+        return true;
+    }
     case kFadeOutTime:
         mFader.SetPhaseTime(Envelope::phase_Release, *pfValue);
         return true;
@@ -718,11 +723,16 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
         mUseChangeColor = *(const bool*)pValue;
         return true;
     case kScale:
-        matrix = mElement->m_mLocal;
+    {
+        PblMatrix matrix(mElement->m_mLocal);
         mMatrix.SetMatrix(&matrix);
         mMatrix.ApplyRotation();
         mMatrix.SetScale(pfValue[0], pfValue[1], pfValue[2]);
-        break;
+        mMatrix.ApplyScale();
+        mElement->SetMatrix(matrix);
+        mMatrix.SetMatrix(0);
+        return true;
+    }
     case kEventDisable:
         Item::SetEvent(*(const char* const*)pValue, mEventDisable);
         return true;
@@ -745,9 +755,12 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
         mElement->SetZOrder(*(const unsigned char*)pValue);
         return true;
     case kColorPulseRate:
-        mPulseColorRate = *pfValue;
-        mPulseTime = *pfValue;
+    {
+        const float fRate = *pfValue;
+        mPulseColorRate = fRate;
+        mPulseTime = fRate;
         return true;
+    }
     case kPositionRelative:
         mMatrix.SetRelativeMode(*(const RelativeMode*)pValue);
         return true;
@@ -762,11 +775,6 @@ bool HUD::Element::SetProperty(const unsigned int uHashID, const void* pValue)
     default:
         return false;
     }
-
-    mMatrix.ApplyScale();
-    mElement->SetMatrix(matrix);
-    mMatrix.SetMatrix(0);
-    return true;
 }
 
 // FUNCTION: SWBF2 0x00548c50
@@ -923,23 +931,15 @@ bool HUD::Element::ReadData(PblConfig&, PblConfig::Data& data)
         return Item::ReadEvent(data, mEventChanged);
     case kColorChange:
     {
-        RedColor color;
-        color.b = data.GetUint8Arg(2);
-        color.g = data.GetUint8Arg(1);
-        color.r = data.GetUint8Arg(0);
-        color.a = 0xff;
+        const RedColor color(data.GetUint8Arg(0), data.GetUint8Arg(1), data.GetUint8Arg(2), 0xff);
         mColorChanged = color;
         return true;
     }
     case kColor:
     {
-        RedColor color;
-        color.b = data.GetUint8Arg(2);
-        color.g = data.GetUint8Arg(1);
-        color.r = data.GetUint8Arg(0);
-        color.a = 0xff;
+        const RedColor color(data.GetUint8Arg(0), data.GetUint8Arg(1), data.GetUint8Arg(2), 0xff);
         mElement->SetColor(color);
-        mColorDefault = mElement->m_color;
+        mColorDefault = RedColor(mElement->m_color);
         return true;
     }
     case kFadeInTime:
@@ -985,9 +985,12 @@ bool HUD::Element::ReadData(PblConfig&, PblConfig::Data& data)
     case kEventEnable:
         return Item::ReadEvent(data, mEventEnable);
     case kColorPulseRate:
-        mPulseColorRate = data.GetFloatArg(0);
-        mPulseTime = data.GetFloatArg(0);
+    {
+        const float fRate = data.GetFloatArg(0);
+        mPulseColorRate = fRate;
+        mPulseTime = fRate;
         return true;
+    }
     case kViewport:
     {
         int iViewport = data.GetUint8Arg(0);
@@ -1017,8 +1020,8 @@ bool HUD::Element::ReadData(PblConfig&, PblConfig::Data& data)
         PblMatrix matrix = mElement->m_mLocal;
         mMatrix.SetMatrix(&matrix);
         bool bRead = mMatrix.ReadScale(data, 0);
-        bRead |= mMatrix.ReadRotation(data, 0);
-        bRead |= mMatrix.ReadPosition(data, 0);
+        bRead = mMatrix.ReadRotation(data, 0) | bRead;
+        bRead = mMatrix.ReadPosition(data, 0) | bRead;
         if (bRead)
         {
             mElement->SetMatrix(matrix);
@@ -1061,10 +1064,10 @@ void HUD::Element::WriteData(HUD::File& file, unsigned int uTabs)
     file.WriteProperty("ColorChangeRate", uTabs, mColorIntRate, 0.3f);
     file.WriteProperty("ColorPulseRate", uTabs, mPulseColorRate, FLT_MAX);
     file.WriteProperty("UseChangeColor", uTabs, (int)mUseChangeColor, 0);
-    file.WriteProperty("FadeInTime", uTabs, GetFadeInTime(), 0.0f);
-    file.WriteProperty("FadeHoldTime", uTabs, GetFadeHoldTime(), FLT_MAX);
-    file.WriteProperty("FadeSustainTime", uTabs, GetFadeSustainTime(), 0.0f);
-    file.WriteProperty("FadeOutTime", uTabs, GetFadeOutTime(), 0.0f);
+    file.WriteProperty("FadeInTime", uTabs, mFader.GetPhaseTime(Envelope::phase_Attack), 0.0f);
+    file.WriteProperty("FadeHoldTime", uTabs, mFader.GetPhaseTime(Envelope::phase_Hold), FLT_MAX);
+    file.WriteProperty("FadeSustainTime", uTabs, mFader.GetPhaseTime(Envelope::phase_Sustain), 0.0f);
+    file.WriteProperty("FadeOutTime", uTabs, mFader.GetPhaseTime(Envelope::phase_Release), 0.0f);
     file.WriteProperty("BlendMode", uTabs, Factory::sBlendModeStrings[mElement->GetBlendMode()],
                        Factory::sBlendModeStrings[0]);
     file.WriteProperty("EventEnable", uTabs, mEventEnable.GetRegisteredClassName(true), "");

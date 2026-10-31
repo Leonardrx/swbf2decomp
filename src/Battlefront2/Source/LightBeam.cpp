@@ -135,8 +135,7 @@ FLEffectClass* LightBeamEffect::BuildClass(PblConfig& config) const
             color.b = ClampColorComponent(data.GetFloatArg(2));
             color.a = data.GetNumArgs() > 3 ? ClampColorComponent(data.GetFloatArg(3)) : 0xff;
             pBeam->_color = color;
-            color.a = (unsigned char)(int)(pBeam->_color.a * pBeam->_fFlareIntensity);
-            pBeam->_Flare._color = color;
+            pBeam->_Flare._color = RedColor(pBeam->_color, (unsigned char)(int)(pBeam->_color.a * pBeam->_fFlareIntensity));
             break;
         }
         case 0x1414BF95u:

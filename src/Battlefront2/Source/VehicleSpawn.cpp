@@ -280,15 +280,13 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
     }
 
     mCycleTimer -= fDeltaTime;
-    if (mCycleTimer >= 0.0f)
+    if (!(mCycleTimer < 0.0f))
     {
         return;
     }
     mCycleTimer += 1.0f;
 
-    const CollisionObject* pCollision = tracker.mVehicle->GetCollisionObject();
-    const PblVector3& vCenter = pCollision->GetCollisionCenter();
-    const float fRadius = pCollision->GetCollisionRadius();
+    const PblSphere& sphere = tracker.mVehicle->GetCollisionObject()->GetCollisionSphere();
     int iNearby = 0;
     for (int i = 0; i < Character::sCharacterLimit; ++i)
     {
@@ -302,12 +300,11 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
         {
             continue;
         }
-        const CollisionObject* pOther = pControllable->GetGameObject()->GetCollisionObject();
-        const PblVector3& vOther = pOther->GetCollisionCenter();
-        const float dx = vOther.x - vCenter.x;
-        const float dy = vOther.y - vCenter.y;
-        const float dz = vOther.z - vCenter.z;
-        const float fReach = pOther->GetCollisionRadius() + fRadius + 10.0f;
+        const PblSphere& otherSphere = pControllable->GetGameObject()->GetCollisionObject()->GetCollisionSphere();
+        const float dx = otherSphere.GetCenter().x - sphere.GetCenter().x;
+        const float dy = otherSphere.GetCenter().y - sphere.GetCenter().y;
+        const float dz = otherSphere.GetCenter().z - sphere.GetCenter().z;
+        const float fReach = otherSphere.GetRadius() + sphere.GetRadius() + 10.0f;
         if (fReach * fReach >= dy * dy + dx * dx + dz * dz)
         {
             ++iNearby;
@@ -332,10 +329,8 @@ void VehicleSpawn::UpdateSpawn(float fDeltaTime)
 {
     const PblBox& box =
         static_cast<EntityGeometryClass*>(mSpawnClass[mSpawnTeam])->GetModel()->_mModel->_TotalBoundingBox;
-    const PblVector3 vCenter((box._vMax.x + box._vMin.x) * 0.5f, (box._vMax.y + box._vMin.y) * 0.5f,
-                             (box._vMax.z + box._vMin.z) * 0.5f);
-    const PblVector3 vExtents((box._vMax.x - box._vMin.x) * 0.5f, (box._vMax.y - box._vMin.y) * 0.5f,
-                              (box._vMax.z - box._vMin.z) * 0.5f);
+    const PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
+    const PblVector3 vExtents = (box._vMax - box._vMin) * 0.5f;
     mSpawnRegion.mMatrix = mMatrix;
     PblVector3 vPos;
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
@@ -344,7 +339,7 @@ void VehicleSpawn::UpdateSpawn(float fDeltaTime)
     mSpawnRegion.mSize.x = vExtents.x;
     mSpawnRegion.mSize.y = vExtents.y;
     mSpawnRegion.mSize.z = vExtents.z;
-    mSpawnRegion.mSize.w = sqrtf(vExtents.x * vExtents.x + vExtents.y * vExtents.y + vExtents.z * vExtents.z);
+    mSpawnRegion.mSize.w = PblMath::Sqrt(vExtents.x * vExtents.x + vExtents.y * vExtents.y + vExtents.z * vExtents.z);
     mSpawnRegion.mType = PblRegion::type_box;
 
     const PblMatrix mInverse = mMatrix.GetInverseFast();
@@ -374,7 +369,7 @@ void VehicleSpawn::UpdateSpawn(float fDeltaTime)
         }
     }
     mSpawnTimer -= fDeltaTime;
-    if (mSpawnTimer > 0.0f)
+    if (!(mSpawnTimer <= 0.0f))
     {
         return;
     }

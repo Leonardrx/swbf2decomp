@@ -35,29 +35,30 @@ void DeathCamera::SetInfo(Trackable* pOwner, Character* pKiller, const PblMatrix
     mTimer = 0.0f;
     mKiller = 0;
 
-    if (!pOwner)
+    if (!mOwner)
     {
         return;
     }
 
-    GameObject* pObject = pOwner->GetGameObject();
-    if (!pObject)
+    if (!mOwner->GetGameObject())
     {
         return;
     }
 
-    const PblMatrix& rObjectMatrix = GetCollisionObject(pObject)->GetMatrix();
-    mDeathPos = PblVector3(rObjectMatrix.m[3][0], rObjectMatrix.m[3][1] + 0.8f,
-                           rObjectMatrix.m[3][2]);
+    mDeathPos = mOwner->GetGameObject()->GetMatrix().GetTranslation()
+                + PblVector3(0.0f, 0.8f, 0.0f);
 
-    PblVector3 vForward(rMatrix.m[2][0], 0.0f, rMatrix.m[2][2]);
+    PblVector3 vForward = rMatrix.GetZAxis();
+    vForward.y = 0.0f;
     PblVector3 vNormalized;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormalized), reinterpret_cast<const D3DXVECTOR3*>(&vForward));
-    mDeathMidPos = PblVector3(rObjectMatrix.m[3][0] + vNormalized.x,
-                              rObjectMatrix.m[3][1] + 1.0f + 0.5f,
-                              rObjectMatrix.m[3][2] + vNormalized.z);
+    PblVector3 vOffset = vNormalized;
+    vOffset.y = 0.5f;
+    mDeathMidPos = vOffset
+                   + (mOwner->GetGameObject()->GetMatrix().GetTranslation()
+                      + PblVector3(0.0f, 1.0f, 0.0f));
 
-    if (pKiller && pOwner->GetGameObject()->GetControllable()->mCharacter != pKiller)
+    if (pKiller && mOwner->GetGameObject()->GetControllable()->mCharacter != pKiller)
     {
         mKiller = pKiller;
     }
@@ -96,22 +97,22 @@ void DeathCamera::Update(float fDeltaTime)
         GameObject* pObject = mOwner->GetGameObject();
         if (pObject)
         {
-            const PblMatrix& rMatrix = GetCollisionObject(pObject)->GetMatrix();
-            mDeathPos.x = rMatrix.m[3][0] + 0.0f;
-            mDeathPos.y = rMatrix.m[3][1] + 0.8f;
-            mDeathPos.z = rMatrix.m[3][2] + 0.0f;
+            mDeathPos = pObject->GetMatrix().GetTranslation()
+                        + PblVector3(0.0f, 0.8f, 0.0f);
         }
     }
 
-    PblVector3 vOldPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
+    PblVector3 vOldPos = mMatrix.GetTranslation();
     PblVector3 vTarget = mDeathPos;
     PblVector3 vEye = mDeathMidPos;
-    float fBlend = Min(mTimer, 1.0f);
-
-    if (mTimer > 1.5f && mKiller)
+    float fBlend = 1.0f;
+    if (mTimer < 1.0f)
     {
-        fBlend = (mTimer - 1.5f) * 0.5f;
-        fBlend = Min(fBlend, 1.0f);
+        fBlend = mTimer;
+    }
+    else if (mTimer > 1.5f && mKiller)
+    {
+        fBlend = Min((mTimer - 1.5f) * 0.5f, 1.0f);
 
         Controllable* pUnit = mKiller->mVehicle;
         if (!pUnit)
@@ -121,38 +122,36 @@ void DeathCamera::Update(float fDeltaTime)
         if (pUnit)
         {
             vEye = mDeathPos;
-            vTarget = GetEyePoint(pUnit);
+            vTarget = pUnit->mEyePoint;
         }
     }
 
-    PblVector3 vDelta(vTarget.x - vEye.x, vTarget.y - vEye.y, vTarget.z - vEye.z);
+    PblVector3 vDelta = vTarget - vEye;
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
 
     CollisionObject* pHitObject;
-    PblVector3 vUpper(vEye.x + 0.0f, vEye.y + 0.75f, vEye.z + 0.0f);
-    PblVector3 vBack(-vDir.x, -vDir.y, -vDir.z);
-    float fHitUpper = CollisionManager::RayHit(vUpper, vBack, 6.0f, pHitObject, NULL, NULL, 0, 0x90, false);
+    PblVector3 vUpper = vEye + PblVector3(0.0f, 0.75f, 0.0f);
+    float fHitUpper = CollisionManager::RayHit(vUpper, -vDir, 6.0f, pHitObject, NULL, NULL, 0, 0x90, false);
     PblVector3 vLower(vUpper.x, vEye.y - 0.75f, vUpper.z);
-    vBack = PblVector3(-vDir.x, -vDir.y, -vDir.z);
-    float fHitLower = CollisionManager::RayHit(vLower, vBack, 6.0f, pHitObject, NULL, NULL, 0, 0x90, false);
+    float fHitLower = CollisionManager::RayHit(vLower, -vDir, 6.0f, pHitObject, NULL, NULL, 0, 0x90, false);
 
-    float fHit = Min(fHitLower, fHitUpper);
+    float fHit = Min(fHitUpper, fHitLower);
     float fDist = fHit * 6.0f - 1.0f;
-    PblVector3 vPos(vEye.x - vDir.x * fDist, vEye.y - vDir.y * fDist, vEye.z - vDir.z * fDist);
+    PblVector3 vPos = vEye - vDir * fDist;
 
-    vBack = PblVector3(-vDir.x, -vDir.y, -vDir.z);
-    PblQuaternion qNew = PblQuaternion(DirectionMatrix(vBack, gVectorUnitY, gVectorZero));
+    PblQuaternion qNew = PblQuaternion(DirectionMatrix(-vDir, gVectorUnitY, gVectorZero));
     PblQuaternion qOld = PblQuaternion(mMatrix);
+    vPos = (vPos - vOldPos) * fBlend + vOldPos;
     PblQuaternion qRot = Interpolate(qOld, qNew, fBlend);
 
     PblQuaternion qUnit;
     PblMatrix mNew;
     D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&qRot));
     D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mNew), reinterpret_cast<const D3DXQUATERNION*>(&qUnit));
-    mNew.m[3][0] = (vPos.x - vOldPos.x) * fBlend + vOldPos.x;
-    mNew.m[3][1] = (vPos.y - vOldPos.y) * fBlend + vOldPos.y;
-    mNew.m[3][2] = (vPos.z - vOldPos.z) * fBlend + vOldPos.z;
+    mNew.m[3][0] = vPos.x;
+    mNew.m[3][1] = vPos.y;
+    mNew.m[3][2] = vPos.z;
     mNew.m[3][3] = 1.0f;
     mMatrix = mNew;
 }

@@ -217,7 +217,7 @@ bool CollisionModel::CheckForCollision_SSSC(CollisionObject* pCollider, Collisio
 
         for (unsigned char j = 0; j < pOtherModel->mNumBodies; ++j)
         {
-            if (!mask.IsSet(j))
+            if (!(*sCollisionMask)[i].IsSet(j))
             {
                 continue;
             }

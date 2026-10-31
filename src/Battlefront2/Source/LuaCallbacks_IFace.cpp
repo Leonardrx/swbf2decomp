@@ -2708,14 +2708,23 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
 {
     lua_newtable(LuaHelper::mState);
 
-    unsigned short usColon[] = { ':', ' ', 0 };
-    unsigned short usComma[] = { ',', ' ', 0 };
-    unsigned short usHash[] = { '#', 0 };
+    unsigned short usColon[16];
+    unsigned short usComma[16];
+    unsigned short usHash[16];
     unsigned short usButton[256];
     unsigned short usAction[256];
     unsigned short usKeys[256];
     unsigned short usKey[256];
-    unsigned short usNum[3];
+    unsigned short usNum[16];
+
+    usColon[0] = ':';
+    usColon[1] = ' ';
+    usColon[2] = 0;
+    usComma[0] = ',';
+    usComma[1] = ' ';
+    usComma[2] = 0;
+    usHash[0] = '#';
+    usHash[1] = 0;
 
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
     RawControllerInputs* pJoystick = FLInputManager::s_instance.GetPlayerJoystick(0);
@@ -2750,12 +2759,7 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
                 continue;
             }
 
-            if (usRaw <= 0xFF)
-            {
-                pJoystick->GetKeyboard()->pcGetKeyName((unsigned char)usRaw, usKey, 256);
-                _wcsupr((wchar_t*)usKey);
-            }
-            else
+            if (usRaw > 0xFF)
             {
                 RedLocalizeDB::GetLocalizedString(usButton, sizeof(usButton),
                                                   GetButtonName(ActionKeyToRawInput(usRaw)));
@@ -2773,6 +2777,11 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
                 {
                     PblUnicode::ustrlcpy(usKey, usButton, 512);
                 }
+            }
+            else
+            {
+                pJoystick->GetKeyboard()->pcGetKeyName((unsigned char)usRaw, usKey, 256);
+                _wcsupr((wchar_t*)usKey);
             }
 
             if (PblUnicode::ustrlen(usKeys))
@@ -2822,84 +2831,196 @@ unsigned int GetActionName(int iAction, int iMode)
     switch (iAction)
     {
     case ePROCESSEDINPUT_primaryFireButtonDown:
-        if (iMode == 3)
+        switch (iMode)
         {
+        case 3:
             return 0xce22c384u;
-        }
-        if (iMode == 4)
-        {
+        case 4:
             return 0x4813f4c9u;
+        default:
+            return 0x21ecf289u;
         }
-        return 0x21ecf289u;
     case ePROCESSEDINPUT_secondaryFireButtonDown:
-        return iMode == 3 ? 0x47d420e9u : 0x95067ca9u;
+        return iMode != 3 ? 0x95067ca9u : 0x47d420e9u;
+    case ePROCESSEDINPUT_jumpButtonDown:
+        switch (iMode)
+        {
+        case 2:
+            return 0xd97027fdu;
+        case 3:
+            return 0x5fb1e4fcu;
+        default:
+            return 0xa9f6dc69u;
+        }
     case ePROCESSEDINPUT_sprintButtonDown:
         if (iMode > 0)
         {
-            if (iMode <= 2)
+            if (iMode > 2)
+            {
+                if (iMode == 3)
+                {
+                    return 0xeb047957u;
+                }
+            }
+            else
             {
                 return 0x9468cb58u;
             }
-            if (iMode == 3)
-            {
-                return 0xeb047957u;
-            }
         }
         return 0x7efc5a41u;
-    case ePROCESSEDINPUT_jumpButtonDown:
-        if (iMode == 2)
-        {
-            return 0xd97027fdu;
-        }
-        if (iMode == 3)
-        {
-            return 0x5fb1e4fcu;
-        }
-        return 0xa9f6dc69u;
     case ePROCESSEDINPUT_crouchButtonDown:
-        if (iMode == 1)
+        switch (iMode)
         {
+        case 1:
             return 0xbdb6f1f3u;
-        }
-        if (iMode == 2)
-        {
+        case 2:
             return 0xc34823b0u;
+        default:
+            return 0x4f860e97u;
         }
-        return 0x4f860e97u;
     case ePROCESSEDINPUT_zoomButtonDown:
-        return iMode == 2 ? 0xfce0ab1du : 0x01808c66u;
+        switch (iMode)
+        {
+        case 2:
+            return 0xfce0ab1du;
+        default:
+            return 0x01808c66u;
+        }
     case ePROCESSEDINPUT_viewButtonDown:
-        return iMode == 1 ? 0x494c4741u : 0x04c5f38cu;
+        switch (iMode)
+        {
+        case 1:
+            return 0x494c4741u;
+        default:
+            return 0x04c5f38cu;
+        }
     case ePROCESSEDINPUT_reloadButtonDown:
-        return iMode == 3 ? 0xd05bcadcu : 0x05f51058u;
+        return iMode != 3 ? 0x05f51058u : 0xd05bcadcu;
     case ePROCESSEDINPUT_useButtonPressed:
-        if (iMode == 1)
+        switch (iMode)
         {
+        case 1:
             return 0x96520d93u;
-        }
-        if (iMode == 2)
-        {
+        case 2:
             return 0x36cda1c2u;
-        }
-        if (iMode == 4)
-        {
+        case 4:
             return 0xbb01e263u;
+        default:
+            return 0x58f98b3fu;
         }
-        return 0x58f98b3fu;
-    case ePROCESSEDINPUT_squadCommandButtonPressed: return 0x510446aeu;
-    case ePROCESSEDINPUT_acceptHeroPressed:         return 0x1f1d54b5u;
-    case ePROCESSEDINPUT_declineHeroPressed:        return 0xc22f1315u;
     case ePROCESSEDINPUT_lockTargetButtonPressed:   return 0x2968b3afu;
+    case ePROCESSEDINPUT_STRAFE_AXIS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x10241b37u;
+        default:
+            return 0x72deaafau;
+        }
+    case ePROCESSEDINPUT_MOVE_AXIS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x37c51c28u;
+        case 4:
+            return 0x72189cdbu;
+        default:
+            return 0x96139f99u;
+        }
+    case ePROCESSEDINPUT_TURN_AXIS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x8928fdf3u;
+        default:
+            return 0xa2d9a4d1u;
+        }
+    case ePROCESSEDINPUT_PITCH_AXIS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x0378be5cu;
+        default:
+            return 0xca189fa6u;
+        }
     case ePROCESSEDINPUT_primaryNextButtonPressed:
         return (iMode > 0 && (iMode <= 2 || iMode == 4)) ? 0x60f5b57fu : 0xcff83738u;
     case ePROCESSEDINPUT_primaryPrevButtonPressed:
         return (iMode > 0 && (iMode <= 2 || iMode == 4)) ? 0xadf4d65fu : 0x5de79e60u;
     case ePROCESSEDINPUT_secondaryNextButtonPressed:
-        return iMode == 3 ? 0xda9424a5u : 0x4311c158u;
+        return iMode != 3 ? 0x4311c158u : 0xda9424a5u;
     case ePROCESSEDINPUT_secondaryPrevButtonPressed: return 0xba2edc80u;
-    case ePROCESSEDINPUT_playerList:     return 0x5625eba4u;
+    case ePROCESSEDINPUT_STRAFE_POS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x6790dafcu;
+        default:
+            return 0x1b620c12u;
+        }
+    case ePROCESSEDINPUT_STRAFE_NEG:
+        switch (iMode)
+        {
+        case 2:
+            return 0x83d7e5d5u;
+        default:
+            return 0xd152a071u;
+        }
+    case ePROCESSEDINPUT_MOVE_POS:
+        switch (iMode)
+        {
+        case 2:
+            return 0x335b2dcbu;
+        case 4:
+            return 0x88971f89u;
+        default:
+            return 0xdaadd13du;
+        }
+    case ePROCESSEDINPUT_MOVE_NEG:
+        switch (iMode)
+        {
+        case 2:
+            return 0xd381684fu;
+        case 4:
+            return 0x77270a8au;
+        default:
+            return 0x92ebb24bu;
+        }
+    case ePROCESSEDINPUT_TURN_POS:
+        switch (iMode)
+        {
+        case 2:
+            return 0xce820494u;
+        default:
+            return 0x50a56d68u;
+        }
+    case ePROCESSEDINPUT_TURN_NEG:
+        switch (iMode)
+        {
+        case 2:
+            return 0x7ac3d78bu;
+        default:
+            return 0x05718b77u;
+        }
+    case ePROCESSEDINPUT_PITCH_POS:
+        switch (iMode)
+        {
+        case 2:
+            return 0xbd3f9428u;
+        default:
+            return 0xaf1aa3f7u;
+        }
+    case ePROCESSEDINPUT_PITCH_NEG:
+        switch (iMode)
+        {
+        case 2:
+            return 0xf032a54eu;
+        default:
+            return 0x7ded0392u;
+        }
     case ePROCESSEDINPUT_chat:           return 0xfd43d7cfu;
     case ePROCESSEDINPUT_friendChat:     return 0x4c1553e6u;
+    case ePROCESSEDINPUT_playerList:     return 0x5625eba4u;
     case ePROCESSEDINPUT_Comm_Chat_0:    return 0x1b12d399u;
     case ePROCESSEDINPUT_Comm_Chat_1:    return 0x1a12d206u;
     case ePROCESSEDINPUT_Comm_Chat_2:    return 0x1912d073u;
@@ -2910,55 +3031,16 @@ unsigned int GetActionName(int iAction, int iMode)
     case ePROCESSEDINPUT_Comm_Chat_7:    return 0x1c12d52cu;
     case ePROCESSEDINPUT_Map:            return 0xf5b9358du;
     case ePROCESSEDINPUT_TakeScreenshot:
-        return iMode == 2 ? 0x502ce55du : 0x98aef712u;
-    case ePROCESSEDINPUT_STRAFE_AXIS:
-        return iMode == 2 ? 0x10241b37u : 0x72deaafau;
-    case ePROCESSEDINPUT_MOVE_AXIS:
-        if (iMode == 2)
+        switch (iMode)
         {
-            return 0x37c51c28u;
+        case 2:
+            return 0x502ce55du;
+        default:
+            return 0x98aef712u;
         }
-        if (iMode == 4)
-        {
-            return 0x72189cdbu;
-        }
-        return 0x96139f99u;
-    case ePROCESSEDINPUT_TURN_AXIS:
-        return iMode == 2 ? 0x8928fdf3u : 0xa2d9a4d1u;
-    case ePROCESSEDINPUT_PITCH_AXIS:
-        return iMode == 2 ? 0x0378be5cu : 0xca189fa6u;
-    case ePROCESSEDINPUT_STRAFE_POS:
-        return iMode == 2 ? 0x6790dafcu : 0x1b620c12u;
-    case ePROCESSEDINPUT_STRAFE_NEG:
-        return iMode == 2 ? 0x83d7e5d5u : 0xd152a071u;
-    case ePROCESSEDINPUT_MOVE_POS:
-        if (iMode == 2)
-        {
-            return 0x335b2dcbu;
-        }
-        if (iMode == 4)
-        {
-            return 0x88971f89u;
-        }
-        return 0xdaadd13du;
-    case ePROCESSEDINPUT_MOVE_NEG:
-        if (iMode == 2)
-        {
-            return 0xd381684fu;
-        }
-        if (iMode == 4)
-        {
-            return 0x77270a8au;
-        }
-        return 0x92ebb24bu;
-    case ePROCESSEDINPUT_TURN_POS:
-        return iMode == 2 ? 0xce820494u : 0x50a56d68u;
-    case ePROCESSEDINPUT_TURN_NEG:
-        return iMode == 2 ? 0x7ac3d78bu : 0x05718b77u;
-    case ePROCESSEDINPUT_PITCH_POS:
-        return iMode == 2 ? 0xbd3f9428u : 0xaf1aa3f7u;
-    case ePROCESSEDINPUT_PITCH_NEG:
-        return iMode == 2 ? 0xf032a54eu : 0x7ded0392u;
+    case ePROCESSEDINPUT_squadCommandButtonPressed: return 0x510446aeu;
+    case ePROCESSEDINPUT_acceptHeroPressed:         return 0x1f1d54b5u;
+    case ePROCESSEDINPUT_declineHeroPressed:        return 0xc22f1315u;
     }
     return 0;
 }
@@ -3803,9 +3885,9 @@ int ScriptCB_DoConsoleCmd(lua_State* L)
 void LeaderBoard_FilloutTableData(LeaderBoardStatsT& stats)
 {
     char acBuffer[256];
-    unsigned short usBuffer[258];
+    unsigned short usBuffer[256];
 
-    const float fAccuracy = stats.shotsFired ? (float)stats.shotsHit / (float)stats.shotsFired : 0.0f;
+    const float fAccuracy = stats.shotsFired == 0 ? 0.0f : (float)stats.shotsHit / (float)stats.shotsFired;
     _snprintf(acBuffer, 256, "%d %%%%", (int)(fAccuracy * 100.0f));
     PblUnicode::ustrncnv(usBuffer, acBuffer, 256);
     LuaHelper::TableWriteVal("accuracy", usBuffer);
@@ -4094,10 +4176,8 @@ int ScriptCB_SetBinding(lua_State* L)
         }
     }
     const int iAction = sKeyboardCmdsPerMode[uiMode][iIndex];
-    ActionKey* pKeys = pProfile->mGameOptions.mKeyboardBindings[uiMode];
-    ActionKey& key = pKeys[iAction];
 
-    for (int i = 0; i < 144; ++i)
+    for (unsigned int i = 0; i < 144; ++i)
     {
         const unsigned char ucKey = (unsigned char)RawControllerInputs::IndexToRedKey(i);
         if (!ucKey)
@@ -4109,7 +4189,7 @@ int ScriptCB_SetBinding(lua_State* L)
             lua_pushnumber(LuaHelper::mState, 1.0f);
             for (int iSlot = 0; iSlot < 2; ++iSlot)
             {
-                if (key.mKey[iSlot] == ucKey)
+                if (pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] == ucKey)
                 {
                     gEscapeHoldTime = 0.0f;
                     return 1;
@@ -4130,12 +4210,12 @@ int ScriptCB_SetBinding(lua_State* L)
                 }
                 for (int iSlot = 0; iSlot < 2; ++iSlot)
                 {
-                    key.mKey[iSlot] = 0;
-                    KeyDevices(key)[iSlot] = 0;
+                    pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] = 0;
+                    KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction])[iSlot] = 0;
                 }
                 gEscapeHoldTime = 0.0f;
                 FLInputManager::s_instance.GetPlayerJoystick(GuiManager::mCurViewport)
-                    ->SetKeyBindingsFromMode(pKeys, uiMode);
+                    ->SetKeyBindingsFromMode(pProfile->mGameOptions.mKeyboardBindings[uiMode], uiMode);
                 return 1;
             }
 
@@ -4147,15 +4227,15 @@ int ScriptCB_SetBinding(lua_State* L)
                 }
                 for (int iSlot = 0; iSlot < 2; ++iSlot)
                 {
-                    if (pKeys[iOther].mKey[iSlot] == ucKey)
+                    if (pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot] == ucKey)
                     {
-                        pKeys[iOther].mKey[iSlot] = 0;
+                        pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot] = 0;
                     }
                 }
             }
-            key.mKey[PickBindingSlot(key, iAction)] = ucKey;
+            pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[PickBindingSlot(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction], iAction)] = ucKey;
             FLInputManager::s_instance.GetPlayerJoystick(GuiManager::mCurViewport)
-                ->SetKeyBindingsFromMode(pKeys, uiMode);
+                ->SetKeyBindingsFromMode(pProfile->mGameOptions.mKeyboardBindings[uiMode], uiMode);
             pProfile->NoteBindingChange();
             pProfile->ApplySettings();
             pProfile->UpdateProfCRC();
@@ -4170,28 +4250,24 @@ int ScriptCB_SetBinding(lua_State* L)
         }
     }
 
-    unsigned char* const pRaw = (unsigned char*)pJoystick;
     for (unsigned char ucDevice = 0; ucDevice < 10; ++ucDevice)
     {
-        void* const* ppDevices = (void* const*)(pRaw + 0x25d4);
-        if (ucDevice && !ppDevices[ucDevice])
+        if (ucDevice && !pJoystick->mAttachedJoysticks[ucDevice])
         {
             continue;
         }
         const int iEnd = ucDevice ? 64 : 76;
-        const float* pfValue = (const float*)(pRaw + 0x14) + ucDevice * 76;
-        const float* pfLast = (const float*)(pRaw + 0xbf4) + ucDevice * 76;
 
-        for (int iInput = ppDevices[ucDevice] ? 0 : 64; iInput < iEnd; ++iInput)
+        for (int iInput = pJoystick->mAttachedJoysticks[ucDevice] ? 0 : 64; iInput < iEnd; ++iInput)
         {
             unsigned short usOpposite = 0;
-            const float fValue = pfValue[iInput];
+            const float fValue = pJoystick->mRawInputFloat[ucDevice][iInput];
             switch (iInput)
             {
             case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
             case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
 
-                if (fValue <= 0.4f || fValue - pfLast[iInput] <= 0.03f)
+                if (fValue <= 0.4f || fValue - pJoystick->mLastRawInputFloat[ucDevice][iInput] <= 0.03f)
                 {
                     continue;
                 }
@@ -4200,13 +4276,13 @@ int ScriptCB_SetBinding(lua_State* L)
                 break;
             case 64:
             case 65:
-                if (fabsf(fValue) <= 0.5f)
+                if ((fValue < 0.0f ? -fValue : fValue) <= 0.5f)
                 {
                     continue;
                 }
                 break;
             default:
-                if (fValue <= 0.4f || fValue - pfLast[iInput] <= 0.03f)
+                if (fValue <= 0.4f || fValue - pJoystick->mLastRawInputFloat[ucDevice][iInput] <= 0.03f)
                 {
                     continue;
                 }
@@ -4224,7 +4300,7 @@ int ScriptCB_SetBinding(lua_State* L)
 
             for (int iSlot = 0; iSlot < 2; ++iSlot)
             {
-                if (key.mKey[iSlot] == usKey && KeyDevices(key)[iSlot] == ucDevice)
+                if (pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] == usKey && KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction])[iSlot] == ucDevice)
                 {
                     gEscapeHoldTime = 0.0f;
                     return 1;
@@ -4238,15 +4314,15 @@ int ScriptCB_SetBinding(lua_State* L)
                 }
                 for (int iSlot = 0; iSlot < 2; ++iSlot)
                 {
-                    const unsigned short usBound = pKeys[iOther].mKey[iSlot];
+                    const unsigned short usBound = pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot];
                     if ((usBound == usKey ||
                          (usOther && usBound == usOther &&
                           (iOther == ePROCESSEDINPUT_PITCH_AXIS || iOther == ePROCESSEDINPUT_TURN_AXIS ||
                            iOther == ePROCESSEDINPUT_MOVE_AXIS || iOther == ePROCESSEDINPUT_STRAFE_AXIS))) &&
-                        KeyDevices(pKeys[iOther])[iSlot] == ucDevice)
+                        KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther])[iSlot] == ucDevice)
                     {
-                        pKeys[iOther].mKey[iSlot] = 0;
-                        KeyDevices(pKeys[iOther])[iSlot] = 0;
+                        pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot] = 0;
+                        KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther])[iSlot] = 0;
                     }
                 }
             }
@@ -4263,29 +4339,29 @@ int ScriptCB_SetBinding(lua_State* L)
                         }
                         for (int iSlot = 0; iSlot < 2; ++iSlot)
                         {
-                            if (pKeys[iOther].mKey[iSlot] == usOther && KeyDevices(pKeys[iOther])[iSlot] == ucDevice)
+                            if (pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot] == usOther && KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther])[iSlot] == ucDevice)
                             {
-                                pKeys[iOther].mKey[iSlot] = 0;
-                                KeyDevices(pKeys[iOther])[iSlot] = 0;
+                                pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther].mKey[iSlot] = 0;
+                                KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iOther])[iSlot] = 0;
                             }
                         }
                     }
                 }
                 for (int iSlot = 0; iSlot < 2; ++iSlot)
                 {
-                    if (key.mKey[iSlot] == usOther && KeyDevices(key)[iSlot] == ucDevice)
+                    if (pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] == usOther && KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction])[iSlot] == ucDevice)
                     {
-                        key.mKey[iSlot] = 0;
-                        KeyDevices(key)[iSlot] = 0;
+                        pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] = 0;
+                        KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction])[iSlot] = 0;
                     }
                 }
             }
 
-            const int iSlot = PickBindingSlot(key, iAction);
-            key.mKey[iSlot] = usKey;
-            KeyDevices(key)[iSlot] = ucDevice;
+            const int iSlot = PickBindingSlot(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction], iAction);
+            pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction].mKey[iSlot] = usKey;
+            KeyDevices(pProfile->mGameOptions.mKeyboardBindings[uiMode][iAction])[iSlot] = ucDevice;
             FLInputManager::s_instance.GetPlayerJoystick(GuiManager::mCurViewport)
-                ->SetKeyBindingsFromMode(pKeys, uiMode);
+                ->SetKeyBindingsFromMode(pProfile->mGameOptions.mKeyboardBindings[uiMode], uiMode);
             pProfile->NoteBindingChange();
             pProfile->ApplySettings();
             pProfile->UpdateProfCRC();

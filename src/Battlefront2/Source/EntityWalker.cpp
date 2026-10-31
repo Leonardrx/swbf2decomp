@@ -1699,12 +1699,10 @@ EntityWalker::EntityWalker(EntityWalkerClass* pClass, const EntityDesc& desc)
     , mState(Idle)
     , mDirection(None)
     , mEnergyBar(&pClass->mEnergyBarClass)
+    , mPivotOffset(0.0f, 0.0f, 0.0f)
     , mPostCollision(this)
 {
     mMainMask.SetAll();
-    mPivotOffset.x = 0.0f;
-    mPivotOffset.y = 0.0f;
-    mPivotOffset.z = 0.0f;
     mBoost = false;
     mSpeedPrev = 0.0f;
     mEjectTimer = 0.0f;
@@ -2290,13 +2288,13 @@ void EntityWalker::Render(unsigned char ucViewport, float fDist, unsigned int ui
         }
     }
 
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uiFlags &= ~0x80;
+        uiFlags |= 0x80;
     }
     else
     {
-        uiFlags |= 0x80;
+        uiFlags &= ~0x80;
     }
 
     if (!ucViewport)
@@ -2304,7 +2302,7 @@ void EntityWalker::Render(unsigned char ucViewport, float fDist, unsigned int ui
         mBlend->SetInterpolate(true);
         for (int i = 0; i < mLegPairCount; ++i)
         {
-            mLegPairs[i]->SetInterpolate(true);
+            mLegPairs[i]->GetBlend()->SetInterpolate(true);
         }
     }
 
@@ -2367,7 +2365,7 @@ void EntityWalker::Render(unsigned char ucViewport, float fDist, unsigned int ui
     {
         if (mClass->mDeathAnimationExplosionCount > 0)
         {
-            mDeathExplosionTime += GameLoop::GetDeltaTime();
+            mDeathExplosionTime = GameLoop::GetDeltaTime() + mDeathExplosionTime;
             if (mDeathExplosionTime > mClass->mDeathAnimationExplosionTime)
             {
                 mDeathExplosionTime = 0.0f;
@@ -2434,11 +2432,8 @@ void EntityWalker::Render(unsigned char ucViewport, float fDist, unsigned int ui
                 if (pTarget)
                 {
                     const PblMatrix& mTarget = pTarget->GetMatrix();
-                    float fDX = mWorld.m[3][0] - mTarget.m[3][0];
-                    float fDY = mWorld.m[3][1] - mTarget.m[3][1];
-                    float fDZ = mWorld.m[3][2] - mTarget.m[3][2];
+                    float fDist2 = SquaredLength(mWorld.GetTranslation() - mTarget.GetTranslation());
                     float fRadius2 = mClass->mDeathShakeRadius * mClass->mDeathShakeRadius;
-                    float fDist2 = fDX * fDX + fDY * fDY + fDZ * fDZ;
                     if (fRadius2 > fDist2)
                     {
                         float fScale = 1.0f - fDist2 / fRadius2;
@@ -2510,7 +2505,7 @@ void EntityWalker::Render(unsigned char ucViewport, float fDist, unsigned int ui
             pLight = RedLight::GetGlobalDirectionalLight(1);
         }
         const PblVector3& vDir = pLight->m_vDirection;
-        PblVector3 vShadowNormal(0.0f - vDir.x * 0.2f, 0.8f - vDir.y * 0.2f, 0.0f - vDir.z * 0.2f);
+        PblVector3 vShadowNormal = PblVector3(0.0f, 0.8f, 0.0f) - vDir * 0.2f;
 
         RedDropShadowManager::AddShadow(0x410f19a9, mWorld.GetTranslation(), vShadowNormal, vDir, 0.0f,
                                         mClass->mDropShadowSize, mClass->mDropShadowSize, fAlpha);
@@ -2577,8 +2572,8 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
         mCollisionModel->GetWorldMatrix(mClass->mFootPrimitives[i], mMatrix, GetPose());
         int iFoot = mClass->mFootPrimitives[i];
         if (pResult->mColliderId == iFoot ||
-            mCollisionModel->GetParentNameFromMaskId(pResult->mColliderId) ==
-                mCollisionModel->GetParentNameFromMaskId(iFoot))
+            mCollisionModel->GetParentNameFromMaskId(iFoot) ==
+                mCollisionModel->GetParentNameFromMaskId(pResult->mColliderId))
         {
             bFoot = true;
         }
@@ -2670,10 +2665,11 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
                         owner.mClass = pOther->GetGameObject()->GetGameObjectClass();
                     }
                     GameObject* pObject = pOther->GetGameObject();
+                    const DamageDesc desc(owner, fDamage);
                     if (!pObject || (!pObject->IsRtti(EntityHover::rttiHashEntityHover) &&
                                      !pObject->IsRtti(EntityWalker::rttiHashEntityWalker)))
                     {
-                        Damageable::ApplyDamage(DamageDesc(owner, fDamage), 0xffffffff);
+                        Damageable::ApplyDamage(desc, 0xffffffff);
                     }
                 }
             }
@@ -2856,15 +2852,11 @@ void EntityWalker::MoveForward(float fDistance)
             PblVector3(fTurnSin, 0.0f, fTurnCos),
             PblVector3(0.0f, 0.0f, 0.0f));
         mTurn *= mMatrix;
-        vPos.x = (mTurn.m[2][0] * fCos - mTurn.m[1][0] * fSin) * fDistance + vPos.x;
-        vPos.y = vPos.y + (mTurn.m[2][1] * fCos - mTurn.m[1][1] * fSin) * fDistance;
-        vPos.z = vPos.z + (mTurn.m[2][2] * fCos - mTurn.m[1][2] * fSin) * fDistance;
+        vPos += (mTurn.GetZAxis() * fCos - mTurn.GetYAxis() * fSin) * fDistance;
     }
     else
     {
-        vPos.x = (fCos * mMatrix.m[2][0] - fSin * mMatrix.m[1][0]) * fDistance + vPos.x;
-        vPos.y = (mMatrix.m[2][1] * fCos - mMatrix.m[1][1] * fSin) * fDistance + vPos.y;
-        vPos.z = (mMatrix.m[2][2] * fCos - mMatrix.m[1][2] * fSin) * fDistance + vPos.z;
+        vPos += (mMatrix.GetZAxis() * fCos - mMatrix.GetYAxis() * fSin) * fDistance;
     }
     SetPosition(vPos);
 }
@@ -3073,11 +3065,9 @@ void EntityWalker::ApplyAttackDamage(const PblVector3& vPosition, float fRadius,
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vNormal));
     for (int i = 0; i < iCount; ++i)
     {
+        PblVector3 vOrigin = vAttack - vDir * fRadius * 1.5f;
         const PblVector3& vCenter = pObjects[i]->GetCollisionCenter();
-        PblVector3 vDelta;
-        vDelta.x = vCenter.x - (vAttack.x - vDir.x * fRadius * 1.5f);
-        vDelta.y = vCenter.y - (vAttack.y - vDir.y * fRadius * 1.5f);
-        vDelta.z = vCenter.z - (vAttack.z - vDir.z * fRadius * 1.5f);
+        PblVector3 vDelta = vCenter - vOrigin;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
         if (fDamage > 0.0f)
         {

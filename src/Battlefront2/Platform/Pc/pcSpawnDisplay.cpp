@@ -423,20 +423,18 @@ void SpawnDisplay::UpdateObjectText(GameObjectClass* pClass, int iSlot)
         const WeaponClass* pWeapon = pClass->GetWeaponClass(i);
         if (pWeapon)
         {
-            bool bAvailable;
+            bool bAvailable = pWeapon->mMedalsTypeToUnlock == -1;
             if (pMedals)
             {
-                bAvailable = pWeapon->mMedalsTypeToUnlock == -1 ||
-                             pMedals->IsAwardAvailable(pWeapon->mMedalsTypeToUnlock);
+                if (!bAvailable)
+                {
+                    bAvailable = pMedals->IsAwardAvailable(pWeapon->mMedalsTypeToUnlock);
+                }
                 if (bAvailable && pWeapon->mMedalsTypeToLock != -1 &&
                     pMedals->IsAwardAvailable(pWeapon->mMedalsTypeToLock))
                 {
                     continue;
                 }
-            }
-            else
-            {
-                bAvailable = pWeapon->mMedalsTypeToUnlock == -1;
             }
             if (!bAvailable)
             {
@@ -701,8 +699,8 @@ bool SpawnDisplay::Update(float fDeltaTime)
     RedInterfaceScreen::s_directionalLight[0].SetDirection(sLightDir);
     RedInterfaceScreen::s_directionalLight[0].SetColor(sLightColor);
     RedAmbientLight& ambient = RedInterfaceScreen::s_lightingState.ambientLight;
-    ambient.SetBottomColor(sAmbientBottom);
     ambient.SetTopColor(sAmbientTop);
+    ambient.SetBottomColor(sAmbientBottom);
     RedColorValue average((sAmbientBottom.r + sAmbientTop.r) * 0.5f,
                           (sAmbientBottom.g + sAmbientTop.g) * 0.5f,
                           (sAmbientBottom.b + sAmbientTop.b) * 0.5f,
@@ -802,37 +800,6 @@ bool SpawnDisplay::Update(float fDeltaTime)
     float fMouseY = (float)pInputs->mMouseCoords.mPosY;
     switch (mMode)
     {
-    case eSIDESELECT:
-        if (m_pEntityElement)
-        {
-            m_pEntityElement->Update(fDeltaTime);
-        }
-        if (pInputs->IsAcceptPressed() && GetTeamSelection())
-        {
-            AcceptSideSelect();
-            mMode = eSPAWNDISPLAY;
-        }
-        break;
-    case eSPAWNDISPLAY:
-    case eCHANGECLASS:
-        mTeamNumber = mOwner->mTeamNumber;
-        if (mSpawnReady)
-        {
-            mSpawnReady = false;
-            SendSpawnCancelMessage();
-        }
-        UpdateInput();
-        m_pEntityElement->SetColor(
-            Character::GetPlayerStats(mOwner).IsClassSelectable(mOwner->mClassIndex, 0) ? RedColor::WHITE
-                                                                               : RedColor::BLACK);
-        UpdateUnitCountText();
-        m_pEntityElement->Update(fDeltaTime);
-        if (mMode == eSPAWNDISPLAY && pInputs->IsAcceptPressed() &&
-            m_pBackButton1->TestHotSpot(fMouseX, fMouseY) && NetGame::IsEnabled() && !netAutoAssignTeams)
-        {
-            mMode = eSIDESELECT;
-        }
-        break;
     case eFINISHED:
         if (!mSpawnReady)
         {
@@ -853,6 +820,42 @@ bool SpawnDisplay::Update(float fDeltaTime)
             {
                 CameraManager::sInstance->SetChaseCameraRandomShot(0);
             }
+        }
+        break;
+    case eSPAWNDISPLAY:
+    case eCHANGECLASS:
+        mTeamNumber = mOwner->mTeamNumber;
+        if (mSpawnReady)
+        {
+            mSpawnReady = false;
+            SendSpawnCancelMessage();
+        }
+        UpdateInput();
+        if (Character::GetPlayerStats(mOwner).IsClassSelectable(mOwner->mClassIndex, 0))
+        {
+            m_pEntityElement->SetColor(RedColor::WHITE);
+        }
+        else
+        {
+            m_pEntityElement->SetColor(RedColor::BLACK);
+        }
+        UpdateUnitCountText();
+        m_pEntityElement->Update(fDeltaTime);
+        if (mMode == eSPAWNDISPLAY && pInputs->IsAcceptPressed() &&
+            m_pBackButton1->TestHotSpot(fMouseX, fMouseY) && NetGame::IsEnabled() && !netAutoAssignTeams)
+        {
+            mMode = eSIDESELECT;
+        }
+        break;
+    case eSIDESELECT:
+        if (m_pEntityElement)
+        {
+            m_pEntityElement->Update(fDeltaTime);
+        }
+        if (pInputs->IsAcceptPressed() && GetTeamSelection())
+        {
+            AcceptSideSelect();
+            mMode = eSPAWNDISPLAY;
         }
         break;
     }
@@ -1080,40 +1083,6 @@ void SpawnDisplay::ChangeMode(Mode)
     const char* pcCurrent = m_pGuiManager->GetCurrentScreen();
     switch (mMode)
     {
-    case eSIDESELECT:
-    {
-        _snprintf(acScreen, 32, "ifs_sideselect1");
-        if (strcmp(acScreen, pcCurrent) && strcmp(pcCurrent, "ifs_pausemenu") &&
-            !m_pGuiManager->IsScreenInStack(acScreen))
-        {
-            if (*pcCurrent)
-            {
-                m_pGuiManager->PopScreen(0);
-            }
-            m_pGuiManager->PushScreen(acScreen, 0, 0);
-        }
-        sprintf(acBuffer, "ifs_sideselect1.Info");
-        if (RedGroupElement* pGroup = m_pEntityElement->GetGroup())
-        {
-            pGroup->RemoveElement(m_pEntityElement);
-        }
-        static_cast<RedGroupElement*>(RedInterfaceElement::Find(acBuffer))->AddElement(m_pEntityElement);
-        m_pEntityElement->Enable(true);
-        m_pEntityElement->Visible(true);
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapDisable, true).Send();
-        BootDisplay::Instance(0)->SetSpawnMode(false);
-        HeroMessageDisplay::Instance(0)->SetSpawnMode(false);
-        UpdateSideSelectText(1);
-        int iTeam = GetTeamSelection();
-        for (int i = 0; i < 2; ++i)
-        {
-            if (iTeam == i + 1 && iTeam != mTeamNumber)
-            {
-                SelectTeam(iTeam);
-            }
-        }
-        break;
-    }
     case eSPAWNDISPLAY:
     case eCHANGECLASS:
         if (m_pEntityElement->GetGroup())
@@ -1137,7 +1106,10 @@ void SpawnDisplay::ChangeMode(Mode)
             m_pGuiManager->PushScreen(acBuffer, 0, 0);
             SelectTeam(mTeamNumber);
         }
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2).Send();
+        {
+            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+            event.Send();
+        }
         mTextReady.Enable(false);
         mTextReady.Visible(false);
         mGroupTimer.Enable(false);
@@ -1166,7 +1138,10 @@ void SpawnDisplay::ChangeMode(Mode)
             }
             m_pGuiManager->PushScreen(acScreen, 0, 0);
         }
-        HUD::Event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0).Send();
+        {
+            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
+            event.Send();
+        }
         mGroupTimer.Enable(true);
         mGroupTimer.Visible(true);
         mTextReady.Enable(true);
@@ -1176,6 +1151,43 @@ void SpawnDisplay::ChangeMode(Mode)
         BootDisplay::Instance(0)->SetSpawnMode(false);
         HeroMessageDisplay::Instance(0)->SetSpawnMode(false);
         break;
+    case eSIDESELECT:
+    {
+        _snprintf(acScreen, 32, "ifs_sideselect1");
+        if (strcmp(acScreen, pcCurrent) && strcmp(pcCurrent, "ifs_pausemenu") &&
+            !m_pGuiManager->IsScreenInStack(acScreen))
+        {
+            if (*pcCurrent)
+            {
+                m_pGuiManager->PopScreen(0);
+            }
+            m_pGuiManager->PushScreen(acScreen, 0, 0);
+        }
+        sprintf(acBuffer, "ifs_sideselect1.Info");
+        if (RedGroupElement* pGroup = m_pEntityElement->GetGroup())
+        {
+            pGroup->RemoveElement(m_pEntityElement);
+        }
+        static_cast<RedGroupElement*>(RedInterfaceElement::Find(acBuffer))->AddElement(m_pEntityElement);
+        m_pEntityElement->Enable(true);
+        m_pEntityElement->Visible(true);
+        {
+            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapDisable, true);
+            event.Send();
+        }
+        BootDisplay::Instance(0)->SetSpawnMode(false);
+        HeroMessageDisplay::Instance(0)->SetSpawnMode(false);
+        UpdateSideSelectText(1);
+        int iTeam = GetTeamSelection();
+        for (int i = 0; i < 2; ++i)
+        {
+            if (iTeam == i + 1 && iTeam != mTeamNumber)
+            {
+                SelectTeam(iTeam);
+            }
+        }
+        break;
+    }
     }
 }
 
@@ -1246,15 +1258,15 @@ void SpawnDisplay::Initialize()
         case Team::side_HEROES:
             uModel = 0x1BE6F06A;
             break;
+        case Team::side_CIS:
+            uModel = 0x073E0A94;
+            break;
         case Team::side_Empire:
         case Team::side_VILLAINS:
             uModel = 0xF5198C5A;
             break;
         case Team::side_Republic:
             uModel = 0x86B9BD17;
-            break;
-        case Team::side_CIS:
-            uModel = 0x073E0A94;
             break;
         }
         m_pSideModel[i]->SetModel(uModel);
@@ -1498,11 +1510,8 @@ void SpawnDisplay::UpdateInput()
     for (int i = 0; i < 10; ++i)
     {
         Team* pTeam = Team::sTeams[mTeamNumber];
-        int iCount = pTeam->GetClassCount();
-        if (!CanShowHeroes())
-        {
-            iCount -= pTeam->GetSpecialClassCount();
-        }
+        int iCount = CanShowHeroes() ? pTeam->GetClassCount()
+                                  : pTeam->GetClassCount() - pTeam->GetSpecialClassCount();
         if (i >= iCount)
         {
             break;
@@ -1552,11 +1561,8 @@ void SpawnDisplay::UpdateInput()
         for (iClass = 0; iClass < 10; ++iClass)
         {
             Team* pTeam = Team::sTeams[mTeamNumber];
-            int iCount = pTeam->GetClassCount();
-            if (!CanShowHeroes())
-            {
-                iCount -= pTeam->GetSpecialClassCount();
-            }
+            int iCount = CanShowHeroes() ? pTeam->GetClassCount()
+                                      : pTeam->GetClassCount() - pTeam->GetSpecialClassCount();
             if (iClass >= iCount)
             {
                 break;
@@ -1578,7 +1584,7 @@ void SpawnDisplay::UpdateInput()
                 mMode = eFINISHED;
                 pCharacter->ChangeClass(mClassIndex);
                 PlayerController::sEnabled = -1;
-                EventManager::CharacterEvent::mChangeClass.Trigger(*pCharacter, sChangeClassParam);
+                EventManager::CharacterEvent::mChangeClass.Trigger(*pCharacter, EventManager::noContext);
                 SendSpawnReadyMessage();
             }
             else
@@ -1618,11 +1624,8 @@ void SpawnDisplay::UpdateInput()
     }
     {
         Team* pTeam = Team::sTeams[mTeamNumber];
-        int iCount = pTeam->GetClassCount();
-        if (!CanShowHeroes())
-        {
-            iCount -= pTeam->GetSpecialClassCount();
-        }
+        int iCount = CanShowHeroes() ? pTeam->GetClassCount()
+                                  : pTeam->GetClassCount() - pTeam->GetSpecialClassCount();
         if (iClass < 0 || iClass >= iCount || iClass == mClassIndex)
         {
             return;

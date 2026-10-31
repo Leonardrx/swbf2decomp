@@ -44,7 +44,7 @@ void DroidekaElement::BuildWorldMatrices()
         qRoll._fY = 0.0f;
         qRoll._fZ = 0.0f;
         qRoll._fS = mBallOrientation.GetCos();
-        kSpine.kQuat = kSpine.kQuat * qRoll;
+        kSpine.kQuat *= qRoll;
 
         PblVector3 vCentre(0.0f - kSpine.kTrans.x, mClass->mBallRadius - kSpine.kTrans.y,
                            0.0f - kSpine.kTrans.z);
@@ -64,14 +64,14 @@ void DroidekaElement::BuildWorldMatrices()
         qTurn._fY = mTurnOffset.GetSin();
         qTurn._fZ = 0.0f;
         qTurn._fS = mTurnOffset.GetCos();
-        kRoot.kQuat = kRoot.kQuat * qTurn;
+        kRoot.kQuat *= qTurn;
 
         PblQuaternion qPitch;
         qPitch._fX = mPitchOffset.GetSin();
         qPitch._fY = 0.0f;
         qPitch._fZ = 0.0f;
         qPitch._fS = mPitchOffset.GetCos();
-        kRoot.kQuat = kRoot.kQuat * qPitch;
+        kRoot.kQuat *= qPitch;
 
         PblVector3 vRotated = qPitch.RotateVector(mPivotOffset);
         mTranslationOffset = PblVector3(mPivotOffset.x - vRotated.x, mPivotOffset.y - vRotated.y,
@@ -95,7 +95,7 @@ void DroidekaElement::BuildWorldMatrices()
         qRoll._fY = 0.0f;
         qRoll._fZ = 0.0f;
         qRoll._fS = mBallOrientation.GetCos();
-        kSpine.kQuat = kSpine.kQuat * qRoll.Inverse();
+        kSpine.kQuat *= qRoll.Inverse();
     }
     else
     {
@@ -109,14 +109,14 @@ void DroidekaElement::BuildWorldMatrices()
         qPitch._fY = 0.0f;
         qPitch._fZ = 0.0f;
         qPitch._fS = mPitchOffset.GetCos();
-        kRoot.kQuat = kRoot.kQuat * qPitch.Inverse();
+        kRoot.kQuat *= qPitch.Inverse();
 
         PblQuaternion qTurn;
         qTurn._fX = 0.0f;
         qTurn._fY = mTurnOffset.GetSin();
         qTurn._fZ = 0.0f;
         qTurn._fS = mTurnOffset.GetCos();
-        kRoot.kQuat = kRoot.kQuat * qTurn.Inverse();
+        kRoot.kQuat *= qTurn.Inverse();
     }
 }
 

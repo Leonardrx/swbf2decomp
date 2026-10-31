@@ -876,10 +876,7 @@ GameObjectClass::GameObjectClass(GameObjectClass* pBase, unsigned int uHash)
     mHoldForPlayer = pBase->mHoldForPlayer;
     mAvailableForAnyTeam = pBase->mAvailableForAnyTeam;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        mDamageEffectClass[i] = pBase->mDamageEffectClass[i];
-    }
+    memcpy(mDamageEffectClass, pBase->mDamageEffectClass, sizeof(mDamageEffectClass));
 
     mVOSoundList = pBase->mVOSoundList;
     mVOUnitType = pBase->mVOUnitType;
@@ -899,6 +896,9 @@ static DamageEffectClass* sCurDamageEffect;
 // FUNCTION: SWBF2 0x005365c0
 void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
+    char acSound[256];
+    char acRegion[256];
+    char acBuffer[512];
     switch (uProperty)
     {
     case 0x19971f1b:
@@ -1053,8 +1053,6 @@ void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 
     case 0x7241c3bb:
     {
-        char acSound[256];
-        char acRegion[256];
         acSound[0] = 0;
         acRegion[0] = 0;
         sscanf(pszValue, "%255s %255s", acSound, acRegion);
@@ -1069,7 +1067,6 @@ void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
 
     case 0x172645b9:
     {
-        char acBuffer[512];
         strncpy(acBuffer, pszValue, 511);
         acBuffer[511] = 0;
         const char* pszSound = strtok(acBuffer, " ,+-;");
@@ -1100,20 +1097,24 @@ void GameObjectClass::SetProperty(unsigned int uProperty, const char* pszValue)
     case 0x06182385:
     {
         sCurDamageEffect = 0;
-        int i = 0;
-        while (mDamageEffectClass[i])
+        int i;
+        for (i = 0; i < 10; ++i)
         {
-            if (++i >= 10)
+            if (!mDamageEffectClass[i])
             {
-                return;
+                break;
             }
+        }
+        if (i == 10)
+        {
+            return;
         }
         mDamageEffectClass[i] = new DamageEffectClass;
         sCurDamageEffect = mDamageEffectClass[i];
         if (sCurDamageEffect)
         {
-            sCurDamageEffect->mPercentStop = 0.0f;
             sCurDamageEffect->mPercent = (float)atof(pszValue) / 100.0f;
+            sCurDamageEffect->mPercentStop = 0.0f;
         }
         break;
     }

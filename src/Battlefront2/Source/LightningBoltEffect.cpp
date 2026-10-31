@@ -351,12 +351,14 @@ bool LightningBoltEffectObject::SetOrdnanceOwner(GameObject* pObject)
 void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
 {
     PblVector3 vStart = m_mWorldMatrix.GetTranslation();
-    PblVector3 vMin((mTargetPos.x > vStart.x ? vStart.x : mTargetPos.x) - 128.0f,
-                    (mTargetPos.y > vStart.y ? vStart.y : mTargetPos.y) - 128.0f,
-                    (mTargetPos.z > vStart.z ? vStart.z : mTargetPos.z) - 128.0f);
-    PblVector3 vMax((vStart.x > mTargetPos.x ? vStart.x : mTargetPos.x) + 128.0f,
-                    (vStart.y > mTargetPos.y ? vStart.y : mTargetPos.y) + 128.0f,
-                    (vStart.z > mTargetPos.z ? vStart.z : mTargetPos.z) + 128.0f);
+    float fMinZ = mTargetPos.z > vStart.z ? vStart.z : mTargetPos.z;
+    float fMinY = mTargetPos.y > vStart.y ? vStart.y : mTargetPos.y;
+    float fMinX = mTargetPos.x > vStart.x ? vStart.x : mTargetPos.x;
+    float fMaxZ = vStart.z > mTargetPos.z ? vStart.z : mTargetPos.z;
+    float fMaxY = vStart.y > mTargetPos.y ? vStart.y : mTargetPos.y;
+    float fMaxX = vStart.x > mTargetPos.x ? vStart.x : mTargetPos.x;
+    PblVector3 vMin(fMinX - 128.0f, fMinY - 128.0f, fMinZ - 128.0f);
+    PblVector3 vMax(fMaxX + 128.0f, fMaxY + 128.0f, fMaxZ + 128.0f);
     RedParticleRenderer::SubmitBounds(vMin, vMax);
     RedParticleRenderer::SubmitTexture(mClass->mTexture, BLEND_ADDITIVE, 0);
 
@@ -365,8 +367,7 @@ void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
     float fAlpha = (mStrength * 0.5f + 0.5f) * fFade;
     float fWidthScale = mStrength * 0.7f + 0.3f;
 
-    RedColor color = mClass->mColor;
-    color.a = (unsigned char)(int)(mClass->mColor.a * fAlpha);
+    RedColor color(mClass->mColor, (unsigned char)(int)(mClass->mColor.a * fAlpha));
     Render(vStart, mTargetPos, mClass->mWidth * fWidthScale, mClass->mSpreadFactor, mRandSeed,
            mRandSeed2, mInterpolation, color, mClass->mBreakDistance, mClass->mTextureSize,
            mClass->mBranchFactor, mClass->mMaxBranches, mClass->mBranchSpreadFactor,
@@ -374,22 +375,12 @@ void LightningBoltEffectObject::Render(unsigned char, float, unsigned int)
 
     if (mClass->mNumChildren > 0)
     {
-        for (int i = 0;; ++i)
+        for (int i = 0; i < Max((int)(mClass->mNumChildren * mStrength), 1); ++i)
         {
-            int iChildren = (int)(mClass->mNumChildren * mStrength);
-            if (iChildren < 1)
-            {
-                iChildren = 1;
-            }
-            if (i >= iChildren)
-            {
-                break;
-            }
-            color = mClass->mChildColor;
-            color.a = (unsigned char)(int)(mClass->mChildColor.a * fAlpha);
+            RedColor childColor(mClass->mChildColor, (unsigned char)(int)(mClass->mChildColor.a * fAlpha));
             Render(vStart, mTargetPos, mClass->mChildWidth * fWidthScale,
                    mClass->mChildSpreadFactor, PblRandom::GetGlobalInt(),
-                   PblRandom::GetGlobalInt(), 0.0f, color, mClass->mChildBreakDistance,
+                   PblRandom::GetGlobalInt(), 0.0f, childColor, mClass->mChildBreakDistance,
                    mClass->mChildTextureSize, mClass->mBranchFactor, mClass->mMaxBranches,
                    mClass->mBranchSpreadFactor, mClass->mBranchLength);
         }

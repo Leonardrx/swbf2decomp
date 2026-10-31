@@ -80,7 +80,7 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
                    + -mCamera.m[2][1] * 0.0f
                    + (_Sphere.z - mCamera.m[3][2]) * -mCamera.m[2][2];
     float fScale = 1.0f;
-    if (sGrassDistanceScale >= 1.0f)
+    if (!(1.0f > sGrassDistanceScale))
     {
         fScale = sGrassDistanceScale;
     }
@@ -92,7 +92,14 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
             PropClusterLayer& layer = mLayers[i];
             float fLayerDist = PropGenerator::GetLayerMaxDist(i) * fScale;
 
-            if (mSize + fLayerDist > fCamDist)
+            if (!(mSize + fLayerDist > fCamDist))
+            {
+                if (fCamDist > fLayerDist * 1.05f + mSize)
+                {
+                    UncreateObjects(i);
+                }
+            }
+            else
             {
                 if (layer.mCreateObjectsFlag)
                 {
@@ -112,10 +119,6 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
                         it->Render(pCamera, fCamDist - mSize, uiFlags);
                     }
                 }
-            }
-            else if (fCamDist > fLayerDist * 1.05f + mSize)
-            {
-                UncreateObjects(i);
             }
 
             iNumObjects += layer.mObjects.GetCount();
@@ -226,7 +229,7 @@ const PropObject* PropCluster::FindPropObject(const PblVector3& vPos, bool) cons
             {
             case PropModelMesh::PMM_MESH:
             {
-                PblSphere sphere = pObject->mModel->mRenderObj.mGeometry->_BoundingSphere;
+                const PblSphere& sphere = pObject->mModel->mRenderObj.mGeometry->_BoundingSphere;
                 const PblVector3& vTrans = pObject->GetMatrix().GetTranslation();
                 float dx = vPos.x - (vTrans.x + sphere.x);
                 float dy = vPos.y - (vTrans.y + sphere.y);

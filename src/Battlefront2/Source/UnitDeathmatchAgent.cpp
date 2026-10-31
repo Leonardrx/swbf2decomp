@@ -106,14 +106,21 @@ void UnitDeathmatchAgent::EnterState()
         break;
 
     case STATE_RunPoint:
-        mCtrl->GetLowLevel().SetNavigator_Goto(AIUtil::GetRandomAccessiblePoint(mCtrl), 0, false, false);
+    {
+        const PblVector3 vGoal = AIUtil::GetRandomAccessiblePoint(mCtrl);
+        mCtrl->GetLowLevel().SetNavigator_Goto(vGoal, 0, false, false);
         break;
+    }
 
     case STATE_RunEnemy:
     {
         Character* pChar = mCtrl->mOwner->mCharacter;
         const Team* pTeam = Team::sTeams[pChar ? pChar->GetTeamNumber() : 3];
-        int iEnemyTeam = pTeam->mAffiliation[1] < 0 ? 1 : 0;
+        int iEnemyTeam = 0;
+        if (pTeam->mAffiliation[1] < 0)
+        {
+            iEnemyTeam = 1;
+        }
         if (pTeam->mAffiliation[2] < 0)
         {
             iEnemyTeam = iEnemyTeam ? (int)(PblRandom::GetGlobalInt() & 1) + 1 : 2;
@@ -124,7 +131,8 @@ void UnitDeathmatchAgent::EnterState()
         {
             break;
         }
-        if (!CombatUtil::EngageInCombat(UnitControllerPtr(mCtrl->mOwner->mCtrl),
+        auto pOwnerCtrl = mCtrl->mOwner->mCtrl;
+        if (!CombatUtil::EngageInCombat(UnitControllerPtr(pOwnerCtrl),
                                         pEnemy->GetControllable()->GetGameObject(), true))
         {
             SetNextState(STATE_RunPoint);
@@ -135,20 +143,15 @@ void UnitDeathmatchAgent::EnterState()
         if (GetMe()->GetGameObject()->GetGameObjectClass()->mAIType == ConnectivityGraph::CGT_FLAG_HUGE)
         {
             const PblVector3& vMyPos = GetMe()->GetMatrix().GetTranslation();
-            PblVector3 vDelta(vDest.x - vMyPos.x, vDest.y - vMyPos.y, vDest.z - vMyPos.z);
+            const PblVector3 vDelta = vDest - vMyPos;
             PblVector3 vDir;
             D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDelta);
             float fRadius = GetMe()->GetGameObject()->GetCollisionObject()->GetCollisionRadius();
-            vDest.x -= vDir.x * fRadius;
-            vDest.y -= vDir.y * fRadius;
-            vDest.z -= vDir.z * fRadius;
+            vDest -= vDir * fRadius;
         }
         else
         {
-            PblVector3 vPush = PblRandom::GetGlobalVector3();
-            vPush.x = vPush.x * 10.0f + vDest.x;
-            vPush.y = vPush.y * 10.0f + vDest.y;
-            vPush.z = vPush.z * 10.0f + vDest.z;
+            PblVector3 vPush = PblRandom::GetGlobalVector3() * 10.0f + vDest;
             PathFinder::PushValidPoint(vDest, vPush, GetMe()->GetGameObject());
             vDest = vPush;
         }

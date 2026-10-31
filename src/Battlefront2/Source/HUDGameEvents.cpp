@@ -668,24 +668,32 @@ void HUD::GameEvents::DisableTeamElements(HUD::GameEvents::PlayerEvents& events,
 // FUNCTION: SWBF2 0x00563210
 void HUD::GameEvents::DisablePlayerElements(HUD::GameEvents::PlayerEvents& events, HUD::GameEvents::PlayerData& data)
 {
-    HUD::Event(events.healthDisable, true).Send();
+    HUD::Event ev1(events.healthDisable, true);
+    ev1.Send();
     data.health = -1.0f;
-    HUD::Event(events.healthInVehicleDisable, true).Send();
-    HUD::Event(events.jetDisable, true).Send();
+    HUD::Event ev2(events.healthInVehicleDisable, true);
+    ev2.Send();
+    HUD::Event ev3(events.jetDisable, true);
+    ev3.Send();
     data.hasJetpack = false;
     data.jetFuel = -1.0f;
     data.hasShield = false;
     data.shield = -1.0f;
-    HUD::Event(events.energyDisable, true).Send();
+    HUD::Event ev4(events.energyDisable, true);
+    ev4.Send();
     data.hasEnergy = false;
     data.energy = -1.0f;
-    HUD::Event(events.vehicleHealthDisable, true).Send();
+    HUD::Event ev5(events.vehicleHealthDisable, true);
+    ev5.Send();
     data.vehicleHealth = -1.0f;
-    HUD::Event(events.healthAsHeroDisable, true).Send();
+    HUD::Event ev6(events.healthAsHeroDisable, true);
+    ev6.Send();
     data.isHero = false;
-    HUD::Event(events.vehicleHackingTimeDisable, true).Send();
+    HUD::Event ev7(events.vehicleHackingTimeDisable, true);
+    ev7.Send();
     data.vehicleHacking = false;
-    HUD::Event(events.vehicleHackedTimeDisable, true).Send();
+    HUD::Event ev8(events.vehicleHackedTimeDisable, true);
+    ev8.Send();
     data.vehicleBeingHacked = false;
 
     for (int i = 0; i < 2; ++i)
@@ -700,42 +708,64 @@ void HUD::GameEvents::DisablePlayerElements(HUD::GameEvents::PlayerEvents& event
         weapon.target = 0;
         weapon.showReticule = false;
         weapon.targetLocked = 0;
-        HUD::Event(weaponEvents.disable, true).Send();
-        HUD::Event(weaponEvents.reticuleDisable, true).Send();
-        HUD::Event(weaponEvents.targetTeamColor, &gLocalColor).Send();
-        HUD::Event(weaponEvents.targetTeamColorBright, &gLocalColor).Send();
-        HUD::Event(weaponEvents.targetDisable, true).Send();
-        HUD::Event(weaponEvents.targetDisableShieldName, true).Send();
-        HUD::Event(weaponEvents.lockOnDisable, true).Send();
+        HUD::Event ev9(weaponEvents.disable, true);
+        ev9.Send();
+        HUD::Event ev10(weaponEvents.reticuleDisable, true);
+        ev10.Send();
+        HUD::Event ev11(weaponEvents.targetTeamColor, &gLocalColor);
+        ev11.Send();
+        HUD::Event ev12(weaponEvents.targetTeamColorBright, &gLocalColor);
+        ev12.Send();
+        HUD::Event ev13(weaponEvents.targetDisable, true);
+        ev13.Send();
+        HUD::Event ev14(weaponEvents.targetDisableShieldName, true);
+        ev14.Send();
+        HUD::Event ev15(weaponEvents.lockOnDisable, true);
+        ev15.Send();
     }
 
-    HUD::Event(events.weaponsDisable, true).Send();
+    HUD::Event ev16(events.weaponsDisable, true);
+    ev16.Send();
     data.teamNumber = -1;
     data.noWeapons = true;
     data.numFriendlyFlagsCarried = 0;
-    HUD::Event(events.flagFriendCarriedDisable, true).Send();
-    HUD::Event(events.flagFriendCarriedNumberDisable, true).Send();
+    HUD::Event ev17(events.flagFriendCarriedDisable, true);
+    ev17.Send();
+    HUD::Event ev18(events.flagFriendCarriedNumberDisable, true);
+    ev18.Send();
     data.numFriendlyFlagsDropped = 0;
-    HUD::Event(events.flagFriendDroppedDisable, true).Send();
-    HUD::Event(events.flagFriendDroppedNumberDisable, true).Send();
+    HUD::Event ev19(events.flagFriendDroppedDisable, true);
+    ev19.Send();
+    HUD::Event ev20(events.flagFriendDroppedNumberDisable, true);
+    ev20.Send();
     data.numEnemyFlagsCarried = 0;
-    HUD::Event(events.flagEnemyCarriedDisable, true).Send();
-    HUD::Event(events.flagEnemyCarriedNumberDisable, true).Send();
+    HUD::Event ev21(events.flagEnemyCarriedDisable, true);
+    ev21.Send();
+    HUD::Event ev22(events.flagEnemyCarriedNumberDisable, true);
+    ev22.Send();
     data.numEnemyFlagsDropped = 0;
-    HUD::Event(events.flagEnemyDroppedDisable, true).Send();
-    HUD::Event(events.flagEnemyDroppedNumberDisable, true).Send();
+    HUD::Event ev23(events.flagEnemyDroppedDisable, true);
+    ev23.Send();
+    HUD::Event ev24(events.flagEnemyDroppedNumberDisable, true);
+    ev24.Send();
     data.flagPlayerCarried = false;
-    HUD::Event(events.flagPlayerDisable, true).Send();
-    HUD::Event(events.statisticsDisable, true).Send();
-    HUD::Event(events.lockOnDisable, true).Send();
-    HUD::Event(events.lockOnDisableShieldName, true).Send();
-    HUD::Event(events.lockOnDirectionDisable, true).Send();
+    HUD::Event ev25(events.flagPlayerDisable, true);
+    ev25.Send();
+    HUD::Event ev26(events.statisticsDisable, true);
+    ev26.Send();
+    HUD::Event ev27(events.lockOnDisable, true);
+    ev27.Send();
+    HUD::Event ev28(events.lockOnDisableShieldName, true);
+    ev28.Send();
+    HUD::Event ev29(events.lockOnDirectionDisable, true);
+    ev29.Send();
     data.lockedTarget = 0;
     data.lockedTargetHealth = -1.0f;
     data.unknownFloat00D0 = -1.0f;
     data.lockedDirectionEnabled = false;
     data.carriedFlagItem = false;
-    HUD::Event(events.missileLockDisable, true).Send();
+    HUD::Event ev30(events.missileLockDisable, true);
+    ev30.Send();
     data.missileLocked = false;
 }
 
@@ -815,39 +845,43 @@ void HUD::GameEvents::Update(float fDeltaTime)
         char acBuffer[256];
         _snprintf(acBuffer, sizeof(acBuffer), "level.%s.hints", GameLoop::mWorldFileName);
         unsigned int uHash = PblHash(acBuffer);
-        bool bFound = RedLocalizeDB::Find(uHash, true) != 0;
-        if (!bFound)
+        const unsigned short* pHint = RedLocalizeDB::Find(uHash, true);
+        if (!pHint)
         {
             _snprintf(acBuffer, sizeof(acBuffer), "level.%s.hints", GameLoop::mTerrainFileName);
             uHash = PblHash(acBuffer);
-            bFound = RedLocalizeDB::Find(uHash, true) != 0;
+            pHint = RedLocalizeDB::Find(uHash, true);
         }
-        if (bFound)
+        if (pHint)
         {
-            HUD::Event(gLevelHintText, uHash).Send();
+            HUD::Event ev1(gLevelHintText, uHash);
+            ev1.Send();
         }
-        HUD::Event(gInitialize, true).Send();
+        HUD::Event ev2(gInitialize, true);
+        ev2.Send();
         gInitialized = true;
     }
 
-    HUD::Event(gTime, GameLoop::GetMissionTime()).Send();
+    HUD::Event ev3(gTime, GameLoop::GetMissionTime());
+    ev3.Send();
 
     const Timer* pTimer = gObjectiveTimer;
     const bool bTimer = pTimer != 0;
     HUD::ElementMap* pMap = HUD::ElementMap::FindByPlayerIndex(0);
-    if ((CameraManager::Instance()->GetNumCameras() == 1 && pMap && pMap->GetMode()) || !bTimer)
-    {
-        HUD::Event timerDisable(gObjectiveEvents.timerDisable, true);
-        timerDisable.Send();
-    }
-    else
+    if (!((CameraManager::Instance()->GetNumCameras() == 1 && pMap && pMap->GetMode()) || !bTimer))
     {
         float fTime = pTimer->mTime + 0.5f;
-        if (!(fTime > 0.0f))
+        if (fTime <= 0.0f)
         {
             SetObjectiveTimer(0);
         }
-        HUD::Event(gObjectiveEvents.timer, fTime).Send();
+        HUD::Event ev4(gObjectiveEvents.timer, fTime);
+        ev4.Send();
+    }
+    else
+    {
+        HUD::Event timerDisable(gObjectiveEvents.timerDisable, true);
+        timerDisable.Send();
     }
 
     if (Timer* pMissionTimer = MissionTimer::GetTimer())
@@ -862,13 +896,22 @@ void HUD::GameEvents::Update(float fDeltaTime)
             switch (MissionTimer::GetTeamShow(pPlayer->mTeamNumber))
             {
             case MissionTimer::SHOW_DEFEAT:
-                HUD::Event(gObjectiveEvents.defeatTimer, fTime).Send();
+                {
+                    HUD::Event ev5(gObjectiveEvents.defeatTimer, fTime);
+                    ev5.Send();
+                }
                 break;
             case MissionTimer::SHOW_NEUTRAL:
-                HUD::Event(gObjectiveEvents.timer, fTime).Send();
+                {
+                    HUD::Event ev6(gObjectiveEvents.timer, fTime);
+                    ev6.Send();
+                }
                 break;
             case MissionTimer::SHOW_VICTORY:
-                HUD::Event(gObjectiveEvents.victoryTimer, fTime).Send();
+                {
+                    HUD::Event ev7(gObjectiveEvents.victoryTimer, fTime);
+                    ev7.Send();
+                }
                 break;
             }
         }
@@ -904,8 +947,10 @@ void HUD::GameEvents::Update(float fDeltaTime)
             FLInputManager::Instance()->GetPlayerInputs(i)->GetDigital(ePROCESSEDINPUT_Map);
         if (bMapPressed && !gInputMapLastPressed)
         {
-            HUD::Event(events.mapModeToggle, true).Send();
-            HUD::Event(events.objectivesUpdatedDisable, true).Send();
+            HUD::Event ev8(events.mapModeToggle, true);
+            ev8.Send();
+            HUD::Event ev9(events.objectivesUpdatedDisable, true);
+            ev9.Send();
         }
         gInputMapLastPressed = bMapPressed;
 
@@ -920,16 +965,19 @@ void HUD::GameEvents::Update(float fDeltaTime)
             }
             if (eMode == 1)
             {
-                HUD::Event(events.pressSelectToReturn, true).Send();
+                HUD::Event ev10(events.pressSelectToReturn, true);
+                ev10.Send();
                 if (i == 0 && GameLoop::mNumCameras == 1)
                 {
                     if (ObjectiveManager::GetCurrentPopupText())
                     {
-                        HUD::Event(events.objectiveDetails, true).Send();
+                        HUD::Event ev11(events.objectiveDetails, true);
+                        ev11.Send();
                     }
                     if (PopupText::GetNumHints() > 0)
                     {
-                        HUD::Event(events.hintsAvailable, true).Send();
+                        HUD::Event ev12(events.hintsAvailable, true);
+                        ev12.Send();
                     }
                 }
             }
@@ -952,7 +1000,7 @@ void HUD::GameEvents::Update(float fDeltaTime)
         }
 
         const bool bScope = ScopeDisplay::Instance(i)->IsActive();
-        const bool bInputFlag = FLInputManager::Instance()->mLCDPageToggle[0] != 0;
+        const bool bInputFlag = FLInputManager::Instance()->mLCDPageToggle[0];
         if (data.scopeActive != bScope || data.unknownBool00D8 != bInputFlag)
         {
             HUD::GameEvents::DisablePlayerElements(events, data);
@@ -973,7 +1021,8 @@ void HUD::GameEvents::Update(float fDeltaTime)
         bNoWeapons = bNoWeapons | (bScope || bInputFlag);
         if (bNoWeapons != data.noWeapons)
         {
-            HUD::Event(bNoWeapons ? events.weaponsDisable : events.weaponsEnable, true).Send();
+            HUD::Event ev13(bNoWeapons ? events.weaponsDisable : events.weaponsEnable, true);
+            ev13.Send();
             data.noWeapons = bNoWeapons;
         }
         if (!bScope)
@@ -1120,10 +1169,14 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
         data.lockedTargetHealth = -1.0f;
         data.lockedDirectionEnabled = false;
         data.carriedFlagItem = false;
-        HUD::Event(events.lockOnDisable, true).Send();
-        HUD::Event(events.lockOnDisableShieldName, true).Send();
-        HUD::Event(events.lockOnDirectionDisable, true).Send();
-        HUD::Event(events.lockOnFlagCarrierDisable, true).Send();
+        HUD::Event ev1(events.lockOnDisable, true);
+        ev1.Send();
+        HUD::Event ev2(events.lockOnDisableShieldName, true);
+        ev2.Send();
+        HUD::Event ev3(events.lockOnDirectionDisable, true);
+        ev3.Send();
+        HUD::Event ev4(events.lockOnFlagCarrierDisable, true);
+        ev4.Send();
         if (pTarget)
         {
             PblHandle<GameObject const> hTarget(pTarget);
@@ -1132,17 +1185,20 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
             GameObjectGetNames(hTarget, &pName, &pClassName);
             if (pName)
             {
-                HUD::Event(events.lockOnName, (const wchar_t*)pName).Send();
+                HUD::Event ev5(events.lockOnName, (const wchar_t*)pName);
+                ev5.Send();
             }
             if (pClassName)
             {
-                HUD::Event(events.lockOnClassName, (const wchar_t*)pClassName).Send();
+                HUD::Event ev6(events.lockOnClassName, (const wchar_t*)pClassName);
+                ev6.Send();
             }
             const RedColor color = pTarget->GetTeam()
                                        ? Team::GetColorByAffiliation(
                                              Team::sTeams[pObject->GetTeam()]->GetAffiliation(pTarget->GetTeam()))
                                        : gLocalColor;
-            HUD::Event(events.lockOnTeamColor, &color).Send();
+            HUD::Event ev7(events.lockOnTeamColor, &color);
+            ev7.Send();
         }
         data.lockedTarget = pTarget;
     }
@@ -1163,15 +1219,19 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
         if (data.lockedTargetHealth != fShield)
         {
             const float fMaxShield = pTarget->mMaxShield;
-            HUD::Event(events.lockOnHealth, static_cast<unsigned int>((int)fShield)).Send();
-            HUD::Event(events.lockOnHealthFraction, fShield / fMaxShield).Send();
+            HUD::Event ev8(events.lockOnHealth, static_cast<unsigned int>((int)fShield));
+            ev8.Send();
+            HUD::Event ev9(events.lockOnHealthFraction, fShield / fMaxShield);
+            ev9.Send();
             data.lockedTargetHealth = fShield;
         }
-        HUD::Event(events.lockOnShieldName, (const wchar_t*)RedLocalizeDB::Find(0x66049aa8, false)).Send();
+        HUD::Event ev10(events.lockOnShieldName, (const wchar_t*)RedLocalizeDB::Find(0x66049aa8, false));
+        ev10.Send();
     }
     else
     {
-        HUD::Event(events.lockOnDisableShieldName, true).Send();
+        HUD::Event ev11(events.lockOnDisableShieldName, true);
+        ev11.Send();
         if (!pTarget->GetGameObjectClass()->mbHideHealthBar)
         {
             float fHealth = pTarget->mCurHealth;
@@ -1182,8 +1242,10 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
             if (fHealth != data.lockedTargetHealth)
             {
                 const float fMaxHealth = pTarget->mMaxHealth;
-                HUD::Event(events.lockOnHealth, static_cast<unsigned int>((int)fHealth)).Send();
-                HUD::Event(events.lockOnHealthFraction, fHealth / fMaxHealth).Send();
+                HUD::Event ev12(events.lockOnHealth, static_cast<unsigned int>((int)fHealth));
+                ev12.Send();
+                HUD::Event ev13(events.lockOnHealthFraction, fHealth / fMaxHealth);
+                ev13.Send();
                 data.lockedTargetHealth = fHealth;
             }
         }
@@ -1195,7 +1257,8 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
     const float fDeltaY = vTargetPos.y - mPlayer.m[3][1];
     const float fDeltaZ = vTargetPos.z - mPlayer.m[3][2];
     const float fDistance = sqrtf(fDeltaY * fDeltaY + fDeltaX * fDeltaX + fDeltaZ * fDeltaZ);
-    HUD::Event(events.lockOnDistance, fDistance).Send();
+    HUD::Event ev14(events.lockOnDistance, fDistance);
+    ev14.Send();
 
     const float fInvDistance = 1.0f / fDistance;
     const PblVector3& vUp = mPlayer.GetYAxis();
@@ -1207,11 +1270,13 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
         if (bShowDirection)
         {
             const PblVector3 vRotation(0.0f, 0.0f, fDot > 0.0f ? 0.0f : 180.0f);
-            HUD::Event(events.lockOnDirection, &vRotation).Send();
+            HUD::Event ev15(events.lockOnDirection, &vRotation);
+            ev15.Send();
         }
         else
         {
-            HUD::Event(events.lockOnDirectionDisable, true).Send();
+            HUD::Event ev16(events.lockOnDirectionDisable, true);
+            ev16.Send();
         }
         data.lockedDirectionEnabled = bShowDirection;
     }
@@ -1219,7 +1284,8 @@ void HUD::GameEvents::UpdateLockOn(unsigned int uIndex, const GameObject* const 
     const bool bFlagCarrier = data.lockedTarget->GetCarriedFlagItem() != 0;
     if (data.carriedFlagItem != bFlagCarrier)
     {
-        HUD::Event(bFlagCarrier ? events.lockOnFlagCarrier : events.lockOnFlagCarrierDisable, true).Send();
+        HUD::Event ev17(bFlagCarrier ? events.lockOnFlagCarrier : events.lockOnFlagCarrierDisable, true);
+        ev17.Send();
         data.carriedFlagItem = bFlagCarrier;
     }
 }
@@ -1955,7 +2021,7 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
     int iEnemyCarried = 0;
     int iEnemyDropped = 0;
     const bool bFirstPerson = pControllable->CheckFirstPerson(pCharacter->mPlayerId);
-    bool bPlayerCarrier = false;
+    bool bCarried = false;
     for (PblList<FlagItem>::Itor it(*FlagItem::sList); (FlagItem*)it; ++it)
     {
         const FlagItem* pFlag = &*it;
@@ -1964,7 +2030,7 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
         const Character* pCarrier = reinterpret_cast<const EntityItem*>(pFlag)->mOwner;
         if (pCarrier)
         {
-            bPlayerCarrier |= pCarrier == pCharacter;
+            bCarried |= pCarrier == pCharacter;
             if (iAffiliation > 0)
             {
                 ++iFriendlyCarried;
@@ -1995,18 +2061,20 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
         }
     }
 
-    const bool bCarried = bFirstPerson && bPlayerCarrier;
+    bCarried &= bFirstPerson;
     if (bCarried != data.flagPlayerCarried)
     {
         if (bCarried)
         {
-            HUD::Event(events.flagPlayerCarried, true).Send();
+            HUD::Event ev1(events.flagPlayerCarried, true);
+            ev1.Send();
             data.flagPlayerCarried = true;
         }
         else
         {
             data.flagPlayerCarried = false;
-            HUD::Event(events.flagPlayerDisable, true).Send();
+            HUD::Event ev2(events.flagPlayerDisable, true);
+            ev2.Send();
         }
     }
 
@@ -2014,20 +2082,25 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
     {
         if (iFriendlyCarried > 0)
         {
-            HUD::Event(events.flagFriendCarried, true).Send();
+            HUD::Event ev3(events.flagFriendCarried, true);
+            ev3.Send();
             if (iFriendlyCarried > 1)
             {
-                HUD::Event(events.flagFriendCarriedNumber, iFriendlyCarried).Send();
+                HUD::Event ev4(events.flagFriendCarriedNumber, iFriendlyCarried);
+                ev4.Send();
             }
             else
             {
-                HUD::Event(events.flagFriendCarriedNumberDisable, true).Send();
+                HUD::Event ev5(events.flagFriendCarriedNumberDisable, true);
+                ev5.Send();
             }
         }
         else
         {
-            HUD::Event(events.flagFriendCarriedDisable, true).Send();
-            HUD::Event(events.flagFriendCarriedNumberDisable, true).Send();
+            HUD::Event ev6(events.flagFriendCarriedDisable, true);
+            ev6.Send();
+            HUD::Event ev7(events.flagFriendCarriedNumberDisable, true);
+            ev7.Send();
         }
         data.numFriendlyFlagsCarried = iFriendlyCarried;
     }
@@ -2036,20 +2109,25 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
     {
         if (iFriendlyDropped > 0)
         {
-            HUD::Event(events.flagFriendDropped, true).Send();
+            HUD::Event ev8(events.flagFriendDropped, true);
+            ev8.Send();
             if (iFriendlyDropped > 1)
             {
-                HUD::Event(events.flagFriendDroppedNumber, iFriendlyDropped).Send();
+                HUD::Event ev9(events.flagFriendDroppedNumber, iFriendlyDropped);
+                ev9.Send();
             }
             else
             {
-                HUD::Event(events.flagFriendDroppedNumberDisable, true).Send();
+                HUD::Event ev10(events.flagFriendDroppedNumberDisable, true);
+                ev10.Send();
             }
         }
         else
         {
-            HUD::Event(events.flagFriendDroppedDisable, true).Send();
-            HUD::Event(events.flagFriendDroppedNumberDisable, true).Send();
+            HUD::Event ev11(events.flagFriendDroppedDisable, true);
+            ev11.Send();
+            HUD::Event ev12(events.flagFriendDroppedNumberDisable, true);
+            ev12.Send();
         }
         data.numFriendlyFlagsDropped = iFriendlyDropped;
     }
@@ -2058,20 +2136,25 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
     {
         if (iEnemyCarried > 0)
         {
-            HUD::Event(events.flagEnemyCarried, true).Send();
+            HUD::Event ev13(events.flagEnemyCarried, true);
+            ev13.Send();
             if (iEnemyCarried > 1)
             {
-                HUD::Event(events.flagEnemyCarriedNumber, iEnemyCarried).Send();
+                HUD::Event ev14(events.flagEnemyCarriedNumber, iEnemyCarried);
+                ev14.Send();
             }
             else
             {
-                HUD::Event(events.flagEnemyCarriedNumberDisable, true).Send();
+                HUD::Event ev15(events.flagEnemyCarriedNumberDisable, true);
+                ev15.Send();
             }
         }
         else
         {
-            HUD::Event(events.flagEnemyCarriedDisable, true).Send();
-            HUD::Event(events.flagEnemyCarriedNumberDisable, true).Send();
+            HUD::Event ev16(events.flagEnemyCarriedDisable, true);
+            ev16.Send();
+            HUD::Event ev17(events.flagEnemyCarriedNumberDisable, true);
+            ev17.Send();
         }
         data.numEnemyFlagsCarried = iEnemyCarried;
     }
@@ -2080,20 +2163,25 @@ void HUD::GameEvents::UpdateFlags(const Character* const pCharacter, const Contr
     {
         if (iEnemyDropped > 0)
         {
-            HUD::Event(events.flagEnemyDropped, true).Send();
+            HUD::Event ev18(events.flagEnemyDropped, true);
+            ev18.Send();
             if (iEnemyDropped > 1)
             {
-                HUD::Event(events.flagEnemyDroppedNumber, iEnemyDropped).Send();
+                HUD::Event ev19(events.flagEnemyDroppedNumber, iEnemyDropped);
+                ev19.Send();
             }
             else
             {
-                HUD::Event(events.flagEnemyDroppedNumberDisable, true).Send();
+                HUD::Event ev20(events.flagEnemyDroppedNumberDisable, true);
+                ev20.Send();
             }
         }
         else
         {
-            HUD::Event(events.flagEnemyDroppedDisable, true).Send();
-            HUD::Event(events.flagEnemyDroppedNumberDisable, true).Send();
+            HUD::Event ev21(events.flagEnemyDroppedDisable, true);
+            ev21.Send();
+            HUD::Event ev22(events.flagEnemyDroppedNumberDisable, true);
+            ev22.Send();
         }
         data.numEnemyFlagsDropped = iEnemyDropped;
     }
@@ -2113,7 +2201,8 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     {
         if (!bHasEnergy)
         {
-            HUD::Event(events.energyDisable, true).Send();
+            HUD::Event ev1(events.energyDisable, true);
+            ev1.Send();
             data.energy = -1.0f;
         }
         data.hasEnergy = bHasEnergy;
@@ -2130,13 +2219,16 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
         const int iPlayer = pCharacter->mPlayerId;
         if (iPlayer >= 0 && iPlayer < 1)
         {
-            HUD::Event(gPlayerEvents[iPlayer].energyRegenPulseRate, fEnergy > data.energy ? 0.5f : FLT_MAX).Send();
+            EventClass* pPulseRate = gPlayerEvents[iPlayer].energyRegenPulseRate;
+            HUD::Event ev2(pPulseRate, fEnergy > data.energy ? 0.5f : FLT_MAX);
+            ev2.Send();
         }
     }
 
     if (data.unknownBool00D8)
     {
-        HUD::Event(events.energyDisable, true).Send();
+        HUD::Event ev3(events.energyDisable, true);
+        ev3.Send();
         data.energy = -1.0f;
         return;
     }
@@ -2144,17 +2236,20 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     {
         return;
     }
-    HUD::Event(events.energy, fEnergy).Send();
+    HUD::Event ev4(events.energy, fEnergy);
+    ev4.Send();
     const float fEnergyMax = pBar->m_pClass->m_fEnergyMax;
     float fFraction = 0.0f;
     if (fEnergyMax > 0.0f)
     {
         fFraction = pBar->m_fEnergy / fEnergyMax;
     }
-    HUD::Event(events.energyFraction, (float)fabs(fFraction)).Send();
+    HUD::Event ev5(events.energyFraction, (float)fabs(fFraction));
+    ev5.Send();
     if (pBar->m_bOverheat)
     {
-        HUD::Event(events.energyOverburn, 0.0f > fEnergy ? 1.0f : 0.0f).Send();
+        HUD::Event ev6(events.energyOverburn, 0.0f > fEnergy ? 1.0f : 0.0f);
+        ev6.Send();
     }
     data.energy = fEnergy;
 }
@@ -2173,6 +2268,7 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
             for (unsigned int i = 0; i < 2; ++i)
             {
                 Team* pTeam = apTeams[i];
+                TeamData& teamData = data.teamData[i];
                 if (pSpaceAssault && pSpaceAssault->mbEnabled)
                 {
                     ShowTeamPoints(pTeam->mTeamNumber, true);
@@ -2181,15 +2277,16 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
                          FlagItem::sFlagGameplayType == FlagItem::FLAG_GAMEPLAY_2FLAG)
                 {
                     RedTexture* pTexture =
-                        RedTexture::Find(data.teamData[i].showPoints ? pTeam->mCTFIcon : pTeam->mConquestIcon);
+                        RedTexture::Find(teamData.showPoints ? pTeam->mCTFIcon : pTeam->mConquestIcon);
                     if (pTexture || (pTexture = RedTexture::Find(pTeam->mIcon)) != 0)
                     {
-                        HUD::Event(events.teams[i].texture, pTexture).Send();
+                        HUD::Event ev1(events.teams[i].texture, pTexture);
+                        ev1.Send();
                     }
                 }
-                data.teamData[i].points = -99999;
-                data.teamData[i].reinforcements = -1;
-                data.teamData[i].bleedRate = -1.0f;
+                teamData.points = -99999;
+                teamData.reinforcements = -1;
+                teamData.bleedRate = -1.0f;
             }
         }
         data.teamNumber = iTeam;
@@ -2204,15 +2301,19 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
     {
         Team* pTeam = apTeams[i];
         const int iMaxReinforcements = pTeam->mMaxReinforcements;
-        const int iReinforcements =
-            iMaxReinforcements == 0x7fffffff ? 0x7fffffff : pTeam->mCurReinforcements;
+        int iReinforcements = pTeam->mCurReinforcements;
+        if (iMaxReinforcements == 0x7fffffff)
+        {
+            iReinforcements = 0x7fffffff;
+        }
         const int iPoints = pTeam->mPoints;
         TeamData& teamData = data.teamData[i];
         TeamEvents& teamEvents = events.teams[i];
 
         if (teamData.showPoints && iPoints != teamData.points)
         {
-            HUD::Event(teamEvents.points, iPoints).Send();
+            HUD::Event ev2(teamEvents.points, iPoints);
+            ev2.Send();
             int iLimit;
             if (pSpaceAssault && pSpaceAssault->mbEnabled)
             {
@@ -2220,20 +2321,22 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
             }
             else
             {
-                switch (Lua_Callbacks::gHuntShowScoreLimit)
+                const int iShowScoreLimit = Lua_Callbacks::gHuntShowScoreLimit;
+                if (iShowScoreLimit == 1)
                 {
-                case 1:
                     iLimit = Lua_Callbacks::gHuntScoreLimit[Lua_Callbacks::gCurRules];
-                    break;
-                case 2:
+                }
+                else if (iShowScoreLimit == 2)
+                {
                     iLimit = Lua_Callbacks::gSpaceAssaultScoreLimit[Lua_Callbacks::gCurRules];
-                    break;
-                case 3:
+                }
+                else if (iShowScoreLimit == 3)
+                {
                     iLimit = Lua_Callbacks::gUberScoreLimit;
-                    break;
-                default:
+                }
+                else
+                {
                     iLimit = 0;
-                    break;
                 }
             }
             unsigned short acText[256];
@@ -2245,7 +2348,8 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
             {
                 PblUnicode::usnprintf(acText, 255, "%d", iPoints);
             }
-            HUD::Event(teamEvents.pointsText, (const wchar_t*)acText).Send();
+            HUD::Event ev3(teamEvents.pointsText, (const wchar_t*)acText);
+            ev3.Send();
             teamData.points = iPoints;
         }
 
@@ -2253,15 +2357,18 @@ void HUD::GameEvents::UpdateTeam(const Character* const pCharacter, PlayerEvents
         {
             if (iReinforcements != teamData.reinforcements)
             {
-                HUD::Event(teamEvents.reinforcements, iReinforcements).Send();
-                HUD::Event(teamEvents.reinforcementsFraction,
-                           (float)iReinforcements / (float)iMaxReinforcements).Send();
+                HUD::Event ev4(teamEvents.reinforcements, iReinforcements);
+                ev4.Send();
+                HUD::Event ev5(teamEvents.reinforcementsFraction,
+                           (float)iReinforcements / (float)iMaxReinforcements);
+                ev5.Send();
                 teamData.reinforcements = iReinforcements;
             }
             const float fBleedRate = pTeam->mBleedRate;
             if (fBleedRate != teamData.bleedRate)
             {
-                HUD::Event(teamEvents.bleedRate, fBleedRate == 0.0f ? FLT_MAX : 1.0f / fBleedRate).Send();
+                HUD::Event ev6(teamEvents.bleedRate, fBleedRate != 0.0f ? 1.0f / fBleedRate : FLT_MAX);
+                ev6.Send();
                 teamData.bleedRate = fBleedRate;
             }
         }

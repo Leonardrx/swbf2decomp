@@ -141,9 +141,7 @@ void WindEffect::Update(float fDeltaTime)
     m_fTimer += m_fVelocityChangeRate * fDeltaTime;
     if (m_fTimer < 1.0f)
     {
-        m_vVelocity.x = (m_vVelocityTarget.x - m_vVelocityPrevTarget.x) * m_fTimer + m_vVelocityPrevTarget.x;
-        m_vVelocity.y = (m_vVelocityTarget.y - m_vVelocityPrevTarget.y) * m_fTimer + m_vVelocityPrevTarget.y;
-        m_vVelocity.z = (m_vVelocityTarget.z - m_vVelocityPrevTarget.z) * m_fTimer + m_vVelocityPrevTarget.z;
+        m_vVelocity = (m_vVelocityTarget - m_vVelocityPrevTarget) * m_fTimer + m_vVelocityPrevTarget;
         return;
     }
 
@@ -158,16 +156,14 @@ void WindEffect::Update(float fDeltaTime)
         {
             float fRandX = PblRandom::GetGlobalFloat() * 2.0f - 1.0f;
             float fRandZ = PblRandom::GetGlobalFloat() * 2.0f - 1.0f;
-            m_vVelocityTarget.x = m_vBaseVelocity.x + fRandX * m_fVelocityRange;
-            m_vVelocityTarget.y = m_vBaseVelocity.y + m_fVelocityRange * 0.0f;
-            m_vVelocityTarget.z = m_vBaseVelocity.z + fRandZ * m_fVelocityRange;
+            m_vVelocityTarget = PblVector3(m_vBaseVelocity.x + fRandX * m_fVelocityRange,
+                                           m_vBaseVelocity.y + m_fVelocityRange * 0.0f,
+                                           m_vBaseVelocity.z + fRandZ * m_fVelocityRange);
         }
         else
         {
             float fScale = m_fVelocityRange / fLength;
-            PblVector3 vAlong(m_vBaseVelocity.x * fScale,
-                              m_vBaseVelocity.y * fScale,
-                              m_vBaseVelocity.z * fScale);
+            PblVector3 vAlong = m_vBaseVelocity * fScale;
             float fSide = m_fVelocityRange * m_fVelocityRange / (m_fVelocityRange + fLength) / fLength;
             PblVector3 vSide(m_vBaseVelocity.z * fSide, fSide * 0.0f, -m_vBaseVelocity.x * fSide);
 
@@ -176,9 +172,7 @@ void WindEffect::Update(float fDeltaTime)
             vSide.y *= fRandSide;
             vSide.z *= fRandSide;
             float fRandAlong = PblRandom::GetGlobalFloat() * 2.0f - 1.0f;
-            m_vVelocityTarget.x = m_vBaseVelocity.x + fRandAlong * vAlong.x + vSide.x;
-            m_vVelocityTarget.y = m_vBaseVelocity.y + vAlong.y * fRandAlong + vSide.y;
-            m_vVelocityTarget.z = m_vBaseVelocity.z + vAlong.z * fRandAlong + vSide.z;
+            m_vVelocityTarget = m_vBaseVelocity + vAlong * fRandAlong + vSide;
         }
         m_fTimer = 0.0f;
     }
@@ -474,45 +468,42 @@ void PrecipitationEffect::CreatePrecipitationData()
     m_pData = new PrecipitationData[MAX_PARTICLES_PER_BOX];
     for (unsigned int i = 0; i < MAX_PARTICLES_PER_BOX; ++i)
     {
-        PrecipitationData& data = m_pData[i];
-        data.vPosRelative = PblVector3(PblRandom::_Global.GetFloat(),
-                                       PblRandom::_Global.GetFloat(),
-                                       PblRandom::_Global.GetFloat());
+        m_pData[i].vPosRelative = PblVector3(PblRandom::_Global.GetFloat(),
+                                             PblRandom::_Global.GetFloat(),
+                                             PblRandom::_Global.GetFloat());
         if (VELOCITY_RANGE > 0.0f)
         {
-            const PblVector3 v = PblRandom::GetGlobalVector3();
-            data.vVelocityLocal = PblVector3(v.x * VELOCITY_RANGE, v.y * VELOCITY_RANGE,
-                                             v.z * VELOCITY_RANGE);
+            m_pData[i].vVelocityLocal = PblRandom::GetGlobalVector3() * VELOCITY_RANGE;
         }
         else
         {
-            data.vVelocityLocal = PblVector3(0.0f, 0.0f, 0.0f);
+            m_pData[i].vVelocityLocal = PblVector3(0.0f, 0.0f, 0.0f);
         }
         if (ALPHA_MAX > ALPHA_MIN)
         {
-            data.fAlpha = (ALPHA_MAX - ALPHA_MIN) * PblRandom::_Global.GetFloat() + ALPHA_MIN;
+            m_pData[i].fAlpha = (ALPHA_MAX - ALPHA_MIN) * PblRandom::_Global.GetFloat() + ALPHA_MIN;
         }
         else
         {
-            data.fAlpha = ALPHA_MIN;
+            m_pData[i].fAlpha = ALPHA_MIN;
         }
         if (PARTICLE_TYPE == PRECIPITATION_QUADS)
         {
             if (ROTATION_RATE_RANGE > 0.0f)
             {
-                data.fRotationRate =
+                m_pData[i].fRotationRate =
                     (PblRandom::_Global.GetFloat() - 0.5f) * ROTATION_RATE_RANGE + ROTATION_RATE_MEAN;
             }
             else
             {
-                data.fRotationRate = ROTATION_RATE_MEAN;
+                m_pData[i].fRotationRate = ROTATION_RATE_MEAN;
             }
-            data.fRotation = PblRandom::_Global.GetFloat();
+            m_pData[i].fRotation = PblRandom::_Global.GetFloat();
         }
         else
         {
-            data.fRotationRate = 0.0f;
-            data.fRotation = 0.0f;
+            m_pData[i].fRotationRate = 0.0f;
+            m_pData[i].fRotation = 0.0f;
         }
     }
     m_fParticleDensity = PARTICLES_PER_BOX;

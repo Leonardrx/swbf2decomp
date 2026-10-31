@@ -156,7 +156,7 @@ void ParticleTransformer::PositionTransformer::Update(PblVector3& position, PblV
         }
         else
         {
-            velocity = velocity * (1.0f - fScale);
+            velocity *= (1.0f - fScale);
             velocity.x += mData.mReach.mVelX * fScale * fDeltaTime;
             velocity.y += mData.mReach.mVelY * fScale * fDeltaTime;
             velocity.z += mData.mReach.mVelZ * fScale * fDeltaTime;

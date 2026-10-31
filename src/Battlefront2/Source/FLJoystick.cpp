@@ -182,7 +182,7 @@ void ProcessedInputs::Set(ePROCESSEDINPUT_TYPE eType, bool& bLocked, float fValu
 
     if (bLocked == true)
     {
-        if (fabs(fValue) < 0.125f)
+        if ((float)fabs((double)fValue) < 0.125f)
         {
             bLocked = false;
         }
@@ -195,7 +195,9 @@ void ProcessedInputs::Set(ePROCESSEDINPUT_TYPE eType, bool& bLocked, float fValu
     if ((unsigned int)(eType - ePROCESSEDINPUT_BOOLCOUNT) <= 3)
     {
         float& fAxis = mFloatInputs[eType - ePROCESSEDINPUT_BOOLCOUNT];
-        if (fabsf(fAxis) <= fabsf(fValue))
+        const float fAbsAxis = fAxis < 0.0f ? -fAxis : fAxis;
+        const float fAbsValue = fValue < 0.0f ? -fValue : fValue;
+        if (!(fAbsAxis > fAbsValue))
         {
             fAxis = fValue;
         }
@@ -205,49 +207,49 @@ void ProcessedInputs::Set(ePROCESSEDINPUT_TYPE eType, bool& bLocked, float fValu
     switch (eType)
     {
     case ePROCESSEDINPUT_STRAFE_POS:
-        if (fValue > fabsf(mFloatInputs[0]))
+        if (fValue > (mFloatInputs[0] < 0.0f ? -mFloatInputs[0] : mFloatInputs[0]))
         {
             mFloatInputs[0] = fValue;
         }
         break;
     case ePROCESSEDINPUT_STRAFE_NEG:
-        if (fValue > fabsf(mFloatInputs[0]))
+        if (fValue > (mFloatInputs[0] < 0.0f ? -mFloatInputs[0] : mFloatInputs[0]))
         {
             mFloatInputs[0] = -fValue;
         }
         break;
     case ePROCESSEDINPUT_MOVE_POS:
-        if (fValue > fabsf(mFloatInputs[1]))
+        if (fValue > (mFloatInputs[1] < 0.0f ? -mFloatInputs[1] : mFloatInputs[1]))
         {
             mFloatInputs[1] = fValue;
         }
         break;
     case ePROCESSEDINPUT_MOVE_NEG:
-        if (fValue > fabsf(mFloatInputs[1]))
+        if (fValue > (mFloatInputs[1] < 0.0f ? -mFloatInputs[1] : mFloatInputs[1]))
         {
             mFloatInputs[1] = -fValue;
         }
         break;
     case ePROCESSEDINPUT_TURN_POS:
-        if (fValue > fabsf(mFloatInputs[2]))
+        if (fValue > (mFloatInputs[2] < 0.0f ? -mFloatInputs[2] : mFloatInputs[2]))
         {
             mFloatInputs[2] = fValue;
         }
         break;
     case ePROCESSEDINPUT_TURN_NEG:
-        if (fValue > fabsf(mFloatInputs[2]))
+        if (fValue > (mFloatInputs[2] < 0.0f ? -mFloatInputs[2] : mFloatInputs[2]))
         {
             mFloatInputs[2] = -fValue;
         }
         break;
     case ePROCESSEDINPUT_PITCH_POS:
-        if (fValue > fabsf(mFloatInputs[3]))
+        if (fValue > (mFloatInputs[3] < 0.0f ? -mFloatInputs[3] : mFloatInputs[3]))
         {
             mFloatInputs[3] = fValue;
         }
         break;
     case ePROCESSEDINPUT_PITCH_NEG:
-        if (fValue > fabsf(mFloatInputs[3]))
+        if (fValue > (mFloatInputs[3] < 0.0f ? -mFloatInputs[3] : mFloatInputs[3]))
         {
             mFloatInputs[3] = -fValue;
         }
@@ -276,6 +278,14 @@ void ProcessedInputs::Set(ePROCESSEDINPUT_TYPE eType, bool& bLocked, float fValu
         }
         break;
 
+    case ePROCESSEDINPUT_primaryFireButtonDown:
+    case ePROCESSEDINPUT_secondaryFireButtonDown:
+    case ePROCESSEDINPUT_sprintButtonDown:
+    case ePROCESSEDINPUT_jumpButtonDown:
+    case ePROCESSEDINPUT_crouchButtonDown:
+    case ePROCESSEDINPUT_zoomButtonDown:
+    case ePROCESSEDINPUT_viewButtonDown:
+    case ePROCESSEDINPUT_reloadButtonDown:
     default:
         if (fValue >= 0.125f)
         {

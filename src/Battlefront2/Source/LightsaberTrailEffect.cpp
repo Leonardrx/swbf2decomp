@@ -203,17 +203,17 @@ void LightsaberTrail::_AddSample(float fTime, const PblVector3& vPos, const PblV
         const PblVector3 vDPosDt = (vPos - m_avPos[iSamplePrev]) * fDtInv;
         PblVector3 vDDirDt;
         const float fC = DotProduct(vDir, m_avDir[iSamplePrev]);
-        if (fC < 0.999f)
+        if (fC >= 0.999f)
+        {
+            m_avOmg[m_uiSampleNext] = (vDir - m_avDir[iSamplePrev]) * fDtInv;
+            vDDirDt = m_avOmg[m_uiSampleNext];
+        }
+        else
         {
             const float fLen = sqrtf(fC * 2.0f + 2.0f);
             const float fF = ((2.0f - fLen) * fDtInv * 4.0f) / ((1.0f - fC) * fLen);
             m_avOmg[m_uiSampleNext] = vDir * (fF * fC) - m_avDir[iSamplePrev] * fF;
             vDDirDt = vDir * fF - m_avDir[iSamplePrev] * (fF * fC);
-        }
-        else
-        {
-            m_avOmg[m_uiSampleNext] = (vDir - m_avDir[iSamplePrev]) * fDtInv;
-            vDDirDt = m_avOmg[m_uiSampleNext];
         }
 
         if (m_uiNumSamples == 1 || m_afDist[iSamplePrev] <= 0.0f)
@@ -235,7 +235,7 @@ void LightsaberTrail::_AddSample(float fTime, const PblVector3& vPos, const PblV
         float fDistance = (fVel + fVelPrev) * 0.5f;
         if (fVel > 0.001f && fVelPrev > 0.001f)
         {
-            fDistance *= DotProduct(m_avVel[m_uiSampleNext], m_avVel[iSamplePrev]) * 0.25f /
+            fDistance *= DotProduct(m_avVel[iSamplePrev], m_avVel[m_uiSampleNext]) * 0.25f /
                          (fVel * fVelPrev) + 0.75f;
         }
         fDistance *= fDt;

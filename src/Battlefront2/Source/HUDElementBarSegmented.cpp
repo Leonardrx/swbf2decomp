@@ -190,7 +190,7 @@ float HUD::ElementBarSegmented::SetValue(const float fValue)
     {
         const float fHalfWidth = fWidth * 0.5f;
         const float fHalfHeight = fHeight * 0.5f;
-        const float fSpan = (float)fabs(mAngleEnd - mAngleStart);
+        const float fSpan = (float)fabs((double)(mAngleEnd - mAngleStart));
         const float fStep = fSpan / (float)(int)mNumSegments;
         const float fLit = fSpan * fValueApplied + mAngleStart;
 
@@ -199,7 +199,7 @@ float HUD::ElementBarSegmented::SetValue(const float fValue)
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, fAngle);
             const float fX = fSin * fHalfWidth + fHalfWidth;
-            const float fY = fHalfHeight - 0.75f / RedRenderer::GetScreenAspectRatio() * (fCos * fHalfHeight);
+            const float fY = -(0.75f / RedRenderer::GetScreenAspectRatio() * (fCos * fHalfHeight)) + fHalfHeight;
 
             matrix.SetRotateZ(fAngle);
             matrix.m[3][0] = fX;

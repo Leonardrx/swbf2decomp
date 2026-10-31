@@ -188,7 +188,9 @@ void UnitDestroyAgent::UpdateStatePostVision(float dt)
 {
     mAttackHelper.Update();
 
-    if (mCurState == STATE_Goto)
+    switch (mCurState)
+    {
+    case STATE_Goto:
     {
         PblVector3 vPos;
         if (!mTarget.GetLocation(vPos))
@@ -207,27 +209,23 @@ void UnitDestroyAgent::UpdateStatePostVision(float dt)
         CheckTargetPosition(vPos);
 
         GameObject* pMyObj = GetMe()->GetGameObject();
-        const PblVector3& vMyPos = GetCollisionObject(pMyObj)->GetPosition();
+        const CollisionObject& rMyCollision = *pMyObj;
+        const PblVector3& vMyPos = rMyCollision.GetPosition();
         float dx = vPos.x - vMyPos.x;
         float dy = vPos.y - vMyPos.y;
         float dz = vPos.z - vMyPos.z;
         float fDistSq = dy * dy + dx * dx + dz * dz;
 
-        bool bMelee = false;
-        if (GetMe()->GetWeaponCount() >= 1 && IsMelee(GetMe()->GetWeaponPtr(0)))
-        {
-            bMelee = true;
-        }
+        const bool bMelee = GetMe()->GetWeaponCount() >= 1 && GetMe()->GetWeaponPtr(0)->IsMelee();
 
-        const Damageable* pMyHealth = GetDamageable(pMyObj);
+        const Damageable& rMyHealth = *pMyObj;
         bool bAttacking = false;
-        if (pMyHealth->mCurHealth > pMyHealth->mMaxHealth * 0.5f &&
+        if (rMyHealth.mCurHealth > rMyHealth.mMaxHealth * 0.5f &&
             mTarget.mType == AI::GTT_GAMEOBJECT && !bMelee && GetLowLevel().IsNavigatorInProgress())
         {
-            const Entity* pTarget = reinterpret_cast<const Entity*>(ResolveHandle(mTarget.mGameObj));
-            if (pTarget->IsRtti(EntityBuilding::rttiHashEntityBuilding))
+            if (mTarget.mGameObj->IsRtti(EntityBuilding::rttiHashEntityBuilding))
             {
-                if (GetThreatManager(mCtrl)->GetVisibleObject() == mTarget.GetGameObject())
+                if (mTarget.GetGameObject() == GetThreatManager(mCtrl)->GetVisibleObject())
                 {
                     float fRange = GetOptimalBuildingKillingRange(GetMe());
                     if (fRange * fRange > fDistSq)
@@ -242,14 +240,15 @@ void UnitDestroyAgent::UpdateStatePostVision(float dt)
             }
         }
 
-        if (pMyHealth->mCurHealth > pMyHealth->mMaxHealth * 0.5f &&
+        if (rMyHealth.mCurHealth > rMyHealth.mMaxHealth * 0.5f &&
             mTarget.mType == AI::GTT_GAMEOBJECT)
         {
             float fNear = AIUtil::GetCollisionRadius(pMyObj) * 30.0f;
             if (!bAttacking && fNear * fNear > fDistSq)
             {
-                vPos = GetCollisionObject(mTarget.GetGameObject())->GetPosition();
-                if (GetThreatManager(mCtrl)->GetVisibleObject() == mTarget.GetGameObject() ||
+                const CollisionObject& rTargetCollision = *mTarget.GetGameObject();
+                vPos = rTargetCollision.GetPosition();
+                if (mTarget.GetGameObject() == GetThreatManager(mCtrl)->GetVisibleObject() ||
                     AIUtil::CanSee(GetMe(), mTarget.GetGameObject(), &vPos))
                 {
                     mCtrl->ForceSetAttackHelperTarget(mTarget.GetGameObject());
@@ -259,13 +258,16 @@ void UnitDestroyAgent::UpdateStatePostVision(float dt)
         }
 
         FaceTarget(HEIGHT_STAND);
+        break;
     }
-    else if (mCurState == STATE_WaitForSpawn)
+    case STATE_WaitForSpawn:
     {
         if (mTarget.mChr->GetControllable())
         {
             SetNextState(STATE_Goto);
         }
+        break;
+    }
     }
 }
 

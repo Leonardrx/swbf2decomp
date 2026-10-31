@@ -252,16 +252,16 @@ void EntitySquadron::RemoveFromSquadron()
 
         RedStack stack;
         PblListDoubleSorted members;
-        int iNumSlots = mFormation->GetNumSlots();
-        EntityDistance* pDistances = (EntityDistance*)stack.Alloc(iNumSlots * sizeof(EntityDistance));
-        for (int i = 0; i < iNumSlots; ++i)
+        unsigned int uiNumSlots = mFormation->GetNumSlots();
+        EntityDistance* pDistances = (EntityDistance*)stack.Alloc(uiNumSlots * sizeof(EntityDistance));
+        unsigned int uCount = 0;
+        for (unsigned int s = 0; s < uiNumSlots; ++s)
         {
-            new (&pDistances[i]) EntityDistance;
+            new (&pDistances[s]) EntityDistance;
         }
 
         const PblVector3& vLeader = mFormation->GetPointPosition(mFormationSlot);
         EntityDistance* pDistance = pDistances;
-        unsigned int uCount = 0;
         int i = 0;
         for (PblListDouble::Node* pNode = mList.mTerminator.mNext; pNode != &mList.mTerminator;
              pNode = pNode->mNext, ++i)
@@ -277,9 +277,10 @@ void EntitySquadron::RemoveFromSquadron()
             {
                 pDistance->mEntity = pMember;
                 const PblVector3& vSlot = mFormation->GetPointPosition(pMember->mFormationSlot);
-                pDistance->mNode.mSortValue = (vLeader.y - vSlot.y) * (vLeader.y - vSlot.y) +
-                                              (vLeader.x - vSlot.x) * (vLeader.x - vSlot.x) +
-                                              (vLeader.z - vSlot.z) * (vLeader.z - vSlot.z);
+                const float fDx = vLeader.x - vSlot.x;
+                const float fDy = vLeader.y - vSlot.y;
+                const float fDz = vLeader.z - vSlot.z;
+                pDistance->mNode.mSortValue = fDy * fDy + fDx * fDx + fDz * fDz;
                 members.Add(&pDistance->mNode);
                 ++uCount;
                 ++pDistance;

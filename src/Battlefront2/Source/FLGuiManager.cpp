@@ -202,8 +202,8 @@ void GuiManager::UpdateAll(float fElapsed)
         bool bSplitScreen = uiState == 0x8ff60339 && GameLoop::sShowStats && GameLoop::mNumCameras > 1;
         bool bShell = uiState == 0x11e1fc01;
         FLInputManager* pInput = FLInputManager::Instance();
-        bool bReadAll = pInput->GetReadAll();
-        bool bBindMultiple = pInput->GetAllowBindMultiple();
+        bool bReadAll = pInput->mReadAllControllers;
+        bool bBindMultiple = pInput->mAllowBindMultiple;
         int iPrimary = pInput->GetPrimaryPort();
 
         if (!FLInputManager::s_instance.AnyMissing())
@@ -216,37 +216,35 @@ void GuiManager::UpdateAll(float fElapsed)
 
             int iController = mInstances->mJoystickIndex;
             GUIInputs* pInputs = 0;
+            bool bUseInputs = true;
             if (bSplitScreen)
             {
                 if (PlayerPrefs::mAllUserPrefs[0].mJoystick == iPrimary)
                 {
                     iController = 0;
                 }
-                pInputs = pInput->GetPlayerGuiInputs(iController);
             }
             else if (!bShell)
             {
                 iController = 0;
-                pInputs = pInput->GetPlayerGuiInputs(iController);
             }
             else if (bReadAll)
             {
-                bool bBound;
                 if (bBindMultiple)
                 {
                     iController = pInput->GetHWPort(0);
-                    bBound = iController >= 0;
+                    bUseInputs = iController >= 0;
                 }
                 else
                 {
-                    bBound = pInput->IsControllerBound(iController);
-                }
-                if (bBound)
-                {
-                    pInputs = pInput->GetPlayerGuiInputs(iController);
+                    bUseInputs = pInput->IsControllerBound(iController);
                 }
             }
-            else if (iPrimary <= 0)
+            else
+            {
+                bUseInputs = iPrimary <= 0;
+            }
+            if (bUseInputs)
             {
                 pInputs = pInput->GetPlayerGuiInputs(iController);
             }

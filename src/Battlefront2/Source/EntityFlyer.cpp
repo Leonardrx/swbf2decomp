@@ -137,38 +137,40 @@ void EntityFlyer::ClientKill()
 // FUNCTION: SWBF2 0x004b6350
 PblVector3 EntityFlyer::GetTargetPointMissVector() const
 {
-    if (mSideRoll.x == 0.0f && mSideRoll.y == 0.0f && !mInFlip)
+    PblMatrix unbanked, unpitched, matrix;
+    if (mSideRoll.x == 0.0f && mSideRoll.y == 0.0f)
     {
+        if (mInFlip)
+        {
+            D3DXMatrixRotationZ(reinterpret_cast<D3DXMATRIX*>(&unbanked), -mBankRollAngle);
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&unbanked), reinterpret_cast<const D3DXMATRIX*>(&unbanked),
+                               D3DXMatrixRotationX(reinterpret_cast<D3DXMATRIX*>(&unpitched), -mBankPitchAngle));
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&matrix), reinterpret_cast<const D3DXMATRIX*>(&unbanked), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+
+            switch (mLastTrickPerformed)
+            {
+            case FLIP_UP:
+                return PblVector3(matrix.m[1][0] * -10.0f, matrix.m[1][1] * -10.0f, matrix.m[1][2] * -10.0f);
+            case FLIP_DOWN:
+                return PblVector3(matrix.m[1][0] * 10.0f, matrix.m[1][1] * 10.0f, matrix.m[1][2] * 10.0f);
+            case FLIP_UP_RIGHT:
+            case FLIP_DOWN_RIGHT:
+                return PblVector3(matrix.m[0][0] * 10.0f, matrix.m[0][1] * 10.0f, matrix.m[0][2] * 10.0f);
+            case FLIP_UP_LEFT:
+            case FLIP_DOWN_LEFT:
+                return PblVector3(matrix.m[0][0] * -10.0f, matrix.m[0][1] * -10.0f, matrix.m[0][2] * -10.0f);
+            default:
+                break;
+            }
+        }
         return PblVector3(0.0f, 0.0f, 0.0f);
     }
 
-    PblMatrix unbanked, unpitched, matrix;
     D3DXMatrixRotationZ(reinterpret_cast<D3DXMATRIX*>(&unbanked), -mBankRollAngle);
     D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&unbanked), reinterpret_cast<const D3DXMATRIX*>(&unbanked),
                        D3DXMatrixRotationX(reinterpret_cast<D3DXMATRIX*>(&unpitched), -mBankPitchAngle));
     D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&matrix), reinterpret_cast<const D3DXMATRIX*>(&unbanked), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-
-    if (mSideRoll.x == 0.0f && mSideRoll.y == 0.0f)
-    {
-        float scale;
-        int row;
-        switch (mLastTrickPerformed)
-        {
-        case FLIP_UP:         row = 1; scale = -10.0f; break;
-        case FLIP_DOWN:       row = 1; scale = 10.0f; break;
-        case FLIP_UP_RIGHT:
-        case FLIP_DOWN_RIGHT: row = 0; scale = 10.0f; break;
-        case FLIP_UP_LEFT:
-        case FLIP_DOWN_LEFT:  row = 0; scale = -10.0f; break;
-        default: return PblVector3(0.0f, 0.0f, 0.0f);
-        }
-        return PblVector3(matrix.m[row][0] * scale,
-                          matrix.m[row][1] * scale,
-                          matrix.m[row][2] * scale);
-    }
-    return PblVector3((matrix.m[0][0] * mSideRoll.x + matrix.m[1][0] * mSideRoll.y) * 17.0f,
-                      (matrix.m[0][1] * mSideRoll.x + matrix.m[1][1] * mSideRoll.y) * 17.0f,
-                      (matrix.m[0][2] * mSideRoll.x + matrix.m[1][2] * mSideRoll.y) * 17.0f);
+    return (matrix[0] * mSideRoll.x + matrix[1] * mSideRoll.y) * 17.0f;
 }
 
 // FUNCTION: SWBF2 0x004ac370
@@ -695,6 +697,8 @@ void EntityFlyerClass::SetProperty(unsigned int uProperty, const char* pszValue)
             sCurrentSection = 7;
             break;
         case 0xdbaa7975:
+            sCurrentSection = -1;
+            return;
         default:
             sCurrentSection = -1;
             return;
@@ -1876,7 +1880,7 @@ bool EntityFlyer::UpdateIndirect(float fDeltaTime)
 
     if (mState == TAKEOFF || mState == FLYING)
     {
-        if (!mFollowingPath || mState != FLYING || !IsAlive() || mAIEng.ai.mFreeFlyTime > 0.0f || mInRoll ||
+        if (!mFollowingPath || mState != FLYING || !IsAlive() || !(0.0f >= mAIEng.ai.mFreeFlyTime) || mInRoll ||
             mInFlip)
         {
             float fThrust = 1.0f;
@@ -1926,9 +1930,7 @@ bool EntityFlyer::UpdateIndirect(float fDeltaTime)
     {
         const PblMatrix& mTarget = lowLevel.GetTarget()->GetMatrix();
         const PblMatrix& mMine = GetMatrix();
-        PblVector3 vDelta(mTarget.GetTranslation().x - mMine.GetTranslation().x,
-                          mTarget.GetTranslation().y - mMine.GetTranslation().y,
-                          mTarget.GetTranslation().z - mMine.GetTranslation().z);
+        PblVector3 vDelta = mTarget.GetTranslation() - mMine.GetTranslation();
         float fDistSq = vDelta.y * vDelta.y + vDelta.x * vDelta.x + vDelta.z * vDelta.z;
         if (40000.0f > fDistSq)
         {
@@ -2671,13 +2673,9 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
     if (mFlip == -3.1415927f || mFlip == 3.1415927f)
     {
         mInFlip = true;
-        rMatrix.m[0][0] = -rMatrix.m[0][0];
-        rMatrix.m[0][1] = -rMatrix.m[0][1];
-        rMatrix.m[0][2] = -rMatrix.m[0][2];
+        rMatrix[0] = -rMatrix[0];
         rMatrix.m[0][3] = 0.0f;
-        rMatrix.m[2][0] = -rMatrix.m[2][0];
-        rMatrix.m[2][1] = -rMatrix.m[2][1];
-        rMatrix.m[2][2] = -rMatrix.m[2][2];
+        rMatrix[2] = -rMatrix[2];
         rMatrix.m[2][3] = 0.0f;
         mFlip = 0.0f;
         mFlipTarget = 0.0f;
@@ -5123,7 +5121,7 @@ void EntityFlyer::DoTrick(Trick eTrick)
     if (!mInRoll && !mInFlip && mEnergyBar.SpendEnergy(fEnergy))
     {
         mSoundTrick.Stop(true);
-        const GameSound* pSound = &mClass->mSoundFlip;
+        const GameSound* pSound;
         switch (eTrick)
         {
         case SIDE_ROLL:
@@ -5132,9 +5130,11 @@ void EntityFlyer::DoTrick(Trick eTrick)
             break;
         case FLIP_UP:
             FlipAdd(-3.1415927f);
+            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN:
             FlipAdd(3.1415927f);
+            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_UP_RIGHT:
             FlipAdd(-3.1415927f);
@@ -5146,6 +5146,7 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(3.926991f);
             }
+            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN_RIGHT:
             FlipAdd(3.1415927f);
@@ -5157,6 +5158,7 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(-3.926991f);
             }
+            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_UP_LEFT:
             FlipAdd(-3.1415927f);
@@ -5168,6 +5170,7 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(-3.926991f);
             }
+            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN_LEFT:
             FlipAdd(3.1415927f);
@@ -5179,8 +5182,10 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(3.926991f);
             }
+            pSound = &mClass->mSoundFlip;
             break;
         default:
+            pSound = &mClass->mSoundFlip;
             break;
         }
         const PblMatrix& mMine = GetMatrix();
@@ -5301,12 +5306,21 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
     float fH2 = sGetHeight(vPos, vNose, fLook * 0.7f, -0.7853982f);
     float fH3 = sGetHeight(vPos, vNose, fLook * 0.5f, 1.5707964f);
     float fH4 = sGetHeight(vPos, vNose, fLook * 0.5f, -1.5707964f);
-    float fMax = fH3 > fH4 ? fH3 : fH4;
-    fMax = fH2 > fMax ? fH2 : fMax;
-    fMax = fH1 > fMax ? fH1 : fMax;
-    if (!(fHeight > fMax))
+    if (!(fH3 > fH4))
     {
-        fHeight = fMax;
+        fH3 = fH4;
+    }
+    if (!(fH2 > fH3))
+    {
+        fH2 = fH3;
+    }
+    if (!(fH1 > fH2))
+    {
+        fH1 = fH2;
+    }
+    if (!(fHeight > fH1))
+    {
+        fHeight = fH1;
     }
 
     CollisionObject* pHit = 0;
@@ -5316,7 +5330,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
     float fHit = CollisionManager::RayHit(vStart, vNose, fLook, pHit, 0, &pIgnore, 1, 0x18, false);
     if (1.0f > fHit)
     {
-        float fTop = pHit->GetCollisionCenter().y + pHit->GetCollisionRadius();
+        float fTop = pHit->GetCollisionRadius() + pHit->GetCollisionCenter().y;
         float fMyY = GetMatrix().GetTranslation().y;
         if (fTop - fMyY > 0.0f)
         {
@@ -5341,7 +5355,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
         fGround = fHeight;
     }
 
-    float fHoriz = sqrtf(fDz * fDz + fDx * fDx);
+    float fHoriz = sqrtf((pDest->z - vPos.z) * (pDest->z - vPos.z) + (pDest->x - vPos.x) * (pDest->x - vPos.x));
     float fY = fHoriz * (fGround + 25.0f - vPos.y) / fLook + vPos.y;
     if (bTaper)
     {
@@ -5587,52 +5601,56 @@ RedCommandConsole cvRenderContrails("flyer.contrailsActive", MultiVar(&bRenderCo
 // FUNCTION: SWBF2 0x004b5c10
 void EntityFlyer::SetupCameraFOV(float& rFOV)
 {
-    if (!IsAlive())
+    if (IsAlive())
     {
-        rFOV = GetDefaultFOV();
-        return;
-    }
-    if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
-    {
-        const float fSpeed = mGetSpeedSpeed;
-        const float fEffectFOV = mClass->mFOVEffect1st;
-        if (fSpeed > 0.0f && fEffectFOV != 0.0f)
+        if (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView()))
         {
-            const float fMinSpeed = 0.0f;
-            const float fMaxSpeed = Max(GetFlyerMaxSpeed(), mClass->mBoostFlyerSpeed);
-            const float fBlend = Clamp((fSpeed - fMinSpeed) / (fMaxSpeed - fMinSpeed), 0.0f, 1.0f);
-            rFOV = GetControllableClass()->mFirstPersonFOV * (1.0f - fBlend) + fEffectFOV * fBlend;
+            const float fSpeed = mGetSpeedSpeed;
+            const float fEffectFOV = mClass->mFOVEffect1st;
+            if (fSpeed > 0.0f && fEffectFOV != 0.0f)
+            {
+                const float fMinSpeed = 0.0f;
+                const float fBoostSpeed = mClass->mBoostFlyerSpeed;
+                const float fMaxSpeed = Max(GetFlyerMaxSpeed(), fBoostSpeed);
+                const float fBlend = Clamp((fSpeed - fMinSpeed) / (fMaxSpeed - fMinSpeed), 0.0f, 1.0f);
+                rFOV = GetControllableClass()->mFirstPersonFOV * (1.0f - fBlend) + fEffectFOV * fBlend;
+            }
+            else
+            {
+                rFOV = GetControllableClass()->mFirstPersonFOV;
+            }
         }
         else
         {
-            rFOV = GetControllableClass()->mFirstPersonFOV;
+            const float fSpeed = mGetSpeedSpeed;
+            const float fEffectFOV = mClass->mFOVEffect3rd;
+            if (fSpeed > 0.0f && fEffectFOV != 0.0f)
+            {
+                const float fMinSpeed = 0.0f;
+                const float fBoostSpeed = mClass->mBoostFlyerSpeed;
+                const float fMaxSpeed = Max(GetFlyerMaxSpeed(), fBoostSpeed);
+                const float fBlend = Clamp((fSpeed - fMinSpeed) / (fMaxSpeed - fMinSpeed), 0.0f, 1.0f);
+                rFOV = GetControllableClass()->mThirdPersonFOV * (1.0f - fBlend) + fEffectFOV * fBlend;
+                const PblVector3 vOffset = mClass->mFOVEFFectMinCamOffset3rd * (1.0f - fBlend) +
+                                          mClass->mFOVEFFectMaxCamOffset3rd * fBlend;
+                if (vOffset != PblVector3(0.0f, 0.0f, 0.0f))
+                {
+                    mClass->mCameraSettings.mCameraTrackOffset = vOffset;
+                }
+            }
+            else
+            {
+                rFOV = GetControllableClass()->mThirdPersonFOV;
+                const PblVector3 vOffset = mClass->mFOVEFFectMinCamOffset3rd;
+                if (vOffset != PblVector3(0.0f, 0.0f, 0.0f))
+                {
+                    mClass->mCameraSettings.mCameraTrackOffset = vOffset;
+                }
+            }
         }
     }
     else
     {
-        const float fSpeed = mGetSpeedSpeed;
-        const float fEffectFOV = mClass->mFOVEffect3rd;
-        if (fSpeed > 0.0f && fEffectFOV != 0.0f)
-        {
-            const float fMinSpeed = 0.0f;
-            const float fMaxSpeed = Max(GetFlyerMaxSpeed(), mClass->mBoostFlyerSpeed);
-            const float fBlend = Clamp((fSpeed - fMinSpeed) / (fMaxSpeed - fMinSpeed), 0.0f, 1.0f);
-            rFOV = GetControllableClass()->mThirdPersonFOV * (1.0f - fBlend) + fEffectFOV * fBlend;
-            const PblVector3 vOffset = mClass->mFOVEFFectMinCamOffset3rd * (1.0f - fBlend) +
-                                      mClass->mFOVEFFectMaxCamOffset3rd * fBlend;
-            if (vOffset != PblVector3(0.0f, 0.0f, 0.0f))
-            {
-                mClass->mCameraSettings.mCameraTrackOffset = vOffset;
-            }
-        }
-        else
-        {
-            rFOV = GetControllableClass()->mThirdPersonFOV;
-            const PblVector3 vOffset = mClass->mFOVEFFectMinCamOffset3rd;
-            if (vOffset != PblVector3(0.0f, 0.0f, 0.0f))
-            {
-                mClass->mCameraSettings.mCameraTrackOffset = vOffset;
-            }
-        }
+        rFOV = GetDefaultFOV();
     }
 }

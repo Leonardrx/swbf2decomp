@@ -181,23 +181,18 @@ void IdleHelper::StartStationaryIdle(UnitController* pCtrl, float& fIdleTime, fl
     case 14:
     case 15:
     {
-        Controllable* pMe = pCtrl->mOwner;
         float fBestDistSq = FLT_MAX;
-        PblVector3 vMyPos = pMe->GetMatrix().GetTranslation();
+        PblVector3 vMyPos = pCtrl->mOwner->GetMatrix().GetTranslation();
         const Character* pBest = NULL;
         for (int i = 0; i < Character::sCharacterLimit; ++i)
         {
             const Character* pChar = Character::GetPtr(i);
             if (pChar && pChar->mTeamPtr &&
-                pChar->mTeamPtr->GetAffiliation(pMe->mCharacter->mTeamNumber) >= 0 &&
-                pChar != pMe->mCharacter && pChar->GetControllable() &&
+                pChar->mTeamPtr->GetAffiliation(pCtrl->mOwner->mCharacter->mTeamNumber) >= 0 &&
+                pCtrl->mOwner->mCharacter != pChar && pChar->GetControllable() &&
                 pChar->GetControllable()->GetGameObject())
             {
-                const PblMatrix& m = pChar->GetControllable()->GetMatrix();
-                float fX = m.m[3][0] - vMyPos.x;
-                float fY = m.m[3][1] - vMyPos.y;
-                float fZ = m.m[3][2] - vMyPos.z;
-                float fDistSq = fX * fX + fY * fY + fZ * fZ;
+                float fDistSq = SquaredLength(pChar->GetControllable()->GetMatrix().GetTranslation() - vMyPos);
                 if (fDistSq < fBestDistSq)
                 {
                     fBestDistSq = fDistSq;
@@ -209,7 +204,7 @@ void IdleHelper::StartStationaryIdle(UnitController* pCtrl, float& fIdleTime, fl
         {
             LowLevel(pCtrl).HeadLook_Object(pBest->GetControllable()->GetGameObject(),
                                             fTurnToTime, fStayTime, fTurnBackTime);
-            AI::VOHelper::Play(AI::VOT_DefendIdleLookPlayer, pMe->GetGameObject(), 0,
+            AI::VOHelper::Play(AI::VOT_DefendIdleLookPlayer, pCtrl->mOwner->GetGameObject(), 0,
                                pBest->GetControllable()->GetGameObject(), 0.0f);
             fWanderSuppressTime = fTime + fTurnToTime + fStayTime + fTurnBackTime;
         }

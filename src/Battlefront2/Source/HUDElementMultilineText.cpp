@@ -252,8 +252,24 @@ void HUD::ElementMultilineText::DisableAndScroll(Line& line, unsigned int uIndex
 // FUNCTION: SWBF2 0x005579a0
 void HUD::ElementMultilineText::Update(const float fElapsed)
 {
-    const unsigned int uNext = GetNextPendingLineIndex();
-    unsigned int uEldest = GetEldestLineIndex(uNext);
+    unsigned int uNext;
+    if (mNextLine >= mLinesPending)
+    {
+        uNext = mNextLine - mLinesPending;
+    }
+    else
+    {
+        uNext = mNextLine + (mNumLines - mLinesPending);
+    }
+    unsigned int uEldest;
+    if (uNext >= mNumLinesDisplayed)
+    {
+        uEldest = uNext - mNumLinesDisplayed;
+    }
+    else
+    {
+        uEldest = mNumLines - mNumLinesDisplayed + uNext;
+    }
 
     switch (mState)
     {
@@ -268,7 +284,7 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
     case state_DisablingLine:
         if (mLines[uEldest].mEnableState == enableState_Disabled)
         {
-            GetText(mLines[uEldest]).SetText((const unsigned short*)0, true);
+            mLines[uEldest].SetText((const unsigned short*)0, true);
             if (mNumLinesDisplayed && --mNumLinesDisplayed == 0 && mDisableOnEmpty)
             {
                 HUD::Element::Enable(false);
@@ -279,12 +295,12 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
 
     case state_Scrolling:
     {
-        const float fHeight = (float)GetHeightPixels();
-        const unsigned int uLineHeight = GetText(mFormat).GetTextHeight();
+        const float fHeight = (float)(int)GetHeightPixels();
+        const int iLineHeight = (int)mFormat.GetTextHeight();
         if (!GetTop() || TopLineAtTop() ||
             (!mAddToTop && mLinesPending &&
-             BottomLineOutOfBottomRegion(fHeight, (float)uLineHeight)) ||
-            !GetText(mLines[uEldest]).m_bEnabled)
+             BottomLineOutOfBottomRegion(fHeight, (float)iLineHeight)) ||
+            !mLines[uEldest].m_bEnabled)
         {
             EnableNextLine(uNext);
             break;
@@ -300,8 +316,8 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
         {
             fScroll = 1.0f;
         }
-        float fDelta = uLineHeight * fScroll;
-        const float fTopY = GetText(mLines[uEldest]).GetPosition().y;
+        const float fTopY = mLines[uEldest].GetPosition().y;
+        float fDelta = (float)iLineHeight * fScroll;
         if (fDelta > fTopY)
         {
             fDelta = fTopY;
@@ -309,8 +325,8 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
         }
         for (unsigned int i = 0; i < mNumLinesDisplayed; ++i)
         {
-            RedTextElement& text = GetText(mLines[uEldest]);
-            text.SetPosition(text.GetPosition().x, text.GetPosition().y - fDelta);
+            mLines[uEldest].SetPosition(mLines[uEldest].GetPosition().x,
+                                        mLines[uEldest].GetPosition().y - fDelta);
             if (++uEldest == mNumLines)
             {
                 uEldest = 0;
@@ -326,16 +342,17 @@ void HUD::ElementMultilineText::Update(const float fElapsed)
     case state_EnablingLine:
     {
         Line& line = mLines[uNext];
-        if (line.mEnableState == enableState_Enabled)
+        switch (line.mEnableState)
         {
+        case enableState_Enabled:
             --mLinesPending;
             ++mNumLinesDisplayed;
             mState = state_Waiting;
-        }
-        else if (line.mEnableState == enableState_Disabling ||
-                 line.mEnableState == enableState_Disabled)
-        {
+            break;
+        case enableState_Disabling:
+        case enableState_Disabled:
             line.HUD::Element::Enable(true);
+            break;
         }
         break;
     }
@@ -431,17 +448,13 @@ void HUD::ElementMultilineText::SetupLines(unsigned int uNumLines)
 bool HUD::ElementMultilineText::AddText(const unsigned short* const pText,
                                         const RedColor* const pColor)
 {
-    const unsigned int uLineHeight = GetText(mFormat).GetTextHeight();
+    const unsigned int uLineHeight = mFormat.GetTextHeight();
     RedStack stack;
     unsigned int uMaxLines = 80;
     const unsigned int uFreeLines = mNumLines - mNumLinesDisplayed - mLinesPending;
 
-    unsigned int uSize = (PblUnicode::ustrlen(pText) + 1) * sizeof(unsigned short);
-    if (uSize & 0xf)
-    {
-        uSize = (uSize & ~0xfu) + 0x10;
-    }
-    unsigned short* pcText = (unsigned short*)stack.Alloc(uSize);
+    unsigned short* pcText =
+        (unsigned short*)stack.Alloc((PblUnicode::ustrlen(pText) + 1) * sizeof(unsigned short));
     if (!pcText)
     {
         return false;
@@ -450,25 +463,42 @@ bool HUD::ElementMultilineText::AddText(const unsigned short* const pText,
 
     unsigned int uWidth;
     unsigned int uHeight;
-    GetText(mFormat).GetTextBox(uWidth, uHeight);
-    GetText(mFormat).SetTextBox(uWidth, mNumLines * uLineHeight);
+    mFormat.GetTextBox(uWidth, uHeight);
+    mFormat.SetTextBox(uWidth, mNumLines * uLineHeight);
     RedTextElement::TextLine aLines[80];
     unsigned int uNumLines;
     const unsigned short* pcEnd;
     short sCursorX;
-    GetText(mFormat).ClipString(pcText, aLines, uMaxLines, uNumLines, pcEnd, uLineHeight, sCursorX);
-    GetText(mFormat).SetTextBox(uWidth, uHeight);
+    mFormat.ClipString(pcText, aLines, uMaxLines, uNumLines, pcEnd, uLineHeight, sCursorX);
+    mFormat.SetTextBox(uWidth, uHeight);
 
     if (uNumLines > uFreeLines)
     {
-        const float fLineHeight = (float)GetText(mFormat).GetTextHeight();
+        const float fLineHeight = (float)(int)mFormat.GetTextHeight();
         for (unsigned int i = uFreeLines; i < uNumLines; ++i)
         {
-            const unsigned int uNext = GetNextPendingLineIndex();
-            Line& line = mLines[GetEldestLineIndex(uNext)];
-            GetText(line).SetText((const unsigned short*)0, true);
+            unsigned int uNext;
+            if (mNextLine >= mLinesPending)
+            {
+                uNext = mNextLine - mLinesPending;
+            }
+            else
+            {
+                uNext = mNextLine + (mNumLines - mLinesPending);
+            }
+            unsigned int uEldest;
+            if (uNext >= mNumLinesDisplayed)
+            {
+                uEldest = uNext - mNumLinesDisplayed;
+            }
+            else
+            {
+                uEldest = mNumLines - mNumLinesDisplayed + uNext;
+            }
+            Line& line = mLines[uEldest];
+            line.SetText((const unsigned short*)0, true);
             line.HUD::Element::Enable(false);
-            GetText(line).m_bEnabled = false;
+            line.m_bEnabled = false;
             if (mNumLinesDisplayed)
             {
                 --mNumLinesDisplayed;
@@ -478,11 +508,19 @@ bool HUD::ElementMultilineText::AddText(const unsigned short* const pText,
                 --mLinesPending;
             }
 
-            unsigned int uIndex = GetEldestLineIndex(uNext);
+            unsigned int uIndex;
+            if (uNext >= mNumLinesDisplayed)
+            {
+                uIndex = uNext - mNumLinesDisplayed;
+            }
+            else
+            {
+                uIndex = mNumLines - mNumLinesDisplayed + uNext;
+            }
             for (unsigned int j = 0; j < mNumLinesDisplayed; ++j)
             {
-                RedTextElement& text = GetText(mLines[uIndex]);
-                text.SetPosition(text.GetPosition().x, text.GetPosition().y - fLineHeight);
+                mLines[uIndex].SetPosition(mLines[uIndex].GetPosition().x,
+                                           mLines[uIndex].GetPosition().y - fLineHeight);
                 if (++uIndex == mNumLines)
                 {
                     uIndex = 0;
@@ -503,10 +541,10 @@ bool HUD::ElementMultilineText::AddText(const unsigned short* const pText,
         memcpy(acLine, aLines[i].pcStart, uBytes);
         acLine[uBytes / sizeof(unsigned short)] = 0;
 
-        GetText(mLines[mNextLine]).m_color = GetText(mFormat).m_color;
-        mLines[mNextLine].mColorDefault = GetText(mFormat).m_color;
+        mLines[mNextLine].SetColor(mFormat.m_color);
+        mLines[mNextLine].mColorDefault = RedColor(mFormat.m_color);
         mLines[mNextLine].mAlpha = mFormat.mAlpha;
-        GetText(mLines[mNextLine]).SetText(acLine, false);
+        mLines[mNextLine].SetText(acLine, false);
         ++mLinesPending;
         if (++mNextLine == mNumLines)
         {
@@ -514,7 +552,16 @@ bool HUD::ElementMultilineText::AddText(const unsigned short* const pText,
         }
         if (uNumLines > uFreeLines)
         {
-            EnableNextLine(GetNextPendingLineIndex());
+            unsigned int uPending;
+            if (mNextLine >= mLinesPending)
+            {
+                uPending = mNextLine - mLinesPending;
+            }
+            else
+            {
+                uPending = mNextLine + (mNumLines - mLinesPending);
+            }
+            EnableNextLine(uPending);
         }
     }
     return true;

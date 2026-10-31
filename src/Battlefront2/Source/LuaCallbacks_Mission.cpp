@@ -3607,25 +3607,19 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         {
         case PblRegion::type_sphere:
         {
-            PblVector3 vRand = PblRandom::GetSim().GetVector3();
-            PblVector3 vUnit(vRand.x * 2.0f - 1.0f, vRand.y * 2.0f - 1.0f, vRand.z * 2.0f - 1.0f);
+            PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vUnit));
             float fRadius = PblRandom::GetSim().GetFloat() * pRegion->mSize.w;
-            const PblVector3& vCenter = pRegion->mMatrix.GetTranslation();
-            vPosition.x = vCenter.x + vDir.x * fRadius;
-            vPosition.y = vCenter.y + vDir.y * fRadius;
-            vPosition.z = vCenter.z + vDir.z * fRadius;
+            vPosition = pRegion->mMatrix.GetTranslation() + vDir * fRadius;
             break;
         }
         case PblRegion::type_box:
         case PblRegion::type_box_aligned:
         {
-            PblVector3 vRand = PblRandom::GetSim().GetVector3();
-            PblVector3 vLocal(pRegion->mSize.x * (vRand.x * 2.0f - 1.0f),
-                              pRegion->mSize.y * (vRand.y * 2.0f - 1.0f),
-                              pRegion->mSize.z * (vRand.z * 2.0f - 1.0f));
-            D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPosition), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&pRegion->mMatrix));
+            PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
+            PblVector3 vLocal = pRegion->mSize * vUnit;
+            vPosition = pRegion->mMatrix.ApplyTransform(vLocal);
             break;
         }
         case PblRegion::type_cylinder:
@@ -3633,14 +3627,11 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         case PblRegion::type_cylinder_yaligned:
         case PblRegion::type_cylinder_zaligned:
         {
-            PblVector3 vRand = PblRandom::GetSim().GetVector3();
-            float fX = vRand.x * 2.0f - 1.0f;
-            float fY = vRand.y * 2.0f - 1.0f;
-            float fZ = vRand.z * 2.0f - 1.0f;
-            float fLength = sqrtf(fX * fX + fZ * fZ);
+            PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
+            float fLength = sqrtf(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
             float fRadius = PblRandom::GetSim().GetFloat() * pRegion->mSize.x;
-            PblVector3 vLocal(fX / fLength * fRadius, pRegion->mSize.y * fY, fZ / fLength * fRadius);
-            D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPosition), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&pRegion->mMatrix));
+            PblVector3 vLocal(vUnit.x / fLength * fRadius, pRegion->mSize.y * vUnit.y, vUnit.z / fLength * fRadius);
+            vPosition = pRegion->mMatrix.ApplyTransform(vLocal);
             break;
         }
         default:
@@ -3652,9 +3643,9 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         vDir.y = (vMax.y - vMin.y) * PblRandom::GetSim().GetFloat() + vMin.y;
         vDir.z = (vMax.z - vMin.z) * PblRandom::GetSim().GetFloat() + vMin.z;
         const PblVector3& vUp =
-            fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) >= 0.99f
-                ? gVectorUnitY
-                : gVectorUnitZ;
+            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+                ? gVectorUnitZ
+                : gVectorUnitY;
         EntityDesc desc;
         desc.mMatrix = gMatrixIdentity;
         desc.mPlayerId = 0;
@@ -3711,29 +3702,24 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
         GetPoint(PblRandom::GetSim().GetFloat() * fLength, pKeys, iNumKeys,
                  pSegments, vPosition, vDir);
         const PblVector3& vPathUp =
-            fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) >= 0.99f
-                ? gVectorUnitY
-                : gVectorUnitZ;
+            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+                ? gVectorUnitZ
+                : gVectorUnitY;
         PblMatrix mPath = DirectionMatrix(vDir, vPathUp, vPosition);
 
-        PblVector3 vRand = PblRandom::GetSim().GetVector3();
-        float fX = vRand.x * 2.0f - 1.0f;
-        float fY = vRand.y * 2.0f - 1.0f;
-        float fZ = vRand.z * 2.0f - 1.0f;
-        float fOffsetLength = sqrtf(fX * fX + fZ * fZ);
+        PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
+        float fOffsetLength = sqrtf(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
         float fRadius = PblRandom::GetSim().GetFloat() * fDensity;
-        PblVector3 vOffset(fX / fOffsetLength * fRadius, fY / fOffsetLength * fRadius, 0.0f);
-        PblVector3 vOffsetPosition;
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vOffsetPosition), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mPath));
-        vPosition = vOffsetPosition;
+        PblVector3 vOffset(vUnit.x / fOffsetLength * fRadius, vUnit.y / fOffsetLength * fRadius, 0.0f);
+        vPosition = mPath.ApplyTransform(vOffset);
 
         vDir.x = (vMax.x - vMin.x) * PblRandom::GetSim().GetFloat() + vMin.x;
         vDir.y = (vMax.y - vMin.y) * PblRandom::GetSim().GetFloat() + vMin.y;
         vDir.z = (vMax.z - vMin.z) * PblRandom::GetSim().GetFloat() + vMin.z;
         const PblVector3& vUp =
-            fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) >= 0.99f
-                ? gVectorUnitY
-                : gVectorUnitZ;
+            (float)fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) < 0.99f
+                ? gVectorUnitZ
+                : gVectorUnitY;
         EntityDesc desc;
         desc.mMatrix = gMatrixIdentity;
         desc.mPlayerId = 0;

@@ -447,13 +447,13 @@ void UnitCTFOffenseAgent::UpdateStatePostVision(float dt)
             SetNextState(1);
             return;
         }
-        if (!mCtrl->GetLowLevel().IsNavigatorInProgress())
+        if (mCtrl->GetLowLevel().IsNavigatorInProgress())
         {
-            SetNextState(1);
-            return;
+            FaceTargetIfClose(HEIGHT_STAND);
+            break;
         }
-        FaceTargetIfClose(HEIGHT_STAND);
-        break;
+        SetNextState(1);
+        return;
 
     case 3:
         if (!IsFlagInMyHands())
@@ -477,9 +477,8 @@ void UnitCTFOffenseAgent::UpdateStatePostVision(float dt)
             break;
         }
         GameObject* pCarrierObj = pCarrier->GetControllable()->GetGameObject();
-        FormationType eFormation = static_cast<FormationType>(GetFormationType(mCtrl));
-        PblVector3 vOffset = ReserveManager::ReserveOffset(pCarrierObj, mCtrl->mOwner->GetGameObject(), eFormation);
-        PblVector3 vFollow(vOffset.x * 2.0f, vOffset.y * 2.0f, vOffset.z * 2.0f);
+        PblVector3 vFollow = ReserveManager::ReserveOffset(pCarrierObj, mCtrl->mOwner->GetGameObject(),
+                                                           static_cast<FormationType>(GetFormationType(mCtrl))) * 2.0f;
         mCtrl->GetLowLevel().SetNavigator_FollowTarget(pCarrierObj, vFollow);
         FaceTargetIfClose(HEIGHT_STAND);
         break;

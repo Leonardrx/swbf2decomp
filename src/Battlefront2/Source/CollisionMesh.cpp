@@ -95,44 +95,48 @@ CollisionMesh::~CollisionMesh()
 // FUNCTION: SWBF2 0x00461480
 PblBox CollisionMesh::GetWorldspaceAABB(const PblMatrix& matrix) const
 {
-    const CollisionAABB aabb = mAABB;
-    PblBox box;
-    box._vMin.x = box._vMin.y = box._vMin.z = FLT_MAX;
-    box._vMax.x = box._vMax.y = box._vMax.z = -FLT_MAX;
+    CollisionAABB aabb;
+    aabb.boxmin = mAABB.boxmin;
+    aabb.boxmax = mAABB.boxmax;
+    float fMinX = FLT_MAX;
+    float fMinY = FLT_MAX;
+    float fMinZ = FLT_MAX;
+    float fMaxX = -FLT_MAX;
+    float fMaxY = -FLT_MAX;
+    float fMaxZ = -FLT_MAX;
     for (int i = 0; i < 8; ++i)
     {
-        PblVector3 vCorner;
-        vCorner.x = (i & 4) ? aabb.boxmax.x : aabb.boxmin.x;
-        vCorner.y = (i & 2) ? aabb.boxmax.y : aabb.boxmin.y;
-        vCorner.z = (i & 1) ? aabb.boxmax.z : aabb.boxmin.z;
+        const PblVector3 vCorner((i & 4) ? aabb.boxmax.x : aabb.boxmin.x,
+                                 (i & 2) ? aabb.boxmax.y : aabb.boxmin.y,
+                                 (i & 1) ? aabb.boxmax.z : aabb.boxmin.z);
         PblVector3 v;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&v), reinterpret_cast<const D3DXVECTOR3*>(&vCorner), reinterpret_cast<const D3DXMATRIX*>(&matrix));
-        if (box._vMin.x > v.x)
+        if (fMinX > v.x)
         {
-            box._vMin.x = v.x;
+            fMinX = v.x;
         }
-        if (box._vMin.y > v.y)
+        if (fMinY > v.y)
         {
-            box._vMin.y = v.y;
+            fMinY = v.y;
         }
-        if (box._vMin.z > v.z)
+        if (fMinZ > v.z)
         {
-            box._vMin.z = v.z;
+            fMinZ = v.z;
         }
-        if (v.x > box._vMax.x)
+        if (v.x > fMaxX)
         {
-            box._vMax.x = v.x;
+            fMaxX = v.x;
         }
-        if (v.y > box._vMax.y)
+        if (v.y > fMaxY)
         {
-            box._vMax.y = v.y;
+            fMaxY = v.y;
         }
-        if (v.z > box._vMax.z)
+        if (v.z > fMaxZ)
         {
-            box._vMax.z = v.z;
+            fMaxZ = v.z;
         }
     }
-    return box;
+    return PblBox(fMinX, fMinY, fMinZ, fMaxX, fMaxY, fMaxZ);
 }
 
 
@@ -200,19 +204,18 @@ int RayConvexPoly_intersect(const PblVector3& vStart, const PblVector3& vDir, co
     const PblVector3 v0 = pVerts[pIndices[0]];
     PblVector3 vPrev = pVerts[pIndices[1]];
     const PblVector3 v2 = pVerts[pIndices[2]];
-    const PblVector3 e1(vPrev.x - v0.x, vPrev.y - v0.y, vPrev.z - v0.z);
-    const PblVector3 e2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
-    PblVector3 vCross(e1.y * e2.z - e1.z * e2.y, e1.z * e2.x - e1.x * e2.z, e1.x * e2.y - e1.y * e2.x);
+    const PblVector3 e1 = vPrev - v0;
+    const PblVector3 e2 = v2 - v0;
+    const PblVector3 vCross = CrossProduct(e1, e2);
     PblVector3 vNormal;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
 
-    const float fDenom = vDir.x * vNormal.x + vDir.y * vNormal.y + vDir.z * vNormal.z;
+    const float fDenom = DotProduct(vDir, vNormal);
     if (fDenom > -EPSILON)
     {
         return 0;
     }
-    const float t = ((v0.x - vStart.x) * vNormal.x + (v0.y - vStart.y) * vNormal.y + (v0.z - vStart.z) * vNormal.z)
-                  / fDenom;
+    const float t = DotProduct(v0 - vStart, vNormal) / fDenom;
     if (0.0f > t || t > fT)
     {
         return 0;
@@ -221,24 +224,33 @@ int RayConvexPoly_intersect(const PblVector3& vStart, const PblVector3& vDir, co
 
     PblVector3 vFrom = v0;
     PblVector3 vTo = vPrev;
-
-    bool bClosing = false;
-    for (int i = 2;; ++i)
+    PblVector3 vEdge = vTo - vFrom;
+    PblVector3 vOff = p - vFrom;
+    PblVector3 vSide = CrossProduct(vEdge, vOff);
+    if (0.0f > DotProduct(vSide, vNormal))
     {
-        const PblVector3 e(vTo.x - vFrom.x, vTo.y - vFrom.y, vTo.z - vFrom.z);
-        const PblVector3 d(p.x - vFrom.x, p.y - vFrom.y, p.z - vFrom.z);
-        const PblVector3 c(e.y * d.z - e.z * d.y, e.z * d.x - e.x * d.z, e.x * d.y - e.y * d.x);
-        if (0.0f > c.x * vNormal.x + c.y * vNormal.y + c.z * vNormal.z)
+        return 0;
+    }
+    for (int i = 2; i < iNumVerts; ++i)
+    {
+        vFrom = vTo;
+        vTo = pVerts[pIndices[i]];
+        vEdge = vTo - vFrom;
+        vOff = p - vFrom;
+        vSide = CrossProduct(vEdge, vOff);
+        if (0.0f > DotProduct(vSide, vNormal))
         {
             return 0;
         }
-        if (bClosing)
-        {
-            break;
-        }
-        vFrom = vTo;
-        bClosing = i >= iNumVerts;
-        vTo = bClosing ? v0 : pVerts[pIndices[i]];
+    }
+    vFrom = vTo;
+    vTo = v0;
+    vEdge = vTo - vFrom;
+    vOff = p - vFrom;
+    vSide = CrossProduct(vEdge, vOff);
+    if (0.0f > DotProduct(vSide, vNormal))
+    {
+        return 0;
     }
     fT = t;
     return 1;
@@ -265,37 +277,42 @@ bool CollisionMesh::_RayTestAABB(const PblVector3& vStart, const PblVector3& vDi
 {
     bool bInside = true;
     float maxT[3] = { -1.0f, -1.0f, -1.0f };
-    const float minB[3] = { aabb.boxmin.x, aabb.boxmin.y, aabb.boxmin.z };
-    const float maxB[3] = { aabb.boxmax.x, aabb.boxmax.y, aabb.boxmax.z };
-    const float origin[3] = { vStart.x, vStart.y, vStart.z };
-    const float dir[3] = { vDir.x, vDir.y, vDir.z };
-    float coord[3];
+    const PblVector3 minB = aabb.boxmin;
+    const PblVector3 maxB = aabb.boxmax;
+    const PblVector3 origin = vStart;
+    const PblVector3 dir = vDir;
+    PblVector3 coord;
+    const float* pMin = &minB.x;
+    const float* pMax = &maxB.x;
+    const float* pOrigin = &origin.x;
+    const float* pDir = &dir.x;
+    float* pCoord = &coord.x;
 
     for (int i = 0; i < 3; ++i)
     {
         float fPlane;
-        if (origin[i] < minB[i])
+        if (pOrigin[i] < pMin[i])
         {
-            fPlane = minB[i];
+            fPlane = pMin[i];
         }
-        else if (origin[i] > maxB[i])
+        else if (pOrigin[i] > pMax[i])
         {
-            fPlane = maxB[i];
+            fPlane = pMax[i];
         }
         else
         {
             continue;
         }
         bInside = false;
-        coord[i] = fPlane;
-        if (dir[i] != 0.0f)
+        pCoord[i] = fPlane;
+        if (pDir[i] != 0.0f)
         {
-            maxT[i] = (fPlane - origin[i]) / dir[i];
+            maxT[i] = (fPlane - pOrigin[i]) / pDir[i];
         }
     }
     if (bInside)
     {
-        vCoord = vStart;
+        vCoord = origin;
         return true;
     }
 
@@ -305,7 +322,7 @@ bool CollisionMesh::_RayTestAABB(const PblVector3& vStart, const PblVector3& vDi
         whichPlane = 2;
     }
     const float t = maxT[whichPlane];
-    if (t < 0.0f || t > fabsf(fLength / dir[whichPlane]))
+    if (t < 0.0f || t > fabsf(fLength / pDir[whichPlane]))
     {
         return false;
     }
@@ -315,20 +332,20 @@ bool CollisionMesh::_RayTestAABB(const PblVector3& vStart, const PblVector3& vDi
         {
             continue;
         }
-        coord[i] = dir[i] * t + origin[i];
-        if (coord[i] < minB[i] - EPSILON || coord[i] > maxB[i] + EPSILON)
+        pCoord[i] = pDir[i] * t + pOrigin[i];
+        if (pCoord[i] < pMin[i] - EPSILON || pCoord[i] > pMax[i] + EPSILON)
         {
             return false;
         }
     }
-    const float dx = coord[0] - origin[0];
-    const float dy = coord[1] - origin[1];
-    const float dz = coord[2] - origin[2];
+    const float dx = pCoord[0] - pOrigin[0];
+    const float dy = pCoord[1] - pOrigin[1];
+    const float dz = pCoord[2] - pOrigin[2];
     if (dx * dx + dy * dy + dz * dz > fLength * fLength)
     {
         return false;
     }
-    vCoord = PblVector3(coord[0], coord[1], coord[2]);
+    vCoord = coord;
     return true;
 }
 
@@ -348,19 +365,16 @@ int CollisionMesh::_RayHit(const PblVector3& vStart, const PblVector3& vDir, flo
 
     if (!pNode->isleaf)
     {
-        CollisionTreeNode* pLChild = pNode + 1;
-        CollisionTreeNode* pGChild = (CollisionTreeNode*)pNode->data;
-        CollisionAABB lAABB(aabb, pLChild->aabb);
-        CollisionAABB gAABB(aabb, pGChild->aabb);
-        const float fLDist = BoxDistSq(vStart, lAABB);
-        if (BoxDistSq(vStart, gAABB) > fLDist)
+        CollisionAABB lAABB(aabb, (pNode + 1)->aabb);
+        CollisionAABB gAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
+        if (BoxDistSq(vStart, lAABB) < BoxDistSq(vStart, gAABB))
         {
-            const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, pLChild, lAABB, fT, ppHitLeaf);
-            const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, pGChild, gAABB, fT, ppHitLeaf);
+            const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
+            const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
             return (iSecond | iFirst) != 0;
         }
-        const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, pGChild, gAABB, fT, ppHitLeaf);
-        const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, pLChild, lAABB, fT, ppHitLeaf);
+        const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
+        const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
         return (iFirst | iSecond) != 0;
     }
 
@@ -375,7 +389,8 @@ int CollisionMesh::_RayHit(const PblVector3& vStart, const PblVector3& vDir, flo
         fT = t;
         sDrawThisLeaf = (CollisionTreeLeaf*)pNode;
         *ppHitLeaf = pNode;
-        sDrawThisAABB = aabb;
+        sDrawThisAABB.boxmin = aabb.boxmin;
+        sDrawThisAABB.boxmax = aabb.boxmax;
     }
     return 1;
 }
@@ -509,9 +524,12 @@ void CollisionMesh::_Read(PblFileChunk& chunk)
             mPoslList = new PblVector3[mPoslCount];
             for (unsigned int i = 0; i < mPoslCount; ++i)
             {
-                mPoslList[i].x = child._pFile->ReadFloat();
-                mPoslList[i].y = child._pFile->ReadFloat();
-                mPoslList[i].z = child._pFile->ReadFloat();
+                const float x = child._pFile->ReadFloat();
+                mPoslList[i].x = x;
+                const float y = child._pFile->ReadFloat();
+                mPoslList[i].y = y;
+                const float z = child._pFile->ReadFloat();
+                mPoslList[i].z = z;
             }
             break;
         case 0x4B53414D:
@@ -594,9 +612,11 @@ void CollisionMesh::__GetTriHits(const PblVector3& vPos, float fRadius2, const P
 {
     const CollisionMesh* pMesh = (const CollisionMesh*)this;
     RedStack stack;
+    const PblVector3 boxMin = aabb.boxmin;
+    const PblVector3 boxMax = aabb.boxmax;
     const float* pPos = &vPos.x;
-    const float* pBoxMin = &aabb.boxmin.x;
-    const float* pBoxMax = &aabb.boxmax.x;
+    const float* pBoxMin = &boxMin.x;
+    const float* pBoxMax = &boxMax.x;
     int i;
     if (pCache)
     {
@@ -637,8 +657,10 @@ void CollisionMesh::__GetTriHits(const PblVector3& vPos, float fRadius2, const P
 
         CollisionTreeNode* pLChild = pNode + 1;
         CollisionTreeNode* pGChild = (CollisionTreeNode*)pNode->data;
-        CollisionAABB lAABB(aabb, pLChild->aabb);
-        CollisionAABB gAABB(aabb, pGChild->aabb);
+        CollisionAABB lAABB;
+        lAABB = CollisionAABB(aabb, pLChild->aabb);
+        CollisionAABB gAABB;
+        gAABB = CollisionAABB(aabb, pGChild->aabb);
         ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pLChild, lAABB, list, pCache);
         ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pGChild, gAABB, list, pCache);
         return;
@@ -711,7 +733,7 @@ CollisionMeshCache* CollisionMesh::_GetTriHits(const PblVector3& vPos, float fRa
         if (!pCache)
         {
             pCache = &pCaches[0];
-            for (int i = 1; i < 3; ++i)
+            for (int i = 0; i < 3; ++i)
             {
                 if (pCaches[i].mNumPolys < pCache->mNumPolys)
                 {

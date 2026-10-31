@@ -346,24 +346,20 @@ void GodrayManager::Update(float fDeltaTime)
         return;
     }
 
-    if (++m_uiFrame == 0)
-    {
-        m_uiFrame = 1;
-    }
+    m_uiFrame = (m_uiFrame + 1 == 0) ? 1 : m_uiFrame + 1;
     m_fTime += fDeltaTime;
 
     const PblVector3 vSunDir = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
 
     PblVector3 vAxisIn(vSunDir.y * 0.0f - vSunDir.z, vSunDir.z * 0.0f - vSunDir.x * 0.0f,
                        vSunDir.x - vSunDir.y * 0.0f);
-    PblVector3 vAxis;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vAxis, (const D3DXVECTOR3*)&vAxisIn);
-    D3DXMATRIX mRotation;
-    D3DXMatrixRotationAxis(&mRotation, (const D3DXVECTOR3*)&vAxis, m_fOffsetAngle);
+    D3DXVec3Normalize((D3DXVECTOR3*)&vAxisIn, (const D3DXVECTOR3*)&vAxisIn);
+    PblMatrix mRotation;
+    D3DXMatrixRotationAxis((D3DXMATRIX*)&mRotation, (const D3DXVECTOR3*)&vAxisIn, m_fOffsetAngle);
     PblVector3 vLengthDir;
     D3DXVec3TransformNormal((D3DXVECTOR3*)&vLengthDir,
                             (const D3DXVECTOR3*)&RedLight::GetGlobalDirectionalLight(0)->m_vDirection,
-                            &mRotation);
+                            (const D3DXMATRIX*)&mRotation);
     m_vLengthDir = vLengthDir;
 
     m_Rand.SetSeed((unsigned int)(m_fTime * 4099.0f));
@@ -378,8 +374,7 @@ void GodrayManager::Update(float fDeltaTime)
         else
         {
             m_aVisibleGodrays[i].pGodray->uiFrameLastVisible = m_uiFrame;
-            --m_uiNumVisibleGodrays;
-            m_aVisibleGodrays[i] = m_aVisibleGodrays[m_uiNumVisibleGodrays];
+            m_aVisibleGodrays[i] = m_aVisibleGodrays[--m_uiNumVisibleGodrays];
             --i;
         }
     }
@@ -621,10 +616,10 @@ GodrayManager::Godray* GodrayManager::ChooseNewGodray()
         return 0;
     }
 
-    Godray* pBest = 0;
-    unsigned int uiBestScore = 0;
-    const int iNumCameras = CameraManager::Instance()->GetNumCameras();
     Godray* pPrev = 0;
+    const int iNumCameras = CameraManager::Instance()->GetNumCameras();
+    unsigned int uiBestScore = 0;
+    Godray* pBest = 0;
     for (Godray* pGodray = m_pFirstAllocatedGodray; pGodray; pPrev = pGodray, pGodray = pGodray->pNext)
     {
         if (pGodray->uiFrameLastVisible == 0)
@@ -635,8 +630,9 @@ GodrayManager::Godray* GodrayManager::ChooseNewGodray()
         if (pGodray->fLength < 0.0f)
         {
             const float fMaxLength = m_fMaxGodrayLength;
+            const PblVector3& vDir = m_vLengthDir;
             CollisionObject* pHitObject;
-            float fLength = CollisionManager::RayHit(pGodray->vStartPos, m_vLengthDir, fMaxLength,
+            float fLength = CollisionManager::RayHit(pGodray->vStartPos, vDir, fMaxLength,
                                                      pHitObject, 0, 0, 0, 0x80, false) *
                             fMaxLength;
             if (fLength <= 0.0f)
@@ -649,9 +645,9 @@ GodrayManager::Godray* GodrayManager::ChooseNewGodray()
                 fLength = fMaxLength;
             }
             pGodray->fLength = fLength;
-            pGodray->vEndPos = PblVector3(pGodray->vStartPos.x + m_vLengthDir.x * fLength,
-                                          pGodray->vStartPos.y + m_vLengthDir.y * fLength,
-                                          pGodray->vStartPos.z + m_vLengthDir.z * fLength);
+            pGodray->vEndPos = PblVector3(pGodray->vStartPos.x + vDir.x * fLength,
+                                          pGodray->vStartPos.y + vDir.y * fLength,
+                                          pGodray->vStartPos.z + vDir.z * fLength);
         }
 
         unsigned int uiScore = m_uiFrame - pGodray->uiFrameLastVisible;
@@ -767,19 +763,20 @@ GodrayManager::VisibleGodray* GodrayManager::CreateVisibleGodray(Godray* pGodray
 void GodrayManager::CreateRay(VisibleGodray* pVisible, unsigned int uiRay)
 {
     VisibleGodray::Ray& ray = pVisible->aRays[uiRay];
-    const Godray* pGodray = pVisible->pGodray;
 
     ray.fTime0 = m_fTime;
-    ray.fLifeTime = pGodray->fLifetimeMin + (pGodray->fLifetimeMax - pGodray->fLifetimeMin) * m_Rand.GetFloat();
+    ray.fLifeTime = pVisible->pGodray->fLifetimeMin +
+                    (pVisible->pGodray->fLifetimeMax - pVisible->pGodray->fLifetimeMin) * m_Rand.GetFloat();
 
     const float r = m_Rand.GetFloat();
-    const float fDist = (1.0f - r * r) * (pGodray->fRadius - ray.fRadius);
-    const float fAngle = m_Rand.GetFloat() * PblMath::fTwoPi;
+    const float fDist = (1.0f - r * r) * (pVisible->pGodray->fRadius - ray.fRadius);
+    const float fAngle = m_Rand.GetFloat() * (PblMath::fPi * 2.0f);
     ray.fPosX = PblMath::Cos(fAngle) * fDist;
     ray.fPosZ = PblMath::Sin(fAngle) * fDist;
 
-    ray.fRadius0 = (pGodray->fRadius * 0.5f - 0.1f) * m_Rand.GetFloat() + 0.1f;
-    ray.fAlpha0 = pGodray->fAlphaMin + (pGodray->fAlphaMax - pGodray->fAlphaMin) * m_Rand.GetFloat();
+    ray.fRadius0 = (pVisible->pGodray->fRadius * 0.5f - 0.1f) * m_Rand.GetFloat() + 0.1f;
+    ray.fAlpha0 = pVisible->pGodray->fAlphaMin +
+                  (pVisible->pGodray->fAlphaMax - pVisible->pGodray->fAlphaMin) * m_Rand.GetFloat();
     ray.fTexOffsetL0 = m_Rand.GetFloat();
     ray.fTexOffsetW0 = m_Rand.GetFloat();
     ray.fRadius = 0.0f;

@@ -144,11 +144,19 @@ void MapCamera::Update(float fDeltaTime)
     {
         float fT = 0.5f - PblMath::Cos(mZoomRatio * PblMath::fPi) * 0.5f;
         float fDir = (float)mZoomDir;
-        PblVector3 vZoomDir = HermiteSpline(fT, mZoomOldDir, Scale(mZoomOldDir, fDir),
-                                            mZoomNewDir, Scale(mZoomNewDir, fDir));
+        const float t2 = fT * fT;
+        const float t3 = t2 * fT;
+        const float h00 = 2.0f * t3 - 3.0f * t2 + 1.0f;
+        const float h10 = t3 - 2.0f * t2 + fT;
+        const float h01 = 3.0f * t2 - 2.0f * t3;
+        const float h11 = t3 - t2;
+        PblVector3 vZoomDir(h00 * mZoomOldDir.x + h10 * (mZoomOldDir.x * fDir) + h01 * mZoomNewDir.x + h11 * (mZoomNewDir.x * fDir),
+                            h00 * mZoomOldDir.y + h10 * (mZoomOldDir.y * fDir) + h01 * mZoomNewDir.y + h11 * (mZoomNewDir.y * fDir),
+                            h00 * mZoomOldDir.z + h10 * (mZoomOldDir.z * fDir) + h01 * mZoomNewDir.z + h11 * (mZoomNewDir.z * fDir));
         float fTangent = -(mZoomDist * fDir);
-        PblVector3 vZoomPos = HermiteSpline(fT, mZoomOldPos, Scale(mZoomOldDir, fTangent),
-                                            mZoomNewPos, Scale(mZoomNewDir, fTangent));
+        PblVector3 vZoomPos(h00 * mZoomOldPos.x + h10 * (mZoomOldDir.x * fTangent) + h01 * mZoomNewPos.x + h11 * (mZoomNewDir.x * fTangent),
+                            h00 * mZoomOldPos.y + h10 * (mZoomOldDir.y * fTangent) + h01 * mZoomNewPos.y + h11 * (mZoomNewDir.y * fTangent),
+                            h00 * mZoomOldPos.z + h10 * (mZoomOldDir.z * fTangent) + h01 * mZoomNewPos.z + h11 * (mZoomNewDir.z * fTangent));
         mMatrix = DirectionMatrix(vZoomDir, gVectorUnitY, vZoomPos);
     }
     else

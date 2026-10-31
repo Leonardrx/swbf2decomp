@@ -1049,13 +1049,13 @@ float CollisionManager::I_RayHit(const PblVector3& vStart, const PblVector3& vDi
     RayData data;
     data.SetObjectTypeFilter(iFilter);
     data.mFirstHit = NULL;
-    data.mIgnore = (GameObject**)pIgnore;
-    data.mIgnoreCount = iIgnoreCount;
+    data.mRayTestFlag = false;
     data.mStartPos = vStart;
     data.mDirection = vDir;
-    data.mLength = fLength;
     data.mNormal = pNormal;
-    data.mRayTestFlag = false;
+    data.mIgnore = (GameObject**)pIgnore;
+    data.mIgnoreCount = iIgnoreCount;
+    data.mLength = fLength;
     data.mBodyID = pBodyId;
     data.mOrdnanceCollision = bOrdnance;
 
@@ -1078,8 +1078,7 @@ float CollisionManager::I_RayHit(const PblVector3& vStart, const PblVector3& vDi
         }
     }
 
-    PblVector3 vEnd(vStart.x + vDir.x * data.mLength, vStart.y + vDir.y * data.mLength,
-                    vStart.z + vDir.z * data.mLength);
+    PblVector3 vEnd = vStart + vDir * data.mLength;
     PblVector3 vMin = Min(vStart, vEnd);
     PblVector3 vMax = Max(vStart, vEnd);
     if (mTreeGrid)
@@ -1136,6 +1135,7 @@ void CollisionManager::UpdateSimple(PblList<CollisionObject>& list, int iFilter)
 {
     PblVector3 vCameraPos[1];
     CollectData data;
+    data.SetObjectTypeFilter(iFilter);
     data.mLength = 0;
 
     int iNumCameras = CameraManager::Instance()->GetNumCameras();
@@ -1300,7 +1300,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
         }
 
         float fInvDist = 1.0f / (totalDist + EPSILON);
-        PblVector3 deltaMove(diff.x * fInvDist, diff.y * fInvDist, diff.z * fInvDist);
+        PblVector3 deltaMove = diff * fInvDist;
         float fRadius = obj->GetCollisionRadius();
         float fHalfDim = obj->GetSmallestCollisionDim() * 0.5f;
         float fStepSize = fRadius > fHalfDim ? fHalfDim : fRadius;
@@ -1344,7 +1344,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
         {
             data.mMe = obj;
             const PblVector3& vCenter = obj->GetCollisionCenter();
-            data.mCenter = PblVector3(vCenter.x - diff.x * 0.5f, vCenter.y - diff.y * 0.5f, vCenter.z - diff.z * 0.5f);
+            data.mCenter = vCenter - diff * 0.5f;
             data.mRadius = totalDist * 0.5f + obj->GetCollisionRadius();
             data.mMinPos = PblVector3(data.mCenter.x - data.mRadius, data.mCenter.y - data.mRadius,
                                       data.mCenter.z - data.mRadius);

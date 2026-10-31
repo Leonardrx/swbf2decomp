@@ -108,16 +108,18 @@ void NavigatorGraphFollower::EnterState()
         return;
     }
 
-    Controllable* pMe = mOwner->mOwner->mOwner;
-    PblVector3 vFrom = pMe->GetMatrix().GetTranslation();
+    PblVector3 vFrom = mOwner->mOwner->mOwner->GetMatrix().GetTranslation();
     PblVector3 vTo = mGlobalDest;
-    const GameObject* pObj = pMe->GetGameObject();
+    const GameObject* pObj = mOwner->mOwner->mOwner->GetGameObject();
 
     delete mPathFollower;
     mPathFollower = new PathFollower(mOwner->mOwner, vFrom, vFrom, (const Obstacle**)mIgnore,
                                      mIgnoreCnt, false);
 
-    delete mGraphFollower;
+    if (mGraphFollower)
+    {
+        delete mGraphFollower;
+    }
     mGraphFollower = new ConnectivityGraphFollower(mOwner->mOwner);
     if (!mGraphFollower)
     {
@@ -142,7 +144,7 @@ void NavigatorGraphFollower::EnterState()
     unsigned int uArcFlags = mGraphFollower->GetCurrentArcFlags();
     if (uArcFlags)
     {
-        unsigned short uFlags = (uArcFlags & 2) ? AIPathNode::AIPN_JUMP : 0;
+        unsigned int uFlags = (uArcFlags & 2) ? AIPathNode::AIPN_JUMP : 0;
         if (uArcFlags & 4)
         {
             uFlags |= AIPathNode::AIPN_JETJUMP;
@@ -152,10 +154,10 @@ void NavigatorGraphFollower::EnterState()
         if (pPath)
         {
             pPath->Prepend(vDest, 0);
-            PblVector3 vDelta(vDest.x - vFrom.x, vDest.y - vFrom.y, vDest.z - vFrom.z);
+            PblVector3 vDelta = vDest - vFrom;
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-            PblVector3 vJump(vDir.x * 0.1f + vFrom.x, vDir.y * 0.1f + vFrom.y, vDir.z * 0.1f + vFrom.z);
+            PblVector3 vJump = vDir * 0.1f + vFrom;
             pPath->Prepend(vJump, uFlags);
             pPath->Prepend(vFrom, 0);
 

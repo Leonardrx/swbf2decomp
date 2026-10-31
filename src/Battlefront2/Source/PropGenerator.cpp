@@ -242,11 +242,7 @@ void PropGenerator::SortClusters()
             {
                 continue;
             }
-            const PblVector3& vPos = pCluster->GetRenderPos();
-            float dx = vPos.x - m_amCamera[iCam].m[3][0];
-            float dy = vPos.y - m_amCamera[iCam].m[3][1];
-            float dz = vPos.z - m_amCamera[iCam].m[3][2];
-            float fDist = dx * dx + dy * dy + dz * dz;
+            float fDist = SquaredLength(pCluster->GetRenderPos() - m_amCamera[iCam].GetTranslation());
             if (fDist < afScore[i])
             {
                 afScore[i] = fDist;
@@ -755,6 +751,7 @@ void PropGenerator::SetupClusters()
         {
             const int iIndex = z * mClusterMapWidth + x;
             mClusterMap[iIndex].Setup(x, z);
+            const int iCellX = x * 2;
 
             for (int iLayer = 0; iLayer < 4; iLayer++)
             {
@@ -763,11 +760,13 @@ void PropGenerator::SetupClusters()
                     continue;
                 }
 
-                SetRandSeed(iIndex + z * 2 + iLayer);
+                SetRandSeed(iLayer + z * 2 + iIndex);
                 PropLayer& layer = mPropLayers[iLayer];
-                for (int cz = z * 2; cz < z * 2 + 2; cz++)
+                int cz = z * 2;
+                for (int nz = 0; nz < 2; nz++, cz++)
                 {
-                    for (int cx = x * 2; cx < x * 2 + 2; cx++)
+                    int cx = iCellX;
+                    for (int nx = 0; nx < 2; nx++, cx++)
                     {
                         if (!((GetLayers(cx, cz) >> iLayer) & 1))
                         {

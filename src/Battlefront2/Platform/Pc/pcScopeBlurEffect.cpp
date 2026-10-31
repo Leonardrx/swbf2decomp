@@ -136,18 +136,14 @@ void ScopeBlurEffect::Render(int value)
     RedRenderer::pcGetViewport(viewport);
     RedRenderer::pcGetViewportExtents(left, top, right, bottom);
 
-    float fU0 = viewport.fOffsetX * fU;
-    float fV0 = viewport.fOffsetY * fV;
-    float fU1 = (viewport.fWidth + viewport.fOffsetX) * fU;
-    float fV1 = (viewport.fHeight + viewport.fOffsetY) * fV;
     pVerts[0] = left;   pVerts[1] = top;     pVerts[2] = 0.0f;  pVerts[3] = 1.0f;
-    pVerts[4] = fU0;    pVerts[5] = fV0;     pVerts[6] = 0.0f;  pVerts[7] = 0.0f;
+    pVerts[4] = viewport.fOffsetX * fU;    pVerts[5] = viewport.fOffsetY * fV;     pVerts[6] = 0.0f;  pVerts[7] = 0.0f;
     pVerts[8] = left;   pVerts[9] = bottom;  pVerts[10] = 0.0f; pVerts[11] = 1.0f;
-    pVerts[12] = fU0;   pVerts[13] = fV1;    pVerts[14] = 0.0f; pVerts[15] = 1.0f;
+    pVerts[12] = viewport.fOffsetX * fU;   pVerts[13] = (viewport.fHeight + viewport.fOffsetY) * fV;    pVerts[14] = 0.0f; pVerts[15] = 1.0f;
     pVerts[16] = right; pVerts[17] = top;    pVerts[18] = 0.0f; pVerts[19] = 1.0f;
-    pVerts[20] = fU1;   pVerts[21] = fV0;    pVerts[22] = 1.0f; pVerts[23] = 0.0f;
+    pVerts[20] = (viewport.fWidth + viewport.fOffsetX) * fU;   pVerts[21] = viewport.fOffsetY * fV;     pVerts[22] = 1.0f; pVerts[23] = 0.0f;
     pVerts[24] = right; pVerts[25] = bottom; pVerts[26] = 0.0f; pVerts[27] = 1.0f;
-    pVerts[28] = fU1;   pVerts[29] = fV1;    pVerts[30] = 1.0f; pVerts[31] = 1.0f;
+    pVerts[28] = (viewport.fWidth + viewport.fOffsetX) * fU;   pVerts[29] = (viewport.fHeight + viewport.fOffsetY) * fV;    pVerts[30] = 1.0f; pVerts[31] = 1.0f;
     pPrimitive->EndVertexData();
 
     RedRenderer::pcRenderPrimitive(pPrimitive, m_pClearShader, gMatrixIdentity,

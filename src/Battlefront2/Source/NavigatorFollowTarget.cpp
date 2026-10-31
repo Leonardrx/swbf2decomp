@@ -241,16 +241,18 @@ void NavigatorFollowTarget::UpdateTarget()
     const int iPrev = (mCrumbHead > 0) ? mCrumbHead - 1 : NUM_CRUMBS - 1;
     const int iNext = (mCrumbHead < NUM_CRUMBS - 1) ? mCrumbHead + 1 : 0;
 
-    const PblVector3 vWobble = GetSineRandomOffsetXZ(
+    const PblVector3& vWobble = GetSineRandomOffsetXZ(
         HandleObject(mFollowTarget),
         ReserveManager::GetReserveOrder(HandleObject(mFollowTarget),
                                         mOwner->mOwner->mOwner->GetGameObject(), RT_FORMATION));
-    const PblVector3 vOffset(vWobble.x * 0.3f, vWobble.y * 0.3f, vWobble.z * 0.3f);
+    const float fOffsetX = vWobble.x * 0.3f;
+    const float fOffsetY = vWobble.y * 0.3f;
+    const float fOffsetZ = vWobble.z * 0.3f;
 
     PblVector3 vPos;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&mFollowOffset), reinterpret_cast<const D3DXMATRIX*>(&GameObjectMatrix(HandleObject(mFollowTarget))));
+    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&mFollowOffset), reinterpret_cast<const D3DXMATRIX*>(&static_cast<const CollisionObject&>(*HandleObject(mFollowTarget)).GetMatrix()));
     PblVector3& vHead = mCrumbBuffer[mCrumbHead];
-    vHead = PblVector3(vPos.x + vOffset.x, vPos.y + vOffset.y, vPos.z + vOffset.z);
+    vHead = PblVector3(vPos.x + fOffsetX, vPos.y + fOffsetY, vPos.z + fOffsetZ);
 
     PblVector3 vNormal;
     PathFinder::PushValidPoint(GameObjectPosition(HandleObject(mFollowTarget)), vHead, vNormal,

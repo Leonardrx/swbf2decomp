@@ -244,18 +244,12 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
     mParticle[sLeafParticleIndex].mPos = vPos;
     float fScale = ((float)iLeft + 1.0f) * 0.25f;
     float fSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
-    if (fScale >= 1.0f)
-    {
-        fScale = 1.0f;
-    }
+    fScale = Min(fScale, 1.0f);
     fSize = fScale * fSize;
-    mParticle[sLeafParticleIndex++].mSize = fSize;
+    mParticle[sLeafParticleIndex].mSize = fSize;
+    ++sLeafParticleIndex;
 
-    int iLength = (int)((float)(mVineLengthMax - mVineLengthMin) * rand.GetFloat() + (float)mVineLengthMin);
-    if (iLength > iLeft)
-    {
-        iLength = iLeft;
-    }
+    int iLength = Min((int)((float)(mVineLengthMax - mVineLengthMin) * rand.GetFloat() + (float)mVineLengthMin), iLeft);
 
     for (; iLength != 0; --iLength)
     {
@@ -264,9 +258,7 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
         vDir.x += vWander.x;
         vDir.y += vWander.y;
         vDir.z += vWander.z;
-        PblVector3 vNorm;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
-        vDir = vNorm;
+        vDir = Normalize(vDir);
 
         vPos.x += vDir.x * fSize * mVineSpread;
         vPos.y += vDir.y * fSize * mVineSpread;
@@ -274,35 +266,32 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
 
         fScale = ((float)iLeft + 1.0f) * 0.25f;
         fSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
-        if (fScale >= 1.0f)
-        {
-            fScale = 1.0f;
-        }
+        fScale = Min(fScale, 1.0f);
         --iLeft;
         fSize = fScale * fSize;
         mParticle[sLeafParticleIndex].mPos = vPos;
-        mParticle[sLeafParticleIndex++].mSize = fSize;
+        mParticle[sLeafParticleIndex].mSize = fSize;
+        ++sLeafParticleIndex;
     }
 
     if (iLeft > 0)
     {
-        PblVector3 vTarget((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
-                           (rand.GetFloat() - rand.GetFloat()) * mVineZSpread);
-        PblVector3 vBranch = Interpolate(vDir, vTarget, 0.8f);
-        PblVector3 vNorm;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vBranch));
-        vBranch = vNorm;
+        PblVector3 vBranch = Interpolate(vDir,
+                                         PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
+                                                    (rand.GetFloat() - rand.GetFloat()) * mVineZSpread),
+                                         0.8f);
+        vBranch = Normalize(vBranch);
         const int iSplit = (int)((rand.GetFloat() * 0.5f + 0.25f) * (float)iLeft);
         CreateVineBranch(PblVector3(vBranch.x * fSize * mVineSpread + vPos.x,
                                     vBranch.y * fSize * mVineSpread + vPos.y,
                                     vBranch.z * fSize * mVineSpread + vPos.z),
                          vBranch, iSplit, rand);
 
-        vTarget = PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
-                             (rand.GetFloat() - rand.GetFloat()) * mVineZSpread);
-        vBranch = Interpolate(vDir, vTarget, 0.8f);
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vBranch));
-        vBranch = vNorm;
+        vBranch = Interpolate(vDir,
+                              PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
+                                         (rand.GetFloat() - rand.GetFloat()) * mVineZSpread),
+                              0.8f);
+        vBranch = Normalize(vBranch);
         CreateVineBranch(PblVector3(vBranch.x * fSize * mVineSpread + vPos.x,
                                     vBranch.y * fSize * mVineSpread + vPos.y,
                                     vBranch.z * fSize * mVineSpread + vPos.z),
@@ -339,81 +328,79 @@ void LeafPatchClass::Init()
 
     for (int i = 0; i < mNumParticles; ++i)
     {
-        LeafParticle& particle = mParticle[i];
-
         if (mType != 3)
         {
             if (mType == 2)
             {
-                particle.mPos = PblVector3((rand.GetFloat() - 0.5f) * mBoxSize.x,
-                                           (rand.GetFloat() - 0.5f) * mBoxSize.y,
-                                           (rand.GetFloat() - 0.5f) * mBoxSize.z);
+                mParticle[i].mPos = PblVector3((rand.GetFloat() - 0.5f) * mBoxSize.x,
+                                               (rand.GetFloat() - 0.5f) * mBoxSize.y,
+                                               (rand.GetFloat() - 0.5f) * mBoxSize.z);
             }
             else
             {
                 do
                 {
-                    particle.mPos = PblVector3(rand.GetFloat() * mRadius * 1.5f, rand.GetFloat() * mRadius,
-                                               rand.GetFloat() * mRadius * 1.5f);
+                    mParticle[i].mPos = PblVector3(rand.GetFloat() * mRadius * 1.5f, rand.GetFloat() * mRadius,
+                                                   rand.GetFloat() * mRadius * 1.5f);
                     if (cQuadrant < 2)
                     {
-                        particle.mPos.x = -particle.mPos.x;
+                        mParticle[i].mPos.x = -mParticle[i].mPos.x;
                     }
                     if (cQuadrant == 1 || cQuadrant == 2)
                     {
-                        particle.mPos.z = -particle.mPos.z;
+                        mParticle[i].mPos.z = -mParticle[i].mPos.z;
                     }
                     cQuadrant = (char)((cQuadrant + 1) % 4);
-                } while (particle.mPos.x * particle.mPos.x + particle.mPos.y * particle.mPos.y
-                             + particle.mPos.z * particle.mPos.z
+                } while (mParticle[i].mPos.x * mParticle[i].mPos.x + mParticle[i].mPos.y * mParticle[i].mPos.y
+                             + mParticle[i].mPos.z * mParticle[i].mPos.z
                          > mRadius * mRadius);
 
-                particle.mPos.y = fInvHeightScale * mHeight / mRadius * particle.mPos.y;
-                if (mConeHeight > 0.0f && particle.mPos.y > mHeight - mConeHeight)
+                mParticle[i].mPos.y = fInvHeightScale * mHeight / mRadius * mParticle[i].mPos.y;
+                if (mConeHeight > 0.0f && mParticle[i].mPos.y > mHeight - mConeHeight)
                 {
-                    const float fPinch = (mHeight - particle.mPos.y) / mConeHeight;
-                    particle.mPos.x *= fPinch;
-                    particle.mPos.z *= fPinch;
+                    const float fPinch = (mHeight - mParticle[i].mPos.y) / mConeHeight;
+                    mParticle[i].mPos.x *= fPinch;
+                    mParticle[i].mPos.z *= fPinch;
                 }
             }
-            particle.mSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
+            mParticle[i].mSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
         }
 
         const float fDarknessRange = mDarknessMax - mDarknessMin;
         const RedDirectionalLight* pLight = RedLight::m_sGlobalDirectionals[0];
         const float fDarkness = rand.GetFloat() * fDarknessRange * 0.5f + mDarknessMin;
         PblVector3 vNormal;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&particle.mPos));
-        particle.mColor.a = mAlpha;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&mParticle[i].mPos));
+        mParticle[i].mColor.a = mAlpha;
         const float fShade = fDarkness
                              - (pLight->m_vDirection.y * vNormal.y + vNormal.x * pLight->m_vDirection.x
                                 + pLight->m_vDirection.z * vNormal.z)
                                    * fDarknessRange * 0.5f;
-        particle.mColor.r = fShade;
-        particle.mColor.g = fShade;
-        particle.mColor.b = fShade;
-        particle.mTime = rand.GetFloat() * 100.0f;
-        particle.mTexture = (unsigned char)(i % 4);
-        particle.mPos.x += vOffset.x;
-        particle.mPos.y += vOffset.y;
-        particle.mPos.z += vOffset.z;
+        mParticle[i].mColor.r = fShade;
+        mParticle[i].mColor.g = fShade;
+        mParticle[i].mColor.b = fShade;
+        mParticle[i].mTime = rand.GetFloat() * 100.0f;
+        mParticle[i].mTexture = (unsigned char)(i % 4);
+        mParticle[i].mPos.x += vOffset.x;
+        mParticle[i].mPos.y += vOffset.y;
+        mParticle[i].mPos.z += vOffset.z;
 
-        const float fHalfSize = particle.mSize * 0.5f;
-        vMin.x = Min(vMin.x, particle.mPos.x - fHalfSize);
-        vMin.y = Min(vMin.y, (particle.mPos.y - fHalfSize) * mHeightScale);
-        vMin.z = Min(vMin.z, particle.mPos.z - fHalfSize);
-        vMax.x = Max(vMax.x, fHalfSize + particle.mPos.x);
-        vMax.y = Max(vMax.y, (fHalfSize + particle.mPos.y) * mHeightScale);
-        vMax.z = Max(vMax.z, fHalfSize + particle.mPos.z);
+        const float fHalfSize = mParticle[i].mSize * 0.5f;
+        const float fLowX = mParticle[i].mPos.x - fHalfSize;
+        const float fLowY = (mParticle[i].mPos.y - fHalfSize) * mHeightScale;
+        const float fLowZ = mParticle[i].mPos.z - fHalfSize;
+        vMin.x = vMin.x < fLowX ? vMin.x : fLowX;
+        vMin.y = vMin.y < fLowY ? vMin.y : fLowY;
+        vMin.z = vMin.z < fLowZ ? vMin.z : fLowZ;
+        vMax.x = Max(vMax.x, fHalfSize + mParticle[i].mPos.x);
+        vMax.y = Max(vMax.y, (fHalfSize + mParticle[i].mPos.y) * mHeightScale);
+        vMax.z = Max(vMax.z, fHalfSize + mParticle[i].mPos.z);
     }
 
-    mBoundingOffset.x = (vMax.x + vMin.x) * 0.5f;
-    mBoundingOffset.y = (vMax.y + vMin.y) * 0.5f;
-    mBoundingOffset.z = (vMax.z + vMin.z) * 0.5f;
+    mBoundingOffset = PblVector3((vMax.x + vMin.x) * 0.5f, (vMax.y + vMin.y) * 0.5f, (vMax.z + vMin.z) * 0.5f);
     mBoundingRadius = 0.0f;
-    mBoundingBoxRadius.x = vMax.x - mBoundingOffset.x;
-    mBoundingBoxRadius.y = vMax.y - mBoundingOffset.y;
-    mBoundingBoxRadius.z = vMax.z - mBoundingOffset.z;
+    mBoundingBoxRadius = PblVector3(vMax.x - mBoundingOffset.x, vMax.y - mBoundingOffset.y,
+                                    vMax.z - mBoundingOffset.z);
 
     for (int i = 0; i < mNumParticles; ++i)
     {
@@ -461,39 +448,21 @@ extern NoLodData noloddata;
 LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     : RedSceneObject(&noloddata)
     , CollisionObject(COLL_LEAFPATCH, 0, 0, 0)
-    , mClass(pClass)
 {
+    mClass = pClass;
     mMatrix = gMatrixIdentity;
 
-    mMatrix.m[1][0] = matrix.m[1][0];
-    mMatrix.m[1][1] = matrix.m[1][1];
-    mMatrix.m[1][2] = matrix.m[1][2];
+    mMatrix[1] = matrix[1];
     mMatrix.m[1][3] = 0.0f;
 
-    PblVector3 vBack(-mMatrix.m[2][0], -mMatrix.m[2][1], -mMatrix.m[2][2]);
-    PblVector3 vRight(mMatrix.m[1][2] * vBack.y - mMatrix.m[1][1] * vBack.z,
-                      mMatrix.m[1][0] * vBack.z - mMatrix.m[1][2] * vBack.x,
-                      mMatrix.m[1][1] * vBack.x - mMatrix.m[1][0] * vBack.y);
-    PblVector3 vOut;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOut), reinterpret_cast<const D3DXVECTOR3*>(&vRight));
-    mMatrix.m[0][0] = vOut.x;
-    mMatrix.m[0][1] = vOut.y;
-    mMatrix.m[0][2] = vOut.z;
+    const PblVector3 vBack = -mMatrix[2];
+    mMatrix[0] = Normalize(CrossProduct(vBack, mMatrix[1]));
     mMatrix.m[0][3] = 0.0f;
 
-    PblVector3 vAt(mMatrix.m[1][2] * mMatrix.m[0][1] - mMatrix.m[1][1] * mMatrix.m[0][2],
-                   mMatrix.m[1][0] * mMatrix.m[0][2] - mMatrix.m[0][0] * mMatrix.m[1][2],
-                   mMatrix.m[0][0] * mMatrix.m[1][1] - mMatrix.m[1][0] * mMatrix.m[0][1]);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOut), reinterpret_cast<const D3DXVECTOR3*>(&vAt));
-    mMatrix.m[2][0] = vOut.x;
-    mMatrix.m[2][1] = vOut.y;
-    mMatrix.m[2][2] = vOut.z;
+    mMatrix[2] = Normalize(CrossProduct(mMatrix[0], mMatrix[1]));
     mMatrix.m[2][3] = 0.0f;
 
-    mMatrix.m[3][0] = matrix.m[3][0];
-    mMatrix.m[3][1] = matrix.m[3][1];
-    mMatrix.m[3][2] = matrix.m[3][2];
-    mMatrix.m[3][3] = 1.0f;
+    mMatrix.SetTranslation(matrix.GetTranslation());
 
     SetCollisionCenter(mMatrix.GetTranslation());
     SetCollisionRadius(mClass->mRadius);
@@ -508,10 +477,9 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     mNumFallingLeaves = 0;
     const float fShade = PblRandom::_Global.GetFloat() * 0.2f;
 
-    mColor.b = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
-    mColor.g = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
-    mColor.r = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
-    mColor.a = 1.0f;
+    mColor = RedColorValue(PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f,
+                           PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f,
+                           PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f, 1.0f);
 
     if (mClass->mType != 3 && mClass->mMaxFallingLeaves > 0)
     {

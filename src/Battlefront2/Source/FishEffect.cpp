@@ -49,7 +49,7 @@ void FishParticle::RespawnFish(const PblVector3& vPos, const FishParticleType& t
 
     PblQuaternion q = PblQuaternion(gMatrixIdentity);
     {
-        PblVector3 initomega = PblVector3(0.0f, PblRandom::GetGlobalFloat() * PblMath::fTwoPi, 0.0f);
+        PblVector3 initomega = PblVector3(0.0f, PblRandom::_Global.GetFloat() * PblMath::fTwoPi, 0.0f);
         float initAngle = Length(initomega);
         if (initAngle > EPSILON)
         {
@@ -59,7 +59,7 @@ void FishParticle::RespawnFish(const PblVector3& vPos, const FishParticleType& t
     mState = eState;
     mMatrix = PblMatrix(q, vPos);
     mBaseMatrix = mMatrix;
-    mPhase = PblRandom::GetGlobalFloat() * PblMath::fTwoPi;
+    mPhase = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
 
     if (mState == FISH_FLOAT)
     {
@@ -74,11 +74,11 @@ void FishParticle::RespawnFish(const PblVector3& vPos, const FishParticleType& t
         }
         mMatrix = PblMatrix(q, vPos);
         mBaseMatrix = mMatrix;
-        mVelocity = PblVector3(0.0f, PblRandom::GetGlobalFloat() * 0.15f + 0.15f, 0.0f);
+        mVelocity = PblVector3(0.0f, PblRandom::_Global.GetFloat() * 0.15f + 0.15f, 0.0f);
     }
     else if (mState == FISH_SWIM)
     {
-        mVelocity = PblVector3(mBaseMatrix.m[2][0] * 3.0f, mBaseMatrix.m[2][1] * 3.0f, mBaseMatrix.m[2][2] * 3.0f);
+        mVelocity = mBaseMatrix.GetZAxis() * 3.0f;
     }
 
     mIsValid = true;
@@ -177,7 +177,7 @@ bool FishParticle::UpdateSwimmingFish(float fDeltaTime)
 // FUNCTION: SWBF2 0x00523090
 bool FishParticle::UpdateFloatingFish(float fDeltaTime)
 {
-    PblVector3 vPos(mMatrix.m[3][0], mMatrix.m[3][1], mMatrix.m[3][2]);
+    PblVector3 vPos = mMatrix.GetTranslation();
 
     mPhase += fDeltaTime * 2.0f;
     if (mPhase > PblMath::fTwoPi)
@@ -196,24 +196,23 @@ bool FishParticle::UpdateFloatingFish(float fDeltaTime)
     {
         if (fWaterHeight > vPos.y)
         {
-            vPos.x = mVelocity.x * fDeltaTime + vPos.x;
-            vPos.y = mVelocity.y * fDeltaTime + vPos.y;
-            vPos.z = mVelocity.z * fDeltaTime + vPos.z;
-            mMatrix.m[3][0] = vPos.x;
-            mMatrix.m[3][1] = vPos.y;
-            mMatrix.m[3][2] = vPos.z;
-            mMatrix.m[3][3] = 1.0f;
+            vPos = mVelocity * fDeltaTime + vPos;
+            mMatrix.SetTranslation(vPos);
             SetRenderPos(vPos);
             return true;
         }
         mUnderwater = false;
-        mVelocity.SetAll(0.0f);
-        mOmega = PblVector3((0.5f - PblRandom::GetGlobalFloat()) * 0.125f, 0.0f, 0.0f);
+        mVelocity.x = 0.0f;
+        mVelocity.y = 0.0f;
+        mVelocity.z = 0.0f;
+        mOmega.x = (0.5f - PblRandom::_Global.GetFloat()) * 0.125f;
+        mOmega.y = 0.0f;
+        mOmega.z = 0.0f;
     }
 
     PblVector3 vDir;
     D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vWaterVelocity);
-    PblVector3 vAhead(vDir.x * mType.mSize + vPos.x, vDir.y * mType.mSize + vPos.y, vDir.z * mType.mSize + vPos.z);
+    PblVector3 vAhead = vDir * mType.mSize + vPos;
     float fAheadWater;
     if (!RedWater::GetWaterHeight(vAhead, fAheadWater) || RedTerrain::GetInterpolatedHeight(vAhead) > fAheadWater)
     {
@@ -436,12 +435,12 @@ void FishParticleManager::SpawnFloatingFish(const PblVector3& vPos, float fRadiu
             continue;
         }
 
-        const float fRandZ = 0.5f - PblRandom::GetGlobalFloat();
-        PblVector3 vRand(0.5f - PblRandom::GetGlobalFloat(), 0.0f, fRandZ);
+        const float fRandZ = 0.5f - PblRandom::_Global.GetFloat();
+        PblVector3 vRand(0.5f - PblRandom::_Global.GetFloat(), 0.0f, fRandZ);
         PblVector3 vDir;
         D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vRand);
 
-        float fPick = PblRandom::GetGlobalFloat();
+        float fPick = PblRandom::_Global.GetFloat();
         float fStep = 1.0f / sNumFishTypes;
         float fTotal = 0.0f;
         for (int i = 0; i < sNumFishTypes; ++i)
@@ -449,7 +448,7 @@ void FishParticleManager::SpawnFloatingFish(const PblVector3& vPos, float fRadiu
             fTotal += fStep;
             if (fTotal >= fPick)
             {
-                float fDist = PblRandom::GetGlobalFloat() * fRadius;
+                float fDist = PblRandom::_Global.GetFloat() * fRadius;
                 PblVector3 vSpawn(vPos.x + vDir.x * fDist, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
                 pFish->RespawnFish(vSpawn, sFishTypes[i], FISH_FLOAT);
                 break;
@@ -471,12 +470,12 @@ void FishParticleManager::SpawnSwimmingFish(const PblVector3& vPos, float fRadiu
         return;
     }
 
-    const float fRandZ = 0.5f - PblRandom::GetGlobalFloat();
-    PblVector3 vRand(0.5f - PblRandom::GetGlobalFloat(), 0.0f, fRandZ);
+    const float fRandZ = 0.5f - PblRandom::_Global.GetFloat();
+    PblVector3 vRand(0.5f - PblRandom::_Global.GetFloat(), 0.0f, fRandZ);
     PblVector3 vDir;
     D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vRand);
 
-    float fPick = PblRandom::GetGlobalFloat();
+    float fPick = PblRandom::_Global.GetFloat();
     float fStep = 1.0f / sNumFishTypes;
     float fTotal = 0.0f;
     for (int i = 0; i < sNumFishTypes; ++i)
@@ -484,7 +483,7 @@ void FishParticleManager::SpawnSwimmingFish(const PblVector3& vPos, float fRadiu
         fTotal += fStep;
         if (fTotal >= fPick)
         {
-            float fDist = PblRandom::GetGlobalFloat() * fRadius;
+            float fDist = PblRandom::_Global.GetFloat() * fRadius;
             PblVector3 vSpawn(vPos.x + vDir.x * fDist, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
             float fWaterHeight;
             if (RedWater::GetWaterHeight(vSpawn, fWaterHeight))

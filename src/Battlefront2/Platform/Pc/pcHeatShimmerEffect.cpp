@@ -58,10 +58,8 @@ void HeatShimmerEffect::PlatformCleanup()
 // FUNCTION: SWBF2 0x00419b40
 void HeatShimmerEffect::PlatformPostReadInit()
 {
-    const unsigned int uX = s_tessellationX;
-    const unsigned int uY = s_tessellationY;
-    const unsigned int uNumVertices = (uX + 1) * (uY + 1);
-    const unsigned int uNumIndices = 2 * uX * (uY + 2) - 2;
+    const unsigned int uNumVertices = (s_tessellationX + 1) * (s_tessellationY + 1);
+    const unsigned int uNumIndices = 2 * s_tessellationX * (s_tessellationY + 2) - 2;
     if (s_pPrimitive)
     {
         s_pPrimitive->Release();
@@ -71,28 +69,29 @@ void HeatShimmerEffect::PlatformPostReadInit()
 
     const RedCamera* pCamera = RedRenderer::GetCamera();
     const float fHalfWidth = (float)tan((double)(pCamera->GetFOV() * 0.5f)) * 200.0f;
-    const float fXStep = (fHalfWidth * 2.0f) / (float)uX;
+    const float fXStep = (fHalfWidth * 2.0f) / (float)s_tessellationX;
     float fY = s_posY + s_height;
-    const float fYStep = -((fY - s_height) / (float)uY);
+    const float fYStep = -((fY - s_height) / (float)s_tessellationY);
     struct Vertex { float x, y, z; RedColor color; float u, v; };
     Vertex* pVertices = (Vertex*)s_pPrimitive->BeginVertexData();
     if (pVertices)
     {
-        for (unsigned int y = 0; y <= uY; ++y)
+        for (unsigned int y = 0; y <= s_tessellationY; ++y)
         {
-            float fFade = 1.0f - (float)fabs(((float)y / (float)uY) * 2.0f - 1.0f);
+            float fFade = 1.0f - (float)fabs((double)(((float)y / (float)s_tessellationY) * 2.0f - 1.0f));
             unsigned char ucAlpha = (unsigned char)(int)(fFade * 255.0f);
+            RedColor color = RedColor::WHITE;
+            color.a = ucAlpha;
             float fX = -fHalfWidth;
-            for (unsigned int x = 0; x <= uX; ++x)
+            for (unsigned int x = 0; x <= s_tessellationX; ++x)
             {
-                Vertex& v = pVertices[y * (uX + 1) + x];
+                Vertex& v = pVertices[y * (s_tessellationX + 1) + x];
                 v.x = fX;
                 v.y = fY;
                 v.z = 0.0f;
-                v.color = RedColor::WHITE;
-                v.color.a = ucAlpha;
-                v.u = (float)x / (float)uX;
-                v.v = (float)y / (float)uY;
+                v.color = color;
+                v.u = (float)x / (float)s_tessellationX;
+                v.v = (float)y / (float)s_tessellationY;
                 fX += fXStep;
             }
             fY += fYStep;
@@ -100,18 +99,18 @@ void HeatShimmerEffect::PlatformPostReadInit()
         s_pPrimitive->EndVertexData();
         unsigned short* pIndices = s_pPrimitive->BeginIndexData();
         unsigned int n = 0;
-        for (unsigned int y = 0; y < uY; ++y)
+        for (unsigned int y = 0; y < s_tessellationY; ++y)
         {
-            for (unsigned int x = 0; x <= uX; ++x)
+            for (unsigned int x = 0; x <= s_tessellationX; ++x)
             {
-                pIndices[n++] = (unsigned short)(y * (uX + 1) + x);
-                pIndices[n++] = (unsigned short)((y + 1) * (uX + 1) + x);
+                pIndices[n++] = (unsigned short)y * (s_tessellationX + 1) + (unsigned short)x;
+                pIndices[n++] = ((unsigned short)y + 1) * (s_tessellationX + 1) + (unsigned short)x;
             }
-            if (y + 1 < uY)
+            if (y < s_tessellationY - 1)
             {
                 pIndices[n] = pIndices[n - 1];
                 ++n;
-                pIndices[n++] = (unsigned short)((y + 1) * (uX + 1));
+                pIndices[n++] = (unsigned short)((y + 1) * (s_tessellationX + 1));
             }
         }
         s_pPrimitive->EndIndexData();
@@ -141,8 +140,9 @@ void HeatShimmerEffect::PlatformRender(unsigned int) const
 
     const RedCamera* pCamera = RedRenderer::GetCamera();
     const PblMatrix& cameraMatrix = pCamera->GetMatrix();
+    static const PblVector3 vUp(0.0f, 1.0f, 0.0f);
     float fAngle;
-    if (cameraMatrix.m[0][0] == 0.0f && cameraMatrix.m[0][1] == 1.0f && cameraMatrix.m[0][2] == 0.0f)
+    if (cameraMatrix[0] == vUp)
     {
         fAngle = PblMath::Atan2(cameraMatrix.m[1][2], cameraMatrix.m[1][0]);
     }
@@ -156,21 +156,22 @@ void HeatShimmerEffect::PlatformRender(unsigned int) const
     PblVector3 vForward(cameraMatrix.m[2][0], 0.0f, cameraMatrix.m[2][2]);
     PblVector3 vNormalized;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormalized), reinterpret_cast<const D3DXVECTOR3*>(&vForward));
+    const PblVector3 vPos = cameraMatrix.GetTranslation() + (-vNormalized) * (fFar - 10.0f);
     PblMatrix world(gMatrixIdentity);
     world.SetRotateY(-fAngle);
-    world.m[3][0] = cameraMatrix.m[3][0] - vNormalized.x * (fFar - 10.0f);
+    world.m[3][0] = vPos.x;
     world.m[3][1] = 0.0f;
-    world.m[3][2] = cameraMatrix.m[3][2] - vNormalized.z * (fFar - 10.0f);
+    world.m[3][2] = vPos.z;
     world.m[3][3] = 1.0f;
 
     RedTextureTransform transform;
+    float fScroll = s_shimmerTimeStamp.GetElapsed() * s_scrollSpeed;
     transform.m_bTransform = 1;
     transform.m_Transform[0][0] = s_tileU;
     transform.m_Transform[0][1] = 0.0f;
     transform.m_Transform[1][0] = 0.0f;
     transform.m_Transform[1][1] = s_tileV;
     transform.m_Transform[2][0] = s_tileU * 0.0f;
-    float fScroll = s_shimmerTimeStamp.GetElapsed() * s_scrollSpeed;
     transform.m_Transform[2][1] = (fScroll - (float)(int)fScroll) * s_tileV;
     s_pShimmerShader->SetBumpMap(s_bumpMapHash, &transform);
     s_pShimmerShader->SetRefractionMap(RedRenderer::pcGetBuffer(PC_BUFFER_SKY));

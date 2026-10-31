@@ -228,15 +228,17 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
 
         if (puiIds)
         {
+            bool bFound = false;
             unsigned int i;
             for (i = 0; i < uiIdCount; ++i)
             {
                 if (puiIds[i] == child._iId)
                 {
+                    bFound = true;
                     break;
                 }
             }
-            if (i == uiIdCount)
+            if (!bFound)
             {
                 continue;
             }
@@ -248,49 +250,99 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
 
         switch (child._iId)
         {
-        case 0x48544C43:
-            ClothData::Read(child);
-            break;
-        case 0x464C4E54:
-        case 0x52444853:
-            RedRenderer::Read(child);
-            break;
-        case 0x5E262256:
-            Snd::EngineBase::LoadConfiguration(child, pName, true, aSoundOverrides, 2);
-            break;
-        case 0x5F4E4942:
-            ProcessBin(child);
-            break;
-        case 0x5F5F7866:
-            FLEffect::Read(child);
-            break;
-        case 0x5F61617A:
+        case 0x74726F70:
         {
-            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
-            child.GetChunkData(pData);
-            PblMemChunk memChunk(pData);
-            RedAnimation::ReadZaa(memChunk);
-            RedFreeToHeap(__RedTempHeap, pData, 0);
+            RedSceneManager::Read(child);
+            pvs::IManager& manager = pvs::IManager::GetInstance();
+            PblConfig config(child);
+            pvs::PortalReader reader(manager);
+            reader.Read(manager, config);
             break;
         }
-        case 0x5F646E62:
-            BoundaryManager::Instance()->Read(child);
+        case 0x746E6F66:
+            RedFont::Read(child);
             break;
-        case 0x5F646E73:
-            Snd::EngineBase::LoadConfiguration(child, 0, true, 0, 0);
+        case 0x7468676C:
+            RedLight::Read(child);
             break;
-        case 0x5F647568:
-            HUD::Manager::Load(child);
+        case 0x706E6C70:
+            ConnectivityGraphManager::ReadWorldPatch(child);
             break;
-        case 0x5F66617A:
-        {
-            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
-            child.GetChunkData(pData);
-            PblMemChunk memChunk(pData);
-            RedAnimation::ReadZaf(memChunk);
-            RedFreeToHeap(__RedTempHeap, pData, 0);
+        case 0x6E726574:
+            RedTerrain::Read(child);
             break;
-        }
+        case 0x6E616C70:
+            ConnectivityGraphManager::ReadWorldGraph(child);
+            break;
+        case 0x6D6E6173:
+            SoldierAnimatorClass::Read(child);
+            break;
+        case 0x6D697270:
+            CollisionBodyPrimitive::Read(child);
+            break;
+        case 0x6C6C6F63:
+            CollisionMesh::Read(child);
+            break;
+        case 0x6C656B73:
+            RedSkeleton::Read(child);
+            break;
+        case 0x6C646F6D:
+            RedModel::Read(child);
+            break;
+        case 0x6C636F4C:
+            RedLocalizeDB::Read(child);
+            break;
+        case 0x68746170:
+            GamePathFactory::Read(child);
+            break;
+        case 0x6766636D:
+            if (GameMovie::sUseMovies)
+            {
+                RedMovie::Load(child, false);
+            }
+            break;
+        case 0x646F6D67:
+            GameModel::Read(child);
+            break;
+        case 0x646C7277:
+            ProcessWorld(child);
+            break;
+        case 0x63746E65:
+            EntityClass::Read(child);
+            break;
+        case 0x636E7077:
+            WeaponClass::Read(child);
+            break;
+        case 0x63707865:
+            ExplosionClass::Read(child);
+            break;
+        case 0x6364726F:
+            OrdnanceClass::Read(child);
+            break;
+        case 0x626D6F63:
+            WeaponMeleeClass::ReadCombo(child);
+            break;
+        case 0x5F796B73:
+            SkyManager::Read(child);
+            break;
+        case 0x5F786666:
+            FoleyFX::Load(child);
+            break;
+        case 0x5F786574:
+            RedTexture::Read(child);
+            break;
+        case 0x5F73756D:
+            Music::Load(child);
+            break;
+        case 0x5F727374:
+            TriggerSoundRegion::Properties::Load(child);
+            break;
+        case 0x5F726373:
+            LuaScriptFactory::Read(child);
+            break;
+        case 0x5F707270:
+            PropGenerator::Read(child);
+            break;
         case 0x5F6C766C:
             while (child.HasMoreChildren())
             {
@@ -324,99 +376,49 @@ bool LoadUtil::ReadDataFileChunk(char const* pName, PblFileChunk& chunk,
                 }
             }
             break;
-        case 0x5F707270:
-            PropGenerator::Read(child);
-            break;
-        case 0x5F726373:
-            LuaScriptFactory::Read(child);
-            break;
-        case 0x5F727374:
-            TriggerSoundRegion::Properties::Load(child);
-            break;
-        case 0x5F73756D:
-            Music::Load(child);
-            break;
-        case 0x5F786574:
-            RedTexture::Read(child);
-            break;
-        case 0x5F786666:
-            FoleyFX::Load(child);
-            break;
-        case 0x5F796B73:
-            SkyManager::Read(child);
-            break;
-        case 0x626D6F63:
-            WeaponMeleeClass::ReadCombo(child);
-            break;
-        case 0x6364726F:
-            OrdnanceClass::Read(child);
-            break;
-        case 0x63707865:
-            ExplosionClass::Read(child);
-            break;
-        case 0x636E7077:
-            WeaponClass::Read(child);
-            break;
-        case 0x63746E65:
-            EntityClass::Read(child);
-            break;
-        case 0x646C7277:
-            ProcessWorld(child);
-            break;
-        case 0x646F6D67:
-            GameModel::Read(child);
-            break;
-        case 0x6766636D:
-            if (GameMovie::sUseMovies)
-            {
-                RedMovie::Load(child, false);
-            }
-            break;
-        case 0x68746170:
-            GamePathFactory::Read(child);
-            break;
-        case 0x6C636F4C:
-            RedLocalizeDB::Read(child);
-            break;
-        case 0x6C646F6D:
-            RedModel::Read(child);
-            break;
-        case 0x6C656B73:
-            RedSkeleton::Read(child);
-            break;
-        case 0x6C6C6F63:
-            CollisionMesh::Read(child);
-            break;
-        case 0x6D697270:
-            CollisionBodyPrimitive::Read(child);
-            break;
-        case 0x6D6E6173:
-            SoldierAnimatorClass::Read(child);
-            break;
-        case 0x6E616C70:
-            ConnectivityGraphManager::ReadWorldGraph(child);
-            break;
-        case 0x6E726574:
-            RedTerrain::Read(child);
-            break;
-        case 0x706E6C70:
-            ConnectivityGraphManager::ReadWorldPatch(child);
-            break;
-        case 0x7468676C:
-            RedLight::Read(child);
-            break;
-        case 0x746E6F66:
-            RedFont::Read(child);
-            break;
-        case 0x74726F70:
+        case 0x5F66617A:
         {
-            RedSceneManager::Read(child);
-            pvs::IManager& manager = pvs::IManager::GetInstance();
-            PblConfig config(child);
-            pvs::PortalReader reader(manager);
-            reader.Read(manager, config);
+            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
+            child.GetChunkData(pData);
+            PblMemChunk memChunk(pData);
+            RedAnimation::ReadZaf(memChunk);
+            RedFreeToHeap(__RedTempHeap, pData, 0);
             break;
         }
+        case 0x5F647568:
+            HUD::Manager::Load(child);
+            break;
+        case 0x5F646E73:
+            Snd::EngineBase::LoadConfiguration(child, 0, true, 0, 0);
+            break;
+        case 0x5F646E62:
+            BoundaryManager::Instance()->Read(child);
+            break;
+        case 0x5F61617A:
+        {
+            void* pData = RedAllocFromHeap(__RedTempHeap, child._iSize + 8, 0);
+            child.GetChunkData(pData);
+            PblMemChunk memChunk(pData);
+            RedAnimation::ReadZaa(memChunk);
+            RedFreeToHeap(__RedTempHeap, pData, 0);
+            break;
+        }
+        case 0x5F5F7866:
+            FLEffect::Read(child);
+            break;
+        case 0x5F4E4942:
+            ProcessBin(child);
+            break;
+        case 0x5E262256:
+            Snd::EngineBase::LoadConfiguration(child, pName, true, aSoundOverrides, 2);
+            break;
+        case 0x464C4E54:
+        case 0x52444853:
+            RedRenderer::Read(child);
+            break;
+        case 0x48544C43:
+            ClothData::Read(child);
+            break;
         }
     }
 
@@ -446,10 +448,13 @@ bool LoadUtil::ReadDataFileOnHeap(char const* pName, int iHeap,
     pcFileName[i] = '\0';
     if (pName[i++] == ';')
     {
+        const char* pcSrc = pName + i;
         int j = 0;
-        for (; pName[i + j] != '\0'; ++j)
+        while (*pcSrc != '\0')
         {
-            pcLvlName[j] = pName[i + j];
+            pcLvlName[j] = *pcSrc;
+            ++pcSrc;
+            ++j;
         }
         pcLvlName[j] = '\0';
     }
@@ -482,7 +487,7 @@ bool LoadUtil::ReadDataFileOnHeap(char const* pName, int iHeap,
         iOldHeap = RedSetCurrentHeap(iHeap);
     }
     PblFile::SetBlockCallback(FileBlockCallback);
-    bool bOpened = file.Open(pcFullName, true, false, true);
+    int bOpened = file.Open(pcFullName, true, false, true);
     if (iHeap != -1)
     {
         RedSetCurrentHeap(iOldHeap);
@@ -694,8 +699,7 @@ RedRegion* LoadUtil::ProcessRegionInfo(PblFileChunk& chunk)
             desc.mSize.x = child._pFile->ReadFloat();
             desc.mSize.y = child._pFile->ReadFloat();
             desc.mSize.z = child._pFile->ReadFloat();
-            desc.mSize.w = sqrtf(desc.mSize.x * desc.mSize.x + desc.mSize.y * desc.mSize.y +
-                                 desc.mSize.z * desc.mSize.z);
+            desc.mSize.w = D3DXVec3Length(reinterpret_cast<const D3DXVECTOR3*>(&desc.mSize));
             break;
         }
         case 0x4D524658:
@@ -872,8 +876,7 @@ namespace LoadUtil
 void ProcessBarrierInfo(PblFileChunk& chunk)
 {
     PblMatrix mMatrix = gMatrixIdentity;
-    PblVector4 vSize;
-    vSize.x = vSize.y = vSize.z = vSize.w = 0.0f;
+    PblVector4 vSize(0.0f);
     int iFlag = 0;
     char acName[128];
 
@@ -893,11 +896,8 @@ void ProcessBarrierInfo(PblFileChunk& chunk)
             const float fX = child._pFile->ReadFloat();
             const float fY = child._pFile->ReadFloat();
             const float fZ = child._pFile->ReadFloat();
-            const float fLength = sqrtf(fY * fY + fX * fX + fZ * fZ);
-            vSize.x = fX;
-            vSize.y = fY;
-            vSize.z = fZ;
-            vSize.w = fLength;
+            const float fLength = Length(PblVector3(fX, fY, fZ));
+            vSize = PblVector4(fX, fY, fZ, fLength);
             break;
         }
         case 0x4D524658:

@@ -102,7 +102,7 @@ void PatrolHelper::EnterState()
 
         bool bTryHint = AIUtil::GetRandomInt(1, 4) != 1;
         bool bSoldier = GetMe()->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier);
-        if (bTryHint && bSoldier)
+        if (bTryHint & bSoldier)
         {
             const BaseHint* hints[10];
             int iCount = HintManager::RequestPatrolHints(GetCtrl(), mPost, 10, hints);
@@ -132,12 +132,6 @@ void PatrolHelper::EnterState()
         break;
     }
 
-    case STATE_GOTO_HINT:
-        mHint->Reserve(GetMe()->GetGameObject());
-        LowLevel(GetCtrl()).SetNavigator_Goto(mHint->GetCollisionCenter(), NULL, false, false);
-        mNextPatrolTime = AIUtil::GetRandomInt(30, 45) + GameLoop::GetMissionTime();
-        break;
-
     case STATE_GOTO_BASE:
     {
         mNextPatrolTime = AIUtil::GetRandomInt(20, 30) + GameLoop::GetMissionTime();
@@ -153,19 +147,23 @@ void PatrolHelper::EnterState()
         PblVector3 vDir = PblRandom::_Sim.GetVector3();
         vDir.y = 0.0f;
         float fDist = AIUtil::GetRandomFloat(8.0f, 14.0f);
-        vPos.x += vDir.x * fDist;
-        vPos.y += vDir.y * fDist;
-        vPos.z += vDir.z * fDist;
+        vPos = PblVector3(vDir.x * fDist + vPos.x, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
         LowLevel(GetCtrl()).SetNavigator_Slide(vPos, NULL);
         break;
     }
+
+    case STATE_GOTO_HINT:
+        mHint->Reserve(GetMe()->GetGameObject());
+        LowLevel(GetCtrl()).SetNavigator_Goto(mHint->GetCollisionCenter(), NULL, false, false);
+        mNextPatrolTime = AIUtil::GetRandomInt(30, 45) + GameLoop::GetMissionTime();
+        break;
 
     case STATE_GUARD_HINT:
     {
         mOverrideDefaultFacePos = true;
         const PblVector3& vForward = mHint->GetZAxis();
         PblVector3 vLook(vForward.x * 10.0f, vForward.y * 10.0f, vForward.z * 10.0f);
-        PblVector3 vDest = LowLevel(GetCtrl()).GetGlobalDest();
+        const PblVector3& vDest = LowLevel(GetCtrl()).GetGlobalDest();
         mDefaultFacePos = PblVector3(vDest.x + vLook.x, vDest.y + vLook.y, vDest.z + vLook.z);
         mHeight = mHint->GetRandomPrimaryStance();
         break;

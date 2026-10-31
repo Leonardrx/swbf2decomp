@@ -423,7 +423,7 @@ void SpaceDustEffect::Render(int value)
     }
 
     const RedCamera* pCamera = RedRenderer::GetCamera();
-    int iEmitter;
+    unsigned int iEmitter;
     for (iEmitter = 0; iEmitter < 1; iEmitter++)
     {
         if (CameraManager::sInstance->mRedCamera[iEmitter] == pCamera && m_emitter[iEmitter].mEnabled &&
@@ -439,8 +439,8 @@ void SpaceDustEffect::Render(int value)
     const DustEmitterData& emitter = m_emitter[iEmitter];
 
     const PblMatrix& mCamera = pCamera->GetMatrix();
-    const PblVector3 vPos(mCamera.m[3][0], mCamera.m[3][1], mCamera.m[3][2]);
-    const PblVector3 vFwd(mCamera.m[2][0], mCamera.m[2][1], mCamera.m[2][2]);
+    const PblVector3 vPos = mCamera.GetTranslation();
+    const PblVector3 vFwd = mCamera.GetZAxis();
     const PblVector3 vMax(vPos.x + 300.0f, vPos.y + 300.0f, vPos.z + 300.0f);
     const PblVector3 vMin(vPos.x - 300.0f, vPos.y - 300.0f, vPos.z - 300.0f);
     RedParticleRenderer::SubmitBounds(vMin, vMax);
@@ -450,7 +450,8 @@ void SpaceDustEffect::Render(int value)
     ChaseCamera* pChaseCamera = CameraManager::sInstance->mChaseCamera[iEmitter];
     if (pChaseCamera)
     {
-        PblVector3 vVelocity = pChaseCamera->GetVelocity();
+        PblVector3 vVelocity;
+        vVelocity = pChaseCamera->GetVelocity();
         const float fLengthSq = vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
                                 vVelocity.z * vVelocity.z;
         if (fLengthSq >= 0.0001f)
@@ -482,9 +483,7 @@ void SpaceDustEffect::Render(int value)
         {
             continue;
         }
-        RedColor color = RedColor::WHITE;
-        float fFade = ((particle.mCoord.x - vPos.x) * -vFwd.x + (particle.mCoord.y - vPos.y) * -vFwd.y +
-                       (particle.mCoord.z - vPos.z) * -vFwd.z - 50.0f) / 30.0f;
+        float fFade = (DotProduct(particle.mCoord - vPos, -vFwd) - 50.0f) / 30.0f;
         if (fFade < 0.0f)
         {
             fFade = 0.0f;
@@ -502,11 +501,10 @@ void SpaceDustEffect::Render(int value)
         {
             fAlpha = 255.0f;
         }
-        color.a = (unsigned char)(int)fAlpha;
+        RedColor color(RedColor::WHITE, (unsigned char)(int)fAlpha);
         RedParticleRenderer::SubmitParticle(PIT_LASER_START, particle.mCoord, color, particle.mScale * 0.5f,
                                             0.0f, texCoords, gVectorUnitX, gVectorUnitY);
-        const PblVector3 vTail(particle.mCoord.x - vFwd.x * fLength, particle.mCoord.y - vFwd.y * fLength,
-                               particle.mCoord.z - vFwd.z * fLength);
+        const PblVector3 vTail = particle.mCoord - vFwd * fLength;
         RedParticleRenderer::SubmitParticle(PIT_LASER_END, vTail, color, particle.mScale * 0.5f, 0.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
     }

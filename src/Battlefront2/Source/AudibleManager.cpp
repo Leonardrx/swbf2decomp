@@ -100,8 +100,8 @@ void AudibleManager::UpdateAudience(Controller* pController)
             vDelta.y = vPos.y - vListener.y;
             vDelta.z = vPos.z - vListener.z;
             const PblVector3 vDir = AIUtil::GetSafeNormal(vDelta);
-            if (fabs(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z) >= 0.87f &&
-                vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z >= 12.25f)
+            if (!(0.87f > (float)fabs((double)(vDir.y * gVectorUnitY.y + vDir.x * gVectorUnitY.x + vDir.z * gVectorUnitY.z))) &&
+                !(12.25f > vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z))
             {
                 continue;
             }

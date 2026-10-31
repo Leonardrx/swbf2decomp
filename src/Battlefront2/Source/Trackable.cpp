@@ -197,57 +197,48 @@ void Trackable::SetFirstPersonView(int iPlayer, bool bFirstPerson)
 // FUNCTION: SWBF2 0x00658830
 bool Trackable::CheckFirstPerson(int iPlayer) const
 {
-
     Controllable* pControllable = const_cast<Controllable*>(GetControllable());
-    if (pControllable)
+    if (!pControllable || pControllable->GetControllableClass()->mForceMode != 1)
     {
-        if (pControllable->GetControllableClass()->mForceMode == 1)
-        {
-            return false;
-        }
-        if (pControllable->GetControllableClass()->mForceMode == 2)
+        if (pControllable && pControllable->GetControllableClass()->mForceMode == 2)
         {
             return true;
         }
-    }
-    if (IsForcedThirdPerson())
-    {
-        return false;
-    }
-    if (IsForcedFirstPerson())
-    {
-        return true;
-    }
-    if (iPlayer < 0)
-    {
-        return false;
-    }
-
-    if (NetGame::IsEnabled() && !NetGame::IsClient() &&
-        !(NetGame::IsHost() && NetGame::IsOneWorld() && !NetGame::IsDedicated()))
-    {
-        return NetGame::IsCockpitCam(iPlayer);
-    }
-
-    int iLocal = NetGame::GetJoystickIndex(iPlayer);
-    if (iLocal < 0)
-    {
-        if (NetGame::IsEnabled() && NetGame::IsHost())
+        if (!IsForcedThirdPerson())
         {
-            return NetGame::IsCockpitCam(iPlayer);
-        }
-        return false;
-    }
-    if (iLocal < 1 && PlayerPrefs::mAllUserPrefs[iLocal].mJoystick >= 0)
-    {
-        PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PlayerPrefs::mAllUserPrefs[iLocal].mJoystick);
-        if (pProfile)
-        {
-            if (GetGameObject() && GameObject_IsRtti(GetGameObject(), EntityFlyer::rttiHashEntityFlyer))
+            if (IsForcedFirstPerson())
             {
-                return pProfile->mGameOptions.mCockpitCamFlyer;
+                return true;
             }
-            return pProfile->mGameOptions.mCockpitCam;
+            if (iPlayer >= 0)
+            {
+                if (NetGame::IsEnabled() && !NetGame::IsClient() &&
+                    !(NetGame::IsHost() && NetGame::IsOneWorld() && !NetGame::IsDedicated()))
+                {
+                    return NetGame::IsCockpitCam(iPlayer);
+                }
+
+                int iLocal = NetGame::GetJoystickIndex(iPlayer);
+                if (iLocal < 0)
+                {
+                    if (NetGame::IsEnabled() && NetGame::IsHost())
+                    {
+                        return NetGame::IsCockpitCam(iPlayer);
+                    }
+                }
+                else if (iLocal < 1 && PlayerPrefs::mAllUserPrefs[iLocal].mJoystick >= 0)
+                {
+                    PlayerProfile::tProfile* pProfile = PlayerProfile::GetProfile(PlayerPrefs::mAllUserPrefs[iLocal].mJoystick);
+                    if (pProfile)
+                    {
+                        if (GetGameObject() && GameObject_IsRtti(GetGameObject(), EntityFlyer::rttiHashEntityFlyer))
+                        {
+                            return pProfile->mGameOptions.mCockpitCamFlyer;
+                        }
+                        return pProfile->mGameOptions.mCockpitCam;
+                    }
+                }
+            }
         }
     }
     return false;
@@ -377,7 +368,8 @@ void CameraTrackSetting::SetupCameraTrackMatrixHUDTargeting(PblMatrix& rMatrix, 
     PblQuaternion qLook = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
 
     float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, -GetCameraTiltValue() * 0.5f);
+    float fNegTilt = -GetCameraTiltValue();
+    PblMath::SinCos(&fSin, &fCos, fNegTilt * 0.5f);
     PblQuaternion qTilt;
     qTilt._fX = fSin;
     qTilt._fY = fSin * 0.0f;
@@ -385,10 +377,13 @@ void CameraTrackSetting::SetupCameraTrackMatrixHUDTargeting(PblMatrix& rMatrix, 
     qTilt._fS = fCos;
 
     PblQuaternion q = qLook * qTilt;
-    PblQuaternion qUnit;
+    D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&q)));
-    mCamera.SetTranslation(gVectorZero);
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    mCamera.m[3][0] = gVectorZero.x;
+    mCamera.m[3][1] = gVectorZero.y;
+    mCamera.m[3][2] = gVectorZero.z;
+    mCamera.m[3][3] = 1.0f;
 
     PblVector3 vPoint = CalcCameraPoint(rTarget, mCamera);
     mCamera.SetTranslation(vPoint);
@@ -423,10 +418,13 @@ void CameraTrackSetting::SetupCameraTrackMatrixHUDTargeting(const CameraTrackSet
     qTilt._fS = fCos;
 
     PblQuaternion q = qLook * qTilt;
-    PblQuaternion qUnit;
+    D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&q)));
-    mCamera.SetTranslation(gVectorZero);
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    mCamera.m[3][0] = gVectorZero.x;
+    mCamera.m[3][1] = gVectorZero.y;
+    mCamera.m[3][2] = gVectorZero.z;
+    mCamera.m[3][3] = 1.0f;
 
     PblVector3 vOffset;
     D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vTrackOffset), reinterpret_cast<const D3DXMATRIX*>(&mCamera));
@@ -456,12 +454,8 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
     PblQuaternion qTarget = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
 
     float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, -GetCameraTiltValue() * 0.5f);
-    PblQuaternion qTilt;
-    qTilt._fX = fSin;
-    qTilt._fY = fSin * 0.0f;
-    qTilt._fZ = fSin * 0.0f;
-    qTilt._fS = fCos;
+    PblMath::SinCos(&fSin, &fCos, 0.5f * -GetCameraTiltValue());
+    PblQuaternion qTilt(fCos, fSin, fSin * 0.0f, fSin * 0.0f);
     qTarget = qTarget * qTilt;
 
     PblQuaternion q;
@@ -474,10 +468,13 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
         q = Interpolate(qTarget, qCurrent, expf(-(mCameraAimTension * fAimTensionScale * fDeltaTime)));
     }
 
-    PblQuaternion qUnit;
+    D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&q)));
-    mCamera.SetTranslation(gVectorZero);
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    mCamera.m[3][0] = gVectorZero.x;
+    mCamera.m[3][1] = gVectorZero.y;
+    mCamera.m[3][2] = gVectorZero.z;
+    mCamera.m[3][3] = 1.0f;
 
     PblVector3 vCamera = CalcCameraPoint(rTarget, mCamera);
     PblVector3 vSafe = CalcCameraSafePoint(rTarget);
@@ -503,23 +500,25 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
         switch (pTrackable->whichCornerToCastForCamera)
         {
         case 0:
-            vCorner = PblVector3(0.0f, 0.0f, 0.0f);
+            vCorner.x = 0.0f;
+            vCorner.y = 0.0f;
+            vCorner.z = 0.0f;
             break;
         case 1:
-            vCorner = PblVector3(vRight.x * 0.4f + vUp.x * 0.4f, vRight.y * 0.4f + vUp.y * 0.4f,
-                                 vRight.z * 0.4f + vUp.z * 0.4f);
+            vCorner = PblVector3(vUp.x * 0.4f + vRight.x * 0.4f, vUp.y * 0.4f + vRight.y * 0.4f,
+                                 vUp.z * 0.4f + vRight.z * 0.4f);
             break;
         case 2:
-            vCorner = PblVector3(vRight.x * -0.4f + vUp.x * 0.4f, vRight.y * -0.4f + vUp.y * 0.4f,
-                                 vRight.z * -0.4f + vUp.z * 0.4f);
+            vCorner = PblVector3(vUp.x * 0.4f + vRight.x * -0.4f, vUp.y * 0.4f + vRight.y * -0.4f,
+                                 vUp.z * 0.4f + vRight.z * -0.4f);
             break;
         case 3:
-            vCorner = PblVector3(vRight.x * 0.4f + vUp.x * -0.4f, vRight.y * 0.4f + vUp.y * -0.4f,
-                                 vRight.z * 0.4f + vUp.z * -0.4f);
+            vCorner = PblVector3(vUp.x * -0.4f + vRight.x * 0.4f, vUp.y * -0.4f + vRight.y * 0.4f,
+                                 vUp.z * -0.4f + vRight.z * 0.4f);
             break;
         case 4:
-            vCorner = PblVector3(vRight.x * -0.4f + vUp.x * -0.4f, vRight.y * -0.4f + vUp.y * -0.4f,
-                                 vRight.z * -0.4f + vUp.z * -0.4f);
+            vCorner = PblVector3(vUp.x * -0.4f + vRight.x * -0.4f, vUp.y * -0.4f + vRight.y * -0.4f,
+                                 vUp.z * -0.4f + vRight.z * -0.4f);
             break;
         }
 
@@ -603,26 +602,14 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, const Cam
 
     float fSin, fCos;
     PblMath::SinCos(&fSin, &fCos, fTilt * -0.5f);
-    PblQuaternion qTilt;
-    qTilt._fX = fSin;
-    qTilt._fY = fSin * 0.0f;
-    qTilt._fZ = fSin * 0.0f;
-    qTilt._fS = fCos;
+    PblQuaternion qTilt(fCos, fSin, fSin * 0.0f, fSin * 0.0f);
     qTarget = qTarget * qTilt;
 
-    PblQuaternion q;
-    if (bSnap)
-    {
-        q = qTarget;
-    }
-    else
-    {
-        q = Interpolate(qTarget, qCurrent, expf(-(mCameraAimTension * fAimTensionScale * fDeltaTime)));
-    }
+    PblQuaternion q = bSnap ? qTarget : Interpolate(qTarget, qCurrent, expf(-(mCameraAimTension * fAimTensionScale * fDeltaTime)));
 
-    PblQuaternion qUnit;
+    D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
     mCamera.SetTranslation(gVectorZero);
 
     PblVector3 vOffset;

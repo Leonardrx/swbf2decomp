@@ -499,23 +499,21 @@ void BonusManager::PlayTeamBonusVO(unsigned int uBonus, int iTeam)
 {
     char acName[128] = "team_bonus_";
 
-    const char* pcBonus;
     switch (uBonus)
     {
-    case 0x85ad826d: pcBonus = "energy_boost"; break;
-    case 0x56e2ce71: pcBonus = "sensor_array"; break;
-    case 0x96f36950: pcBonus = "garrison"; break;
-    case 0xbb03442e: pcBonus = "advanced_blasters"; break;
-    case 0xc10b9cdc: pcBonus = "bacta_tanks"; break;
-    case 0xc81956e6: pcBonus = "supplies"; break;
-    case 0xd265e905: pcBonus = "sabotage"; break;
-    case 0xd6a6e644: pcBonus = "garrison_used_by"; break;
-    case 0xddb212e1: pcBonus = "combat_shielding"; break;
-    case 0xde68cb69: pcBonus = "autoturrets"; break;
-    case 0xeac1e9d4: pcBonus = "leader"; break;
+    case 0x85ad826d: strlcat(acName, "energy_boost", sizeof(acName)); break;
+    case 0x56e2ce71: strlcat(acName, "sensor_array", sizeof(acName)); break;
+    case 0x96f36950: strlcat(acName, "garrison", sizeof(acName)); break;
+    case 0xbb03442e: strlcat(acName, "advanced_blasters", sizeof(acName)); break;
+    case 0xc10b9cdc: strlcat(acName, "bacta_tanks", sizeof(acName)); break;
+    case 0xc81956e6: strlcat(acName, "supplies", sizeof(acName)); break;
+    case 0xd265e905: strlcat(acName, "sabotage", sizeof(acName)); break;
+    case 0xd6a6e644: strlcat(acName, "garrison_used_by", sizeof(acName)); break;
+    case 0xddb212e1: strlcat(acName, "combat_shielding", sizeof(acName)); break;
+    case 0xde68cb69: strlcat(acName, "autoturrets", sizeof(acName)); break;
+    case 0xeac1e9d4: strlcat(acName, "leader", sizeof(acName)); break;
     default: return;
     }
-    strlcat(acName, pcBonus, sizeof(acName));
 
     for (int i = 1; i <= 2; ++i)
     {
@@ -525,8 +523,15 @@ void BonusManager::PlayTeamBonusVO(unsigned int uBonus, int iTeam)
             continue;
         }
 
-        strlcat(acName, i == iTeam ? "_us_" : "_them_", sizeof(acName));
-        switch (GetSide(pTeam))
+        if (i == iTeam)
+        {
+            strlcat(acName, "_us_", sizeof(acName));
+        }
+        else
+        {
+            strlcat(acName, "_them_", sizeof(acName));
+        }
+        switch (pTeam->mSide)
         {
         case 2: strlcat(acName, "imp", sizeof(acName)); break;
         case 3: strlcat(acName, "rep", sizeof(acName)); break;

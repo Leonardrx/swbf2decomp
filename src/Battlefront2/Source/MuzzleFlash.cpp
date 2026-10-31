@@ -88,7 +88,8 @@ void MuzzleFlashRenderer::Render(int)
         RedColor color = data.mColor;
         const float fDot = data.mDir.x * mCamera.m[2][0] + data.mDir.y * mCamera.m[2][1] +
                            data.mDir.z * mCamera.m[2][2];
-        color.a = (unsigned char)(int)((1.0f - fabsf(fDot) * 0.3f) * 255.0f);
+        const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
+        color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 255.0f);
         if (color.a)
         {
             RenderStreak(data, color);
@@ -100,7 +101,8 @@ void MuzzleFlashRenderer::Render(int)
         RedColor color = data.mColor;
         const float fDot = data.mDir.x * mCamera.m[2][0] + data.mDir.y * mCamera.m[2][1] +
                            data.mDir.z * mCamera.m[2][2];
-        color.a = (unsigned char)(int)((1.0f - fabsf(fDot) * 0.3f) * 128.0f);
+        const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
+        color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 128.0f);
         if (color.a)
         {
             RenderStreak(data, color);

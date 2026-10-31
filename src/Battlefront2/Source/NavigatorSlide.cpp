@@ -384,7 +384,7 @@ void NavigatorSlide::NextVehicleSlidePos()
     for (int i = 0; i < 5; ++i)
     {
         const Obstacle* pHit = 0;
-        float fStep = GameObjectGetMaxSpeed(GetGameObject()) * 1.5f;
+        float fStep = GetGameObject()->GetMaxSpeed() * 1.5f;
         if (fStep > 30.0f)
         {
             fStep = 30.0f;
@@ -394,12 +394,12 @@ void NavigatorSlide::NextVehicleSlidePos()
             fStep = 1.0f;
         }
 
-        const PblVector3 delta(mSlidePos.x - pos.x, mSlidePos.y - pos.y, mSlidePos.z - pos.z);
+        const PblVector3 delta = mSlidePos - pos;
         PblVector3 dest = mSlidePos;
         if (delta.z * delta.z + delta.x * delta.x > fStep * fStep)
         {
             const PblVector3 normal = AIUtil::GetSafeNormalXZ(delta);
-            dest = PblVector3(pos.x + normal.x * fStep, pos.y + normal.y * fStep, pos.z + normal.z * fStep);
+            dest = pos + normal * fStep;
         }
 
         float fDistSq;
@@ -419,9 +419,16 @@ void NavigatorSlide::NextVehicleSlidePos()
             const float lz = left.z - pos.z;
             const float rx = right.x - pos.x;
             const float rz = right.z - pos.z;
-            mSlideDirection = (rz * rz + rx * rx <= lz * lz + lx * lx) ? SLIDE_RIGHT : SLIDE_LEFT;
+            mSlideDirection = (rz * rz + rx * rx > lz * lz + lx * lx) ? SLIDE_LEFT : SLIDE_RIGHT;
         }
-        mSlidePos = (mSlideDirection == SLIDE_LEFT) ? left : right;
+        if (mSlideDirection == SLIDE_LEFT)
+        {
+            mSlidePos = left;
+        }
+        else
+        {
+            mSlidePos = right;
+        }
     }
 
     if (!(mSlidePathDest != mSlidePos))

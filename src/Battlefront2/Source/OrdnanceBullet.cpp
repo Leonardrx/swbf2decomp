@@ -362,9 +362,9 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
     : Ordnance(pClass, desc),
       RedSceneObject(&((OrdnanceBulletClass*)mClass)->mLodData),
       mOldPosition(desc.mPosition),
-      mVelocity(desc.mDirection * Interpolate(
+      mVelocity(Interpolate(
           ((const OrdnanceBulletClass*)mClass)->mVelocity,
-          ((const OrdnanceBulletClass*)mClass->mNextCharge)->mVelocity, mRatio)),
+          ((const OrdnanceBulletClass*)mClass->mNextCharge)->mVelocity, mRatio) * desc.mDirection),
       mFinalCollision(0)
 {
     mFinalCollisionOnNextUpdate = false;
@@ -401,7 +401,7 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
                 const PblVector3& vDir = desc.mDirection;
                 matrix[1] = vDir;
                 matrix.m[1][3] = 0.0f;
-                PblVector3 vFront = vDir * vDir.y + (-gVectorUnitY);
+                PblVector3 vFront = (-gVectorUnitY) + vDir * vDir.y;
                 float fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
                 if (fLength2 <= 0.0001f)
                 {
@@ -410,9 +410,7 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
                 }
                 const float fInv = 1.0f / (float)sqrt((double)fLength2);
                 vFront *= fInv;
-                matrix.m[0][0] = vDir.y * vFront.z - vDir.z * vFront.y;
-                matrix.m[0][1] = vDir.z * vFront.x - vDir.x * vFront.z;
-                matrix.m[0][2] = vDir.x * vFront.y - vDir.y * vFront.x;
+                matrix[0] = CrossProduct(vDir, vFront);
                 matrix.m[0][3] = 0.0f;
                 matrix[2] = vFront;
                 matrix.m[2][3] = 0.0f;
@@ -483,9 +481,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     mOldPosition = mPosition;
     const float fStep = mLifeTime > fDeltaTime ? fDeltaTime : mLifeTime;
-    mPosition.x = mPosition.x + mVelocity.x * fStep;
-    mPosition.y = mVelocity.y * fStep + mPosition.y;
-    mPosition.z = mVelocity.z * fStep + mPosition.z;
+    mPosition += mVelocity * fStep;
     mOffscreenTime += fDeltaTime;
     if (!Ordnance::Update(fDeltaTime))
     {
@@ -495,9 +491,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     if (m_pLight)
     {
-        const PblVector3 vMid((mPosition.x + mOldPosition.x) * 0.5f, (mPosition.y + mOldPosition.y) * 0.5f,
-                              (mPosition.z + mOldPosition.z) * 0.5f);
-        m_pLight->SetPosition(vMid);
+        m_pLight->SetPosition((mPosition + mOldPosition) * 0.5f);
         OrdnanceBulletClass* pClass = (OrdnanceBulletClass*)mClass;
         if (pClass->mFadeColorLight)
         {

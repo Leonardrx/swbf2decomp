@@ -176,18 +176,15 @@ void AsteroidClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (iNumBodies == 0 && mModel)
         {
             const PblBox& box = mModel->_mModel->_TotalBoundingBox;
-            float fCenterX = (box._vMin.x + box._vMax.x) * 0.5f;
-            float fCenterY = (box._vMin.y + box._vMax.y) * 0.5f;
-            float fCenterZ = (box._vMin.z + box._vMax.z) * 0.5f;
+            const PblVector3 vCenter((box._vMin.x + box._vMax.x) * 0.5f, (box._vMin.y + box._vMax.y) * 0.5f,
+                                     (box._vMin.z + box._vMax.z) * 0.5f);
             float fHalfX = (box._vMax.x - box._vMin.x) * 0.5f;
             float fHalfY = (box._vMax.y - box._vMin.y) * 0.5f;
             float fHalfZ = (box._vMax.z - box._vMin.z) * 0.5f;
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
             primitive.SetAACylinder((fHalfZ + fHalfX) * 0.5f, fHalfY * 2.0f);
-            matrix.m[3][0] = fCenterX;
-            matrix.m[3][1] = fCenterY;
-            matrix.m[3][2] = fCenterZ;
+            matrix[3] = vCenter;
             matrix.m[3][3] = 1.0f;
             mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, "main_body", matrix, 0));
         }
@@ -497,12 +494,8 @@ void Asteroid::Kill()
                 if (pChild)
                 {
                     pChild->Init();
-                    const PblVector3& vPos = mMatrix.GetTranslation();
-                    PblVector3 vDir(desc.mMatrix.m[3][0] - vPos.x, desc.mMatrix.m[3][1] - vPos.y,
-                                    desc.mMatrix.m[3][2] - vPos.z);
-                    D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDir);
-                    static_cast<EntityGeometry*>(pChild)->SetVelocity(
-                        PblVector3(vDir.x * 50.0f, vDir.y * 50.0f, vDir.z * 50.0f));
+                    const PblVector3 vDir = desc.mMatrix.GetTranslation() - mMatrix.GetTranslation();
+                    static_cast<EntityGeometry*>(pChild)->SetVelocity(Normalize(vDir) * 50.0f);
                 }
             }
         }
@@ -540,15 +533,14 @@ bool Asteroid::Update(float fDeltaTime)
         }
     }
 
-    CameraManager* pCameras = CameraManager::Instance();
-    for (unsigned int i = 0; i < pCameras->GetNumCameras(); ++i)
+    for (unsigned int i = 0; i < CameraManager::Instance()->GetNumCameras(); ++i)
     {
-        const PblMatrix& mView = pCameras->GetCamera(i)->GetMatrixInverse();
-        const PblVector3& vPos = static_cast<CollisionObject*>(this)->GetPosition();
-        const float fZ = vPos.x * mView.m[0][2] + vPos.y * mView.m[1][2] +
-                         vPos.z * mView.m[2][2] + mView.m[3][2];
+        const PblMatrix& mView = CameraManager::Instance()->GetCamera(i)->GetMatrixInverse();
+        CollisionObject& rObject = *this;
+        const float fZ = rObject.GetPosition().x * mView.m[0][2] + rObject.GetPosition().y * mView.m[1][2] +
+                         rObject.GetPosition().z * mView.m[2][2] + mView.m[3][2];
         PblVector3 vView;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vView, (const D3DXVECTOR3*)&vPos,
+        D3DXVec3TransformCoord((D3DXVECTOR3*)&vView, (const D3DXVECTOR3*)&rObject.GetPosition(),
                                (const D3DXMATRIX*)&mView);
         if (fZ < -2000.0f || fZ > 0.0f)
         {
@@ -562,9 +554,10 @@ bool Asteroid::Update(float fDeltaTime)
     if (fOmega > 0.0001f)
     {
         const float fInv = 1.0f / fOmega;
+        const PblVector3 vAxis = mOmega * fInv;
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, fOmega * fDeltaTime * 0.5f);
-        const PblQuaternion qStep(fCos, mOmega.x * fInv * fSin, mOmega.y * fInv * fSin, mOmega.z * fInv * fSin);
+        const PblQuaternion qStep(fCos, vAxis.x * fSin, vAxis.y * fSin, vAxis.z * fSin);
         qRotation = qRotation * qStep;
     }
     vPos += mVelocity * fDeltaTime;

@@ -276,7 +276,7 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
         const PblMatrix& camMatrix = pCamera->GetMatrix();
         const float dz = mMatrix.m[3][2] - camMatrix.m[3][2];
         const float dx = mMatrix.m[3][0] - camMatrix.m[3][0];
-        float fCamDist = sqrtf(dz * dz + dx * dx);
+        float fCamDist = PblMath::Sqrt(dx * dx + dz * dz);
 
         if (fMaxDist > fCamDist)
         {
@@ -347,7 +347,7 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
                     uiRenderFlags &= ~0x80u;
                 }
 
-                pGeometry->Render(&mMatrix, 0, mColor, uiRenderFlags | 0x1000000, 0);
+                mModel->mRenderObj.mGeometry->Render(&mMatrix, 0, mColor, uiRenderFlags | 0x1000000, 0);
                 break;
             }
 
@@ -380,12 +380,7 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
                     uiRenderFlags &= ~1u;
                 }
 
-                const float kInv255 = 1.0f / 255.0f;
-                RedColorValue color;
-                color.r = mColor.r * kInv255;
-                color.g = mColor.g * kInv255;
-                color.b = mColor.b * kInv255;
-                color.a = mColor.a * kInv255;
+                const RedColorValue color(mColor);
                 PblMatrix matrix(reinterpret_cast<const _D3DXMATRIXA16*>(&mMatrix));
 
                 mModel->mRenderObj.mGrassClass->RenderMaxDist(
@@ -423,12 +418,7 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
                     uiRenderFlags &= ~1u;
                 }
 
-                const float kInv255 = 1.0f / 255.0f;
-                RedColorValue color;
-                color.r = mColor.r * kInv255;
-                color.g = mColor.g * kInv255;
-                color.b = mColor.b * kInv255;
-                color.a = mColor.a * kInv255;
+                const RedColorValue color(mColor);
                 PblMatrix matrix(reinterpret_cast<const _D3DXMATRIXA16*>(&mMatrix));
 
                 mModel->mRenderObj.mLeafClass->RenderMaxDist(
@@ -725,8 +715,9 @@ PropObject* PropModelMesh::CreateObject(float x, float z, float rotation)
 // FUNCTION: SWBF2 0x0062d330
 void PropModelMesh::SetupMatrix(PblMatrix& matrix, float rotation)
 {
-    const float x = matrix.m[3][0];
-    const float z = matrix.m[3][2];
+    const PblVector3 vOrigin = matrix.GetTranslation();
+    const float x = vOrigin.x;
+    const float z = vOrigin.z;
     PblVector3 vNormal(0.0f, 1.0f, 0.0f);
     float y;
 
@@ -754,25 +745,20 @@ void PropModelMesh::SetupMatrix(PblMatrix& matrix, float rotation)
         const float bx = v2.x - v1.x;
         const float by = y2 - y1;
         const float bz = v1.z - v1.z;
-        PblVector3 vCross;
-        vCross.x = bz * ay - by * az;
-        vCross.y = az * bx - bz * ax;
-        vCross.z = by * ax - ay * bx;
-        D3DXVec3Normalize((D3DXVECTOR3*)&vNormal, (const D3DXVECTOR3*)&vCross);
+        const PblVector3 vCross(bz * ay - by * az, az * bx - bz * ax, by * ax - ay * bx);
+        PblVector3 vUnit;
+        D3DXVec3Normalize((D3DXVECTOR3*)&vUnit, (const D3DXVECTOR3*)&vCross);
+        vNormal = vUnit;
     }
 
-    matrix.m[3][0] = x;
-    matrix.m[3][1] = y;
-    matrix.m[3][2] = z;
-    matrix.m[3][3] = 1.0f;
+    matrix.SetTranslation(PblVector3(x, y, z));
 
     const float fStiffness = mStiffness;
     if (fStiffness > 0.0f)
     {
         const float fFlex = 1.0f - fStiffness;
-        vNormal.x = fFlex * vNormal.x + fStiffness * 0.0f;
-        vNormal.y = vNormal.y * fFlex + fStiffness;
-        vNormal.z = vNormal.z * fFlex + fStiffness * 0.0f;
+        vNormal = PblVector3(fFlex * vNormal.x + fStiffness * 0.0f, vNormal.y * fFlex + fStiffness,
+                             vNormal.z * fFlex + fStiffness * 0.0f);
     }
 
     const float fScale = mScale;
@@ -800,32 +786,25 @@ void PropModelMesh::SetupMatrix(PblMatrix& matrix, float rotation)
     }
 
     matrix = gMatrixIdentity;
-    matrix.m[1][0] = vNormal.x;
-    matrix.m[1][1] = vNormal.y;
-    matrix.m[1][2] = vNormal.z;
+    matrix[1] = vNormal;
     matrix.m[1][3] = 0.0f;
 
-    PblVector3 vIn;
     PblVector3 vOut;
     const float bx = -matrix.m[2][0];
     const float by = -matrix.m[2][1];
     const float bz = -matrix.m[2][2];
-    vIn.x = matrix.m[1][2] * by - matrix.m[1][1] * bz;
-    vIn.y = matrix.m[1][0] * bz - matrix.m[1][2] * bx;
-    vIn.z = matrix.m[1][1] * bx - matrix.m[1][0] * by;
+    PblVector3 vIn(matrix.m[1][2] * by - matrix.m[1][1] * bz,
+                   matrix.m[1][0] * bz - matrix.m[1][2] * bx,
+                   matrix.m[1][1] * bx - matrix.m[1][0] * by);
     D3DXVec3Normalize((D3DXVECTOR3*)&vOut, (const D3DXVECTOR3*)&vIn);
-    matrix.m[0][0] = vOut.x;
-    matrix.m[0][1] = vOut.y;
-    matrix.m[0][2] = vOut.z;
+    matrix[0] = vOut;
     matrix.m[0][3] = 0.0f;
 
-    vIn.x = matrix.m[0][1] * matrix.m[1][2] - matrix.m[0][2] * matrix.m[1][1];
-    vIn.y = matrix.m[0][2] * matrix.m[1][0] - matrix.m[0][0] * matrix.m[1][2];
-    vIn.z = matrix.m[0][0] * matrix.m[1][1] - matrix.m[0][1] * matrix.m[1][0];
+    vIn = PblVector3(matrix.m[0][1] * matrix.m[1][2] - matrix.m[0][2] * matrix.m[1][1],
+                     matrix.m[0][2] * matrix.m[1][0] - matrix.m[0][0] * matrix.m[1][2],
+                     matrix.m[0][0] * matrix.m[1][1] - matrix.m[0][1] * matrix.m[1][0]);
     D3DXVec3Normalize((D3DXVECTOR3*)&vOut, (const D3DXVECTOR3*)&vIn);
-    matrix.m[2][0] = vOut.x;
-    matrix.m[2][1] = vOut.y;
-    matrix.m[2][2] = vOut.z;
+    matrix[2] = vOut;
     matrix.m[2][3] = 0.0f;
 
     matrix.m[3][0] = x - mYOffset * vNormal.x;

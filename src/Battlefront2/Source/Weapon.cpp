@@ -1695,7 +1695,8 @@ bool Weapon::Update(float fDeltaTime)
     }
 
     GameObject* pObject = mOwner->GetGameObject();
-    const PblVector3& vPos = (GetCollisionMatrix(pObject)).GetTranslation();
+    EntityGeometry& rGeometry = *pObject;
+    const PblVector3& vPos = rGeometry.GetMatrix().GetTranslation();
     const PblVector3& vVel = GetVelocity(pObject);
     if (mSoundControl.mFlags & GameSoundControllable::flags_playing)
     {
@@ -1780,8 +1781,8 @@ bool Weapon::Update(float fDeltaTime)
                     mTrigger->IsPressed())
                 {
                     mSoundPropsFire = mClass->mFireEmptySound;
-                    mSoundControlFire.Play(&mSoundPropsFire, &(GetCollisionMatrix(pObject)).GetTranslation(),
-                                           &GetVelocity(pObject), true);
+                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
+                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
                 }
                 return true;
             }
@@ -1825,8 +1826,8 @@ bool Weapon::Update(float fDeltaTime)
                 if (mOwner && mOwner->mPlayerId >= 0 && mSelectedFlag && mTrigger->IsPressed())
                 {
                     mSoundPropsFire = mClass->mFireEmptySound;
-                    mSoundControlFire.Play(&mSoundPropsFire, &(GetCollisionMatrix(pObject)).GetTranslation(),
-                                           &GetVelocity(pObject), true);
+                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
+                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
                 }
                 return true;
             }
@@ -1842,8 +1843,8 @@ bool Weapon::Update(float fDeltaTime)
                 if (mSelectedFlag && mTrigger->IsPressed() && mOwner && mOwner->mPlayerId >= 0)
                 {
                     mSoundPropsFire = mClass->mFireEmptySound;
-                    mSoundControlFire.Play(&mSoundPropsFire, &(GetCollisionMatrix(pObject)).GetTranslation(),
-                                           &GetVelocity(pObject), true);
+                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
+                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
                 }
                 return true;
             }
@@ -1861,8 +1862,8 @@ bool Weapon::Update(float fDeltaTime)
                 if (mOwner && mOwner->mPlayerId >= 0 && mSelectedFlag && mTrigger->IsPressed())
                 {
                     mSoundPropsFire = mClass->mFireEmptySound;
-                    mSoundControlFire.Play(&mSoundPropsFire, &(GetCollisionMatrix(pObject)).GetTranslation(),
-                                           &GetVelocity(pObject), true);
+                    const PblVector3& vFirePos = rGeometry.GetMatrix().GetTranslation();
+                    mSoundControlFire.Play(&mSoundPropsFire, &vFirePos, &GetVelocity(pObject), true);
                 }
                 return true;
             }

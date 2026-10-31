@@ -168,16 +168,17 @@ bool ReticuleDisplay::Update(float fDeltaTime)
         return true;
     }
 
-    bool bShow = false;
+    bool bShow;
     if (pCharacter->GetControllable() && pCharacter->GetControllable()->GetGameObject() &&
         pCharacter->GetControllable()->GetGameObject()->ShouldShowReticule() &&
         CameraManager::sInstance->IsChaseMode(mJoystickIndex))
     {
         Trackable* pOwner = CameraManager::sInstance->mChaseCamera[mJoystickIndex]->GetOwner();
-        if (pOwner && pOwner->GetControllable() == pCharacter->GetControllable())
-        {
-            bShow = true;
-        }
+        bShow = pOwner && pOwner->GetControllable() == pCharacter->GetControllable();
+    }
+    else
+    {
+        bShow = false;
     }
 
     if (mVisible)
@@ -212,15 +213,13 @@ bool ReticuleDisplay::Update(float fDeltaTime)
         pControllable = pCharacter->mUnit;
     }
 
-    PblVector3 vAim(pControllable->mTargetInfo.mAimStart.x + pControllable->mEyeDir.x * 1024.0f,
-                    pControllable->mTargetInfo.mAimStart.y + pControllable->mEyeDir.y * 1024.0f,
-                    pControllable->mTargetInfo.mAimStart.z + pControllable->mEyeDir.z * 1024.0f);
+    PblVector3 vAim = pControllable->mTargetInfo.mAimStart + pControllable->mEyeDir * 1024.0f;
     PblVector3 vCamera;
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCamera), reinterpret_cast<const D3DXVECTOR3*>(&vAim), reinterpret_cast<const D3DXMATRIX*>(&pCamera->_MatrixInverse));
     PblVector3 vPos = pCamera->TransformCameraPointToProjectionSpace(vCamera);
 
     HUD::ElementMap* pMap = HUD::ElementMap::FindByPlayerIndex(mJoystickIndex);
-    if ((!pMap || GetMapMode(pMap) != HUD::ElementMap::mode_Large) && !GameLoop::sPauseMode)
+    if ((!pMap || pMap->GetMode() != HUD::ElementMap::mode_Large) && !GameLoop::sPauseMode)
     {
         for (unsigned int i = 0; i < 2; ++i)
         {

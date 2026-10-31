@@ -130,13 +130,13 @@ void SkyDome::Render(int value)
             mat = gMatrixIdentity;
             D3DXMatrixRotationAxis(reinterpret_cast<D3DXMATRIX*>(&mat), reinterpret_cast<const D3DXVECTOR3*>(&rDome.mRotationAxis),
                                    RedRenderer::GetTimeBase()->GetTime() * rDome.mRotationSpeed *
-                                       PblMath::fTwoPi);
+                                       6.2831855f);
 
             const PblMatrix& camMatrix = pCamera->GetMatrix();
             PblVector3 pos = camMatrix.GetTranslation();
             if (rDome.mType == STATIC_HEIGHT)
             {
-                float fHeight = rDome.mOffset + mDomeHeight;
+                float fHeight = mDomeHeight + rDome.mOffset;
                 pos.y = fHeight - (fHeight - pos.y) * rDome.mMovementScale;
             }
             mat.SetTranslation(pos);
@@ -205,7 +205,7 @@ void SkyDome::Render(int value)
     RedRenderer::SetFogEnable(bFogEnable);
 
     float fFarSceneRange = FLRenderer::GetFarSceneRange();
-    if (FLRenderer::GetNearSceneFadeStart() < fFarSceneRange)
+    if (!(FLRenderer::GetNearSceneFadeStart() >= fFarSceneRange))
     {
         RedTerrain::Render(uiFlags | 0x20000);
         RedRenderer::pcFlush(RENDERPHASE_OPAQUE);

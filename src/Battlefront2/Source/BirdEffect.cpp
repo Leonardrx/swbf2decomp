@@ -383,22 +383,14 @@ bool BirdParticle::UpdateStandingBird(float fDeltaTime)
     {
         PblVector3 vDir;
         D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocity);
-        mMatrix.m[2][0] = vDir.x;
-        mMatrix.m[2][1] = vDir.y;
-        mMatrix.m[2][2] = vDir.z;
+        mMatrix[2] = vDir;
         mMatrix.m[2][3] = 0.0f;
         mMatrix.m[1][0] = 0.0f;
         mMatrix.m[1][1] = 1.0f;
         mMatrix.m[1][2] = 0.0f;
         mMatrix.m[1][3] = 0.0f;
-        const PblVector3& vY = mMatrix.GetYAxis();
-        const PblVector3& vZ = mMatrix.GetZAxis();
-        PblVector3 vCross(vY.y * vZ.z - vY.z * vZ.y, vY.z * vZ.x - vY.x * vZ.z, vY.x * vZ.y - vY.y * vZ.x);
-        PblVector3 vX;
-        D3DXVec3Normalize((D3DXVECTOR3*)&vX, (const D3DXVECTOR3*)&vCross);
-        mMatrix.m[0][0] = vX.x;
-        mMatrix.m[0][1] = vX.y;
-        mMatrix.m[0][2] = vX.z;
+        PblVector3 vX = Normalize(CrossProduct(mMatrix.GetYAxis(), mMatrix.GetZAxis()));
+        mMatrix[0] = vX;
         mMatrix.m[0][3] = 0.0f;
 
         PblQuaternion q = PblQuaternion(mMatrix);
@@ -561,48 +553,54 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
     }
     const float fStep = 1.0f / (float)sNumBirdTypes;
     float fAccumulated = 0.0f;
-    int iType = 0;
-    do
+    int iType = -1;
+    for (int i = 0; i < sNumBirdTypes; ++i)
     {
         fAccumulated += fStep;
         if (fAccumulated >= fChoice)
         {
+            iType = i;
             break;
         }
-        ++iType;
-    } while (iType < sNumBirdTypes);
-    if (iType >= sNumBirdTypes)
+    }
+    if (iType == -1)
     {
         return;
     }
 
     const BirdParticleType& type = sBirdTypes[iType];
-    PblVector3 vForward;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vForward),
-                      reinterpret_cast<const D3DXVECTOR3*>(&vVelocity));
-    PblVector3 vSide(vForward.z * 1.5f, 0.0f, -vForward.x * 1.5f);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vSide),
-                      reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-    vSide.x *= 0.37f; vSide.y *= 0.37f; vSide.z *= 0.37f;
-    vForward.x *= 1.5f; vForward.y *= 1.5f; vForward.z *= 1.5f;
+    const float fSize = type.mSize;
+    const PblVector3 vUp(0.0f, 1.0f, 0.0f);
+    PblVector3 vForward = Normalize(vVelocity) * 1.5f;
+    PblVector3 vSide = Normalize(CrossProduct(vUp, vForward)) * 0.37f;
 
     BirdParticle* pBird = GetFreeBird();
     if (pBird)
     {
         pBird->RespawnFlockBird(vPosition, vVelocity, type);
     }
-    for (int i = 0; i < 4; ++i)
+    pBird = GetFreeBird();
+    if (pBird)
     {
-        pBird = GetFreeBird();
-        if (!pBird)
-        {
-            continue;
-        }
-        const float fSpacing = (i < 2 ? 2.0f : 4.0f) * type.mSize;
-        const float fSide = (i & 1) ? -1.0f : 1.0f;
-        const PblVector3 vBirdPosition(vPosition.x + (fSide*vSide.x - vForward.x)*fSpacing,
-                                       vPosition.y + (fSide*vSide.y - vForward.y)*fSpacing,
-                                       vPosition.z + (fSide*vSide.z - vForward.z)*fSpacing);
+        const PblVector3 vBirdPosition = vPosition + (vSide - vForward) * (fSize * 2.0f);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+    }
+    pBird = GetFreeBird();
+    if (pBird)
+    {
+        const PblVector3 vBirdPosition = vPosition + (-vSide - vForward) * (fSize * 2.0f);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+    }
+    pBird = GetFreeBird();
+    if (pBird)
+    {
+        const PblVector3 vBirdPosition = vPosition + (vSide - vForward) * (fSize * 4.0f);
+        pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
+    }
+    pBird = GetFreeBird();
+    if (pBird)
+    {
+        const PblVector3 vBirdPosition = vPosition + (-vSide - vForward) * (fSize * 4.0f);
         pBird->RespawnFlockBird(vBirdPosition, vVelocity, type);
     }
     sInstance->mFlockTimer = 0.0f;
@@ -611,8 +609,9 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
 // FUNCTION: SWBF2 0x0044b980
 void BirdParticleManager::SpawnGroundBirds()
 {
-    int iCam = PblRandom::GetGlobalInt() % CameraManager::Instance()->GetNumCameras();
-    PblMatrix mCamera = CameraManager::Instance()->GetCamera(iCam)->GetMatrix();
+    CameraManager* pCameraManager = CameraManager::Instance();
+    int iCam = PblRandom::GetGlobalInt() % pCameraManager->GetNumCameras();
+    PblMatrix mCamera = pCameraManager->GetCamera(iCam)->GetMatrix();
     const D3DXVECTOR3& vDir = *(const D3DXVECTOR3*)&mCamera.m[2][0];
     const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
     const D3DXVECTOR3 vUp(0.0f, 1.0f, 0.0f);
@@ -638,8 +637,8 @@ void BirdParticleManager::SpawnGroundBirds()
 
     for (int i = 3 - iNumGround; i > 0; --i)
     {
-        float fForward = PblRandom::GetGlobalFloat();
-        float fSide = PblRandom::GetGlobalFloat();
+        float fForward = PblRandom::_Global.GetFloat();
+        float fSide = PblRandom::_Global.GetFloat();
         PblVector3 vPos(vCenter.x + (vSide.x * fSide + vForward.x * fForward) * 8.0f,
                         vCenter.y + (vSide.y * fSide + vForward.y * fForward) * 8.0f,
                         vCenter.z + (vSide.z * fSide + vForward.z * fForward) * 8.0f);
@@ -650,7 +649,7 @@ void BirdParticleManager::SpawnGroundBirds()
         CollisionManager::RayHit(vPos, vDown, 1024.0f, pHit, 0, 0, 0, 0x190, false);
         if (pHit && pHit->GetCollisionType() == COLL_TERRAIN)
         {
-            float fChoice = PblRandom::GetGlobalFloat();
+            float fChoice = PblRandom::_Global.GetFloat();
             BirdParticle* pBird = GetFreeBird();
             if (sNumBirdTypes)
             {
@@ -705,12 +704,12 @@ void BirdParticle::RespawnGroundBird(const PblVector3& vPos, const BirdParticleT
     mState = BIRD_WALK_CIRCLE;
     mTimeOffCamera = 0.0f;
     mTotalLifetime = 0.0f;
-    mFlapTime = PblRandom::GetGlobalFloat() * PblMath::fTwoPi;
+    mFlapTime = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
     mVelocity = PblVector3(0.0f, 0.0f, 0.0f);
 
     PblQuaternion q = PblQuaternion(gMatrixIdentity);
     {
-        PblVector3 initomega = PblVector3(0.0f, PblRandom::GetGlobalFloat() * PblMath::fTwoPi, 0.0f);
+        PblVector3 initomega = PblVector3(0.0f, PblRandom::_Global.GetFloat() * PblMath::fTwoPi, 0.0f);
         float initAngle = Length(initomega);
         if (initAngle > EPSILON)
         {
@@ -726,10 +725,10 @@ void BirdParticle::RespawnGroundBird(const PblVector3& vPos, const BirdParticleT
         }
     }
 
-    mTotalCircleTime = (PblRandom::GetGlobalFloat() + 0.7f) * 10.0f;
-    mCircleRadius = PblRandom::GetGlobalFloat() * 2.0f;
+    mTotalCircleTime = (PblRandom::_Global.GetFloat() + 0.7f) * 10.0f;
+    mCircleRadius = PblRandom::_Global.GetFloat() * 2.0f;
     mCircleCenter = vPos;
-    mCircleTime = PblRandom::GetGlobalFloat() * mTotalCircleTime;
+    mCircleTime = PblRandom::_Global.GetFloat() * mTotalCircleTime;
 
     PblVector3 vNewPos = mCircleCenter;
     float fSin, fCos;
@@ -772,32 +771,19 @@ void BirdParticle::RespawnFlockBird(const PblVector3& vPos, const PblVector3& vV
     mState = BIRD_FLOCK;
     mTimeOffCamera = 0.0f;
     mTotalLifetime = 0.0f;
-    mFlapTime = PblRandom::GetGlobalFloat() * PblMath::fTwoPi;
+    mFlapTime = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
     mVelocity = vVelocity;
 
-    PblVector3 vDir;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&mVelocity);
-    PblVector3 vCross(vUp.y * vDir.z - vUp.z * vDir.y, vUp.z * vDir.x - vUp.x * vDir.z,
-                      vUp.x * vDir.y - vUp.y * vDir.x);
-    PblVector3 vRight;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vRight, (const D3DXVECTOR3*)&vCross);
+    PblVector3 vDir = Normalize(mVelocity);
+    PblVector3 vRight = Normalize(CrossProduct(vUp, vDir));
 
-    mMatrix.m[0][0] = vRight.x;
-    mMatrix.m[0][1] = vRight.y;
-    mMatrix.m[0][2] = vRight.z;
+    mMatrix[0] = vRight;
     mMatrix.m[0][3] = 0.0f;
-    mMatrix.m[1][0] = vUp.x;
-    mMatrix.m[1][1] = vUp.y;
-    mMatrix.m[1][2] = vUp.z;
+    mMatrix[1] = vUp;
     mMatrix.m[1][3] = 0.0f;
-    mMatrix.m[2][0] = vDir.x;
-    mMatrix.m[2][1] = vDir.y;
-    mMatrix.m[2][2] = vDir.z;
+    mMatrix[2] = vDir;
     mMatrix.m[2][3] = 0.0f;
-    mMatrix.m[3][0] = vPos.x;
-    mMatrix.m[3][1] = vPos.y;
-    mMatrix.m[3][2] = vPos.z;
-    mMatrix.m[3][3] = 1.0f;
+    mMatrix.SetTranslation(vPos);
     mIsValid = true;
     mInitMatrix = mMatrix;
     mType = type;
@@ -816,11 +802,11 @@ void BirdParticle::RespawnScatterBird(const PblVector3& vPos, const BirdParticle
     mState = BIRD_SCATTER;
     mTimeOffCamera = 0.0f;
     mTotalLifetime = 0.0f;
-    mFlapTime = PblRandom::GetGlobalFloat() * PblMath::fTwoPi;
+    mFlapTime = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
 
     PblQuaternion q = PblQuaternion(gMatrixIdentity);
     {
-        PblVector3 initomega = PblVector3(0.0f, PblRandom::GetGlobalFloat() * PblMath::fTwoPi, 0.0f);
+        PblVector3 initomega = PblVector3(0.0f, PblRandom::_Global.GetFloat() * PblMath::fTwoPi, 0.0f);
         float initAngle = Length(initomega);
         if (initAngle > EPSILON)
         {
@@ -828,7 +814,7 @@ void BirdParticle::RespawnScatterBird(const PblVector3& vPos, const BirdParticle
         }
     }
     {
-        PblVector3 initomega = PblVector3((-0.25f - PblRandom::GetGlobalFloat() * 0.25f) * fHalfPi, 0.0f, 0.0f);
+        PblVector3 initomega = PblVector3((-0.25f - PblRandom::_Global.GetFloat() * 0.25f) * fHalfPi, 0.0f, 0.0f);
         float initAngle = Length(initomega);
         if (initAngle > EPSILON)
         {
@@ -837,27 +823,18 @@ void BirdParticle::RespawnScatterBird(const PblVector3& vPos, const BirdParticle
     }
     mMatrix = PblMatrix(q, vPos);
 
-    mRandomness = PblRandom::GetGlobalFloat();
+    mRandomness = PblRandom::_Global.GetFloat();
 
     if (vAway.y >= -EPSILON &&
         mMatrix.m[2][0] * vAway.x + mMatrix.m[2][1] * vAway.y + mMatrix.m[2][2] * vAway.z < 0.0f)
     {
 
-        PblVector3 vX(-mMatrix.m[0][0], mMatrix.m[0][1], -mMatrix.m[0][2]);
-        PblVector3 vY(-mMatrix.m[1][0], mMatrix.m[1][1], -mMatrix.m[1][2]);
-        PblVector3 vZ(-mMatrix.m[2][0], mMatrix.m[2][1], -mMatrix.m[2][2]);
-        mMatrix.m[0][0] = vX.x;
-        mMatrix.m[0][1] = vX.y;
-        mMatrix.m[0][2] = vX.z;
-        mMatrix.m[0][3] = 0.0f;
-        mMatrix.m[1][0] = vY.x;
-        mMatrix.m[1][1] = vY.y;
-        mMatrix.m[1][2] = vY.z;
-        mMatrix.m[1][3] = 0.0f;
-        mMatrix.m[2][0] = vZ.x;
-        mMatrix.m[2][1] = vZ.y;
-        mMatrix.m[2][2] = vZ.z;
-        mMatrix.m[2][3] = 0.0f;
+        const PblVector3 vX = mMatrix[0];
+        const PblVector3 vY = mMatrix[1];
+        const PblVector3 vZ = mMatrix[2];
+        mMatrix.SetXAxis(-vX.x, vX.y, -vX.z, 0.0f);
+        mMatrix.SetYAxis(-vY.x, vY.y, -vY.z, 0.0f);
+        mMatrix.SetZAxis(-vZ.x, vZ.y, -vZ.z, 0.0f);
     }
 
     mInitMatrix = mMatrix;
@@ -896,10 +873,7 @@ void BirdParticle::UpdateFlying(float fDeltaTime)
     float fBob = PblMath::Sin(fWing2) * 0.1f;
     const PblVector3& vUp = mInitMatrix.GetYAxis();
     PblVector3 vPos = mVelocity * mTotalLifetime + (vInitPos - vUp * fBob);
-    mMatrix.m[3][0] = vPos.x;
-    mMatrix.m[3][1] = vPos.y;
-    mMatrix.m[3][2] = vPos.z;
-    mMatrix.m[3][3] = 1.0f;
+    mMatrix.SetTranslation(vPos);
     SetRenderPos(vPos);
 
     mTotalLifetime += fDeltaTime;
@@ -1039,7 +1013,7 @@ bool BirdParticleManager::Update(float fDeltaTime)
     {
         if (mScatterTimer > 20.0f)
         {
-            int iPoint = (int)(PblRandom::GetGlobalFloat() * 5.0f);
+            int iPoint = (int)(PblRandom::_Global.GetFloat() * 5.0f);
             if (iPoint >= 5)
             {
                 iPoint = 4;
@@ -1049,8 +1023,9 @@ bool BirdParticleManager::Update(float fDeltaTime)
 
         if (mFlockTimer > 25.0f)
         {
-            int iCam = PblRandom::GetGlobalInt() % CameraManager::Instance()->GetNumCameras();
-            PblMatrix mCamera = CameraManager::Instance()->GetCamera(iCam)->GetMatrix();
+            CameraManager* pCameraManager = CameraManager::Instance();
+            int iCam = PblRandom::GetGlobalInt() % pCameraManager->GetNumCameras();
+            PblMatrix mCamera = pCameraManager->GetCamera(iCam)->GetMatrix();
             const D3DXVECTOR3& vDir = *(const D3DXVECTOR3*)&mCamera.m[2][0];
             const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
             const D3DXVECTOR3 vUp(0.0f, 1.0f, 0.0f);
@@ -1061,12 +1036,12 @@ bool BirdParticleManager::Update(float fDeltaTime)
             PblVector3 vForward;
             D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
 
-            if (PblRandom::GetGlobalFloat() <= 0.5f)
+            if (PblRandom::_Global.GetFloat() <= 0.5f)
             {
                 vSide = PblVector3(-vSide.x, -vSide.y, -vSide.z);
             }
 
-            float fAhead = PblRandom::GetGlobalFloat() + 1.5f;
+            float fAhead = PblRandom::_Global.GetFloat() + 1.5f;
             PblVector3 vPos(vCamPos.x + (vForward.x * fAhead - vSide.x * 1.1f) * 20.0f,
                             vCamPos.y + (vForward.y * fAhead - vSide.y * 1.1f) * 20.0f,
                             vCamPos.z + (vForward.z * fAhead - vSide.z * 1.1f) * 20.0f);

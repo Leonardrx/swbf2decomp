@@ -564,7 +564,8 @@ void PathFollower::Update(float dt)
                 if (pNext)
                 {
                     const PblMatrix& mMe = mCtrl->mOwner->GetMatrix();
-                    vJump = PblVector3(pNext->mPos.x - mMe.m[3][0], 0.0f, pNext->mPos.z - mMe.m[3][2]);
+                    vJump = pNext->mPos - mMe.GetTranslation();
+                    vJump.y = 0.0f;
                     PblVector3 vDir;
                     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vJump));
                     vJump = PblVector3(vDir.x * 0.70710677f, 0.70710677f, vDir.z * 0.70710677f);
@@ -592,8 +593,11 @@ void PathFollower::Update(float dt)
                 if (pNext)
                 {
                     const PblMatrix& mMe = mCtrl->mOwner->GetMatrix();
-                    PblVector3 vDelta(pNext->mPos.x - mMe.m[3][0], 0.0f, pNext->mPos.z - mMe.m[3][2]);
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRoll), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+                    vRoll = pNext->mPos - mMe.GetTranslation();
+                    vRoll.y = 0.0f;
+                    PblVector3 vDir;
+                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vRoll));
+                    vRoll = vDir;
                 }
                 LowLevel(mCtrl).SetRoll(vRoll);
             }
@@ -657,7 +661,7 @@ void PathFollower::UpdateControllableMoving()
     {
         PblVector3 vPos = mCtrl->mOwner->GetMatrix().GetTranslation();
         const PblVector3& vVel = EntityGetVelocity(mCtrl->mOwner->GetEntity());
-        float fSpeed = sqrtf(vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z);
+        float fSpeed = PblMath::Sqrt(vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z);
         AIUtil::CalculateSoldierSteerPoint(mPrevPoint, mGotoPoint, vPos, fSpeed, vSteer);
     }
 
@@ -699,7 +703,7 @@ void PathFollower::UpdateControllableMoving()
                 PblVector3 vAwayN;
                 D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAwayN), reinterpret_cast<const D3DXVECTOR3*>(&vAway));
                 float fDot = vAwayN.x * vAlong.x + vAwayN.y * 0.0f + vAwayN.z * vAlong.z;
-                cDir = fDot <= 0.0f ? 1 : -1;
+                cDir = fDot > 0.0f ? -1 : 1;
             }
 
             float fStep = (float)cDir * 5.0f;
@@ -732,7 +736,7 @@ void PathFollower::UpdateControllableMoving()
 
             PblVector3 vPos = mCtrl->mOwner->GetMatrix().GetTranslation();
             const PblVector3& vVel = EntityGetVelocity(mCtrl->mOwner->GetEntity());
-            float fSpeed = sqrtf(vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z);
+            float fSpeed = PblMath::Sqrt(vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z);
             AIUtil::CalculateSoldierSteerPoint(mPrevPoint, mGotoPoint, vPos, fSpeed, vSteer);
         }
     }

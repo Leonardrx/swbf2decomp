@@ -729,8 +729,8 @@ void LoadDisplay::Render()
     CameraManager::Instance()->SetNumCameras(1);
 
     RedDirectionalLight& light = RedInterfaceScreen::s_directionalLight[0];
-    RedColorValue savedTop = AmbientTopColor();
-    RedColorValue savedBottom = AmbientBottomColor();
+    RedColorValue savedTop = RedInterfaceScreen::s_lightingState.ambientLight.m_topColor;
+    RedColorValue savedBottom = RedInterfaceScreen::s_lightingState.ambientLight.m_bottomColor;
     PblVector3 savedDirection = light.m_vDirection;
     RedColorValue savedColor = light.m_color;
     bool bColorControl = ColorControl::s_pInstance->IsEnabled();
@@ -738,10 +738,24 @@ void LoadDisplay::Render()
 
     RedRenderer::SetCamera(m_redCamera);
 
-    RedColorValue ambient = ToColorValue(m_ambientColor);
-    SetAmbientColors(ambient, ambient);
+    RedColorValue ambient;
+    ambient.r = m_ambientColor.r * (1.0f / 255.0f);
+    ambient.g = m_ambientColor.g * (1.0f / 255.0f);
+    ambient.b = m_ambientColor.b * (1.0f / 255.0f);
+    ambient.a = m_ambientColor.a * (1.0f / 255.0f);
+    RedInterfaceScreen::s_lightingState.ambientLight.m_topColor = ambient;
+    RedInterfaceScreen::s_lightingState.ambientLight.m_bottomColor = ambient;
+    RedInterfaceScreen::s_lightingState.ambientLight.m_color.r = (ambient.r + ambient.r) * 0.5f;
+    RedInterfaceScreen::s_lightingState.ambientLight.m_color.g = (ambient.g + ambient.g) * 0.5f;
+    RedInterfaceScreen::s_lightingState.ambientLight.m_color.b = (ambient.b + ambient.b) * 0.5f;
+    RedInterfaceScreen::s_lightingState.ambientLight.m_color.a = (ambient.a + ambient.a) * 0.5f;
     light.SetDirection(m_sunDirection);
-    light.SetColor(ToColorValue(m_sunColor));
+    RedColorValue sun;
+    sun.r = m_sunColor.r * (1.0f / 255.0f);
+    sun.g = m_sunColor.g * (1.0f / 255.0f);
+    sun.b = m_sunColor.b * (1.0f / 255.0f);
+    sun.a = m_sunColor.a * (1.0f / 255.0f);
+    light.SetColor(sun);
 
     ColorControl::s_pInstance->Enable(false);
     HDREffect::Instance()->Enable(false);
@@ -984,7 +998,10 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     m_LEDSpacing = item.GetFloatArg(0);
                     break;
                 case CFG_PROGRESSBARLEDCOLOR:
-                    m_LEDColor = ConfigColor(item);
+                    m_LEDColor.r = item.GetUint8Arg(0);
+                    m_LEDColor.g = item.GetUint8Arg(1);
+                    m_LEDColor.b = item.GetUint8Arg(2);
+                    m_LEDColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : 0xff;
                     break;
                 case CFG_TIPSTIME:
                     m_timePerTip = item.GetFloatArg(0);
@@ -992,14 +1009,14 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                 case CFG_AMBIENTCOLOR:
                     m_ambientColor.r = item.GetUint8Arg(0);
                     m_ambientColor.g = item.GetUint8Arg(1);
-                    m_ambientColor.a = 0xff;
                     m_ambientColor.b = item.GetUint8Arg(2);
+                    m_ambientColor.a = 0xff;
                     break;
                 case CFG_SUNCOLOR:
                     m_sunColor.r = item.GetUint8Arg(0);
                     m_sunColor.g = item.GetUint8Arg(1);
-                    m_sunColor.a = 0xff;
                     m_sunColor.b = item.GetUint8Arg(2);
+                    m_sunColor.a = 0xff;
                     break;
                 case CFG_LEDOFFINTENSITY:
                     LED_OFF_INTENSITY = item.GetFloatArg(0);
@@ -1034,7 +1051,10 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     m_backDropHash = PblHash(item.GetStringArg(0));
                     break;
                 case CFG_RANDOMBACKDROP:
-                    CopyBackDropName(m_randomBackDropFileName, item.GetStringArg(0));
+                    if (strlen(item.GetStringArg(0)) <= sizeof(m_randomBackDropFileName) - 1)
+                    {
+                        strcpy(m_randomBackDropFileName, item.GetStringArg(0));
+                    }
                     break;
                 case CFG_LOADINGTEXTCOLORPALLETE:
                 {
@@ -1044,7 +1064,12 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                         PblConfig::Data color = palette.ReadNextData();
                         if (color.GetId() == CFG_COLOR && m_loadingColorPalleteSize < 16)
                         {
-                            m_loadingColorPallete[m_loadingColorPalleteSize++] = ConfigColor(color);
+                            m_loadingColorPallete[m_loadingColorPalleteSize].r = color.GetUint8Arg(0);
+                            m_loadingColorPallete[m_loadingColorPalleteSize].g = color.GetUint8Arg(1);
+                            m_loadingColorPallete[m_loadingColorPalleteSize].b = color.GetUint8Arg(2);
+                            m_loadingColorPallete[m_loadingColorPalleteSize].a =
+                                color.GetNumArgs() > 3 ? color.GetUint8Arg(3) : 0xff;
+                            ++m_loadingColorPalleteSize;
                         }
                     }
                     break;
@@ -1056,7 +1081,14 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     AddTipsToDatabase(sTipsDatabase, item.GetStringArg(0));
                     break;
                 case CFG_TIPSCOLOR:
-                    m_textLevelTips.SetColor(ConfigColor(item));
+                    {
+                    RedColor tipsColor;
+                    tipsColor.r = item.GetUint8Arg(0);
+                    tipsColor.g = item.GetUint8Arg(1);
+                    tipsColor.b = item.GetUint8Arg(2);
+                    tipsColor.a = item.GetNumArgs() > 3 ? item.GetUint8Arg(3) : 0xff;
+                    m_textLevelTips.SetColor(tipsColor);
+                    }
                     break;
                 case CFG_TEAMMODEL:
                 {
@@ -1112,7 +1144,10 @@ void LoadDisplay::LoadConfig(PblFileChunk& chunk)
                     m_timePerTip = item.GetFloatArg(0);
                     break;
                 case CFG_RANDOMBACKDROP:
-                    CopyBackDropName(m_randomBackDropFileName, item.GetStringArg(0));
+                    if (strlen(item.GetStringArg(0)) <= sizeof(m_randomBackDropFileName) - 1)
+                    {
+                        strcpy(m_randomBackDropFileName, item.GetStringArg(0));
+                    }
                     break;
                 case CFG_TIPS:
                     sTipsDatabase.RemoveAll();
@@ -1183,8 +1218,8 @@ void LoadDisplay::ProgressIndicator::Init(int iNumLEDs, float fSpacing,
     {
         m_pIntensity[i] = LED_OFF_INTENSITY;
         const unsigned int uiTexture =
-            puiTextureHashes[(unsigned int)(PblRandom::GetGlobalFloat() * iNumTextures)];
-        m_pColor[i] = pColors[(unsigned int)(PblRandom::GetGlobalFloat() * iNumColors)];
+            puiTextureHashes[(unsigned int)(PblRandom::_Global.GetFloat() * iNumTextures)];
+        m_pColor[i] = pColors[(unsigned int)(PblRandom::_Global.GetFloat() * iNumColors)];
 
         m_pLED[i].Enable(true);
         m_pLED[i].SetColor(m_pColor[i]);
@@ -1238,30 +1273,31 @@ void LoadDisplay::ProgressIndicator::Update(float fDelta, GameSound* const pSoun
     if (m_OnLEDFraction >= 1.0f)
     {
         m_OnLEDFraction -= 1.0f;
-        switch (m_mode)
+        if (m_mode == LED_MODE_RANDOM)
         {
-        case LED_MODE_RANDOM:
             m_curOnLED = (int)(PblRandom::GetGlobalFloat() * (float)iNumLEDs);
-            break;
-        case LED_MODE_WRAP:
+        }
+        else if (m_mode == LED_MODE_WRAP)
+        {
             m_curOnLED = (m_curOnLED + 1) % iNumLEDs;
-            break;
-        case LED_MODE_TIMER:
+        }
+        else if (m_mode == LED_MODE_TIMER)
+        {
             m_pIntensity[m_curOnLED] = 1.0f;
-            m_pLED[m_curOnLED].SetColor(RedColor(
-            (unsigned char)(m_pColor[m_curOnLED].r * m_pIntensity[m_curOnLED]),
-            (unsigned char)(m_pColor[m_curOnLED].g * m_pIntensity[m_curOnLED]),
-            (unsigned char)(m_pColor[m_curOnLED].b * m_pIntensity[m_curOnLED]),
-            m_pColor[m_curOnLED].a));
+            RedColor color((unsigned char)(m_pColor[m_curOnLED].r * m_pIntensity[m_curOnLED]),
+                           (unsigned char)(m_pColor[m_curOnLED].g * m_pIntensity[m_curOnLED]),
+                           (unsigned char)(m_pColor[m_curOnLED].b * m_pIntensity[m_curOnLED]),
+                           m_pColor[m_curOnLED].a);
+            m_pLED[m_curOnLED].SetColor(color);
             ++m_curOnLED;
-            iNumLEDs = m_numLEDs;
-            if (m_curOnLED >= iNumLEDs)
+            if (m_curOnLED >= m_numLEDs)
             {
                 m_OnLEDFraction = 1.0f;
-                m_curOnLED = iNumLEDs - 1;
+                m_curOnLED = m_numLEDs - 1;
             }
-            break;
-        default:
+        }
+        else
+        {
             m_curOnLED += m_progressBarDirection;
             if (m_curOnLED >= iNumLEDs)
             {
@@ -1273,7 +1309,6 @@ void LoadDisplay::ProgressIndicator::Update(float fDelta, GameSound* const pSoun
                 m_progressBarDirection = 1;
                 m_curOnLED = iNumLEDs > 1 ? 1 : 0;
             }
-            break;
         }
     }
 
@@ -1283,27 +1318,27 @@ void LoadDisplay::ProgressIndicator::Update(float fDelta, GameSound* const pSoun
         for (int i = 0; i < m_numLEDs; ++i)
         {
             m_pIntensity[i] = (m_pIntensity[i] - fOff) * 0.95f + fOff;
-            m_pLED[i].SetColor(RedColor(
-            (unsigned char)(m_pColor[i].r * m_pIntensity[i]),
-            (unsigned char)(m_pColor[i].g * m_pIntensity[i]),
-            (unsigned char)(m_pColor[i].b * m_pIntensity[i]),
-            m_pColor[i].a));
+            RedColor color((unsigned char)(m_pColor[i].r * m_pIntensity[i]),
+                           (unsigned char)(m_pColor[i].g * m_pIntensity[i]),
+                           (unsigned char)(m_pColor[i].b * m_pIntensity[i]),
+                           m_pColor[i].a);
+            m_pLED[i].SetColor(color);
         }
         m_pIntensity[m_curOnLED] = (1.0f - fOff) * m_OnLEDFraction + fOff;
     }
     else
     {
-        if (m_pIntensity[m_curOnLED] >= 0.99f)
+        if (!(0.99f > m_pIntensity[m_curOnLED]))
         {
             return;
         }
         m_pIntensity[m_curOnLED] = (1.0f - LED_OFF_INTENSITY) * m_OnLEDFraction + LED_OFF_INTENSITY;
     }
-    m_pLED[m_curOnLED].SetColor(RedColor(
-            (unsigned char)(m_pColor[m_curOnLED].r * m_pIntensity[m_curOnLED]),
-            (unsigned char)(m_pColor[m_curOnLED].g * m_pIntensity[m_curOnLED]),
-            (unsigned char)(m_pColor[m_curOnLED].b * m_pIntensity[m_curOnLED]),
-            m_pColor[m_curOnLED].a));
+    RedColor color((unsigned char)(m_pColor[m_curOnLED].r * m_pIntensity[m_curOnLED]),
+                   (unsigned char)(m_pColor[m_curOnLED].g * m_pIntensity[m_curOnLED]),
+                   (unsigned char)(m_pColor[m_curOnLED].b * m_pIntensity[m_curOnLED]),
+                   m_pColor[m_curOnLED].a);
+    m_pLED[m_curOnLED].SetColor(color);
 }
 
 // FUNCTION: SWBF2 0x00578d50

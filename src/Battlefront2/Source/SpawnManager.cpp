@@ -300,7 +300,8 @@ void SpawnManager::InitialUpdate()
                 {
                     iBotTeam = 3 - iBotTeam;
                 }
-                Team::sTeams[iBotTeam]->CreateCharacter(iBotTeam == NetGame::GetStartTeam(i) ? name : otherName, -1);
+                unsigned short* pName = iBotTeam == NetGame::GetStartTeam(i) ? name : otherName;
+                Team::sTeams[iBotTeam]->CreateCharacter(pName, -1);
                 ++mCurrentUnitCount[iBotTeam];
             }
         }

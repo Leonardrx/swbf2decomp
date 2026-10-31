@@ -51,22 +51,21 @@ bool OrdnanceFatRay::CheckCollision()
     }
 
     const PblVector3 vDir = vDelta / fLength;
-    const float fHalf = fLength * 0.5f;
 
     GameObject* pObjects[32];
-    int iCount = CollisionManager::GetObjectsInRange(vDir * fHalf + vOld, pClass->mRayRadius + fHalf, pObjects, 32,
+    int iCount = CollisionManager::GetObjectsInRange(vDir * (fLength * 0.5f) + vOld, pClass->mRayRadius + fLength * 0.5f, pObjects, 32,
                                                      GetOwner(), 0x1022);
     while (iCount)
     {
         GameObject* pObject = pObjects[--iCount];
         const PblVector3 vTarget = pObject->GetTargetPoint(vOld, vDir, -1);
         const PblVector3 vFromOld = vTarget - vOld;
-        const PblVector3 vFromCur = vTarget - vCur;
         const float fAlong = DotProduct(vFromOld, vDir);
         if (!(fAlong > 0.0f))
         {
             continue;
         }
+        const PblVector3 vFromCur = vTarget - vCur;
         if (!(DotProduct(vFromCur, vDir) < 0.0f))
         {
             continue;

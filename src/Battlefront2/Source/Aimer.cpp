@@ -151,37 +151,38 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
 
     case 0x1e534b12:
     {
-        BarrelInfo& barrel = pClass->mBarrelInfo[sCurBarrel];
-        barrel.mHash = PblTEMPHash(pszValue);
-        barrel.mFireHash = barrel.mHash;
+        pClass->mBarrelInfo[sCurBarrel].mHash = PblTEMPHash(pszValue);
+        pClass->mBarrelInfo[sCurBarrel].mFireHash = pClass->mBarrelInfo[sCurBarrel].mHash;
         if (pModel)
         {
-            unsigned int uParent = pModel->GetParentBoneAndOffset(barrel.mHash, barrel.mOffset);
-            barrel.mParentHash = uParent;
+            unsigned int uParent = pModel->GetParentBoneAndOffset(pClass->mBarrelInfo[sCurBarrel].mHash, pClass->mBarrelInfo[sCurBarrel].mOffset);
+            pClass->mBarrelInfo[sCurBarrel].mParentHash = uParent;
             if (uParent && pClass->mMountHash)
             {
                 while (uParent != pClass->mMountHash && (uParent = pModel->GetParentBone(uParent)) != 0)
                     ;
             }
         }
-        break;
+        pClass->mNumBarrels = Max(pClass->mNumBarrels, sCurBarrel + 1);
+        return true;
     }
 
     case 0x2e5375da:
     case 0x4274fc96:
     {
-        BarrelInfo& barrel = pClass->mBarrelInfo[sCurBarrel];
-        barrel.mFireHash = PblTEMPHash(pszValue);
+        const unsigned int uFireHash = PblTEMPHash(pszValue);
+        pClass->mBarrelInfo[sCurBarrel].mFireHash = uFireHash;
         if (pModel)
         {
-            unsigned int uParent = pModel->GetParentBoneAndOffset(barrel.mFireHash, barrel.mFireOffset);
+            unsigned int uParent = pModel->GetParentBoneAndOffset(uFireHash, pClass->mBarrelInfo[sCurBarrel].mFireOffset);
             if (uParent && pClass->mMountHash)
             {
                 while (uParent != pClass->mMountHash && (uParent = pModel->GetParentBone(uParent)) != 0)
                     ;
             }
         }
-        break;
+        pClass->mNumBarrels = Max(pClass->mNumBarrels, sCurBarrel + 1);
+        return true;
     }
 
     case 0x3f38083c:
@@ -216,7 +217,8 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
 
     case 0x5a29d1cb:
         sscanf(pszValue, "%f", &pClass->mBarrelInfo[sCurBarrel].mRecoil);
-        break;
+        pClass->mNumBarrels = Max(pClass->mNumBarrels, sCurBarrel + 1);
+        return true;
 
     case 0xa9c3675c:
         sscanf(pszValue, "%f %f", &pClass->mYawMin, &pClass->mYawMax);
@@ -224,7 +226,7 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
         pClass->mYawMax *= 0.017453292f;
 
         pClass->mShiftYaw = pClass->mYawMin > 0.0f && pClass->mYawMin <= PblMath::fPi &&
-                            pClass->mYawMax >= PblMath::fPi && pClass->mYawMax < PblMath::fTwoPi;
+                            pClass->mYawMax >= PblMath::fPi && pClass->mYawMax < PblMath::fPi * 2.0f;
         return true;
 
     case 0xc182abc2:
@@ -252,7 +254,8 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
         BarrelInfo& barrel = pClass->mBarrelInfo[sCurBarrel];
         barrel.mFireOffset.z += fLength;
         barrel.mRecoil = fLength * 0.25f;
-        break;
+        pClass->mNumBarrels = Max(pClass->mNumBarrels, sCurBarrel + 1);
+        return true;
     }
 
     case 0xe98f377c:
@@ -273,12 +276,6 @@ bool AimerClass::SetProperty(unsigned int uProperty, const char* pszValue, const
     default:
         return false;
     }
-
-    if (pClass->mNumBarrels < sCurBarrel + 1)
-    {
-        pClass->mNumBarrels = sCurBarrel + 1;
-    }
-    return true;
 }
 
 // FUNCTION: SWBF2 0x0043cfa0
@@ -386,7 +383,7 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
         {
             PblMatrix mOffset = PblMatrix(mClass->mOffsetRot, mOffsetPos);
             PblMatrix mMount;
-            mMount = mOffset * *pParentBone;
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(pParentBone));
             PblVector3 vDir;
             D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mDirection), reinterpret_cast<const D3DXMATRIX*>(&mParent));
             mMountPoseMatrix = DirectionMatrix(vDir, mMount[1], mMount[3]);
@@ -396,9 +393,9 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
             {
                 if (pOld)
                 {
-                    PoseRemove(pose, mClass->mMountHash);
+                    pose.Remove(mClass->mMountHash);
                 }
-                PoseStore(pose, mClass->mMountHash, &mMountPoseMatrix);
+                pose.Store(mClass->mMountHash, &mMountPoseMatrix);
             }
         }
     }
@@ -429,9 +426,9 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
                 {
                     if (pOld)
                     {
-                        PoseRemove(pose, barrel.mHash);
+                        pose.Remove(barrel.mHash);
                     }
-                    PoseStore(pose, barrel.mHash, &mBarrelPoseMatrix[i]);
+                    pose.Store(barrel.mHash, &mBarrelPoseMatrix[i]);
                 }
             }
         }
@@ -490,62 +487,58 @@ bool Aimer::GetLeadPos(const PblVector3& vTarget, const PblVector3& vVelocity, P
 {
     *pvLead = vTarget;
     bool bResult = true;
-    if (!mWeapon)
+    if (mWeapon)
     {
-        return bResult;
-    }
-
-    const float fSpeed = mWeapon->GetOrdnanceVelocity();
-    if (!(fSpeed > 0.0001f))
-    {
-        return bResult;
-    }
-
-    const float dx = vTarget.x - mRootPos.x;
-    const float dy = vTarget.y - mRootPos.y;
-    const float dz = vTarget.z - mRootPos.z;
-    const float fGravity = mWeapon->GetOrdnanceGravity();
-    if (fGravity == 0.0f)
-    {
-        float b = -(vVelocity.x * dx + vVelocity.y * dy + vVelocity.z * dz);
-        const float fDistSq = dy * dy + dx * dx + dz * dz;
-        const float fDisc = b * b - (vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y
-                                     + vVelocity.z * vVelocity.z - fSpeed * fSpeed) * fDistSq;
-        if (fDisc > 0.0f)
+        const float fSpeed = mWeapon->GetOrdnanceVelocity();
+        if (fSpeed > 0.0001f)
         {
-            b += sqrtf(fDisc);
+            const float dx = vTarget.x - mRootPos.x;
+            const float dy = vTarget.y - mRootPos.y;
+            const float dz = vTarget.z - mRootPos.z;
+            const float fGravity = mWeapon->GetOrdnanceGravity();
+            if (fGravity == 0.0f)
+            {
+                float b = -(vVelocity.x * dx + vVelocity.y * dy + vVelocity.z * dz);
+                const float fDistSq = dy * dy + dx * dx + dz * dz;
+                const float fDisc = b * b - (vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y
+                                             + vVelocity.z * vVelocity.z - fSpeed * fSpeed) * fDistSq;
+                if (fDisc > 0.0f)
+                {
+                    b += sqrtf(fDisc);
+                }
+                const float fTime = fDistSq / b;
+                if (fTime > 0.0f)
+                {
+                    *pvLead += vVelocity * fTime;
+                }
+            }
+            else
+            {
+                float a = dy * fGravity + fSpeed * fSpeed;
+                const float fGravitySq = fGravity * fGravity;
+                const float fDisc = a * a - (dy * dy + dx * dx + dz * dz) * fGravitySq;
+                if (fDisc > 0.0f)
+                {
+                    a -= sqrtf(fDisc);
+                }
+                else
+                {
+                    bResult = false;
+                }
+                const float fTimeSq = a * 2.0f / fGravitySq;
+                if (fTimeSq > 0.0f)
+                {
+                    pvLead->y -= fGravity * 0.5f * fTimeSq;
+                    const float fTime = sqrtf(fTimeSq);
+                    *pvLead += vVelocity * fTime;
+                }
+                else
+                {
+                    bResult = false;
+                }
+            }
         }
-        const float fTime = fDistSq / b;
-        if (fTime > 0.0f)
-        {
-            pvLead->x += vVelocity.x * fTime;
-            pvLead->y += vVelocity.y * fTime;
-            pvLead->z += vVelocity.z * fTime;
-        }
-        return bResult;
     }
-
-    float a = dy * fGravity + fSpeed * fSpeed;
-    const float fGravitySq = fGravity * fGravity;
-    const float fDisc = a * a - (dy * dy + dx * dx + dz * dz) * fGravitySq;
-    if (fDisc > 0.0f)
-    {
-        a -= sqrtf(fDisc);
-    }
-    else
-    {
-        bResult = false;
-    }
-    const float fTimeSq = a * 2.0f / fGravitySq;
-    if (!(fTimeSq > 0.0f))
-    {
-        return false;
-    }
-    pvLead->y -= fGravity * 0.5f * fTimeSq;
-    const float fTime = sqrtf(fTimeSq);
-    pvLead->x += vVelocity.x * fTime;
-    pvLead->y += vVelocity.y * fTime;
-    pvLead->z += vVelocity.z * fTime;
     return bResult;
 }
 
@@ -593,14 +586,14 @@ bool Aimer::Update(float fDeltaTime)
 
     const PblVector3 vAimPoint = mOwner->mTargetInfo.mAimPoint;
 
-    if (mPose && mParentMatrix == &GetCollisionObject(mOwner->GetGameObject())->GetMatrix()
+    PblMatrix mMount;
+    if (mPose && mParentMatrix == &static_cast<const CollisionObject&>(*mOwner->GetGameObject()).GetMatrix()
         && mClass->mParentHash)
     {
         const PblMatrix* pParentBone = mPose->Find(mClass->mParentHash);
         if (pParentBone)
         {
             PblMatrix mOffset = PblMatrix(mClass->mOffsetRot, mOffsetPos);
-            PblMatrix mMount;
             D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(pParentBone));
             mMountPos = mMount[3];
             mMountRot = PblQuaternion(mMount);
@@ -608,7 +601,6 @@ bool Aimer::Update(float fDeltaTime)
     }
 
     PblMatrix mRot = PblMatrix(mMountRot, mMountPos);
-    PblMatrix mMount;
     D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mRot), reinterpret_cast<const D3DXMATRIX*>(mParentMatrix));
     mRootPos = mMount[3];
 
@@ -623,7 +615,7 @@ bool Aimer::Update(float fDeltaTime)
         }
     }
 
-    const float t = mDirection.x * (mFirePos.x - mRootPos.x) + mDirection.y * (mFirePos.y - mRootPos.y)
+    const float t = mDirection.y * (mFirePos.y - mRootPos.y) + mDirection.x * (mFirePos.x - mRootPos.x)
                   + mDirection.z * (mFirePos.z - mRootPos.z);
     PblVector3 vDelta(vAimPoint.x - (mFirePos.x - mDirection.x * t),
                       vAimPoint.y - (mFirePos.y - mDirection.y * t),
@@ -649,30 +641,16 @@ bool Aimer::Update(float fDeltaTime)
     const float fOldYaw = mYaw;
 
     const float fPitchMax = mClass->mPitchRate * fDeltaTime;
-    float fPitch = mMount.m[0][0] * vAxis.x + mMount.m[0][1] * vAxis.y + mMount.m[0][2] * vAxis.z;
-    if (-fPitchMax > fPitch)
-    {
-        fPitch = -fPitchMax;
-    }
-    else if (fPitch > fPitchMax)
-    {
-        fPitch = fPitchMax;
-    }
+    const float fPitch = Clamp(mMount.m[0][0] * vAxis.x + mMount.m[0][1] * vAxis.y + mMount.m[0][2] * vAxis.z,
+                               -fPitchMax, fPitchMax);
     mPitch = fOldPitch - fPitch;
 
     const float fYawMax = mClass->mYawRate * fDeltaTime;
-    float fYaw = mMount.m[1][0] * vAxis.x + mMount.m[1][1] * vAxis.y + mMount.m[1][2] * vAxis.z;
-    if (-fYawMax > fYaw)
-    {
-        fYaw = -fYawMax;
-    }
-    else if (fYaw > fYawMax)
-    {
-        fYaw = fYawMax;
-    }
+    const float fYaw = Clamp(mMount.m[1][0] * vAxis.x + mMount.m[1][1] * vAxis.y + mMount.m[1][2] * vAxis.z,
+                             -fYawMax, fYawMax);
     mYaw = fOldYaw + fYaw;
 
-    if (fabs(fOldPitch - mPitch) < 0.0001f && fabs(fOldYaw - mYaw) < 0.0001f)
+    if ((float)fabs((double)(fOldPitch - mPitch)) < 0.0001f && (float)fabs((double)(fOldYaw - mYaw)) < 0.0001f)
     {
         const float fx = mRootPos.x - mOldRootPos.x;
         const float fy = mRootPos.y - mOldRootPos.y;
@@ -709,7 +687,7 @@ bool Aimer::Update(float fDeltaTime)
 
     if (mPose)
     {
-        SetupPose(GetCollisionObject(mOwner->GetGameObject())->GetMatrix().GetInverseFast(), *mPose, false);
+        SetupPose(static_cast<const CollisionObject&>(*mOwner->GetGameObject()).GetMatrix().GetInverseFast(), *mPose, false);
     }
     return true;
 }

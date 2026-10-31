@@ -705,67 +705,68 @@ SoldierAnimatorLowRes* SoldierAnimatorLowResClass::GetAnimatorLocal(const Entity
         return m_aPose[ePose].m_pAnimator;
     }
 
+    SoldierAnimatorLowRes* pOwner = soldier.mSoldierAnimatorLowRes;
     const AnimPoolClass* pPoolClass = &s_AnimPoolClasses[eAnimPool];
-    if (pPoolClass->m_bLoop)
+    if (!pPoolClass->m_bLoop)
     {
-        if (soldier.mSoldierAnimatorLowRes)
+        SoldierAnimatorLowRes_UnsharedPool* pAnimator = NULL;
+        if (pOwner)
         {
-            SoldierAnimatorLowRes* pAnimator =
-                soldier.mSoldierAnimatorLowRes->GetOwnerAnimator(soldier, POSE_ANIMPOOL, eAnimPool);
+            pAnimator = static_cast<SoldierAnimatorLowRes_UnsharedPool*>(
+                pOwner->GetOwnerAnimator(soldier, POSE_ANIMPOOL, eAnimPool));
             if (pAnimator)
             {
                 return pAnimator;
             }
         }
 
-        int iIndex = m_AnimPool.m_iLastUsed++;
-        if (m_AnimPool.m_iLastUsed >= pPoolClass->m_iPoolSize)
+        int iOldest = 0;
+        float fOldest = 0.0f;
+        int i;
+        for (i = 0; i < pPoolClass->m_iPoolSize; ++i)
         {
-            m_AnimPool.m_iLastUsed %= pPoolClass->m_iPoolSize;
+            pAnimator = &m_UnsharedAnimPool.m_apAnimator[i];
+            if (!pAnimator->m_pOwner)
+            {
+                break;
+            }
+            if (pAnimator->mZephyrPoseDyn.m_fCurT > fOldest)
+            {
+                fOldest = pAnimator->mZephyrPoseDyn.m_fCurT;
+                iOldest = i;
+            }
         }
-        return &m_AnimPool.m_apAnimator[iIndex];
+        if (i == pPoolClass->m_iPoolSize)
+        {
+            pAnimator = &m_UnsharedAnimPool.m_apAnimator[iOldest];
+        }
+
+        float fTime = soldier.mStateTimer;
+        if (pOwner && pOwner->m_ePose == POSE_FLY)
+        {
+            fTime = 0.5f;
+        }
+        pAnimator->SetAnim(m_UnsharedAnimPool.m_apZephyrAnim[0], fTime);
+        pAnimator->m_pOwner = &soldier;
+        return pAnimator;
     }
 
-    SoldierAnimatorLowRes_UnsharedPool* pAnimator = NULL;
-    if (soldier.mSoldierAnimatorLowRes)
+    if (pOwner)
     {
-        pAnimator = static_cast<SoldierAnimatorLowRes_UnsharedPool*>(
-            soldier.mSoldierAnimatorLowRes->GetOwnerAnimator(soldier, POSE_ANIMPOOL, eAnimPool));
+        SoldierAnimatorLowRes* pAnimator =
+            pOwner->GetOwnerAnimator(soldier, POSE_ANIMPOOL, eAnimPool);
         if (pAnimator)
         {
             return pAnimator;
         }
     }
 
-    int iOldest = 0;
-    float fOldest = 0.0f;
-    int i;
-    for (i = 0; i < pPoolClass->m_iPoolSize; ++i)
+    int iIndex = m_AnimPool.m_iLastUsed++;
+    if (m_AnimPool.m_iLastUsed >= pPoolClass->m_iPoolSize)
     {
-        pAnimator = &m_UnsharedAnimPool.m_apAnimator[i];
-        if (!pAnimator->m_pOwner)
-        {
-            break;
-        }
-        if (pAnimator->mZephyrPoseDyn.m_fCurT > fOldest)
-        {
-            fOldest = pAnimator->mZephyrPoseDyn.m_fCurT;
-            iOldest = i;
-        }
+        m_AnimPool.m_iLastUsed %= pPoolClass->m_iPoolSize;
     }
-    if (i == pPoolClass->m_iPoolSize)
-    {
-        pAnimator = &m_UnsharedAnimPool.m_apAnimator[iOldest];
-    }
-
-    float fTime = soldier.mStateTimer;
-    if (soldier.mSoldierAnimatorLowRes && soldier.mSoldierAnimatorLowRes->m_ePose == POSE_FLY)
-    {
-        fTime = 0.5f;
-    }
-    pAnimator->SetAnim(m_UnsharedAnimPool.m_apZephyrAnim[0], fTime);
-    pAnimator->m_pOwner = &soldier;
-    return pAnimator;
+    return &m_AnimPool.m_apAnimator[iIndex];
 }
 
 // GLOBAL: SWBF2 0x007ae908
@@ -891,8 +892,8 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
     {
         const PblVector3& vVelocity = soldier.GetVelocity();
         const PblMatrix& kSoldier = soldier.GetMatrix();
-        float fRight = vVelocity.x * kSoldier.m[0][0] + vVelocity.y * kSoldier.m[0][1] + vVelocity.z * kSoldier.m[0][2];
-        float fFront = vVelocity.x * kSoldier.m[2][0] + vVelocity.y * kSoldier.m[2][1] + vVelocity.z * kSoldier.m[2][2];
+        float fFront = DotProduct(vVelocity, kSoldier.GetZAxis());
+        float fRight = DotProduct(vVelocity, kSoldier.GetXAxis());
 
         float fSpeedSq = fRight * fRight + fFront * fFront;
         if (fSpeedSq < 0.09f || fRight == 0.0f)
@@ -910,12 +911,62 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
         PblVector3 vFront(fRight * fInvSpeed, 0.0f, fFront * fInvSpeed);
         PblVector3 vRight(vFront.z, 0.0f, -vFront.x);
 
-        PblMatrix kRoot(vRight, gVectorUnitY, vFront, gVectorZero);
-        kMatrix = kRoot;
+        kMatrix = PblMatrix(vRight, gVectorUnitY, vFront, gVectorZero);
         return true;
     }
 
-    if (soldier.mState == SoldierState::ROLL)
+    switch (soldier.mState)
+    {
+    case SoldierState::FLY:
+    case SoldierState::TUMBLE:
+    {
+        const PblVector3& vVelocity = soldier.GetVelocity();
+        const PblMatrix& kSoldier = soldier.GetMatrix();
+        float fFront = DotProduct(vVelocity, kSoldier.GetZAxis());
+        float fRight = DotProduct(vVelocity, kSoldier.GetXAxis());
+
+        float fSpeed = 0.0f;
+        PblVector3 vAxis;
+        float fSpeedSq = fRight * fRight + fFront * fFront;
+        if (fSpeedSq > 0.0001f)
+        {
+            fSpeed = sqrtf(fSpeedSq);
+            float fInvSpeed = 1.0f / fSpeed;
+            vAxis.x = fFront * fInvSpeed;
+            vAxis.y = 0.0f * fInvSpeed;
+            vAxis.z = -fRight * fInvSpeed;
+        }
+        else
+        {
+            vAxis = gVectorUnitX;
+        }
+
+        float fSpin = fSpeed * 2.0f;
+        if (fSpin < 2.0f)
+        {
+            fSpin = 2.0f;
+        }
+        else if (fSpin > 6.0f)
+        {
+            fSpin = 6.0f;
+        }
+
+        D3DXMatrixRotationAxis(reinterpret_cast<D3DXMATRIX*>(&kMatrix), reinterpret_cast<const D3DXVECTOR3*>(&vAxis), soldier.mStateTimer * fSpin);
+        kMatrix.m[3][0] = 0.0f;
+        kMatrix.m[3][1] = 0.0f;
+        kMatrix.m[3][3] = 1.0f;
+        if (soldier.mState == SoldierState::FLY)
+        {
+            kMatrix.m[3][2] = 1.0f;
+        }
+        else
+        {
+            kMatrix.m[3][2] = 0.0f;
+        }
+        return true;
+    }
+
+    case SoldierState::ROLL:
     {
         // GLOBAL: SWBF2 0x01fac23c
         static PblVector3 s_vRollCenter(0.0f, 0.5f, 0.0f);
@@ -930,57 +981,16 @@ bool SoldierAnimatorLowRes::GetRootMatrixAnimation(const EntitySoldier& soldier,
         kMatrix.SetRotateX(soldier.mStateTimer * 8.0f + 1.0f);
         PblVector3 vCenter;
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&s_vRollCenter), reinterpret_cast<const D3DXMATRIX*>(&kMatrix));
-        kMatrix.m[3][0] = s_vRollCenter.x - vCenter.x;
-        kMatrix.m[3][1] = s_vRollCenter.y - vCenter.y;
-        kMatrix.m[3][2] = s_vRollCenter.z - vCenter.z;
+        kMatrix[3] = s_vRollCenter - vCenter;
         kMatrix.m[3][3] = 1.0f;
 
         kMatrix.RotateY(fYaw);
         return true;
     }
 
-    if (soldier.mState != SoldierState::FLY && soldier.mState != SoldierState::TUMBLE)
-    {
+    default:
         return false;
     }
-
-    const PblVector3& vVelocity = soldier.GetVelocity();
-    const PblMatrix& kSoldier = soldier.GetMatrix();
-    float fRight = vVelocity.x * kSoldier.m[0][0] + vVelocity.y * kSoldier.m[0][1] + vVelocity.z * kSoldier.m[0][2];
-    float fFront = vVelocity.x * kSoldier.m[2][0] + vVelocity.y * kSoldier.m[2][1] + vVelocity.z * kSoldier.m[2][2];
-
-    float fSpeed = 0.0f;
-    PblVector3 vAxis;
-    float fSpeedSq = fRight * fRight + fFront * fFront;
-    if (fSpeedSq > 0.0001f)
-    {
-        fSpeed = sqrtf(fSpeedSq);
-        float fInvSpeed = 1.0f / fSpeed;
-        vAxis.x = fFront * fInvSpeed;
-        vAxis.y = 0.0f * fInvSpeed;
-        vAxis.z = -fRight * fInvSpeed;
-    }
-    else
-    {
-        vAxis = gVectorUnitX;
-    }
-
-    float fSpin = fSpeed * 2.0f;
-    if (fSpin < 2.0f)
-    {
-        fSpin = 2.0f;
-    }
-    else if (fSpin > 6.0f)
-    {
-        fSpin = 6.0f;
-    }
-
-    D3DXMatrixRotationAxis(reinterpret_cast<D3DXMATRIX*>(&kMatrix), reinterpret_cast<const D3DXVECTOR3*>(&vAxis), soldier.mStateTimer * fSpin);
-    kMatrix.m[3][0] = 0.0f;
-    kMatrix.m[3][1] = 0.0f;
-    kMatrix.m[3][2] = soldier.mState == SoldierState::FLY ? 1.0f : 0.0f;
-    kMatrix.m[3][3] = 1.0f;
-    return true;
 }
 
 // FUNCTION: SWBF2 0x00649b90

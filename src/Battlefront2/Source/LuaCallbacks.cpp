@@ -445,10 +445,7 @@ int ScriptCB_GetVKeyboardCharacter(lua_State*)
 // FUNCTION: SWBF2 0x0057dee0
 int ScriptCB_IsLegalGamespyString(lua_State*)
 {
-    static const char sBadFirstChars[] = "@+:#";
-
     bool bLegal = true;
-    bool bResult = false;
     const char* pcError = "ifs.gsprofile.badchars";
 
     if (lua_gettop(LuaHelper::mState) != 3 || !lua_isstring(LuaHelper::mState, 1) ||
@@ -462,11 +459,12 @@ int ScriptCB_IsLegalGamespyString(lua_State*)
     apcStrings[1] = luaL_checklstring(LuaHelper::mState, 2, 0);
     apcStrings[2] = luaL_checklstring(LuaHelper::mState, 3, 0);
 
-    for (unsigned int i = 0; i < 3; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         unsigned int uLen = strlen(apcStrings[i]);
         if (uLen < 1 || (i == 0 && uLen < 3))
         {
+            bLegal = false;
             goto done;
         }
 
@@ -496,37 +494,50 @@ int ScriptCB_IsLegalGamespyString(lua_State*)
     if (apcStrings[0][0] >= '0' && apcStrings[0][0] <= '9')
     {
         pcError = "gamespy.errors.nick_nonumber";
+        bLegal = false;
         goto done;
     }
-    for (unsigned int j = 0; j < strlen(apcStrings[0]); ++j)
     {
-        if (apcStrings[0][j] == ' ')
+        unsigned int uLen = strlen(apcStrings[0]);
+        for (unsigned int j = 0; j < uLen; ++j)
         {
-            pcError = "gamespy.errors.nick_nospaces";
-            goto done;
+            if (apcStrings[0][j] == ' ')
+            {
+                pcError = "gamespy.errors.nick_nospaces";
+                bLegal = false;
+                goto done;
+            }
         }
     }
-    for (unsigned int j = 0; j < strlen(apcStrings[0]); ++j)
     {
-        if (apcStrings[0][j] == '!')
+        unsigned int uLen = strlen(apcStrings[0]);
+        for (unsigned int j = 0; j < uLen; ++j)
         {
-            pcError = "gamespy.errors.nick_validchars";
-            goto done;
+            if (apcStrings[0][j] == '!')
+            {
+                pcError = "gamespy.errors.nick_validchars";
+                bLegal = false;
+                goto done;
+            }
         }
     }
-    for (unsigned int j = 0; j < strlen(apcStrings[0]); ++j)
     {
-        if (apcStrings[0][j] == '\\')
+        unsigned int uLen = strlen(apcStrings[0]);
+        for (unsigned int j = 0; j < uLen; ++j)
         {
-            pcError = "gamespy.errors.nick_validchars";
-            goto done;
+            if (apcStrings[0][j] == '\\')
+            {
+                pcError = "gamespy.errors.nick_validchars";
+                bLegal = false;
+                goto done;
+            }
         }
     }
-    for (unsigned int i = 0; i < 3; ++i)
+    for (int i = 0; i < 3; ++i)
     {
-        for (unsigned int c = 0; c < sizeof(sBadFirstChars) - 1; ++c)
+        for (unsigned int c = 0; c < sizeof("@+:#") - 1; ++c)
         {
-            if (apcStrings[i][0] == sBadFirstChars[c])
+            if (apcStrings[i][0] == "@+:#"[c])
             {
                 bLegal = false;
                 break;
@@ -543,16 +554,16 @@ int ScriptCB_IsLegalGamespyString(lua_State*)
         if (pcAt && !strchr(pcAt + 1, '@') && pcAt[1] && pcAt[2] && strchr(pcAt + 2, '.'))
         {
             pcError = "";
-            bResult = bLegal;
         }
         else
         {
             pcError = "ifs.gsprofile.bademail";
+            bLegal = false;
         }
     }
 
 done:
-    lua_pushboolean(LuaHelper::mState, bResult);
+    lua_pushboolean(LuaHelper::mState, bLegal);
     lua_pushstring(LuaHelper::mState, pcError);
     return 2;
 }
@@ -1710,15 +1721,22 @@ void DrawAllBeamBetween::Render(int)
         const Desc& desc = mArray[i];
         const PblVector3& vPos1 = desc.mPos1;
         const PblVector3& vPos2 = desc.mPos2;
+
+        const float fMinZ = vPos2.z > vPos1.z ? vPos1.z : vPos2.z;
+        const float fMinY = vPos2.y > vPos1.y ? vPos1.y : vPos2.y;
+        const float fMinX = vPos2.x > vPos1.x ? vPos1.x : vPos2.x;
+        const float fMaxZ = vPos1.z > vPos2.z ? vPos1.z : vPos2.z;
+        const float fMaxY = vPos1.y > vPos2.y ? vPos1.y : vPos2.y;
+        const float fMaxX = vPos1.x > vPos2.x ? vPos1.x : vPos2.x;
         float fRadius = desc.mWidth * 2.0f;
 
         PblVector3 vMin, vMax;
-        vMin.x = (vPos2.x > vPos1.x ? vPos1.x : vPos2.x) - fRadius;
-        vMin.y = (vPos2.y > vPos1.y ? vPos1.y : vPos2.y) - fRadius;
-        vMin.z = (vPos2.z > vPos1.z ? vPos1.z : vPos2.z) - fRadius;
-        vMax.x = fRadius + (vPos1.x > vPos2.x ? vPos1.x : vPos2.x);
-        vMax.y = fRadius + (vPos1.y > vPos2.y ? vPos1.y : vPos2.y);
-        vMax.z = fRadius + (vPos1.z > vPos2.z ? vPos1.z : vPos2.z);
+        vMin.x = fMinX - fRadius;
+        vMin.y = fMinY - fRadius;
+        vMin.z = fMinZ - fRadius;
+        vMax.x = fRadius + fMaxX;
+        vMax.y = fRadius + fMaxY;
+        vMax.z = fRadius + fMaxZ;
         RedParticleRenderer::SubmitTexture(desc.mTexture, BLEND_NORMAL, 0);
         RedParticleRenderer::SubmitBounds(vMin, vMax);
 

@@ -1100,10 +1100,11 @@ void AILowLevel::UpdateHeadLook(float dt)
 // FUNCTION: SWBF2 0x0043c610
 bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
 {
+    const float kHalfPi = 1.5707964f;
     float fBlend = 0.0f;
     if (mHeadLook_TurnToTime > 0.0f)
     {
-        fBlend = PblMath::Cos(mHeadLook_Time / mHeadLook_TurnToTime * PblMath::fHalfPi);
+        fBlend = PblMath::Cos(mHeadLook_Time / mHeadLook_TurnToTime * kHalfPi);
     }
     else if (mHeadLook_StayTime > 0.0f)
     {
@@ -1111,11 +1112,9 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
     }
     else if (mHeadLook_TurnBackTime > 0.0f)
     {
-        fBlend = PblMath::Cos(PblMath::fHalfPi - mHeadLook_Time / mHeadLook_TurnBackTime * PblMath::fHalfPi);
+        fBlend = PblMath::Cos(kHalfPi - mHeadLook_Time / mHeadLook_TurnBackTime * kHalfPi);
     }
 
-    float fSin, fCos;
-    PblQuaternion q;
     if (mHeadLookState == AI::HEAD_LOOK_OBJECT)
     {
         const GameObject* pObj = mHeadLook_Object;
@@ -1129,7 +1128,7 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
         PblVector3 vFwd;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFwd), reinterpret_cast<const D3DXVECTOR3*>((const PblVector3*)&mHead.m[1][0]));
         const PblVector3& vEye = pObj->GetControllable()->mEyePoint;
-        PblVector3 vTo(vEye.x - mHead.m[3][0], vEye.y - mHead.m[3][1], vEye.z - mHead.m[3][2]);
+        const PblVector3 vTo = vEye - mHead.GetTranslation();
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vTo));
 
@@ -1144,33 +1143,21 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
             fTurn = (float)acos((double)fDot) * fBlend;
         }
 
-        PblVector3 vCross(vFwd.y * vDir.z - vDir.y * vFwd.z,
-                          vFwd.z * vDir.x - vDir.z * vFwd.x,
-                          vDir.y * vFwd.x - vFwd.y * vDir.x);
+        const PblVector3 vCross = CrossProduct(vFwd, vDir);
         PblVector3 vAxis;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-        PblMath::SinCos(&fSin, &fCos, fTurn * 0.5f);
-        q._fS = fCos;
-        q._fX = vAxis.x * fSin;
-        q._fY = vAxis.y * fSin;
-        q._fZ = vAxis.z * fSin;
+        const PblQuaternion q(vAxis, fTurn);
 
         PblVector3 vRotated = q.RotateVector(vFwd);
         PblVector3 vY;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vY), reinterpret_cast<const D3DXVECTOR3*>(&vRotated));
-        const PblVector3& vUp = gVectorUnitY;
-        PblVector3 vSide(vY.z * vUp.y - vY.y * vUp.z,
-                         vY.x * vUp.z - vY.z * vUp.x,
-                         vY.y * vUp.x - vY.x * vUp.y);
+        const PblVector3 vSide = CrossProduct(gVectorUnitY, vY);
         PblVector3 vZ;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vZ), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-        const PblVector3 vX(vZ.z * vY.y - vZ.y * vY.z,
-                            vZ.x * vY.z - vZ.z * vY.x,
-                            vZ.y * vY.x - vY.y * vZ.x);
+        const PblVector3 vX = CrossProduct(vY, vZ);
 
         *pOut = PblMatrix(vX, vY, vZ, mHead.GetTranslation());
-        const PblMatrix mInv = GetMatrix().GetInverseFast();
-        *pOut *= mInv;
+        *pOut *= GetMatrix().GetInverseFast();
         return true;
     }
 
@@ -1182,17 +1169,8 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
     {
         fBlend = -fBlend;
     }
-    PblMath::SinCos(&fSin, &fCos, fBlend * 0.5f);
-    q._fS = fCos;
-    q._fX = fSin;
-    q._fY = fSin * 0.0f;
-    q._fZ = fSin * 0.0f;
-    PblQuaternion qUnit;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(pOut), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&q)));
-    pOut->m[3][0] = 0.0f;
-    pOut->m[3][1] = 0.0f;
-    pOut->m[3][2] = 0.0f;
-    pOut->m[3][3] = 1.0f;
+    const PblQuaternion q(PblVector3(1.0f, 0.0f, 0.0f), fBlend);
+    *pOut = PblMatrix(q, PblVector3(0.0f, 0.0f, 0.0f));
     const PblMatrix mHeadCopy = *pHead;
     *pOut *= mHeadCopy;
     return true;

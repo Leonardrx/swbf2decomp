@@ -235,9 +235,9 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
       RedSceneObject(&((OrdnanceMeleeThrowClass*)mClass)->mLodData),
       m_pOwner(desc.mOwner),
       mOldPosition(desc.mPosition),
-      mVelocity(Interpolate(((const OrdnanceMeleeThrowClass*)mClass)->mVelocity,
-                            ((const OrdnanceMeleeThrowClass*)mClass->mNextCharge)->mVelocity, mRatio) *
-                desc.mDirection)
+      mVelocity(desc.mDirection * Interpolate(((const OrdnanceMeleeThrowClass*)mClass)->mVelocity,
+                                              ((const OrdnanceMeleeThrowClass*)mClass->mNextCharge)->mVelocity,
+                                              mRatio))
 {
     m_pDamageData = 0;
     m_pLight = 0;

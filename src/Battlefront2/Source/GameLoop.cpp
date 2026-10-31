@@ -806,8 +806,8 @@ int Init()
     sMissionTimeInitialized = false;
     for (int i = 0; i < 3; ++i)
     {
-        netHeroFirstUnlocked[i] = false;
         netHeroUnlocked[i] = false;
+        netHeroFirstUnlocked[i] = false;
     }
     SetLastGameWinner(-1);
     sInitCompleteFlag = true;
@@ -932,7 +932,7 @@ int Init()
     }
 
     LuaHelper::InitState();
-    LuaHelper::CallGlobalProc("ScriptInit");
+    LuaHelper::CallProc("ScriptInit");
     SpawnManager::Instance()->SetupSoldierMemoryPool();
     RedShadowProxy::CleanUp();
     RedTerrain::Activate();
@@ -1165,51 +1165,63 @@ int PostLoad()
 // FUNCTION: SWBF2 0x00532100
 void UpdateDedicatedMsg(float fDeltaTime)
 {
-    if (g_bNoRender)
+    if (!g_bNoRender)
     {
-        UpdateDedicatedNoRender();
-        return;
-    }
+        const float fSafeZone = RedInterfaceScreen::GetScreenSafeZone();
+        const float fRangeX = (float)RedInterfaceScreen::GetScreenWidth() * fSafeZone - 360.0f;
+        const float fRangeY = (float)RedInterfaceScreen::GetScreenHeight() * fSafeZone - 380.0f;
+        DedicatedMsgX += fDeltaTime * DedicatedMsgDX;
+        DedicatedMsgY += fDeltaTime * DedicatedMsgDY;
 
-    const float fSafeZone = RedInterfaceScreen::GetScreenSafeZone();
-    const float fRangeX = (float)RedInterfaceScreen::GetScreenWidth() * fSafeZone - 360.0f;
-    const float fRangeY = (float)RedInterfaceScreen::GetScreenHeight() * fSafeZone - 380.0f;
-    DedicatedMsgX += fDeltaTime * DedicatedMsgDX;
-    DedicatedMsgY += fDeltaTime * DedicatedMsgDY;
-
-    float fX = (float)fmod(DedicatedMsgX, fRangeX * 2.0f);
-    float fY = (float)fmod(DedicatedMsgY, fRangeY * 2.0f);
-    if (fX > fRangeX)
-    {
-        fX = fRangeX * 2.0f - fX;
-    }
-    if (fY > fRangeY)
-    {
-        fY = fRangeY * 2.0f - fY;
-    }
-    mDedicatedGroup.SetPosition(PblVector3(fX - fRangeX * 0.5f, fY - fRangeY * 0.5f - 10.0f, 0.0f));
-
-    unsigned short acName[128];
-    unsigned short acCount[128];
-    RedTextElement* apText[2] = { &mDedicatedTeam1Text, &mDedicatedTeam2Text };
-    for (int i = 0; i < 2; ++i)
-    {
-        Team* pTeam = Team::sTeams[i + 1];
-        const int iCount = mShowTeamPoints[i] ? pTeam->mPoints : pTeam->mCurReinforcements;
-        if (pTeam->mName)
+        float fX = fmodf(DedicatedMsgX, fRangeX * 2.0f);
+        float fY = fmodf(DedicatedMsgY, fRangeY * 2.0f);
+        if (fX > fRangeX)
         {
-            PblUnicode::ustrlcpy(acName, pTeam->mName, 128);
+            fX = fRangeX * 2.0f - fX;
+        }
+        if (fY > fRangeY)
+        {
+            fY = fRangeY * 2.0f - fY;
+        }
+        mDedicatedGroup.SetPosition(PblVector3(fX - fRangeX * 0.5f, fY - fRangeY * 0.5f - 10.0f, 0.0f));
+
+        unsigned short acName[128];
+        unsigned short acCount[128];
+
+        Team* pTeam1 = Team::sTeams[1];
+        const int iCount1 = mShowTeamPoints[0] ? pTeam1->mPoints : pTeam1->mCurReinforcements;
+        if (pTeam1->mName)
+        {
+            PblUnicode::ustrlcpy(acName, pTeam1->mName, 128);
         }
         else
         {
             PblUnicode::ustrncnv(acName, "", 128);
         }
-        PblUnicode::usnprintf(acCount, 128, " : %d", iCount);
+        PblUnicode::usnprintf(acCount, 128, " : %d", iCount1);
         PblUnicode::ustrlcat(acName, acCount, 128);
-        apText[i]->SetText(acName, true);
-    }
+        mDedicatedTeam1Text.SetText(acName, true);
 
-    mDedicatedGroup.Visible(!PauseMenu::GetPaused(0));
+        Team* pTeam2 = Team::sTeams[2];
+        const int iCount2 = mShowTeamPoints[1] ? pTeam2->mPoints : pTeam2->mCurReinforcements;
+        if (pTeam2->mName)
+        {
+            PblUnicode::ustrlcpy(acName, pTeam2->mName, 128);
+        }
+        else
+        {
+            PblUnicode::ustrncnv(acName, "", 128);
+        }
+        PblUnicode::usnprintf(acCount, 128, " : %d", iCount2);
+        PblUnicode::ustrlcat(acName, acCount, 128);
+        mDedicatedTeam2Text.SetText(acName, true);
+
+        mDedicatedGroup.Visible(!PauseMenu::GetPaused(0));
+    }
+    else
+    {
+        UpdateDedicatedNoRender();
+    }
 }
 
 // FUNCTION: SWBF2 0x005323e0
@@ -1251,7 +1263,7 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
             mWaitMessageGroup.Enable(true);
         }
 
-        float fAlpha = (1.0f - (float)fabs((mWaitTimer - (float)(int)mWaitTimer) * 2.0f - 1.0f)) * 255.0f;
+        float fAlpha = (1.0f - (float)fabs((double)((mWaitTimer - (float)(int)mWaitTimer) * 2.0f - 1.0f))) * 255.0f;
         if (fAlpha < 0.0f)
         {
             fAlpha = 0.0f;
@@ -1270,7 +1282,7 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
         return;
     }
 
-    ScreenTransition::sInstance->Update(fSystemDeltaTime);
+    ScreenTransition::sInstance->ScreenTransition::Update(fSystemDeltaTime);
     sSystemDeltaTime = fSystemDeltaTime;
 
     if (gAttractMode)
@@ -1340,7 +1352,7 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
             else
             {
 
-                const float fThreshold = netSecondsPerTurn * (netFrameLock ? 0.85f : 0.95f);
+                const float fThreshold = netFrameLock ? netSecondsPerTurn * 0.85f : netSecondsPerTurn * 0.95f;
                 int iTurns = 0;
                 while (clientInputAcc >= fThreshold && iTurns < 64)
                 {
@@ -1592,7 +1604,7 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
                                 pTeam->mMemberCount,
                                 AIDifficulty::GetIntSkill((const UnitController*)bPlayerTeam, false),
                                 bPlayerTeam ? 'P' : ' ',
-                                pTeam->mMaxReinforcements >= 0x7fffffff ? -1 : pTeam->mCurReinforcements,
+                                pTeam->mMaxReinforcements < 0x7fffffff ? pTeam->mCurReinforcements : -1,
                                 pTeam->mPoints);
                     }
                     fprintf(pFile, "\n");
@@ -1609,7 +1621,8 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
             endTimer.Update(fSystemDeltaTime);
             if (!NetGame::IsEnabled() || NetGame::IsGameOver())
             {
-                if ((EndDisplay::Instance()->IsFinished() || endTimer.IsFinished()) && !GameLoop::sShowStats &&
+                const bool bEndDisplayFinished = EndDisplay::Instance()->IsFinished();
+                if ((endTimer.IsFinished() || bEndDisplayFinished) && !GameLoop::sShowStats &&
                     (NetGame::IsEnabled() || !PauseMenu::GetPaused(0)))
                 {
                     EndDisplay::Instance()->Hide();

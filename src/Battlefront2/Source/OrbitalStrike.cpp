@@ -81,9 +81,8 @@ bool OrbitalStrike::Update(float fDeltaTime)
             aim._44 = 1.0f;
 
             OrdnanceDesc desc;
-            PblRandom& rand = PblRandom::GetSim();
-            const D3DXVECTOR3 offset((rand.GetFloat() - rand.GetFloat()) * mClass->mScatterDistance,
-                                     (rand.GetFloat() - rand.GetFloat()) * mClass->mScatterDistance,
+            const D3DXVECTOR3 offset((PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) * mClass->mScatterDistance,
+                                     (PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) * mClass->mScatterDistance,
                                      mClass->mAimDistance);
             D3DXVECTOR3 pos;
             D3DXVec3TransformCoord(&pos, &offset, &aim);

@@ -68,15 +68,14 @@ unsigned char Threat::GetPriority(float fTime, Controllable* pMe) const
 
     const PblMatrix& mMe = pMe->GetMatrix();
     const PblVector3& vHim = mThreatObject->GetPosition();
-    PblVector3 vToMe(mMe.GetTranslation().x - vHim.x, mMe.GetTranslation().y - vHim.y,
-                     mMe.GetTranslation().z - vHim.z);
+    const PblVector3 vToMe = mMe.GetTranslation() - vHim;
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToMe));
 
     if (pMe->GetEntity()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
     {
         const PblVector3& vFwd = mMe.GetZAxis();
-        if (-vDir.x * vFwd.x + -vDir.y * vFwd.y + -vDir.z * vFwd.z <= 0.0f)
+        if (DotProduct(-vDir, vFwd) <= 0.0f)
         {
             return 0;
         }
@@ -105,15 +104,7 @@ unsigned char Threat::GetPriority(float fTime, Controllable* pMe) const
         {
             fMin = 0.0f;
         }
-        float fScale = (fFacing - 0.6f) / 0.4f;
-        if (fScale < fMin)
-        {
-            fScale = fMin;
-        }
-        else if (fScale > 1.0f)
-        {
-            fScale = 1.0f;
-        }
+        const float fScale = Clamp((fFacing - 0.6f) / 0.4f, fMin, 1.0f);
         iVisual = (int)((float)iVisual * fScale);
     }
 

@@ -128,12 +128,15 @@ int UnitBoardAgent::EventHandler(AI::EventInfo* pInfo)
     switch (pInfo->mType)
     {
     case AI::EVT_EmptyVehicle:
-        if (ResolveHandle(pInfo->mGameObject) == ResolveHandle(mVehicle) || !GetMe() || !ResolveHandle(mVehicle))
+    {
+        GameObject* pEventObject = pInfo->mGameObject;
+        GameObject* pCurrentVehicle = mVehicle;
+        if (pEventObject == pCurrentVehicle || !GetMe() || !mVehicle)
         {
             return 0;
         }
-        if (DistSq(GetCollisionObject(ResolveHandle(mVehicle))->GetPosition(), GetMe()->GetMatrix().GetTranslation()) <=
-            DistSq(GetCollisionObject(ResolveHandle(pInfo->mGameObject))->GetPosition(), GetMe()->GetMatrix().GetTranslation()))
+        if (DistSq(GetCollisionObject(mVehicle.operator->())->GetPosition(), GetMe()->GetMatrix().GetTranslation()) <=
+            DistSq(GetCollisionObject(pInfo->mGameObject.operator->())->GetPosition(), GetMe()->GetMatrix().GetTranslation()))
         {
             return 0;
         }
@@ -142,6 +145,7 @@ int UnitBoardAgent::EventHandler(AI::EventInfo* pInfo)
             return 1;
         }
         return 0;
+    }
 
     case AI::EVT_Grenade:
     case AI::EVT_Damaged:

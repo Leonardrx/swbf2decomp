@@ -304,13 +304,13 @@ FLEffectClass* EntityLightFXParser::BuildClass(PblConfig& config) const
             }
             break;
         case 0x5127F14Du:
-            if (PblHash(data.GetStringArg(0)) == 0x2305F67Du)
+            if (PblHash(data.GetStringArg(0)) != 0x2305F67Du)
             {
-                pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_TYPE_SPOT;
+                pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_TYPE_OMNI;
             }
             else
             {
-                pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_TYPE_OMNI;
+                pClass->_uiFlags |= EntityLightClass::ENTITY_LIGHT_FLAG_TYPE_SPOT;
             }
             break;
         case 0x8D39BDE6u:
@@ -336,10 +336,10 @@ FLEffectClass* EntityLightFXParser::BuildClass(PblConfig& config) const
             {
                 pClass->_fBeamFadeLength = 0.2f;
             }
-            pClass->_fBeamWidthX = (float)fabs(data.GetFloatArg(0));
+            pClass->_fBeamWidthX = static_cast<float>(fabs(static_cast<double>(data.GetFloatArg(0))));
             if (data.GetNumArgs() >= 2)
             {
-                pClass->_fBeamWidthZ = (float)fabs(data.GetFloatArg(1));
+                pClass->_fBeamWidthZ = static_cast<float>(fabs(static_cast<double>(data.GetFloatArg(1))));
             }
             else
             {
@@ -356,10 +356,10 @@ FLEffectClass* EntityLightFXParser::BuildClass(PblConfig& config) const
             {
                 pClass->_fBeamFadeLength = 0.2f;
             }
-            pClass->_fBeamInitialWidthX = (float)fabs(data.GetFloatArg(0));
+            pClass->_fBeamInitialWidthX = static_cast<float>(fabs(static_cast<double>(data.GetFloatArg(0))));
             if (data.GetNumArgs() >= 2)
             {
-                pClass->_fBeamInitialWidthZ = (float)fabs(data.GetFloatArg(1));
+                pClass->_fBeamInitialWidthZ = static_cast<float>(fabs(static_cast<double>(data.GetFloatArg(1))));
             }
             else
             {
@@ -376,7 +376,7 @@ FLEffectClass* EntityLightFXParser::BuildClass(PblConfig& config) const
             {
                 pClass->_fBeamFadeLength = 0.5f;
             }
-            pClass->_fBeamWidthZ = pClass->_fBeamWidthX = (float)fabs(data.GetFloatArg(0));
+            pClass->_fBeamWidthX = pClass->_fBeamWidthZ = static_cast<float>(fabs(static_cast<double>(data.GetFloatArg(0))));
             break;
         case 0x857435A7u:
             if (pClass->_fBeamFadeLength < 0.0f)
@@ -494,7 +494,7 @@ FLEffectClass* EntityLightFXParser::BuildClass(PblConfig& config) const
                 else
                 {
                     unsigned int uType = (int)data.GetFloatArg(0);
-                    pClass->_eLightFlickerType = uType < EntityLight::NumLightFlickerTypes
+                    pClass->_eLightFlickerType = uType <= EntityLight::NumLightFlickerTypes - 1
                                                      ? uType
                                                      : EntityLight::LightFlickerType_None;
                 }
@@ -1144,13 +1144,13 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
         }
         break;
     case 0x5127F14Du:
-        if (PblHash(pszValue) == 0x2305F67Du)
+        if (PblHash(pszValue) != 0x2305F67Du)
         {
-            _uiFlags |= ENTITY_LIGHT_FLAG_TYPE_SPOT;
+            _uiFlags |= ENTITY_LIGHT_FLAG_TYPE_OMNI;
         }
         else
         {
-            _uiFlags |= ENTITY_LIGHT_FLAG_TYPE_OMNI;
+            _uiFlags |= ENTITY_LIGHT_FLAG_TYPE_SPOT;
         }
         break;
     case 0x8D39BDE6u:
@@ -1209,13 +1209,13 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
             }
             else
             {
-                _fBeamWidthX = (float)fabs(_fBeamWidthX);
-                _fBeamWidthZ = (float)fabs(_fBeamWidthZ);
+                _fBeamWidthX = static_cast<float>(fabs(static_cast<double>(_fBeamWidthX)));
+                _fBeamWidthZ = static_cast<float>(fabs(static_cast<double>(_fBeamWidthZ)));
             }
         }
         else if (iCount == 1)
         {
-            _fBeamWidthZ = _fBeamWidthX = (float)fabs(_fBeamWidthX);
+            _fBeamWidthX = _fBeamWidthZ = static_cast<float>(fabs(static_cast<double>(_fBeamWidthX)));
         }
         break;
     }
@@ -1235,13 +1235,13 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
             }
             else
             {
-                _fBeamInitialWidthX = (float)fabs(_fBeamInitialWidthX);
-                _fBeamInitialWidthZ = (float)fabs(_fBeamInitialWidthZ);
+                _fBeamInitialWidthX = static_cast<float>(fabs(static_cast<double>(_fBeamInitialWidthX)));
+                _fBeamInitialWidthZ = static_cast<float>(fabs(static_cast<double>(_fBeamInitialWidthZ)));
             }
         }
         else if (iCount == 1)
         {
-            _fBeamInitialWidthZ = _fBeamInitialWidthX = (float)fabs(_fBeamInitialWidthX);
+            _fBeamInitialWidthZ = _fBeamInitialWidthX = static_cast<float>(fabs(static_cast<double>(_fBeamInitialWidthX)));
         }
         break;
     }
@@ -1252,7 +1252,7 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
         }
         if (sscanf(pszValue, "%f", &_fBeamWidthX) == 1)
         {
-            _fBeamWidthX = _fBeamWidthZ = (float)fabs(_fBeamWidthX);
+            _fBeamWidthX = _fBeamWidthZ = static_cast<float>(fabs(static_cast<double>(_fBeamWidthX)));
         }
         break;
     case 0x857435A7u:
@@ -1346,7 +1346,7 @@ void EntityLightClass::SetProperty(unsigned int uProperty, const char* pszValue)
         {
             unsigned int uType;
             sscanf(pszValue, "%d", &uType);
-            _eLightFlickerType = uType < EntityLight::NumLightFlickerTypes
+            _eLightFlickerType = uType <= EntityLight::NumLightFlickerTypes - 1
                                      ? uType
                                      : EntityLight::LightFlickerType_None;
         }

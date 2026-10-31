@@ -575,7 +575,7 @@ void EntitySoldier::UpdateFoleyFX(float fDeltaTime)
 
     if (mSoundState & 0x10)
     {
-        if (Snd::Bus::GetRootBus().GetFinalGain() == 0.0f)
+        if (0.0f == Snd::Bus::GetRootBus().GetFinalGain())
         {
             mSoundState &= ~0x10;
         }
@@ -602,7 +602,7 @@ void EntitySoldier::UpdateFoleyFX(float fDeltaTime)
     }
     else
     {
-        mDistanceMoved += (float)fabs(mControlTurn) * fDeltaTime * 0.0005f;
+        mDistanceMoved += (float)fabs((double)mControlTurn) * fDeltaTime * 0.0005f;
     }
 
     if (!(mSoundState & 3))
@@ -689,11 +689,13 @@ void EntitySoldier::UpdateFoleyFX(const RedPose& pose, const PblMatrix& mWorld)
         if (RedWater::GetWaterHeight(GetPosition(), fWaterHeight) &&
             fWaterHeight > GetPosition().y)
         {
-            bInWater = vRoot.y + 0.5f > fWaterHeight;
+            if (vRoot.y + 0.5f > fWaterHeight)
+            {
+                bInWater = true;
+            }
         }
     }
 
-    const PblVector3* pPos = &mWorld.GetTranslation();
     mSoundState &= ~0xc;
 
     if (mLeftFootElevation - fLeftFoot > 0.01f)
@@ -701,7 +703,7 @@ void EntitySoldier::UpdateFoleyFX(const RedPose& pose, const PblMatrix& mWorld)
         if (!(mSoundState & 1))
         {
             mSoundState |= 1;
-            mClass->mClothingRustleSound.Play(pPos, &mVelocity, false, true);
+            mClass->mClothingRustleSound.Play(&mWorld.GetTranslation(), &mVelocity, false, true);
         }
     }
     else if ((mSoundState & 1) && fLeftFoot - mLeftFootElevation > 0.01f)
@@ -709,7 +711,7 @@ void EntitySoldier::UpdateFoleyFX(const RedPose& pose, const PblMatrix& mWorld)
         mSoundState &= ~1;
         if (mClass->mMinFootHeight > mLeftFootElevation)
         {
-            PlayFootstep(0.0f, false, pPos, &mVelocity);
+            PlayFootstep(0.0f, false, &mWorld.GetTranslation(), &mVelocity);
             mSoundState |= 4;
             if (!NetGame::IsEnabled() || (NetGame::IsClient() && netIsLocalTurn))
             {
@@ -735,7 +737,7 @@ void EntitySoldier::UpdateFoleyFX(const RedPose& pose, const PblMatrix& mWorld)
         if (!(mSoundState & 2))
         {
             mSoundState |= 2;
-            mClass->mClothingRustleSound.Play(pPos, &mVelocity, false, true);
+            mClass->mClothingRustleSound.Play(&mWorld.GetTranslation(), &mVelocity, false, true);
         }
     }
     else if ((mSoundState & 2) && fRightFoot - mRightFootElevation > 0.01f)
@@ -743,7 +745,7 @@ void EntitySoldier::UpdateFoleyFX(const RedPose& pose, const PblMatrix& mWorld)
         mSoundState &= ~2;
         if (mClass->mMinFootHeight > mRightFootElevation)
         {
-            PlayFootstep(0.0f, true, pPos, &mVelocity);
+            PlayFootstep(0.0f, true, &mWorld.GetTranslation(), &mVelocity);
             mSoundState |= 8;
             if (!NetGame::IsEnabled() || (NetGame::IsClient() && netIsLocalTurn))
             {
@@ -821,9 +823,7 @@ EntitySoldier::EntitySoldier(EntitySoldierClass* pClass, const EntityDesc& desc)
     mVelocity.y = 0.0f;
     mVelocity.z = 0.0f;
     mFlags |= flags_footprintLeft | flags_isGrounded;
-    mGroundNormal.x = 0.0f;
-    mGroundNormal.y = 1.0f;
-    mGroundNormal.z = 0.0f;
+    mGroundNormal = PblVector3(0.0f, 1.0f, 0.0f);
     mPitchValue = -0.07f;
     mPitchOffset = 0.0f;
     mPitchVelocity = 0.0f;
@@ -972,9 +972,7 @@ EntitySoldier::EntitySoldier(EntitySoldierClass* pClass, const EntityDesc& desc)
     mSkip = 0;
     mDoProneRotation = 0;
     mDrownTime = mClass->mDrownTime;
-    mAILastCollisionNormal.x = 0.0f;
-    mAILastCollisionNormal.y = 0.0f;
-    mAILastCollisionNormal.z = 0.0f;
+    mAILastCollisionNormal = PblVector3(0.0f, 0.0f, 0.0f);
     mFoliageCollisionTime = 0.0f;
     mForceFrameNum1 = -1.0f;
     mForceFrameNum2 = -1.0f;
@@ -984,7 +982,14 @@ EntitySoldier::EntitySoldier(EntitySoldierClass* pClass, const EntityDesc& desc)
     mSkipIndirectTime = 0.0f;
     mLastVehicleMatrix = gMatrixIdentity;
     mLastPilotInfoFrame = 99999999;
-    mJetFuel = (mClass->mJetFuelRechargeRate > 0.0f) ? 0.5f : 0.0f;
+    if (mClass->mJetFuelRechargeRate > 0.0f)
+    {
+        mJetFuel = 0.5f;
+    }
+    else
+    {
+        mJetFuel = 0.0f;
+    }
 
     mHealthGainEffectHandle = NULL;
     mAmmoGainEffectHandle = NULL;
@@ -7798,7 +7803,7 @@ bool EntitySoldier::Stand()
             mInputLockTime = 0.5f;
         }
         else if (mOldState == SoldierState::JET_HOVER || mOldState == SoldierState::JET_JUMP ||
-                 fOldStateTimer <= 1.5f)
+                 !(fOldStateTimer > 1.5f))
         {
             m_uiInputLockMask = INPUTLOCK_ACTION;
             mInputLockTime = 0.3f;
@@ -7849,7 +7854,7 @@ bool EntitySoldier::Stand()
     if (mOldState == SoldierState::PRONE)
     {
 
-        const PblVector3& vFront = mMatrix.GetZAxis();
+        PblVector3 vFront = mMatrix.GetZAxis();
         PblVector3 vUp(0.0f, 1.0f, 0.0f);
         PblVector3 vCross(vUp.y * vFront.z - vUp.z * vFront.y, vUp.z * vFront.x - vUp.x * vFront.z,
                           vUp.x * vFront.y - vUp.y * vFront.x);
@@ -7859,25 +7864,7 @@ bool EntitySoldier::Stand()
                             vRight.x * vUp.y - vRight.y * vUp.x);
         PblVector3 vNewFront;
         D3DXVec3Normalize(&vNewFront, &vCross);
-        const PblVector3& vOrigin = mMatrix.GetTranslation();
-        PblMatrix mNew;
-        mNew.m[0][0] = vRight.x;
-        mNew.m[0][1] = vRight.y;
-        mNew.m[0][2] = vRight.z;
-        mNew.m[0][3] = 0.0f;
-        mNew.m[1][0] = vUp.x;
-        mNew.m[1][1] = vUp.y;
-        mNew.m[1][2] = vUp.z;
-        mNew.m[1][3] = 0.0f;
-        mNew.m[2][0] = vNewFront.x;
-        mNew.m[2][1] = vNewFront.y;
-        mNew.m[2][2] = vNewFront.z;
-        mNew.m[2][3] = 0.0f;
-        mNew.m[3][0] = vOrigin.x;
-        mNew.m[3][1] = vOrigin.y;
-        mNew.m[3][2] = vOrigin.z;
-        mNew.m[3][3] = 1.0f;
-        SetMatrix(mNew);
+        SetMatrix(PblMatrix(vRight, vUp, vNewFront, mMatrix.GetTranslation()));
     }
     else if (mMatrix.m[1][1] < 1.0f)
     {
@@ -7921,48 +7908,32 @@ bool EntitySoldier::Jump()
         return false;
     }
 
-    const PblVector3* pAIDir = NULL;
-    if (UnitControllerPtr(mCtrl))
+    if (UnitControllerPtr(mCtrl) &&
+        SquaredLength(UnitControllerPtr(mCtrl)->GetLowLevel().mAIJetJumpDir) > 0.1f)
     {
-        const PblVector3& vAIDir = UnitControllerPtr(mCtrl)->GetLowLevel().mAIJetJumpDir;
-        if (vAIDir.x * vAIDir.x + vAIDir.y * vAIDir.y + vAIDir.z * vAIDir.z > 0.1f)
-        {
-            pAIDir = &UnitControllerPtr(mCtrl)->GetLowLevel().mAIJetJumpDir;
-        }
-    }
-    if (pAIDir)
-    {
-        PblVector3 vLifted(pAIDir->x, 0.01f, pAIDir->z);
+        PblVector3 vLifted = UnitControllerPtr(mCtrl)->GetLowLevel().mAIJetJumpDir;
+        vLifted.y = 0.01f;
         PblVector3 vDir;
         D3DXVec3Normalize(&vDir, &vLifted);
-        float fSpeed = mClass->mMaxSpeed;
-        float fFactor = mClass->mJumpForwardSpeedFactor;
-        PblVector3 vPush(vDir.x * fSpeed * fFactor, vDir.y * fSpeed * fFactor, vDir.z * fSpeed * fFactor);
-        mVelocity = PblVector3(0.0f + vPush.x, mClass->mJumpVerticalSpeed + vPush.y, 0.0f + vPush.z);
+        mVelocity = PblVector3(0.0f, mClass->mJumpVerticalSpeed, 0.0f) +
+                    vDir * mClass->mMaxSpeed * mClass->mJumpForwardSpeedFactor;
     }
     else
     {
         mVelocity.y += mClass->mJumpVerticalSpeed;
         const PblVector3& vFront = mMatrix.GetZAxis();
         const PblVector3& vRight = mMatrix.GetXAxis();
-        float fForward = mVelocity.x * vFront.x + mVelocity.y * vFront.y + mVelocity.z * vFront.z;
-        float fSide = mVelocity.x * vRight.x + mVelocity.y * vRight.y + mVelocity.z * vRight.z;
-        float fScale;
+        float fForward = DotProduct(mVelocity, vFront);
+        float fSide = DotProduct(mVelocity, vRight);
         if (fForward > 0.0f)
         {
-            fScale = (mClass->mJumpForwardSpeedFactor - 1.0f) * fForward;
+            mVelocity += vFront * ((mClass->mJumpForwardSpeedFactor - 1.0f) * fForward);
         }
         else
         {
-            fScale = (mClass->mJumpStrafeSpeedFactor - 1.0f) * fForward;
+            mVelocity += vFront * ((mClass->mJumpStrafeSpeedFactor - 1.0f) * fForward);
         }
-        mVelocity.x += vFront.x * fScale;
-        mVelocity.y += vFront.y * fScale;
-        mVelocity.z += vFront.z * fScale;
-        fScale = (mClass->mJumpStrafeSpeedFactor - 1.0f) * fSide;
-        mVelocity.x += vRight.x * fScale;
-        mVelocity.y += vRight.y * fScale;
-        mVelocity.z += vRight.z * fScale;
+        mVelocity += vRight * ((mClass->mJumpStrafeSpeedFactor - 1.0f) * fSide);
     }
 
     if (FoleyFXSoldier* pFoley = static_cast<FoleyFXSoldier*>(GetFoleyFX()))
@@ -8013,9 +7984,7 @@ bool EntitySoldier::JetJump()
     float fStrafe = mControlStrafe * -0.1f;
     const PblVector3& vFront = mMatrix.GetZAxis();
     const PblVector3& vRight = mMatrix.GetXAxis();
-    PblVector3 vPush(vRight.x * fStrafe + vFront.x * fForward + 0.0f,
-                     vRight.y * fStrafe + vFront.y * fForward + 1.1f,
-                     vRight.z * fStrafe + vFront.z * fForward + 0.0f);
+    PblVector3 vPush = vRight * fStrafe + vFront * fForward + PblVector3(0.0f, 1.1f, 0.0f);
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vPush));
     if (mPlayerId < 0)
@@ -8051,14 +8020,18 @@ bool EntitySoldier::JetJump()
         {
             fSpeed = mClass->mMaxStrafeSpeed * mControlMove;
         }
-        mVelocity = PblVector3(vFront.x * fSpeed, vFront.y * fSpeed, vFront.z * fSpeed);
+        mVelocity = vFront * fSpeed;
         float fSide = -(mClass->mMaxStrafeSpeed * mControlStrafe);
         mVelocity += vRight * fSide;
         mVelocity.y = fVertical;
 
-        if (!mSoldierAnimator ||
-            mSoldierAnimator->RestartJumpAnimation(mControlMove, -mControlStrafe,
-                                                   mState == SoldierState::JUMP && fOldStateTimer >= 0.5f))
+        bool bAnimated = true;
+        if (mSoldierAnimator)
+        {
+            bool bRestart = mState == SoldierState::JUMP && fOldStateTimer >= 0.5f;
+            bAnimated = mSoldierAnimator->RestartJumpAnimation(mControlMove, -mControlStrafe, bRestart);
+        }
+        if (bAnimated)
         {
             mStateTimer = 0.0f;
         }
@@ -9242,17 +9215,13 @@ void EntitySoldier::ApplyPush(const PblVector3& vPush, float fArg, bool bArg)
     }
     else
     {
-        float fDot = vPush.x * mVelocity.x + vPush.y * mVelocity.y + vPush.z * mVelocity.z;
+        float fDot = DotProduct(vPush, mVelocity);
         if (fDot < 0.0f)
         {
             fDot *= 0.5f;
-            mVelocity.x -= vPush.x * fDot;
-            mVelocity.y -= vPush.y * fDot;
-            mVelocity.z -= vPush.z * fDot;
+            mVelocity -= vPush * fDot;
         }
-        mVelocity.x += vPush.x * fArg;
-        mVelocity.y += fArg * vPush.y;
-        mVelocity.z += fArg * vPush.z;
+        mVelocity += vPush * fArg;
     }
 
     SoldierState::SoldierState eState = mState;
@@ -9452,23 +9421,17 @@ bool EntitySoldier::Roll()
     const PblVector3& vFront = mMatrix.GetZAxis();
     const PblVector3& vRight = mMatrix.GetXAxis();
     float fRollSpeed = mClass->mRollSpeedFactor * mClass->mMaxSpeed;
-    float fForward = mVelocity.x * vFront.x + mVelocity.y * vFront.y + mVelocity.z * vFront.z;
-    float fSide = mVelocity.x * vRight.x + mVelocity.y * vRight.y + mVelocity.z * vRight.z;
+    float fForward = DotProduct(vFront, mVelocity);
+    float fSide = DotProduct(vRight, mVelocity);
     float fSpeed2 = fSide * fSide + fForward * fForward;
     if (fSpeed2 > 0.01f && fRollSpeed * fRollSpeed > fSpeed2)
     {
-        float fScale = fRollSpeed / (float)sqrt((double)fSpeed2) - 1.0f;
+        float fScale = fRollSpeed / sqrtf(fSpeed2) - 1.0f;
         if (fForward > 0.0f)
         {
-            float fPush = fScale * fForward;
-            mVelocity.x += fPush * vFront.x;
-            mVelocity.y += vFront.y * fPush;
-            mVelocity.z += vFront.z * fPush;
+            mVelocity += vFront * (fScale * fForward);
         }
-        float fPush = fScale * fSide;
-        mVelocity.x += vRight.x * fPush;
-        mVelocity.y += vRight.y * fPush;
-        mVelocity.z += vRight.z * fPush;
+        mVelocity += vRight * (fScale * fSide);
     }
 
     if (FoleyFXSoldier* pFoley = static_cast<FoleyFXSoldier*>(GetFoleyFX()))
@@ -9485,7 +9448,7 @@ bool EntitySoldier::Roll()
     int iFirstPerson = GetFirstPersonIndex();
     if (iFirstPerson >= 0)
     {
-        float fMove = fabsf(mControlMove);
+        float fMove = mControlMove < 0.0f ? -mControlMove : mControlMove;
         if (mControlStrafe > fMove)
         {
             FirstPerson::RollRight(iFirstPerson);
@@ -10539,24 +10502,28 @@ void EntitySoldier::UpdateAcklayFoleyFX(const RedPose& pose, const PblMatrix& mW
         float* pElevation = i == 0 ? &mLeftFootElevation
                            : i == 1 ? &mRightFootElevation
                            : &mAcklayData->mFeetElevation[i - 2];
-        PblMatrix mFoot;
-        mFoot = *pBone * mWorld;
-        const PblVector3& vFoot = mFoot.GetTranslation();
+        const PblVector3 vFoot = (*pBone * mWorld).GetTranslation();
         const float fElevation = pBone->m[3][1] - 2.5f;
 
-        PblVector3 vBone(pBone->m[0][0], pBone->m[0][1], pBone->m[0][2]);
+        PblVector3 vBone = pBone->GetXAxis();
         PblVector3 vWorldBone;
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vWorldBone), reinterpret_cast<const D3DXVECTOR3*>(&vBone), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vWorldBone));
-        PblVector3 vWaterTest(vFoot.x + vDir.x * 2.5f,
-                              vFoot.y + vDir.y * 2.5f,
-                              vFoot.z + vDir.z * 2.5f);
+        PblVector3 vWaterTest = vFoot + vDir * 2.5f;
         float fWaterHeight = -FLT_MAX;
-        const bool bWaterStep = mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y
-                              + mVelocity.z * mVelocity.z > 4.5f &&
-                              RedWater::GetWaterHeight(vWaterTest, fWaterHeight) &&
-                              fWaterHeight > vFoot.y - 2.5f && vFoot.y - 1.0f > fWaterHeight;
+        bool bWaterStep = false;
+        const PblVector3& vVelocity = GetVelocity();
+        if (vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z > 4.5f)
+        {
+            if (RedWater::GetWaterHeight(vWaterTest, fWaterHeight) && fWaterHeight > vFoot.y - 2.5f)
+            {
+                if (vFoot.y - 1.0f > fWaterHeight)
+                {
+                    bWaterStep = true;
+                }
+            }
+        }
 
         const unsigned short uFootBit = static_cast<unsigned short>(0x100u << i);
         if (fElevation - *pElevation > 0.01f && fElevation > 0.1f)
@@ -10572,7 +10539,7 @@ void EntitySoldier::UpdateAcklayFoleyFX(const RedPose& pose, const PblMatrix& mW
             mAcklayData->mFootSound[i & 1].Play(&vFoot, &mVelocity, mSoundState != 0, true);
             if ((!NetGame::IsEnabled() || (NetGame::IsClient() && netIsLocalTurn)) && bWaterStep)
             {
-                PblVector3 vHorizontal(mVelocity.x, 0.0f, mVelocity.z);
+                PblVector3 vHorizontal(GetVelocity().x, 0.0f, GetVelocity().z);
                 PblVector3 vNormal;
                 D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vHorizontal));
                 WaterEffect::AddDirectionalWaterEffect(mClass->mWakeWaterSplashEffect,

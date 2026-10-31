@@ -232,9 +232,11 @@ namespace CollisionUtil
 bool CollideBoxSphere(const PblMatrix& matrix, float fWidth, float fDepth, float fHeight, const PblVector3& vSphereCenter,
                 float fSphereRadius, PblVector3& vNormal, float& fPenetration)
 {
-    PblVector3 vOffset(vSphereCenter.x - matrix.m[3][0], vSphereCenter.y - matrix.m[3][1],
-                       vSphereCenter.z - matrix.m[3][2]);
-    PblVector3 vLocal = ToLocal(matrix, vOffset);
+    PblVector3 vXAxis = matrix.GetXAxis();
+    PblVector3 vYAxis = matrix.GetYAxis();
+    PblVector3 vZAxis = matrix.GetZAxis();
+    PblVector3 vOffset = vSphereCenter - matrix.GetTranslation();
+    PblVector3 vLocal(DotProduct(vXAxis, vOffset), DotProduct(vYAxis, vOffset), DotProduct(vZAxis, vOffset));
     bool bInside = true;
     int iSideX, iSideY, iSideZ;
     float fClampX, fClampY, fClampZ;
@@ -306,7 +308,12 @@ bool CollideBoxSphere(const PblMatrix& matrix, float fWidth, float fDepth, float
 
     float fDist = (float)sqrt((double)fDist2);
     fPenetration = fSphereRadius - fDist;
-    vNormal = ToWorld(matrix, (float)iSideX * fDX, (float)iSideY * fDY, (float)iSideZ * fDZ);
+    float fWorldX = (float)iSideX * fDX;
+    float fWorldY = (float)iSideY * fDY;
+    float fWorldZ = (float)iSideZ * fDZ;
+    vNormal = PblVector3(vXAxis.x * fWorldX + vYAxis.x * fWorldY + vZAxis.x * fWorldZ,
+                         vXAxis.y * fWorldX + vYAxis.y * fWorldY + vZAxis.y * fWorldZ,
+                         vXAxis.z * fWorldX + vYAxis.z * fWorldY + vZAxis.z * fWorldZ);
     float fInv = 1.0f / fDist;
     vNormal = PblVector3(vNormal.x * fInv, vNormal.y * fInv, vNormal.z * fInv);
     return true;
@@ -333,9 +340,14 @@ namespace CollisionUtil
 bool CollideCylinderSphere(const PblMatrix& matrix, float fRadius, float fHalfHeight, const PblVector3& vSphereCenter,
                 float fSphereRadius, PblVector3& vNormal, float& fDepth)
 {
+    PblVector3 vXAxis = matrix.GetXAxis();
+    PblVector3 vYAxis = matrix.GetYAxis();
+    PblVector3 vZAxis = matrix.GetZAxis();
     PblVector3 vOffset(vSphereCenter.x - matrix.m[3][0], vSphereCenter.y - matrix.m[3][1],
                        vSphereCenter.z - matrix.m[3][2]);
-    PblVector3 vLocal = ToLocal(matrix, vOffset);
+    PblVector3 vLocal(vXAxis.x * vOffset.x + vXAxis.y * vOffset.y + vXAxis.z * vOffset.z,
+                      vYAxis.x * vOffset.x + vYAxis.y * vOffset.y + vYAxis.z * vOffset.z,
+                      vZAxis.x * vOffset.x + vZAxis.y * vOffset.y + vZAxis.z * vOffset.z);
     float fDist2 = vLocal.x * vLocal.x + vLocal.z * vLocal.z;
 
     if (!(vLocal.y > fHalfHeight || -fHalfHeight > vLocal.y))
@@ -350,12 +362,17 @@ bool CollideCylinderSphere(const PblMatrix& matrix, float fRadius, float fHalfHe
         if (fDist > 0.0001f)
         {
             float fInv = 1.0f / fDist;
-            vNormal = ToWorld(matrix, fInv * vLocal.x, fInv * 0.0f, vLocal.z * fInv);
+            float fWorldX = fInv * vLocal.x;
+            float fWorldY = fInv * 0.0f;
+            float fWorldZ = vLocal.z * fInv;
+            vNormal = PblVector3(vXAxis.x * fWorldX + vYAxis.x * fWorldY + vZAxis.x * fWorldZ,
+                                 vXAxis.y * fWorldX + vYAxis.y * fWorldY + vZAxis.y * fWorldZ,
+                                 vXAxis.z * fWorldX + vYAxis.z * fWorldY + vZAxis.z * fWorldZ);
         }
         else
         {
             fDepth = fSphereRadius > fRadius ? fSphereRadius : fRadius;
-            vNormal = PblVector3(matrix.m[2][0], matrix.m[2][1], matrix.m[2][2]);
+            vNormal = matrix.GetZAxis();
         }
         return true;
     }
@@ -374,7 +391,7 @@ bool CollideCylinderSphere(const PblMatrix& matrix, float fRadius, float fHalfHe
         }
         else
         {
-            vNormal = PblVector3(matrix.m[1][0], matrix.m[1][1], matrix.m[1][2]);
+            vNormal = matrix.GetYAxis();
         }
         return true;
     }
@@ -393,7 +410,12 @@ bool CollideCylinderSphere(const PblMatrix& matrix, float fRadius, float fHalfHe
     float fEdgeDist = (float)sqrt((double)fEdgeDist2);
     fDepth = fSphereRadius - fEdgeDist;
     float fInv = 1.0f / fEdgeDist;
-    vNormal = ToWorld(matrix, fX * fInv, fY * fInv, fZ * fInv);
+    float fWorldX = fX * fInv;
+    float fWorldY = fY * fInv;
+    float fWorldZ = fZ * fInv;
+    vNormal = PblVector3(vXAxis.x * fWorldX + vYAxis.x * fWorldY + vZAxis.x * fWorldZ,
+                         vXAxis.y * fWorldX + vYAxis.y * fWorldY + vZAxis.y * fWorldZ,
+                         vXAxis.z * fWorldX + vYAxis.z * fWorldY + vZAxis.z * fWorldZ);
     return true;
 }
 }
@@ -405,13 +427,15 @@ namespace CollisionUtil
 bool GetClosestPointInPolygon(const PblVector3& vPos, int iNumCorners, const PblVector3* pCorners, PblVector3& vOutPos,
                 float fMaxDist)
 {
-    const PblVector3& c0 = pCorners[0];
-    float e0x = pCorners[1].x - c0.x;
-    float e0y = pCorners[1].y - c0.y;
-    float e0z = pCorners[1].z - c0.z;
-    float e1x = pCorners[2].x - pCorners[1].x;
-    float e1y = pCorners[2].y - pCorners[1].y;
-    float e1z = pCorners[2].z - pCorners[1].z;
+    PblVector3 c0 = pCorners[0];
+    const PblVector3& c1 = pCorners[1];
+    const PblVector3& c2 = pCorners[2];
+    float e0x = c1.x - c0.x;
+    float e0y = c1.y - c0.y;
+    float e0z = c1.z - c0.z;
+    float e1x = c2.x - c1.x;
+    float e1y = c2.y - c1.y;
+    float e1z = c2.z - c1.z;
     float nx = e0y * e1z - e0z * e1y;
     float ny = e0z * e1x - e0x * e1z;
     float nz = e0x * e1y - e0y * e1x;
@@ -438,7 +462,7 @@ bool GetClosestPointInPolygon(const PblVector3& vPos, int iNumCorners, const Pbl
     float pz = vPos.z - nz * fT;
 
     float fFirstStart = e0x * (px - c0.x) + e0y * (py - c0.y) + e0z * (pz - c0.z);
-    float fEnd = -(e0x * (px - pCorners[1].x) + e0y * (py - pCorners[1].y) + e0z * (pz - pCorners[1].z));
+    float fEnd = -(e0x * (px - c1.x) + e0y * (py - c1.y) + e0z * (pz - c1.z));
     if (fFirstStart >= 0.0f && fEnd >= 0.0f &&
         (ny * e0z - nz * e0y) * (px - c0.x) + (nz * e0x - nx * e0z) * (py - c0.y) +
                 (nx * e0y - ny * e0x) * (pz - c0.z) < 0.0f)
@@ -688,27 +712,25 @@ namespace CollisionUtil
 bool CollideCapsules(const PblMatrix& m1, float fRadius1, float fHalfHeight1, const PblMatrix& m2, float fRadius2,
                 float fHalfHeight2, PblVector3& vNormal, float& fDepth)
 {
-    PblVector3 vStart1(m1.m[3][0] - m1.m[1][0] * fHalfHeight1, m1.m[3][1] - m1.m[1][1] * fHalfHeight1,
-                       m1.m[3][2] - m1.m[1][2] * fHalfHeight1);
-    PblVector3 vEnd1(m1.m[3][0] + m1.m[1][0] * fHalfHeight1, m1.m[3][1] + m1.m[1][1] * fHalfHeight1,
-                     m1.m[3][2] + m1.m[1][2] * fHalfHeight1);
-    PblVector3 vStart2(m2.m[3][0] - m2.m[1][0] * fHalfHeight2, m2.m[3][1] - m2.m[1][1] * fHalfHeight2,
-                       m2.m[3][2] - m2.m[1][2] * fHalfHeight2);
-    PblVector3 vEnd2(m2.m[3][0] + m2.m[1][0] * fHalfHeight2, m2.m[3][1] + m2.m[1][1] * fHalfHeight2,
-                     m2.m[3][2] + m2.m[1][2] * fHalfHeight2);
+    PblVector3 vStart1 = m1.GetTranslation() - m1.GetYAxis() * fHalfHeight1;
+    PblVector3 vEnd1 = m1.GetTranslation() + m1.GetYAxis() * fHalfHeight1;
+    PblVector3 vStart2 = m2.GetTranslation() - m2.GetYAxis() * fHalfHeight2;
+    PblVector3 vEnd2 = m2.GetTranslation() + m2.GetYAxis() * fHalfHeight2;
     PblVector3 vPoint1, vPoint2;
     CollisionUtil::GetClosestPoints_SegmentSegment(vStart1, vEnd1, vStart2, vEnd2, vPoint1, vPoint2);
 
-    float fX = vPoint2.x - vPoint1.x;
-    float fY = vPoint2.y - vPoint1.y;
-    float fZ = vPoint2.z - vPoint1.z;
-    float fDist2 = fX * fX + fY * fY + fZ * fZ;
+    PblVector3 vDelta = vPoint2 - vPoint1;
+    float fDist2 = SquaredLength(vDelta);
     if (0.0001f > fDist2)
     {
-        vNormal = PblVector3(1.0f, 0.0f, 0.0f);
+        vNormal.x = 1.0f;
+        vNormal.y = 0.0f;
+        vNormal.z = 0.0f;
         if (0.0001f > 1.0f - (vNormal.x * m1.m[1][0] + vNormal.y * m1.m[1][1] + vNormal.z * m1.m[1][2]))
         {
-            vNormal = PblVector3(0.0f, 0.0f, 1.0f);
+            vNormal.x = 0.0f;
+            vNormal.y = 0.0f;
+            vNormal.z = 1.0f;
         }
         fDepth = fRadius1 > fRadius2 ? fRadius1 : fRadius2;
         return true;
@@ -720,7 +742,7 @@ bool CollideCapsules(const PblMatrix& m1, float fRadius1, float fHalfHeight1, co
         return false;
     }
     float fInv = 1.0f / fDist;
-    vNormal = PblVector3(fX * fInv, fY * fInv, fZ * fInv);
+    vNormal = vDelta * fInv;
     return true;
 }
 }
@@ -799,10 +821,8 @@ float CollisionUtil::RayHitSphere(const PblVector3& vStart, const PblVector3& vD
     {
         return 1.0f;
     }
-    float fX = vCenter.x - vStart.x;
-    float fY = vCenter.y - vStart.y;
-    float fZ = vCenter.z - vStart.z;
-    float fProj = vDir.x * fX + vDir.y * fY + vDir.z * fZ;
+    PblVector3 vToCenter = vCenter - vStart;
+    float fProj = DotProduct(vDir, vToCenter);
     if (-fRadius > fProj)
     {
         return 1.0f;
@@ -812,11 +832,10 @@ float CollisionUtil::RayHitSphere(const PblVector3& vStart, const PblVector3& vD
         return 1.0f;
     }
 
-    float fNearX = vStart.x + vDir.x * fProj;
-    float fNearY = vStart.y + vDir.y * fProj;
-    float fNearZ = vStart.z + vDir.z * fProj;
-    float fDist2 = (fNearX - vCenter.x) * (fNearX - vCenter.x) + (fNearY - vCenter.y) * (fNearY - vCenter.y) +
-                   (fNearZ - vCenter.z) * (fNearZ - vCenter.z);
+    PblVector3 vNear = vStart + vDir * fProj;
+    PblVector3 vNearToCenter = vNear - vCenter;
+    float fDist2 = vNearToCenter.x * vNearToCenter.x + vNearToCenter.y * vNearToCenter.y +
+                   vNearToCenter.z * vNearToCenter.z;
     float fRadius2 = fRadius * fRadius;
     if (fDist2 > fRadius2)
     {
@@ -828,14 +847,14 @@ float CollisionUtil::RayHitSphere(const PblVector3& vStart, const PblVector3& vD
     {
         if (pNormal)
         {
-            float fLen2 = fX * fX + fY * fY + fZ * fZ;
+            float fLen2 = vToCenter.x * vToCenter.x + vToCenter.y * vToCenter.y + vToCenter.z * vToCenter.z;
             if (fLen2 > 0.0001f)
             {
                 float fLen = (float)sqrt((double)fLen2);
                 if (fLen > 0.0001f)
                 {
                     float fInv = 1.0f / fLen;
-                    *pNormal = PblVector3(fInv * fX, fInv * fY, fInv * fZ);
+                    *pNormal = PblVector3(fInv * vToCenter.x, fInv * vToCenter.y, fInv * vToCenter.z);
                     return 0.0f;
                 }
             }
@@ -857,9 +876,9 @@ float CollisionUtil::RayHitSphere(const PblVector3& vStart, const PblVector3& vD
     if (pNormal)
     {
         float fInv = 1.0f / fRadius;
-        *pNormal = PblVector3((fNearX - vDir.x * fHalfChord - vCenter.x) * fInv,
-                              (fNearY - vDir.y * fHalfChord - vCenter.y) * fInv,
-                              (fNearZ - vDir.z * fHalfChord - vCenter.z) * fInv);
+        *pNormal = PblVector3((vNear.x - vDir.x * fHalfChord - vCenter.x) * fInv,
+                              (vNear.y - vDir.y * fHalfChord - vCenter.y) * fInv,
+                              (vNear.z - vDir.z * fHalfChord - vCenter.z) * fInv);
     }
     return fHit / fLength;
 }
@@ -955,7 +974,9 @@ float RayHitBox(const PblVector3& vStart, const PblVector3& vDir, float fLength,
             *pNormal = PblVector3(matrix.m[2][0] * -1.0f, matrix.m[2][1] * -1.0f, matrix.m[2][2] * -1.0f);
             break;
         default:
-            *pNormal = PblVector3(0.0f, 1.0f, 0.0f);
+            pNormal->x = 0.0f;
+            pNormal->y = 1.0f;
+            pNormal->z = 0.0f;
             break;
         }
     }
@@ -1000,7 +1021,7 @@ float RayHitAACylinder(const PblVector3& vStart, const PblVector3& vDir, float f
     }
 
     PblVector3 vFlat(vDir.x * fClipped, 0.0f, vDir.z * fClipped);
-    float fFlatLen = sqrtf(vFlat.x * vFlat.x + vFlat.y * vFlat.y + vFlat.z * vFlat.z);
+    float fFlatLen = Length(vFlat);
     if (fFlatLen < 0.0001f)
     {
         return 1.0f;
@@ -1048,9 +1069,6 @@ float RayHitAxisAlignedCylinder(const PblVector3& vStart, const PblVector3& vDir
                  float fRadius, float fHalfHeight, PblVector3* pNormal)
 {
     float fEndY = vDir.y * fLength + vStart.y;
-    float fPlane;
-    float fNormalY;
-
     float fTop = vCenter.y + fHalfHeight;
     if (vStart.y > fTop)
     {
@@ -1058,32 +1076,51 @@ float RayHitAxisAlignedCylinder(const PblVector3& vStart, const PblVector3& vDir
         {
             return 1.0f;
         }
-        fPlane = fTop;
-        fNormalY = 1.0f;
-    }
-    else
-    {
-        float fBottom = vCenter.y - fHalfHeight;
-        if (!(fBottom > vStart.y))
+        float t = (vStart.y - fTop) / (vStart.y - fEndY);
+        float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
+        float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
+        if (fRadius * fRadius > dx * dx + dz * dz)
         {
-            return RayHitAACylinder(vStart, vDir, fLength, vCenter, fRadius, fHalfHeight, pNormal);
+            if (pNormal)
+            {
+                pNormal->x = 0.0f;
+                pNormal->y = 1.0f;
+                pNormal->z = 0.0f;
+            }
+            return t;
         }
-        if (!(fEndY > fBottom))
+
+        t += 0.0001f;
+        float fStep = t * fLength;
+        PblVector3 vS(fStep * vDir.x + vStart.x, fStep * vDir.y + vStart.y, fStep * vDir.z + vStart.z);
+        float fRest = 1.0f - t;
+        float fHit = RayHitAACylinder(vS, vDir, fRest * fLength, vCenter, fRadius, fHalfHeight, pNormal);
+        if (fHit < 1.0f)
         {
-            return 1.0f;
+            return fRest * fHit + t;
         }
-        fPlane = fBottom;
-        fNormalY = -1.0f;
+        return 1.0f;
     }
 
-    float t = (vStart.y - fPlane) / (vStart.y - fEndY);
+    float fBottom = vCenter.y - fHalfHeight;
+    if (!(fBottom > vStart.y))
+    {
+        return RayHitAACylinder(vStart, vDir, fLength, vCenter, fRadius, fHalfHeight, pNormal);
+    }
+    if (!(fEndY > fBottom))
+    {
+        return 1.0f;
+    }
+    float t = (vStart.y - fBottom) / (vStart.y - fEndY);
     float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
     float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
     if (fRadius * fRadius > dx * dx + dz * dz)
     {
         if (pNormal)
         {
-            *pNormal = PblVector3(0.0f, fNormalY, 0.0f);
+            pNormal->x = 0.0f;
+            pNormal->y = -1.0f;
+            pNormal->z = 0.0f;
         }
         return t;
     }
@@ -1160,14 +1197,14 @@ void GetClosestPoints_SegmentSegment(const PblVector3& vSStart, const PblVector3
                 const PblVector3& vTEnd, PblVector3& vSPoint, PblVector3& vTPoint)
 {
     const float SMALL = 0.0001f;
-    float fUX = vSEnd.x - vSStart.x, fUY = vSEnd.y - vSStart.y, fUZ = vSEnd.z - vSStart.z;
-    float fVX = vTEnd.x - vTStart.x, fVY = vTEnd.y - vTStart.y, fVZ = vTEnd.z - vTStart.z;
-    float fWX = vSStart.x - vTStart.x, fWY = vSStart.y - vTStart.y, fWZ = vSStart.z - vTStart.z;
-    float a = fUX * fUX + fUY * fUY + fUZ * fUZ;
-    float b = fVX * fUX + fVY * fUY + fVZ * fUZ;
-    float c = fVX * fVX + fVY * fVY + fVZ * fVZ;
-    float d = fWX * fUX + fWY * fUY + fWZ * fUZ;
-    float e = fWX * fVX + fWY * fVY + fWZ * fVZ;
+    PblVector3 u = vSEnd - vSStart;
+    PblVector3 v = vTEnd - vTStart;
+    PblVector3 w = vSStart - vTStart;
+    float a = DotProduct(u, u);
+    float b = DotProduct(v, u);
+    float c = DotProduct(v, v);
+    float d = DotProduct(w, u);
+    float e = DotProduct(w, v);
     float D = c * a - b * b;
     float sN, sD = D, tN, tD = D;
 
@@ -1233,7 +1270,7 @@ void GetClosestPoints_SegmentSegment(const PblVector3& vSStart, const PblVector3
 
     float sc = fabs(sN) < SMALL ? 0.0f : sN / sD;
     float tc = fabs(tN) < SMALL ? 0.0f : tN / tD;
-    vSPoint = PblVector3(vSStart.x + fUX * sc, vSStart.y + fUY * sc, vSStart.z + fUZ * sc);
-    vTPoint = PblVector3(vTStart.x + fVX * tc, vTStart.y + fVY * tc, vTStart.z + fVZ * tc);
+    vSPoint = vSStart + u * sc;
+    vTPoint = vTStart + v * tc;
 }
 }

@@ -18,42 +18,52 @@ LeafPatchRenderable::LeafPatchRenderable(const LeafPatchClass* pClass)
     : Renderable(2), m_fDistanceFarShader(pClass->mNearFadeDist),
       m_pPrimitive(0), m_pPrimitiveFar(0), m_pClass(pClass), m_pVertices(0)
 {
-    const unsigned int vertexFormat = RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED
-        ? 0x2a2 : 0xd2a2;
-    m_pShader = pcRedShader::Create(0xe68b9c52, vertexFormat, &pClass->mTextureHash,
-                                    1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
-    m_pShaderFar = pcRedShader::Create(0xe68b9c52, vertexFormat, &pClass->mTextureHash,
-                                       1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
+    {
+        m_pShader = pcRedShader::Create(0xe68b9c52, 0x2a2, &m_pClass->mTextureHash,
+                                        1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        m_pShaderFar = pcRedShader::Create(0xe68b9c52, 0x2a2, &m_pClass->mTextureHash,
+                                           1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
+    else
+    {
+        m_pShader = pcRedShader::Create(0xe68b9c52, 0xd2a2, &m_pClass->mTextureHash,
+                                        1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        m_pShaderFar = pcRedShader::Create(0xe68b9c52, 0xd2a2, &m_pClass->mTextureHash,
+                                           1, 0x10002, RedColor::WHITE, RedColor::BLACK, 32.0f);
+    }
     m_bReflection = false;
-    const int count = pClass->mNumParticles;
+    const int count = m_pClass->mNumParticles;
     m_pIBReverse = pcRedIndexBuffer::Create(6 * count, true, true);
     unsigned short* indices = m_pIBReverse->Lock(6 * count, m_startIndexReverse);
-    for (int i = count - 1, j = 0; i >= 0; --i, j += 6)
+    for (short i = (short)(count - 1); i >= 0; --i)
     {
-        const int base = i * 4;
-        indices[j] = (unsigned short)base;
-        indices[j + 1] = (unsigned short)(base + 1);
-        indices[j + 2] = (unsigned short)(base + 2);
-        indices[j + 3] = (unsigned short)base;
-        indices[j + 4] = (unsigned short)(base + 2);
-        indices[j + 5] = (unsigned short)(base + 3);
+        const unsigned short v = (unsigned short)(i * 4 + 2);
+        indices[0] = v - 2;
+        indices[1] = v - 1;
+        indices[2] = v;
+        indices[3] = v - 2;
+        indices[4] = v;
+        indices[5] = v + 1;
+        indices += 6;
     }
     m_pIBReverse->Unlock();
     m_pIBForward = pcRedIndexBuffer::Create(6 * count, true, true);
     indices = m_pIBForward->Lock(6 * count, m_startIndexForward);
-    for (int i = 0, j = 0; i < count; ++i, j += 6)
+    for (short i = 0; i < count; ++i)
     {
-        const int base = i * 4;
-        indices[j] = (unsigned short)base;
-        indices[j + 1] = (unsigned short)(base + 1);
-        indices[j + 2] = (unsigned short)(base + 2);
-        indices[j + 3] = (unsigned short)base;
-        indices[j + 4] = (unsigned short)(base + 2);
-        indices[j + 5] = (unsigned short)(base + 3);
+        const unsigned short v = (unsigned short)(i * 4 + 2);
+        indices[0] = v - 2;
+        indices[1] = v - 1;
+        indices[2] = v;
+        indices[3] = v - 2;
+        indices[4] = v;
+        indices[5] = v + 1;
+        indices += 6;
     }
     m_pIBForward->Unlock();
     m_pVB = 0;
-    mHeap = new PblHeap<int, float>(count, 1000000.0f, 0);
+    mHeap = new PblHeap<int, float>(pClass->mNumParticles, 1000000.0f, 0);
     m_iTexCoordType = pClass->mNumParts == 4 ? 1 : 0;
     Activate(0);
 }

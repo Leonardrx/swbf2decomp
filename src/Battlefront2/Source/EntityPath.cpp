@@ -535,7 +535,8 @@ bool EntityPath::ReadPropertyScope(PblConfig& config, PblConfig::Data& data,
         pPath->mClasses[pPath->mNumClassIDs].SetID(PblHash(acClass));
         if (pcMaxCount)
         {
-            pPath->mClasses[pPath->mNumClassIDs++].SetMaxCount(atol(pcMaxCount));
+            const long lMaxCount = atol(pcMaxCount);
+            pPath->mClasses[pPath->mNumClassIDs++].SetMaxCount(lMaxCount);
         }
         else
         {

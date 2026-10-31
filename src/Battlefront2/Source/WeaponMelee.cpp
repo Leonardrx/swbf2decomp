@@ -103,7 +103,8 @@ void WeaponMelee::Render(const PblMatrix& matrix, const RedPose* pPose,
         {
             bThrown = true;
         }
-        if (m_pMeleeThrow->m_bReturnedThisFrame)
+        const bool bReturned = m_pMeleeThrow->m_bReturnedThisFrame != 0;
+        if (bReturned)
         {
             bThrown = true;
         }
@@ -176,9 +177,9 @@ void WeaponMelee::Render(const PblMatrix& matrix, const RedPose* pPose,
         }
         if (!bThrown && edge.colorTrail.a && !bNoTrail && bRenderModel)
         {
-            bool bTrailOn = ((1u << i) & m_uiTrailOnMask) && IsOn(uiWeapon);
             PblMatrix mTrail = *pEdgeMatrix;
-            const_cast<WeaponMelee*>(this)->RenderLightsaberTrail(i, &mTrail, bTrailOn, uiFlags);
+            const_cast<WeaponMelee*>(this)->RenderLightsaberTrail(i, &mTrail,
+                                                                   ((1u << i) & m_uiTrailOnMask) && IsOn(uiWeapon), uiFlags);
         }
         PblVector3 vPosition, vDirection;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPosition), reinterpret_cast<const D3DXVECTOR3*>(&edge.vOffsetPos), reinterpret_cast<const D3DXMATRIX*>(pEdgeMatrix));
@@ -1208,9 +1209,9 @@ void WeaponMelee::SetNetworkState(ComboState eState, bool bAnimatedMove)
 // FUNCTION: SWBF2 0x0068bc30
 void WeaponMelee::EnterState(ComboState eState)
 {
-    const Combo::State& state = m_pCombo->m_aState[eState];
     m_eComboState = eState;
     m_fComboStateTimer = 0.0f;
+    const Combo::State& state = m_pCombo->m_aState[eState];
     m_uiAnimIndex = state.m_uiAnimIndex;
     m_bAnimatedMove = state.m_bAnimatedMove;
     m_bGravityDone = 0;
@@ -1219,10 +1220,10 @@ void WeaponMelee::EnterState(ComboState eState)
     m_bUnreachableState_SoldierUpdate = 0;
     const WeaponMeleeClass* pClass = static_cast<const WeaponMeleeClass*>(mClass);
     const unsigned int uiBladeMask = (1u << pClass->m_uiNumWeapons) - 1;
-    m_uiLightsaberOnMask = uiBladeMask & ~state.m_uiLightsaberOffMask;
+    m_uiLightsaberOnMask = (state.m_uiLightsaberOffMask ^ uiBladeMask) & uiBladeMask;
     m_bRestartAnimation = state.m_bRestartAnimation;
 
-    if (state.m_bPlayExplosion && pClass->mImpactExplosion &&
+    if (state.m_bPlayExplosion != 0 && pClass->mImpactExplosion &&
         (!(netInShell ? netEnabled : netEnabledNext) || netIsLocalTurn))
     {
         DamageOwner owner(mOwner->GetCharacter(), mOwner->GetGameObject(),
@@ -1231,13 +1232,13 @@ void WeaponMelee::EnterState(ComboState eState)
         pClass->mImpactExplosion->CreateExplosion(vPos, owner, false, COLL_UNKNOWN);
     }
 
-    if (state.m_sound.GetProperties() && state.m_uiSoundTime == 0)
+    if (state.m_sound.GetProperties() && state.m_uiSoundTime * 0.01f == 0.0f)
     {
         state.m_sound.Play(&mOwner->GetGameObject()->GetPosition(),
                            &mOwner->GetGameObject()->GetVelocity(), false, true);
     }
 
-    if (eState == COMBO_IDLE)
+    if (m_eComboState == COMBO_IDLE)
     {
         m_InputQueue.Clear();
         mState = (WeaponState)MELEE_IDLE;
@@ -2525,7 +2526,7 @@ bool WeaponMelee::OverrideSoldierVelocity(float& fVelocityZ, float& fVelocityX, 
             if (m_bGravityDone || (fGravity > 0.0f) == ((float)iTarget * 0.1f >= fVelocityY))
             {
                 const_cast<WeaponMelee*>(this)->m_bGravityDone = 1;
-                fGravity = 1.0f - (float)pState->m_bGravityZeroAtTarget;
+                fGravity = 1.0f - (float)(int)pState->m_bGravityZeroAtTarget;
             }
         }
         if (fGravity != 1.0f)
@@ -2541,26 +2542,26 @@ bool WeaponMelee::OverrideSoldierVelocity(float& fVelocityZ, float& fVelocityX, 
         return bOverride;
     }
 
-    if (!pState->m_bAnimatedMove && m_eComboStatePrev != m_eComboState)
+    if (!pState->IsAnimatedMove() && m_eComboStatePrev != m_eComboState)
     {
         const Combo::State* pPrev = &m_pCombo->m_aState[m_eComboStatePrev];
-        if (pPrev->m_bAnimatedMove)
+        if (pPrev->IsAnimatedMove())
         {
             pState = pPrev;
         }
     }
-    if (!pState->m_bAnimatedMove)
+    if (!pState->IsAnimatedMove())
     {
         return bOverride;
     }
 
     float fStateX = pState->GetVelocityX();
     float fStateZ = pState->GetVelocityZ();
-    PblVector3 vThrust(-m_fInputThrustX, 0.0f, m_fInputThrustZ);
     float fX;
     float fZ;
-    if (pState->m_bAlignToThrust)
+    if (pState->IsAlignedToThrust())
     {
+        PblVector3 vThrust(-m_fInputThrustX, 0.0f, m_fInputThrustZ);
         AlignVectorToThrust(vThrust, true);
         PblVector3 vVelocity(pState->GetVelocityFromStrafe() * vThrust.x + fStateX, 0.0f,
                              pState->GetVelocityFromThrust() * vThrust.z + fStateZ);
@@ -2570,8 +2571,8 @@ bool WeaponMelee::OverrideSoldierVelocity(float& fVelocityZ, float& fVelocityX, 
     }
     else
     {
-        fX = pState->GetVelocityFromStrafe() * vThrust.x + fStateX;
-        fZ = pState->GetVelocityFromThrust() * vThrust.z + fStateZ;
+        fX = -(pState->GetVelocityFromStrafe() * m_fInputThrustX) + fStateX;
+        fZ = pState->GetVelocityFromThrust() * m_fInputThrustZ + fStateZ;
     }
     fFactor = fOverride;
     fVelocityZ = fZ;
@@ -2720,7 +2721,8 @@ bool WeaponMelee::Update(float fDeltaTime)
 
     if (m_pMeleeThrow)
     {
-        if (m_pMeleeThrow->m_bReturnedThisFrame)
+        const bool bReturned = m_pMeleeThrow->m_bReturnedThisFrame != 0;
+        if (bReturned)
         {
             m_pMeleeThrow->m_bReturnedThisFrame = 0;
             if ((m_iSoldierState == SoldierState::STAND || m_iSoldierState == SoldierState::CROUCH) &&
@@ -3285,7 +3287,7 @@ void WeaponMeleeClass::SetProperty(unsigned int aId, const char* aValue)
         if (aId == 0x2D32CE43)
         {
             m_pComboODF = 0;
-            m_pCombo = pcCombo ? (Combo*)Combo::s_ComboTable.Find(PblHash(pcCombo)) : 0;
+            m_pCombo = pcCombo ? (Combo*)Combo::Find(PblHash(pcCombo)) : 0;
             if (!m_pCombo)
             {
                 mSoldierAnimationWeapon = SoldierAnimationBank::INVALID_WEAPON;
@@ -3407,17 +3409,17 @@ void WeaponMeleeClass::SetProperty(unsigned int aId, const char* aValue)
             {
                 Combo::State& state = m_pComboODF->m_aState[uiState];
                 Combo::Transition* pTransition;
-                if (state.m_uiNumTransitions)
-                {
-                    pTransition = state.m_aTransition;
-                }
-                else
+                if (state.m_uiNumTransitions == 0)
                 {
                     pTransition = state.AddTransition(0);
                     if (!pTransition)
                     {
                         break;
                     }
+                }
+                else
+                {
+                    pTransition = state.m_aTransition;
                 }
                 Combo::Condition* pCondition = pTransition->AddCondition();
                 if (pCondition)

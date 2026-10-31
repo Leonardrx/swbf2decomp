@@ -298,12 +298,11 @@ void EntityDroidClass::SetProperty(unsigned int uProperty, const char* pszValue)
     {
         int iAmmo = 0;
         sscanf(pszValue, "%d", &iAmmo);
-        WeaponAmmoDesc& ammo = mWeaponAmmo[sWeaponSection];
-        ammo.bFlagShareAmmo = 0;
-        ammo.bFlagAmmoInfinite = iAmmo <= 0;
-        if (!ammo.bFlagAmmoInfinite)
+        mWeaponAmmo[sWeaponSection].bFlagShareAmmo = 0;
+        mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite = iAmmo <= 0;
+        if (!mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite)
         {
-            ammo.uiAmmo = iAmmo;
+            mWeaponAmmo[sWeaponSection].uiAmmo = iAmmo;
         }
         break;
     }
@@ -311,17 +310,16 @@ void EntityDroidClass::SetProperty(unsigned int uProperty, const char* pszValue)
     {
         int iWeapon = 0;
         sscanf(pszValue, "%d", &iWeapon);
-        WeaponAmmoDesc& ammo = mWeaponAmmo[sWeaponSection];
         if (iWeapon > 0 && iWeapon <= sWeaponSection)
         {
-            ammo.bFlagAmmoInfinite = 0;
-            ammo.bFlagShareAmmo = 1;
-            ammo.uiAmmo = iWeapon - 1;
+            mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite = 0;
+            mWeaponAmmo[sWeaponSection].bFlagShareAmmo = 1;
+            mWeaponAmmo[sWeaponSection].uiAmmo = iWeapon - 1;
         }
         else
         {
-            ammo.bFlagShareAmmo = 0;
-            ammo.bFlagAmmoInfinite = 1;
+            mWeaponAmmo[sWeaponSection].bFlagShareAmmo = 0;
+            mWeaponAmmo[sWeaponSection].bFlagAmmoInfinite = 1;
         }
         break;
     }
@@ -731,11 +729,8 @@ EntityDroid::EntityDroid(EntityDroidClass* pClass, const EntityDesc& desc)
     mVelocity.x = 0.0f;
     mPitchValue = 0.0f;
     mGroundRatio = 1.0f;
-    for (int i = 0; i < 4; ++i)
-    {
-        mAimer[i] = 0;
-        mWeapon[i] = 0;
-    }
+    memset(mAimer, 0, sizeof(mAimer));
+    memset(mWeapon, 0, sizeof(mWeapon));
     for (int i = 0; i < mClass->mWeaponCount; ++i)
     {
         if (!mClass->mWeaponClass[i])
@@ -994,7 +989,8 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
             }
             if (fDamage > 0.0f)
             {
-                Damageable::ApplyDamage(DamageDesc(owner, fDamage), 0xffffffff);
+                DamageDesc damage(owner, fDamage);
+                Damageable::ApplyDamage(damage, 0xffffffff);
             }
         }
     }
@@ -1028,22 +1024,14 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
             }
             fFriction = (1.0f - fUp * fUp * fUp * fUp) * 0.25f;
         }
-        mVelocity.x -= vSeparation.x * fApproach;
-        mVelocity.y -= vSeparation.y * fApproach;
-        mVelocity.z -= vSeparation.z * fApproach;
-        float fSlow = fFriction * fApproach * -1.125f /
-                      sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z);
-        if (fSlow >= 1.0f)
+        mVelocity -= vSeparation * fApproach;
+        float fSlow = fFriction * fApproach * -1.125f / sqrtf(SquaredLength(mVelocity));
+        if (fSlow > 1.0f)
         {
             fSlow = 1.0f;
         }
-        mVelocity.x -= fSlow * mVelocity.x;
-        mVelocity.y -= fSlow * mVelocity.y;
-        mVelocity.z -= fSlow * mVelocity.z;
-        float fBounce = fApproach * 0.125f;
-        mVelocity.x -= vSeparation.x * fBounce;
-        mVelocity.y -= vSeparation.y * fBounce;
-        mVelocity.z -= vSeparation.z * fBounce;
+        mVelocity -= mVelocity * fSlow;
+        mVelocity -= vSeparation * (fApproach * 0.125f);
     }
 
     float fDist = pResult->mOverlap;
@@ -1069,7 +1057,7 @@ bool EntityDroid::Update(float fDeltaTime)
 
     Controllable::Update(fDeltaTime);
 
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+    if (!(NetGame::IsEnabled() && netEnabledNext && netClientActive))
     {
         float fHeight = mMatrix.m[3][1];
         if (-500.0f > fHeight)
@@ -1119,7 +1107,7 @@ bool EntityDroid::Update(float fDeltaTime)
         {
             mKillTimer = 0.0f;
         }
-        if (NetGame::IsEnabled() && NetGame::IsClient())
+        if (NetGame::IsEnabled() && netEnabledNext && netClientActive)
         {
             return true;
         }
@@ -1156,7 +1144,7 @@ bool EntityDroid::Update(float fDeltaTime)
 
     if (!IsAlive())
     {
-        if (mClass->mExplosion && !(NetGame::IsEnabled() && NetGame::IsClient()))
+        if (mClass->mExplosion && !(NetGame::IsEnabled() && netEnabledNext && netClientActive))
         {
             DamageOwner owner(mDamageOwner.mCharacter, mDamageOwner.mGameObject, mDamageOwner.mTeam, mClass, 0,
                               1.0f);
@@ -1165,13 +1153,13 @@ bool EntityDroid::Update(float fDeltaTime)
         RemoveFromCollisionManager();
         RemoveFromScene();
         Kill();
-        if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+        if (!(NetGame::IsEnabled() && netEnabledNext && netClientActive))
         {
             return false;
         }
     }
 
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+    if (!(NetGame::IsEnabled() && netEnabledNext && netClientActive))
     {
         Controllable* pPilot = this->GetPilot();
         if (pPilot && mState == NORMAL)
@@ -1257,12 +1245,12 @@ bool EntityDroid::Update(float fDeltaTime)
             SwitchControlView(mPlayerId);
         }
 
-        int iIndex = mWeaponIndex[0];
-        if (mState != FROZEN && iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mClass->mZoomMax > 1.0f)
+        if (mState != FROZEN && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] &&
+            mWeapon[mWeaponIndex[0]]->mClass->mZoomMax > 1.0f)
         {
             if (mControlZoom.IsPressed())
             {
-                mTargetInfo.mIsAiming = mWeapon[iIndex]->CycleZoom(mTargetInfo.mIsAiming);
+                mTargetInfo.mIsAiming = mWeapon[mWeaponIndex[0]]->CycleZoom(mTargetInfo.mIsAiming);
             }
             if (mWeapon[0]->mClass->mZoomRate != 0.0f)
             {
@@ -1332,7 +1320,8 @@ bool EntityDroid::Update(float fDeltaTime)
             PblQuaternion qLook = PblQuaternion(mLook);
             float fTiltSin;
             float fTiltCos;
-            PblMath::SinCos(&fTiltSin, &fTiltCos, -mClass->mCameraSettings.GetCameraTiltValue() * 0.5f);
+            float fTilt = -mClass->mCameraSettings.GetCameraTiltValue();
+            PblMath::SinCos(&fTiltSin, &fTiltCos, fTilt * 0.5f);
             PblQuaternion qTilt;
             qTilt._fX = fTiltSin * gVectorUnitX.x;
             qTilt._fY = fTiltSin * gVectorUnitX.y;
@@ -1355,9 +1344,7 @@ bool EntityDroid::Update(float fDeltaTime)
         float fDist =
             CollisionManager::RayHit(mTargetInfo.mAimStart, mEyeDir, 512.0f, pHit, 0, &pIgnore, 1, 0x9a, true) *
             512.0f;
-        mTargetInfo.mAimPoint = PblVector3(mTargetInfo.mAimStart.x + mEyeDir.x * fDist,
-                                           mTargetInfo.mAimStart.y + mEyeDir.y * fDist,
-                                           mTargetInfo.mAimStart.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + mEyeDir * fDist;
     }
     else
     {
@@ -1371,8 +1358,7 @@ bool EntityDroid::Update(float fDeltaTime)
                           (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                           (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = PblVector3(mEyeDir.x * fDist + mEyePoint.x, mEyePoint.y + mEyeDir.y * fDist,
-                                           mEyePoint.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mEyeDir * fDist + mEyePoint;
     }
 
     mGroundRatio = 0.0f;

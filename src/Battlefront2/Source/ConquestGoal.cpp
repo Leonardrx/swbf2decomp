@@ -62,10 +62,11 @@ void AI::ConquestGoal::Update()
             continue;
         }
 
+        const int iTeam = pChr->mTeamNumber;
         const CommandPost* pPost = pChr->GetAssignedCP();
         if (pPost && pPost->GetGameObject() && GameObjectTeam(pPost->GetGameObject()) > 0 &&
             Team::sTeams[GameObjectTeam(pPost->GetGameObject())] &&
-            Team::sTeams[GameObjectTeam(pPost->GetGameObject())]->GetAffiliation(pChr->mTeamNumber) > 0 &&
+            Team::sTeams[GameObjectTeam(pPost->GetGameObject())]->GetAffiliation(iTeam) > 0 &&
             !pPost->GetStrategicDefendValue(pChr->mTeamPtr->GetSide()))
         {
             sAssign(pChr, 0);
@@ -146,12 +147,13 @@ void AI::ConquestGoal::sIssueCmd(Character* pChr, const CommandPost* pPost)
 // FUNCTION: SWBF2 0x00482d90
 const CommandPost* AI::ConquestGoal::sGenerateCP(Character* pChr, const CommandPost* pPost, bool bSecondPass)
 {
+    CommandPostItor it = CommandPostManager::Instance()->GetItor();
     bool bValid[16] = {};
     float fTotal = 0.0f;
     const int iTeam = pChr->mTeamNumber;
 
     bool* pValid = bValid;
-    for (CommandPostItor it = CommandPostManager::Instance()->GetItor(); it; ++it, ++pValid)
+    for (; it; ++it, ++pValid)
     {
         CommandPost* pCP = *it;
         if (!bSecondPass && pCP->GetGameObject() &&

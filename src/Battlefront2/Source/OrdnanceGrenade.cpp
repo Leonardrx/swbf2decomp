@@ -284,8 +284,8 @@ bool OrdnanceGrenade::Collide(CollisionObject* pObject, const PblVector3& vPos,
     OrdnanceGrenadeClass* pClass = (OrdnanceGrenadeClass*)mClass;
     if (pObject->GetCollisionType() == COLL_WATER)
     {
-        mVelocity = PblVector3(0.0f, -0.2f, 0.0f);
         mNumBounces = 4;
+        mVelocity = PblVector3(0.0f, -0.2f, 0.0f);
         pClass->mSoundCollisionWater.Play(&vPos, 0, false, true);
         RedWater::AddWaterRing(vPos, 1.5f, 0.01f);
         WaterEffect::AddWaterEffect(pClass->mImpactEffectWater, vPos);
@@ -304,29 +304,26 @@ bool OrdnanceGrenade::Collide(CollisionObject* pObject, const PblVector3& vPos,
             {
                 PblVector3 vDir;
                 D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mVelocity));
-                AsDamageable(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
+                static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
             }
         }
 
-        const float fDot = mVelocity.x * vNormal.x + mVelocity.y * vNormal.y + mVelocity.z * vNormal.z;
+        const float fDot = DotProduct(mVelocity, vNormal);
         if (fDot < 0.0f)
         {
             const float fRebound = pClass->mRebound;
             const float fFriction = pClass->mFriction;
-            mPosition = PblVector3(vPos.x + vNormal.x * 0.01f, vPos.y + vNormal.y * 0.01f,
-                                   vPos.z + vNormal.z * 0.01f);
+            mPosition = vPos + vNormal * 0.01f;
 
             mVelocity -= vNormal * fDot;
             float fSlow = -(fFriction * fDot * (fRebound + 1.0f) /
                             sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                   mVelocity.z * mVelocity.z));
             fSlow = fSlow < 1.0f ? fSlow : 1.0f;
-            mVelocity.x -= fSlow * mVelocity.x;
-            mVelocity.y -= mVelocity.y * fSlow;
-            mVelocity.z -= mVelocity.z * fSlow;
+            mVelocity -= mVelocity * fSlow;
 
             const float fBounce = fRebound * fDot;
-            mVelocity -= vNormal * fBounce;
+            mVelocity -= fBounce * vNormal;
             if (mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z < 1.0f)
             {
                 ++mNumBounces;

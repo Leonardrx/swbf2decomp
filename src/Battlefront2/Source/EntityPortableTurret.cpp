@@ -79,21 +79,12 @@ EntityPortableTurret::EntityPortableTurret(EntityPortableTurretClass* pClass, co
     PblVector3& vFront = mMatrix[2];
     vUp = gVectorUnitY;
     mMatrix.m[1][3] = 0.0f;
-    PblVector3 vCross(vUp.y * vFront.z - vUp.z * vFront.y, vUp.z * vFront.x - vUp.x * vFront.z,
-                      vUp.x * vFront.y - vUp.y * vFront.x);
-    PblVector3 vNorm;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-    vRight = vNorm;
+    vRight = Normalize(CrossProduct(vUp, vFront));
     mMatrix.m[0][3] = 0.0f;
-    vCross = PblVector3(vRight.y * vUp.z - vRight.z * vUp.y, vRight.z * vUp.x - vRight.x * vUp.z,
-                        vRight.x * vUp.y - vRight.y * vUp.x);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-    vFront = vNorm;
+    vFront = Normalize(CrossProduct(vRight, vUp));
     mMatrix.m[2][3] = 0.0f;
 
-    PblBox box;
-    box._vMin = PblVector3(FLT_MAX, FLT_MAX, FLT_MAX);
-    box._vMax = PblVector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    PblBox box(FLT_MAX, FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
     bool bHaveBody = false;
     for (int i = 0; i < mCollisionModel->GetNumBodies(); ++i)
     {
@@ -149,19 +140,21 @@ bool EntityPortableTurret::Update(float fDeltaTime)
         mLifeTimer += fDeltaTime;
     }
 
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()) &&
-        ((!IsAlive() && !mClass->mDestroyedModel && !mClass->mUnbuiltModel) || mLifeTimer > mClass->mLifeTime ||
-         mMatrix.m[3][1] < -500.0f))
+    if (!(NetGame::IsEnabled() && NetGame::IsClient()))
     {
-        Kill();
-        return false;
+        if ((!IsAlive() && !mClass->mDestroyedModel && !mClass->mUnbuiltModel) || mLifeTimer > mClass->mLifeTime ||
+            mMatrix.m[3][1] < -500.0f)
+        {
+            Kill();
+            return false;
+        }
     }
 
     if (mBecomeStationaryNow)
     {
         mStationary = true;
         mBecomeStationaryNow = false;
-        CollisionManager::RemoveBody(this);
+        RemoveFromCollisionManager();
         this->AddRigidToCollisionManager();
     }
 
@@ -172,12 +165,8 @@ bool EntityPortableTurret::Update(float fDeltaTime)
         PblVector3 vStep(mVelocity.x * fDeltaTime, mVelocity.y * fDeltaTime, mVelocity.z * fDeltaTime);
         const PblVector3& vPos = GetPosition();
         SetPosition(PblVector3(vPos.x + vStep.x, vPos.y + vStep.y, vPos.z + vStep.z));
-        mAABB._vMax.x += mVelocity.x * fDeltaTime;
-        mAABB._vMax.y += mVelocity.y * fDeltaTime;
-        mAABB._vMax.z += mVelocity.z * fDeltaTime;
-        mAABB._vMin.x += mVelocity.x * fDeltaTime;
-        mAABB._vMin.y += mVelocity.y * fDeltaTime;
-        mAABB._vMin.z += mVelocity.z * fDeltaTime;
+        mAABB._vMax = mAABB._vMax + mVelocity * fDeltaTime;
+        mAABB._vMin = mAABB._vMin + mVelocity * fDeltaTime;
         mVelocity.y += fHalfDrop;
         if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -500.0f)
         {
@@ -224,11 +213,17 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
     if (pOther->GetCollisionType() != COLL_SOFT && pOther->GetCollisionType() != COLL_RIGID)
     {
         const PblVector3& vNormal = pResult->mSeparationNormal;
-        float fDot = vNormal.x * mVelocity.x + mVelocity.y * vNormal.y + mVelocity.z * vNormal.z;
+        float fDot = DotProduct(mVelocity, vNormal);
         if (fDot < 0.0f)
         {
-            (pOther->GetCollisionType() == COLL_WATER ? mClass->mCollisionWaterSound : mClass->mCollisionSound)
-                .Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            if (pOther->GetCollisionType() == COLL_WATER)
+            {
+                mClass->mCollisionWaterSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            }
+            else
+            {
+                mClass->mCollisionSound.Play((const PblVector3*)mMatrix.m[3], 0, false, true);
+            }
             PblVector3 vUnit;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUnit), reinterpret_cast<const D3DXVECTOR3*>(&vNormal));
             if (vUnit.y > 0.7f)
@@ -258,14 +253,9 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
     }
 
     bool bResult = CollisionObject::CollisionCallback(pResult, pOther, pRestrictor);
-    const PblVector3& vPos = GetPosition();
-    PblVector3 vDelta(vPos.x - vOldPos.x, vPos.y - vOldPos.y, vPos.z - vOldPos.z);
-    mAABB._vMax.x += vDelta.x;
-    mAABB._vMax.y += vDelta.y;
-    mAABB._vMax.z += vDelta.z;
-    mAABB._vMin.x += vDelta.x;
-    mAABB._vMin.y += vDelta.y;
-    mAABB._vMin.z += vDelta.z;
+    PblVector3 vDelta = GetPosition() - vOldPos;
+    mAABB._vMax = mAABB._vMax + vDelta;
+    mAABB._vMin = mAABB._vMin + vDelta;
     return bResult;
 }
 

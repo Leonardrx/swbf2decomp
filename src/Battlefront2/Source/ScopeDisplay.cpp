@@ -278,10 +278,10 @@ bool ScopeDisplay::Update(float fDeltaTime)
         if (mScopeTexture != uTexture)
         {
             mScopeTexture = uTexture;
-            for (int i = 0; i < 4; ++i)
-            {
-                mBitmapWeaponScope[i].SetTexture(mScopeTexture);
-            }
+            mBitmapWeaponScope[0].SetTexture(mScopeTexture);
+            mBitmapWeaponScope[1].SetTexture(mScopeTexture);
+            mBitmapWeaponScope[2].SetTexture(mScopeTexture);
+            mBitmapWeaponScope[3].SetTexture(mScopeTexture);
         }
         if (mScopeTexture)
         {

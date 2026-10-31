@@ -460,26 +460,28 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
         return;
     }
 
-    if (mClass->m_bDynamicLighting)
+    if (!mClass->m_bDynamicLighting)
     {
-        uMask &= ~0x80;
+        uMask |= 0x80;
     }
     else
     {
-        uMask |= 0x80;
+        uMask &= ~0x80;
     }
 
     float fNear, fFar, fWidth, fHeight;
     RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
-    const RedCamera* pCamera = RedRenderer::GetCamera();
+    const PblMatrix& mView = RedRenderer::GetCamera()->GetMatrix();
     if (GetModel()->GetRedModel(0)->_pStencilShadow && RedStencilShadow::GetShadowEnable())
     {
         RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
         if (!pLight->IsShadowCaster())
         {
-            pLight = RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster()
-                         ? RedLight::GetGlobalDirectionalLight(1)
-                         : NULL;
+            pLight = RedLight::GetGlobalDirectionalLight(1);
+            if (!pLight->IsShadowCaster())
+            {
+                pLight = NULL;
+            }
         }
         float fLength;
         if (pLight)
@@ -487,7 +489,8 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
             uMask |= 0x10000;
             const PblVector3& vDir = pLight->m_vDirection;
             float fMinLength = _Sphere.w * -2.0f / vDir.y;
-            PblVector3 vStart(_Sphere.x, _Sphere.w + _Sphere.y, _Sphere.z);
+            PblVector3 vStart = GetRenderPos();
+            vStart.y += _Sphere.w;
             const GameObject* pIgnore = this;
             CollisionObject* pHit;
             fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pIgnore, 1, 0x90, false) * 50.0f;
@@ -504,13 +507,12 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
         static float fMaxShadowLength =
             static_cast<const EntityGeometryClass*>(mEntityClass)->mMaxShadowLength;
         float fShadowLength = fMaxShadowLength;
-        if (fShadowLength <= 0.0f || fShadowLength > fLength)
+        if (!(fShadowLength > 0.0f) || fShadowLength > fLength)
         {
             fShadowLength = fLength;
         }
         RedRenderer::SetStencilShadowLength(fShadowLength);
 
-        const PblMatrix& mView = pCamera->GetMatrix();
         float fDX = mView.m[3][0] - mView.m[2][0] * fNear - _Sphere.x;
         float fDY = mView.m[3][1] - mView.m[2][1] * fNear - _Sphere.y;
         float fDZ = mView.m[3][2] - mView.m[2][2] * fNear - _Sphere.z;

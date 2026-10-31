@@ -178,7 +178,9 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
     {
         PblMatrix world = mHitObject->GetCollisionObject()->mCollisionModel->GetWorldMatrix(
             mCollBodyID, mHitObject->GetMatrix(), mHitObject->GetCollisionObject()->GetPose());
-        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&mPosition), reinterpret_cast<const D3DXVECTOR3*>(&mCollOffset), reinterpret_cast<const D3DXMATRIX*>(&world));
+        PblVector3 vNewPos;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vNewPos), reinterpret_cast<const D3DXVECTOR3*>(&mCollOffset), reinterpret_cast<const D3DXMATRIX*>(&world));
+        mPosition = vNewPos;
 
         float fSpeed = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                              mVelocity.z * mVelocity.z);
@@ -200,8 +202,9 @@ bool OrdnanceGrapplingHook::Update(float fDeltaTime)
     {
         if (!mFireWeapon->mTrigger->IsUp())
         {
+            GameObject* pOwner = mOwner;
             float fRadius = mOwner->GetCollisionObject()->GetCollisionRadius();
-            const PblVector3& vCenter = mOwner->GetCollisionObject()->GetCollisionCenter();
+            const PblVector3& vCenter = pOwner->GetCollisionObject()->GetCollisionCenter();
             const PblVector3& vPos = GetPosition();
             float fDx = vCenter.x - vPos.x;
             float fDz = vCenter.z - vPos.z;

@@ -93,9 +93,14 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            mDestNode = DistSq(pToArc->n1->GetCenter(), vTo) < DistSq(pToArc->n2->GetCenter(), vTo)
-                            ? pToArc->n1
-                            : pToArc->n2;
+            if (DistSq(pToArc->n1->GetCenter(), vTo) < DistSq(pToArc->n2->GetCenter(), vTo))
+            {
+                mDestNode = pToArc->n1;
+            }
+            else
+            {
+                mDestNode = pToArc->n2;
+            }
         }
         mDestNode2 = mDestNode == pToArc->n1 ? pToArc->n2 : pToArc->n1;
         mUseDest2ForWeights = pArc1 && pArc2
@@ -127,10 +132,14 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            mCurDestNode = DistSq(pFromArc->n2->GetCenter(), vFrom)
-                                   > DistSq(pFromArc->n1->GetCenter(), vFrom)
-                               ? pFromArc->n2
-                               : pFromArc->n1;
+            if (DistSq(pFromArc->n2->GetCenter(), vFrom) > DistSq(pFromArc->n1->GetCenter(), vFrom))
+            {
+                mCurDestNode = pFromArc->n2;
+            }
+            else
+            {
+                mCurDestNode = pFromArc->n1;
+            }
             mCurArc = const_cast<ConnectivityArc*>(
                 mCurDestNode->GetRandomArc(pFromArc, *pGraph, eType));
         }
@@ -184,10 +193,14 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            mCurDestNode = DistSq(pFromArc->n2->GetCenter(), vFrom)
-                                   > DistSq(pFromArc->n1->GetCenter(), vFrom)
-                               ? pFromArc->n2
-                               : pFromArc->n1;
+            if (DistSq(pFromArc->n2->GetCenter(), vFrom) > DistSq(pFromArc->n1->GetCenter(), vFrom))
+            {
+                mCurDestNode = pFromArc->n2;
+            }
+            else
+            {
+                mCurDestNode = pFromArc->n1;
+            }
         }
         mCurArc = const_cast<ConnectivityArc*>(
             mCurDestNode->GetRandomArc(pFromArc, *mGraph, eType));
@@ -206,9 +219,14 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
     }
     else
     {
-        mDestNode = DistSq(pToArc->n1->GetCenter(), vTo) < DistSq(pToArc->n2->GetCenter(), vTo)
-                        ? pToArc->n1
-                        : pToArc->n2;
+        if (DistSq(pToArc->n1->GetCenter(), vTo) < DistSq(pToArc->n2->GetCenter(), vTo))
+        {
+            mDestNode = pToArc->n1;
+        }
+        else
+        {
+            mDestNode = pToArc->n2;
+        }
     }
     mDestNode2 = mDestNode == pToArc->n1 ? pToArc->n2 : pToArc->n1;
     mUseDest2ForWeights =

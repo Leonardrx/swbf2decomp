@@ -49,38 +49,20 @@ PblList<DustEffect> DustEffectClass::sDustEffects;
 // FUNCTION: SWBF2 0x0048ec20
 DustEffect::DustEffect(DustEffectClass* pClass, const PblMatrix& matrix)
     : RedSceneObject(&cloudClusterObjectLodData)
-    , mClass(pClass)
 {
+    mClass = pClass;
     mMatrix = gMatrixIdentity;
 
-    mMatrix.m[1][0] = matrix.m[1][0] * mClass->mHeightScale;
-    mMatrix.m[1][1] = matrix.m[1][1] * mClass->mHeightScale;
-    mMatrix.m[1][2] = matrix.m[1][2] * mClass->mHeightScale;
+    mMatrix[1] = matrix[1] * pClass->mHeightScale;
     mMatrix.m[1][3] = 0.0f;
 
-    PblVector3 vBack(-mMatrix.m[2][0], -mMatrix.m[2][1], -mMatrix.m[2][2]);
-    PblVector3 vRight(mMatrix.m[1][2] * vBack.y - mMatrix.m[1][1] * vBack.z,
-                      mMatrix.m[1][0] * vBack.z - mMatrix.m[1][2] * vBack.x,
-                      mMatrix.m[1][1] * vBack.x - mMatrix.m[1][0] * vBack.y);
-    PblVector3 vOut;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOut), reinterpret_cast<const D3DXVECTOR3*>(&vRight));
-    mMatrix.m[0][0] = vOut.x;
-    mMatrix.m[0][1] = vOut.y;
-    mMatrix.m[0][2] = vOut.z;
+    mMatrix[0] = Normalize(CrossProduct(-mMatrix[2], mMatrix[1]));
     mMatrix.m[0][3] = 0.0f;
 
-    PblVector3 vAt(mMatrix.m[1][2] * mMatrix.m[0][1] - mMatrix.m[1][1] * mMatrix.m[0][2],
-                   mMatrix.m[1][0] * mMatrix.m[0][2] - mMatrix.m[0][0] * mMatrix.m[1][2],
-                   mMatrix.m[0][0] * mMatrix.m[1][1] - mMatrix.m[1][0] * mMatrix.m[0][1]);
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOut), reinterpret_cast<const D3DXVECTOR3*>(&vAt));
-    mMatrix.m[2][0] = vOut.x;
-    mMatrix.m[2][1] = vOut.y;
-    mMatrix.m[2][2] = vOut.z;
+    mMatrix[2] = Normalize(CrossProduct(mMatrix[0], mMatrix[1]));
     mMatrix.m[2][3] = 0.0f;
 
-    mMatrix.m[3][0] = matrix.m[3][0];
-    mMatrix.m[3][1] = matrix.m[3][1];
-    mMatrix.m[3][2] = matrix.m[3][2];
+    mMatrix[3] = matrix[3];
     mMatrix.m[3][3] = 1.0f;
 
     SetRenderPos(mMatrix.GetTranslation());
@@ -228,9 +210,9 @@ bool DustEffectClass::UpdateParticle(DustParticle& particle, float fDeltaTime,
 void DustEffectClass::SpawnParticle(DustParticle& particle)
 {
     {
-        const float fZ = (mPosMax.z - mPosMin.z) * PblRandom::GetGlobalFloat() + mPosMin.z;
-        const float fY = (mPosMax.y - mPosMin.y) * PblRandom::GetGlobalFloat() + mPosMin.y;
-        const float fX = (mPosMax.x - mPosMin.x) * PblRandom::GetGlobalFloat() + mPosMin.x;
+        const float fZ = (mPosMax.z - mPosMin.z) * PblRandom::_Global.GetFloat() + mPosMin.z;
+        const float fY = (mPosMax.y - mPosMin.y) * PblRandom::_Global.GetFloat() + mPosMin.y;
+        const float fX = (mPosMax.x - mPosMin.x) * PblRandom::_Global.GetFloat() + mPosMin.x;
         particle.mPos = PblVector3(fX, fY, fZ);
     }
 
@@ -245,13 +227,13 @@ void DustEffectClass::SpawnParticle(DustParticle& particle)
 
     particle.mColor.a = 0.0f;
     {
-        const float fZ = (mVelMax.z - mVelMin.z) * PblRandom::GetGlobalFloat() + mVelMin.z;
-        const float fY = (mVelMax.y - mVelMin.y) * PblRandom::GetGlobalFloat() + mVelMin.y;
-        const float fX = (mVelMax.x - mVelMin.x) * PblRandom::GetGlobalFloat() + mVelMin.x;
+        const float fZ = (mVelMax.z - mVelMin.z) * PblRandom::_Global.GetFloat() + mVelMin.z;
+        const float fY = (mVelMax.y - mVelMin.y) * PblRandom::_Global.GetFloat() + mVelMin.y;
+        const float fX = (mVelMax.x - mVelMin.x) * PblRandom::_Global.GetFloat() + mVelMin.x;
         particle.mVel = PblVector3(fX, fY, fZ);
     }
-    particle.mSize = (mSizeMax - mSizeMin) * PblRandom::GetGlobalFloat() + mSizeMin;
-    particle.mLifeTime = (mLifeTimeMax - mLifeTimeMin) * PblRandom::GetGlobalFloat() + mLifeTimeMin;
+    particle.mSize = (mSizeMax - mSizeMin) * PblRandom::_Global.GetFloat() + mSizeMin;
+    particle.mLifeTime = (mLifeTimeMax - mLifeTimeMin) * PblRandom::_Global.GetFloat() + mLifeTimeMin;
     particle.mTime = 0.0f;
 
     mDustSound.Play(&particle.mPos, 0, false, true);
@@ -602,6 +584,7 @@ Entity* CloudClusterClass::Build(const EntityDesc& desc)
 void CloudClusterClass::RenderDustEffects(const PblVector3& vPos, unsigned int uSeed, unsigned int uiFlags)
 {
     PblMatrix matrix = gMatrixIdentity;
+    PblRandom random = { uSeed ^ 0xc71c2830 };
     // SYNTHETIC: SWBF2 0x00766ed0
     // `CloudClusterClass::RenderDustEffects'::`2'::`dynamic atexit destructor for 'positionHeap''
 
@@ -609,7 +592,6 @@ void CloudClusterClass::RenderDustEffects(const PblVector3& vPos, unsigned int u
     static PblHeap<int, float> positionHeap(20, 100000.0f, 0);
     // GLOBAL: SWBF2 0x01faa800
     static PblVector3 positions[20];
-    PblRandom random = { uSeed ^ 0xc71c2830 };
     const PblMatrix& camMatrix = RedRenderer::GetCamera()->GetMatrix();
 
     for (int i = 0; i < mNumDustEffectsInCluster; ++i)
@@ -619,9 +601,7 @@ void CloudClusterClass::RenderDustEffects(const PblVector3& vPos, unsigned int u
         {
             continue;
         }
-        matrix.m[1][0] = 0.0f;
-        matrix.m[1][1] = pEffect->mHeightScale;
-        matrix.m[1][2] = 0.0f;
+        matrix[1] = PblVector3(0.0f, pEffect->mHeightScale, 0.0f);
         matrix.m[1][3] = 0.0f;
         if (pEffect->Init())
         {
@@ -636,9 +616,7 @@ void CloudClusterClass::RenderDustEffects(const PblVector3& vPos, unsigned int u
                 positions[j].x += vPos.x;
                 positions[j].y += vPos.y;
                 positions[j].z += vPos.z;
-                const float fDistance = (camMatrix.m[3][0] - positions[j].x) * camMatrix.m[2][0] +
-                                        (camMatrix.m[3][1] - positions[j].y) * camMatrix.m[2][1] +
-                                        (camMatrix.m[3][2] - positions[j].z) * camMatrix.m[2][2];
+                const float fDistance = DotProduct(camMatrix.GetTranslation() - positions[j], camMatrix.GetZAxis());
                 if (pEffect->mMaxDistance > fDistance &&
                     (pEffect->mMinDistance <= 0.0f || fDistance > pEffect->mMinDistance))
                 {

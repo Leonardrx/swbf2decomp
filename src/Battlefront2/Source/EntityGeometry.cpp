@@ -267,9 +267,11 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
     RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
     if (!pLight->IsShadowCaster())
     {
-        pLight = RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster()
-                     ? RedLight::GetGlobalDirectionalLight(1)
-                     : NULL;
+        pLight = RedLight::GetGlobalDirectionalLight(1);
+        if (!pLight->IsShadowCaster())
+        {
+            pLight = NULL;
+        }
     }
     if (!pLight)
     {
@@ -280,16 +282,17 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
     if (ucLod == 0 && !(uFlags & 0x220000) && pModel->GetRedModel(0)->_pStencilShadow &&
         RedStencilShadow::GetShadowEnable())
     {
-        const PblVector3& vDir = pLight->m_vDirection;
-        float fMinLength = _Sphere.w * -2.0f / vDir.y;
+        const PblVector3& vLightDir = pLight->m_vDirection;
+        float fMinLength = _Sphere.w * -2.0f / vLightDir.y;
         if (fMinLength < 6.0f)
         {
             fMinLength = 6.0f;
         }
         uFlags |= 0x10000;
 
-        float fBack = _Sphere.w * 2.0f;
-        PblVector3 vStart(_Sphere.x - vDir.x * fBack, _Sphere.y - vDir.y * fBack, _Sphere.z - vDir.z * fBack);
+        PblVector3 vStart = GetRenderPos();
+        PblVector3 vDir = pLight->m_vDirection;
+        vStart -= vDir * (_Sphere.w * 2.0f);
         CollisionObject* pHit;
         float fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pObject, pObject != NULL,
                                                  0x90, false) * 50.0f;
@@ -317,7 +320,7 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
     if (uShadowTexture)
     {
         PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
-        PblVector3 vPos(_Sphere.x, _Sphere.y, _Sphere.z);
+        PblVector3 vPos = GetRenderPos();
         float fRadius = GetCollisionRadius();
         if (const RedModel* pRedModel = pModel->GetRedModel(ucLod))
         {
@@ -460,33 +463,15 @@ EntityGeometryClass::EntityGeometryClass(EntityGeometryClass* pBase, unsigned in
     _fPriorityMod = 1.0f;
     mModel = pBase->mModel;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkDescriptors[i] = pBase->mChunkDescriptors[i];
-    }
-    for (int i = 0; i < 10; ++i)
-    {
-        mFullChunkCollisions[i] = pBase->mFullChunkCollisions[i];
-    }
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkAttachPoints[i] = pBase->mChunkAttachPoints[i];
-    }
+    memcpy(mChunkDescriptors, pBase->mChunkDescriptors, sizeof(mChunkDescriptors));
+    memcpy(mFullChunkCollisions, pBase->mFullChunkCollisions, sizeof(mFullChunkCollisions));
+    memcpy(mChunkAttachPoints, pBase->mChunkAttachPoints, sizeof(mChunkAttachPoints));
 
     mLODClass = pBase->mLODClass;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        mInitialChunkSpeed[i] = pBase->mInitialChunkSpeed[i];
-    }
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkVelocityFactor[i] = pBase->mChunkVelocityFactor[i];
-    }
-    for (int i = 0; i < 10; ++i)
-    {
-        mChunkUpFactor[i] = pBase->mChunkUpFactor[i];
-    }
+    memcpy(mInitialChunkSpeed, pBase->mInitialChunkSpeed, sizeof(mInitialChunkSpeed));
+    memcpy(mChunkVelocityFactor, pBase->mChunkVelocityFactor, sizeof(mChunkVelocityFactor));
+    memcpy(mChunkUpFactor, pBase->mChunkUpFactor, sizeof(mChunkUpFactor));
 
     mNumHitLocations = pBase->mNumHitLocations;
     mHitLocations = 0;
@@ -796,9 +781,9 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
 
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
-            float fHalfX = (float)fabs(box._vMax.x - box._vMin.x) * 0.5f;
-            float fHalfY = (float)fabs(box._vMax.y - box._vMin.y) * 0.5f;
-            float fHalfZ = (float)fabs(box._vMax.z - box._vMin.z) * 0.5f;
+            float fHalfX = (float)fabs((double)(box._vMax.x - box._vMin.x)) * 0.5f;
+            float fHalfY = (float)fabs((double)(box._vMax.y - box._vMin.y)) * 0.5f;
+            float fHalfZ = (float)fabs((double)(box._vMax.z - box._vMin.z)) * 0.5f;
             primitive.SetSphere(sqrtf(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
             matrix.m[3][0] = fCenterX;
             matrix.m[3][1] = fCenterY;
@@ -843,10 +828,7 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            ChunkDescriptor* pDesc = mChunkDescriptors[sCurrentChunk];
-            pDesc->mOmega.x = x;
-            pDesc->mOmega.y = y;
-            pDesc->mOmega.z = z;
+            mChunkDescriptors[sCurrentChunk]->mOmega = PblVector3(x, y, z);
         }
         break;
     case 0xd0259d88:
@@ -854,10 +836,7 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            ChunkDescriptor* pDesc = mChunkDescriptors[sCurrentChunk];
-            pDesc->mGravity.x = x;
-            pDesc->mGravity.y = y;
-            pDesc->mGravity.z = z;
+            mChunkDescriptors[sCurrentChunk]->mGravity = PblVector3(x, y, z);
         }
         break;
     case 0xc2f5ffd5:
@@ -938,11 +917,14 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
     case 0xa8fb54e9:
-        if ((unsigned int)sCurrentChunk <= 9 && (unsigned int)(sCurrentTrail - 1) <= 2)
+    {
+        unsigned int uTrail = sCurrentTrail - 1;
+        if ((unsigned int)sCurrentChunk <= 9 && uTrail <= 2)
         {
-            mChunkDescriptors[sCurrentChunk]->mTrailAttachPoints[sCurrentTrail - 1] = PblTEMPHash(pszValue);
+            mChunkDescriptors[sCurrentChunk]->mTrailAttachPoints[uTrail] = PblTEMPHash(pszValue);
         }
         break;
+    }
     case 0xd350c3de:
         if ((unsigned int)sCurrentChunk <= 9 && (unsigned int)sCurrentSmoke <= 2)
         {
@@ -951,11 +933,14 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
     case 0x472e0410:
-        if ((unsigned int)sCurrentChunk <= 9 && (unsigned int)(sCurrentSmoke - 1) <= 2)
+    {
+        unsigned int uSmoke = sCurrentSmoke - 1;
+        if ((unsigned int)sCurrentChunk <= 9 && uSmoke <= 2)
         {
-            mChunkDescriptors[sCurrentChunk]->mSmokeAttachPoints[sCurrentSmoke - 1] = PblTEMPHash(pszValue);
+            mChunkDescriptors[sCurrentChunk]->mSmokeAttachPoints[uSmoke] = PblTEMPHash(pszValue);
         }
         break;
+    }
 
     default:
         if (!AttachedEffectsClass::SetProperty(uProperty, pszValue) &&

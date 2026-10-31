@@ -269,18 +269,11 @@ bool HUD::ElementText::ReadData(PblConfig& config, PblConfig::Data& data)
                                                 3, data.GetStringArg(0));
         const unsigned int uVAlign = TranslateString((const char* const*)Factory::sTextAlignVertical,
                                                 4, data.GetStringArg(1));
-        TextHAlignT eHAlign;
         TextVAlignT eVAlign;
+        TextHAlignT eHAlign;
         GetTextAlign(eHAlign, eVAlign);
-        if (uHAlign < 3)
-        {
-            eHAlign = (TextHAlignT)uHAlign;
-        }
-        if (uVAlign < 4)
-        {
-            eVAlign = (TextVAlignT)uVAlign;
-        }
-        SetTextAlign(eHAlign, eVAlign);
+        SetTextAlign(uHAlign < 3 ? (TextHAlignT)uHAlign : eHAlign,
+                     uVAlign < 4 ? (TextVAlignT)uVAlign : eVAlign);
         return true;
     }
     case kTextScaleHash:
@@ -407,11 +400,11 @@ void HUD::ElementText::EventNumber(const HUD::Event& event, void* const pData)
         }
 
         float fSeconds = event.GetDataFloat();
-        float fMinutes = floor(fSeconds / 60.0f);
+        float fMinutes = floorf(fSeconds / 60.0f);
         fSeconds -= fMinutes * 60.0f;
-        float fHours = floor(fMinutes / 60.0f);
+        float fHours = floorf(fMinutes / 60.0f);
         fMinutes -= fHours * 60.0f;
-        const float fDays = floor(fHours / 24.0f);
+        const float fDays = floorf(fHours / 24.0f);
         fHours -= fDays * 24.0f;
 
         char format[32];
@@ -506,7 +499,7 @@ void HUD::ElementText::EventNumber(const HUD::Event& event, void* const pData)
             const bool bPercent = pText->mPercent;
             const float fValue = bPercent ? event.GetData().floatValue * 100.0f : event.GetData().floatValue;
             const char* pFormat;
-            if (event.GetData().floatValue == FLT_MAX)
+            if (FLT_MAX == event.GetData().floatValue)
             {
                 pFormat = pText->mShowInfiniteDashes ? "--" : "";
             }
@@ -607,6 +600,7 @@ bool HUD::ElementText::GetProperty(const unsigned int uHashID, void* pValue)
 // FUNCTION: SWBF2 0x0055b410
 bool HUD::ElementText::SetProperty(const unsigned int uHashID, const void* pValue)
 {
+    unsigned short* pText;
     switch (uHashID)
     {
     case kPercentHash: mPercent = *(const bool*)pValue; return true;
@@ -621,51 +615,56 @@ bool HUD::ElementText::SetProperty(const unsigned int uHashID, const void* pValu
         SetTextScale(((const float*)pValue)[0], ((const float*)pValue)[1]);
         return true;
     case 0xAF7A0A77u:
-    case 0xFD78EA2Du:
     {
-        unsigned short* pText;
-        SaveTextBoxText(&pText);
+        unsigned short* pAlignText;
+        SaveTextBoxText(&pAlignText);
         TextHAlignT eHAlign;
         TextVAlignT eVAlign;
         GetTextAlign(eHAlign, eVAlign);
-        if (uHashID == 0xAF7A0A77u)
-        {
-            eHAlign = (TextHAlignT)*(const unsigned int*)pValue;
-        }
-        else
-        {
-            eVAlign = (TextVAlignT)*(const unsigned int*)pValue;
-        }
-        SetTextAlign(eHAlign, eVAlign);
-        RestoreTextBoxText(&pText);
+        SetTextAlign((TextHAlignT)*(const unsigned int*)pValue, eVAlign);
+        RestoreTextBoxText(&pAlignText);
+        return true;
+    }
+    case 0xFD78EA2Du:
+    {
+        unsigned short* pAlignText;
+        SaveTextBoxText(&pAlignText);
+        TextHAlignT eHAlign;
+        TextVAlignT eVAlign;
+        GetTextAlign(eHAlign, eVAlign);
+        SetTextAlign(eHAlign, (TextVAlignT)*(const unsigned int*)pValue);
+        RestoreTextBoxText(&pAlignText);
         return true;
     }
     case kTextStyleHash:
-    case kTextBreakHash:
-    case kTextClipHash:
-    case kTextCharacterSpacingHash:
-    case kTextTabSpacingHash:
-    case kTextBoxHash:
-    {
-        unsigned short* pText;
         SaveTextBoxText(&pText);
-        switch (uHashID)
-        {
-        case kTextStyleHash: SetTextStyle((TextStyleT)*(const unsigned int*)pValue); break;
-        case kTextBreakHash: SetTextBreak((TextBreakT)*(const unsigned int*)pValue); break;
-        case kTextClipHash: SetTextClip((TextClipT)*(const unsigned int*)pValue); break;
-        case kTextCharacterSpacingHash: SetIntercharacterSpacing(*(const int*)pValue); break;
-        case kTextTabSpacingHash: SetTabSpacing(*(const unsigned int*)pValue); break;
-        case kTextBoxHash:
-            SetTextBox((unsigned int)(((const float*)pValue)[0] * sViewportWidth),
-                       (unsigned int)(((const float*)pValue)[1] * sViewportHeight));
-            break;
-        }
-        RestoreTextBoxText(&pText);
-        return true;
-    }
+        SetTextStyle((TextStyleT)*(const unsigned int*)pValue);
+        break;
+    case kTextBreakHash:
+        SaveTextBoxText(&pText);
+        SetTextBreak((TextBreakT)*(const unsigned int*)pValue);
+        break;
+    case kTextClipHash:
+        SaveTextBoxText(&pText);
+        SetTextClip((TextClipT)*(const unsigned int*)pValue);
+        break;
+    case kTextCharacterSpacingHash:
+        SaveTextBoxText(&pText);
+        SetIntercharacterSpacing(*(const int*)pValue);
+        break;
+    case kTextTabSpacingHash:
+        SaveTextBoxText(&pText);
+        SetTabSpacing(*(const unsigned int*)pValue);
+        break;
+    case kTextBoxHash:
+        SaveTextBoxText(&pText);
+        SetTextBox((unsigned int)(((const float*)pValue)[0] * sViewportWidth),
+                   (unsigned int)(((const float*)pValue)[1] * sViewportHeight));
+        break;
     default: return Element::SetProperty(uHashID, pValue);
     }
+    RestoreTextBoxText(&pText);
+    return true;
 }
 
 // FUNCTION: SWBF2 0x0055c100

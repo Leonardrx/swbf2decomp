@@ -507,7 +507,11 @@ bool PauseMenu::Update(float fDeltaTime)
         mDebounceTime <= 0.0f && !FLInputManager::s_instance.AnyMissing() && pSpawn->mMode != SpawnDisplay::eFINISHED &&
         (bStart || bPlayerList))
     {
-        if (PauseMenu::sEnablePause)
+        if (!PauseMenu::sEnablePause)
+        {
+            PauseMenu::sEnablePause = true;
+        }
+        else
         {
             pGuiInputs->ClearStart();
             PauseMenu::sPausingViewport = iViewport;
@@ -516,10 +520,6 @@ bool PauseMenu::Update(float fDeltaTime)
             gSkipToPlayerListState = 0;
             gSkipToPlayerListTime = GameLoop::GetMissionTime();
             _SetPaused(!mVisible);
-        }
-        else
-        {
-            PauseMenu::sEnablePause = true;
         }
     }
     else if (mVisible && bStart)

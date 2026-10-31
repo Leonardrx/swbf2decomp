@@ -91,14 +91,14 @@ void BlurEffect::Render(int value)
     float left, top, right, bottom;
     RedRenderer::pcGetViewportExtents(left, top, right, bottom);
 
-    float fU1 = (right - left) * m_downSizeFactor /
-                (float)(RedRenderer::pcGetBuffer(PC_BUFFER_SKY))->m_uiWidth;
-    float fV1 = (bottom - top) * m_downSizeFactor /
-                (float)(RedRenderer::pcGetBuffer(PC_BUFFER_SKY))->m_uiHeight;
-    float fU0 = (right - left) * m_downSizeFactor /
-                (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiWidth;
-    float fV0 = (bottom - top) * m_downSizeFactor /
-                (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiHeight;
+    const float fSkyWidth = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_SKY))->m_uiWidth;
+    float fU1 = (right - left) * m_downSizeFactor / fSkyWidth;
+    const float fSkyHeight = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_SKY))->m_uiHeight;
+    float fV1 = (bottom - top) * m_downSizeFactor / fSkyHeight;
+    const float fTempWidth = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiWidth;
+    float fU0 = (right - left) * m_downSizeFactor / fTempWidth;
+    const float fTempHeight = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiHeight;
+    float fV0 = (bottom - top) * m_downSizeFactor / fTempHeight;
 
     float fX = fU1 * 2.0f - 1.0f;
     float fY = 1.0f - fV1 * 2.0f;

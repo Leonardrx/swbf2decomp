@@ -463,7 +463,7 @@ void VoiceChatGroup::AddPlayers()
             line.mText.SetText(pCharacter->mName, true);
             if (pLocal)
             {
-                line.mText.m_color = gVoiceChatTeamColors[pLocal->mTeamNumber != pCharacter->mTeamNumber];
+                line.mText.SetColor(gVoiceChatTeamColors[pLocal->mTeamNumber != pCharacter->mTeamNumber]);
             }
         }
         for (int j = iLine + 1; j < 4; ++j)

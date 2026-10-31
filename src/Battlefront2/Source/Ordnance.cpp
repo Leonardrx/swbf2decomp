@@ -502,7 +502,16 @@ void OrdnanceClass::Read(PblFileChunk& chunk)
         case 0x45505954:
         {
             const unsigned int uType = PblHash(child.ReadString(acBuffer, sizeof(acBuffer)));
-            if (Find(uType))
+            OrdnanceClass* pExisting = 0;
+            for (PblList<OrdnanceFactory>::Itor it(OrdnanceFactory::sList.GetFirst()); it; ++it)
+            {
+                if (it->mId == uType)
+                {
+                    pExisting = static_cast<OrdnanceClass*>(&*it);
+                    break;
+                }
+            }
+            if (pExisting)
             {
                 return;
             }

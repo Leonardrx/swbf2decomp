@@ -99,10 +99,8 @@ void UnitHoldAgent::UpdateStatePostVision(float dt)
 
     const PblMatrix& mine = GetMe()->GetMatrix();
     const PblMatrix& theirs = pLeader->GetControllable()->GetMatrix();
-    float dx = theirs.m[3][0] - mine.m[3][0];
-    float dy = theirs.m[3][1] - mine.m[3][1];
-    float dz = theirs.m[3][2] - mine.m[3][2];
-    if (dx * dx + dy * dy + dz * dz > 400.0f)
+    PblVector3 vDelta = theirs.GetTranslation() - mine.GetTranslation();
+    if (SquaredLength(vDelta) > 400.0f)
     {
         mInsubValue -= 0.05f;
         if (mInsubValue <= 0.0f)

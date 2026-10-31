@@ -493,16 +493,20 @@ bool TreeGrid::ProcessNeighborhood(int iX, int iZ, int iGridSize, int iStartInde
             iCell += iGridSize - (iMaxX - iMinX + 1);
         }
     }
-    else if (sLastX == iX)
+    else if (sLastX != iX)
     {
 
-        int z = iZ < sLastZ ? iZ + piExtents[2] - 1 : iZ + piExtents[3];
-        if (z >= 0 && z <= iGridSize - 1)
+        int x = iX + piExtents[iX >= sLastX ? 1 : 0];
+        if (iX < sLastX)
         {
-            int iMinX = iX - 1 + piExtents[0] > 0 ? iX - 1 + piExtents[0] : 0;
-            int iMaxX = iX + piExtents[1] < iGridSize - 1 ? iX + piExtents[1] : iGridSize - 1;
-            int iCell = iStartIndex + iMinX + iGridSize * z;
-            for (int x = iMinX; x <= iMaxX; ++x, ++iCell)
+            --x;
+        }
+        if (x >= 0 && x <= iGridSize - 1)
+        {
+            int iMinZ = iZ - 1 + piExtents[2] > 0 ? iZ - 1 + piExtents[2] : 0;
+            int iMaxZ = iZ + piExtents[3] < iGridSize - 1 ? iZ + piExtents[3] : iGridSize - 1;
+            int iCell = iStartIndex + x + iGridSize * iMinZ;
+            for (int z = iMinZ; z <= iMaxZ; ++z, iCell += iGridSize)
             {
                 if (!ProcessCell(iCell, pCallback, pData, fDist))
                 {
@@ -514,13 +518,17 @@ bool TreeGrid::ProcessNeighborhood(int iX, int iZ, int iGridSize, int iStartInde
     else
     {
 
-        int x = iX < sLastX ? iX + piExtents[0] - 1 : iX + piExtents[1];
-        if (x >= 0 && x <= iGridSize - 1)
+        int z = iZ + piExtents[iZ >= sLastZ ? 3 : 2];
+        if (iZ < sLastZ)
         {
-            int iMinZ = iZ - 1 + piExtents[2] > 0 ? iZ - 1 + piExtents[2] : 0;
-            int iMaxZ = iZ + piExtents[3] < iGridSize - 1 ? iZ + piExtents[3] : iGridSize - 1;
-            int iCell = iStartIndex + x + iGridSize * iMinZ;
-            for (int z = iMinZ; z <= iMaxZ; ++z, iCell += iGridSize)
+            --z;
+        }
+        if (z >= 0 && z <= iGridSize - 1)
+        {
+            int iMinX = iX - 1 + piExtents[0] > 0 ? iX - 1 + piExtents[0] : 0;
+            int iMaxX = iX + piExtents[1] < iGridSize - 1 ? iX + piExtents[1] : iGridSize - 1;
+            int iCell = iStartIndex + iMinX + iGridSize * z;
+            for (int x = iMinX; x <= iMaxX; ++x, ++iCell)
             {
                 if (!ProcessCell(iCell, pCallback, pData, fDist))
                 {

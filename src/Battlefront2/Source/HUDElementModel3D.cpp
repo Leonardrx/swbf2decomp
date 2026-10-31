@@ -252,9 +252,7 @@ bool HUD::ElementModel3D::SetProperty(const unsigned int uHashID, const void* co
         case kPositionHash:
         {
             PblMatrix& matrix = pMeshInfo->GetMatrix();
-            matrix.m[3][0] = pfValue[0];
-            matrix.m[3][1] = pfValue[1];
-            matrix.m[3][2] = pfValue[2];
+            matrix[3] = *(const PblVector3*)pValue;
             matrix.m[3][3] = 1.0f;
             SetModel(pElement->GetModel());
             break;

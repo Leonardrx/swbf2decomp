@@ -281,7 +281,7 @@ bool Obstacle::IntersectionNewer(const ObstacleTest& rTest, float fRadius, float
         float fEdgeX = vertex[j].x - a.x;
         float fEdgeZ = vertex[j].z - a.z;
         float fDet = fEdgeZ * dir.x - dir.z * fEdgeX;
-        if ((float)fabs(fDet) > EPSILON)
+        if ((float)fabs((double)fDet) > EPSILON)
         {
             float fInvDet = 1.0f / fDet;
             float fWZ = a.z - src.z;
@@ -594,15 +594,17 @@ bool PathFinder::PushValidPoint(const PblVector3& rSrc, PblVector3& rDest, PblVe
                                 int iIgnoreCnt)
 {
     PushValidPointData data;
-    data.mObsTest.mSrc = rSrc;
-    data.mObsTest.mDest = rDest;
-    data.mObsTest.mBoundCenter = PblVector3((data.mObsTest.mDest.x + data.mObsTest.mSrc.x) * 0.5f,
-                                            (data.mObsTest.mDest.y + data.mObsTest.mSrc.y) * 0.5f,
-                                            (data.mObsTest.mDest.z + data.mObsTest.mSrc.z) * 0.5f);
-    float fDX = data.mObsTest.mBoundCenter.x - data.mObsTest.mSrc.x;
-    float fDY = data.mObsTest.mBoundCenter.y - data.mObsTest.mSrc.y;
-    float fDZ = data.mObsTest.mBoundCenter.z - data.mObsTest.mSrc.z;
-    data.mObsTest.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+    ObstacleTest test;
+    test.mSrc = rSrc;
+    test.mDest = rDest;
+    test.mBoundCenter = PblVector3((test.mDest.x + test.mSrc.x) * 0.5f,
+                                   (test.mDest.y + test.mSrc.y) * 0.5f,
+                                   (test.mDest.z + test.mSrc.z) * 0.5f);
+    float fDX = test.mBoundCenter.x - test.mSrc.x;
+    float fDY = test.mBoundCenter.y - test.mSrc.y;
+    float fDZ = test.mBoundCenter.z - test.mSrc.z;
+    test.mBoundRadius = sqrtf(fDX * fDX + fDY * fDY + fDZ * fDZ);
+    data.mObsTest = test;
 
     PblVector3 dir(rDest.x - rSrc.x, rDest.y - rSrc.y, rDest.z - rSrc.z);
     PblVector3 dirN;
@@ -869,12 +871,13 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
 
     float fPerp = (rPos.x - sDestPos.x) * sPerpVec.x + (rPos.y - sDestPos.y) * sPerpVec.y +
                   (rPos.z - sDestPos.z) * sPerpVec.z;
-    if ((float)fabs(fPerp) > sPerpLength)
+    if ((float)fabs((double)fPerp) > sPerpLength)
     {
         return;
     }
 
-    for (int i = 0; i < sSearchedPos->GetLength(); i++)
+    int iSearched = sSearchedPos->GetLength();
+    for (int i = 0; i < iSearched; i++)
     {
         if (sSamePosXZ(rPos, (*sSearchedPos)[i]))
         {

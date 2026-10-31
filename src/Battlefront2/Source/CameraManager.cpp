@@ -228,8 +228,12 @@ void CameraManager::SetChaseCameraRandomShot(int iCam)
     if (mNumShots > 2)
     {
         uiShot = PblRandom::GetGlobalInt() % mNumShots;
-        for (int i = 0; uiShot == sLastChaseShot && i < 16; i++)
+        for (int i = 0; i < 16; i++)
         {
+            if (uiShot != sLastChaseShot)
+            {
+                break;
+            }
             uiShot = PblRandom::GetGlobalInt() % mNumShots;
         }
         if (uiShot == sLastChaseShot)

@@ -247,7 +247,9 @@ void ParticleEmitterObject::RegisterStep(float fDeltaTime)
 {
     if (!mEmitterInfoData)
     {
-        mEmitterInfoData = ParticleEmitterInfoData::Create();
+        mEmitterInfoData = ParticleEmitterInfoData::sMemoryPool.mUsed >= ParticleEmitterInfoData::sMemoryPool.mCount
+                               ? 0
+                               : new ParticleEmitterInfoData;
         if (!mEmitterInfoData)
         {
             return;
@@ -357,7 +359,7 @@ bool ParticleEmitterObject::Update(float fDeltaTime)
         return false;
     }
 
-    mLifeTime += fDeltaTime;
+    mLifeTime = mLifeTime + fDeltaTime;
     if (FLEffectObject::Update(fDeltaTime))
     {
         if (!mStopFlag)
@@ -383,9 +385,9 @@ bool ParticleEmitterObject::Update(float fDeltaTime)
             }
             mMidPos = PblVector3((vMax.x + vMin.x) * 0.5f, (vMax.y + vMin.y) * 0.5f,
                                  (vMax.z + vMin.z) * 0.5f);
-            mMidSize.x = (float)fabs(mMidPos.x - vMin.x);
-            mMidSize.y = (float)fabs(mMidPos.y - vMin.y);
-            mMidSize.z = (float)fabs(mMidPos.z - vMin.z);
+            mMidSize.x = (float)fabs((double)(mMidPos.x - vMin.x));
+            mMidSize.y = (float)fabs((double)(mMidPos.y - vMin.y));
+            mMidSize.z = (float)fabs((double)(mMidPos.z - vMin.z));
             SetRenderPos(mMidPos);
             float fRadius = mMidSize.x > mMidSize.y ? mMidSize.x : mMidSize.y;
             fRadius = fRadius > mMidSize.z ? fRadius : mMidSize.z;
@@ -479,19 +481,17 @@ void ParticleEmitter::Render(float fTime)
     short sCount = mParticleCount;
 
     PblMatrix mat = pInfo->mMatrix;
-    mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-    mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-    mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-    mat.m[3][3] = 1.0f;
+    mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                   mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                   mat.m[3][2] + pInfo->mVelocity.z * fDelay));
     while (fDelay > pInfo->mLifeTime && pInfo->mNext)
     {
         fDelay -= pInfo->mLifeTime;
         pInfo = pInfo->mNext;
         mat = pInfo->mMatrix;
-        mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-        mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-        mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-        mat.m[3][3] = 1.0f;
+        mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                       mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                       mat.m[3][2] + pInfo->mVelocity.z * fDelay));
     }
 
     PblMatrix matFirst;
@@ -531,8 +531,9 @@ void ParticleEmitter::Render(float fTime)
         PblRandom rand(uSeed);
         rand.GetInt();
         uSeed = rand.GetInt();
-        const float fBurstDelay = mClass->mBurstDelay.GetValue(rand);
-        int iBurst = (int)(mClass->mBurstCount.GetValue(rand) + 0.5f);
+        ParticleEmitterClass* const pClass = mClass;
+        const float fBurstDelay = pClass->mBurstDelay.GetValue(rand);
+        int iBurst = (int)(pClass->mBurstCount.GetValue(rand) + 0.5f);
         if (iBurst > 128)
         {
             iBurst = 128;
@@ -553,39 +554,37 @@ void ParticleEmitter::Render(float fTime)
             PblRandom particleRand(uParticleSeed);
             particleRand.GetInt();
             uParticleSeed = particleRand.GetInt();
-            if (mClass->mGeometry.mType != ParticleGeometry::PT_STREAK && !ParticleSystem::IsLodActive(sCount & 3))
+            if (pClass->mGeometry.mType != ParticleGeometry::PT_STREAK && !ParticleSystem::IsLodActive(sCount & 3))
             {
                 continue;
             }
 
             Particle& particle = sParticleCache[iNum];
             const float fAge = fTime - (pInfo->mStartTime + fDelay);
-            if (mClass->mNoRegisterStep)
+            if (pClass->mNoRegisterStep)
             {
                 mat = matFirst;
             }
-            if (mClass->mWorldAlignedFlag)
+            if (pClass->mWorldAlignedFlag)
             {
                 for (int r = 0; r < 3; ++r)
                 {
-                    mat.m[r][0] = gMatrixIdentity.m[r][0];
-                    mat.m[r][1] = gMatrixIdentity.m[r][1];
-                    mat.m[r][2] = gMatrixIdentity.m[r][2];
+                    mat[r] = gMatrixIdentity[r];
                     mat.m[r][3] = 0.0f;
                 }
             }
-            mClass->mSpawner.SetupParticle(particle, mat, spawnRand.GetInt(), sCount, fAge, mSize, pInfo->mVelocity, mInheritVelocityFactor, mClass->mNoRegisterStep);
+            pClass->mSpawner.SetupParticle(particle, mat, spawnRand.GetInt(), sCount, fAge, mSize, pInfo->mVelocity, mInheritVelocityFactor, pClass->mNoRegisterStep);
             particle.mInfoData = pInfo;
-            sParticleCache[i].mFrameIndex = mClass->mGeometry.mType == ParticleGeometry::PT_ANIMATED ? 0 : -1;
-            if (mClass->mGeometry.mType == ParticleGeometry::PT_STREAK)
+            sParticleCache[i].mFrameIndex = pClass->mGeometry.mType == ParticleGeometry::PT_ANIMATED ? 0 : -1;
+            if (pClass->mGeometry.mType == ParticleGeometry::PT_STREAK)
             {
                 particle.mRotation[0] *= fTime;
             }
             const float fBorn = pInfo->mStartTime + fDelay;
-            if (mClass->mSpawner.mFadeInTime > fBorn)
+            if (pClass->mSpawner.mFadeInTime > fBorn)
             {
-                const float fFade = fBorn / mClass->mSpawner.mFadeInTime;
-                for (int k = 0; k < mClass->mSpawner.mNumColors; ++k)
+                const float fFade = fBorn / pClass->mSpawner.mFadeInTime;
+                for (int k = 0; k < pClass->mSpawner.mNumColors; ++k)
                 {
                     particle.mColor[k].a *= fFade;
                 }
@@ -598,19 +597,17 @@ void ParticleEmitter::Render(float fTime)
         }
 
         fDelay += fBurstDelay;
-        mat.m[3][0] += pInfo->mVelocity.x * fBurstDelay;
-        mat.m[3][1] += pInfo->mVelocity.y * fBurstDelay;
-        mat.m[3][2] += pInfo->mVelocity.z * fBurstDelay;
-        mat.m[3][3] = 1.0f;
+        mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fBurstDelay,
+                                       mat.m[3][1] + pInfo->mVelocity.y * fBurstDelay,
+                                       mat.m[3][2] + pInfo->mVelocity.z * fBurstDelay));
         while (fDelay > pInfo->mLifeTime && pInfo->mNext)
         {
             fDelay -= pInfo->mLifeTime;
             pInfo = pInfo->mNext;
             mat = pInfo->mMatrix;
-            mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-            mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-            mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-            mat.m[3][3] = 1.0f;
+            mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                           mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                           mat.m[3][2] + pInfo->mVelocity.z * fDelay));
         }
         if (fDelay > pInfo->mLifeTime && !pInfo->mNext)
         {
@@ -679,19 +676,17 @@ void ParticleEmitter::RenderAsEmitter(float fTime)
     short sCount = mParticleCount;
 
     PblMatrix mat = pInfo->mMatrix;
-    mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-    mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-    mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-    mat.m[3][3] = 1.0f;
+    mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                   mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                   mat.m[3][2] + pInfo->mVelocity.z * fDelay));
     while (fDelay > pInfo->mLifeTime && pInfo->mNext)
     {
         fDelay -= pInfo->mLifeTime;
         pInfo = pInfo->mNext;
         mat = pInfo->mMatrix;
-        mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-        mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-        mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-        mat.m[3][3] = 1.0f;
+        mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                       mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                       mat.m[3][2] + pInfo->mVelocity.z * fDelay));
     }
 
     PblMatrix matFirst;
@@ -726,8 +721,9 @@ void ParticleEmitter::RenderAsEmitter(float fTime)
         PblRandom rand(uSeed);
         rand.GetInt();
         uSeed = rand.GetInt();
-        const float fBurstDelay = mClass->mBurstDelay.GetValue(rand);
-        int iBurst = (int)(mClass->mBurstCount.GetValue(rand) + 0.5f);
+        ParticleEmitterClass* const pClass = mClass;
+        const float fBurstDelay = pClass->mBurstDelay.GetValue(rand);
+        int iBurst = (int)(pClass->mBurstCount.GetValue(rand) + 0.5f);
         if (iBurst > 128)
         {
             iBurst = 128;
@@ -757,9 +753,7 @@ void ParticleEmitter::RenderAsEmitter(float fTime)
             {
                 for (int r = 0; r < 3; ++r)
                 {
-                    mat.m[r][0] = gMatrixIdentity.m[r][0];
-                    mat.m[r][1] = gMatrixIdentity.m[r][1];
-                    mat.m[r][2] = gMatrixIdentity.m[r][2];
+                    mat[r] = gMatrixIdentity[r];
                     mat.m[r][3] = 0.0f;
                 }
             }
@@ -818,19 +812,17 @@ void ParticleEmitter::RenderAsEmitter(float fTime)
         }
 
         fDelay += fBurstDelay;
-        mat.m[3][0] += pInfo->mVelocity.x * fBurstDelay;
-        mat.m[3][1] += pInfo->mVelocity.y * fBurstDelay;
-        mat.m[3][2] += pInfo->mVelocity.z * fBurstDelay;
-        mat.m[3][3] = 1.0f;
+        mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fBurstDelay,
+                                       mat.m[3][1] + pInfo->mVelocity.y * fBurstDelay,
+                                       mat.m[3][2] + pInfo->mVelocity.z * fBurstDelay));
         while (fDelay > pInfo->mLifeTime && pInfo->mNext)
         {
             fDelay -= pInfo->mLifeTime;
             pInfo = pInfo->mNext;
             mat = pInfo->mMatrix;
-            mat.m[3][0] += pInfo->mVelocity.x * fDelay;
-            mat.m[3][1] += pInfo->mVelocity.y * fDelay;
-            mat.m[3][2] += pInfo->mVelocity.z * fDelay;
-            mat.m[3][3] = 1.0f;
+            mat.SetTranslation(PblVector3(mat.m[3][0] + pInfo->mVelocity.x * fDelay,
+                                           mat.m[3][1] + pInfo->mVelocity.y * fDelay,
+                                           mat.m[3][2] + pInfo->mVelocity.z * fDelay));
         }
     }
 }
@@ -848,18 +840,21 @@ void ParticleEmitterObject::Render_(unsigned char ucViewport, float fDist, unsig
     const PblVector3 vNew = m_mWorldMatrix.GetTranslation();
     for (ParticleEmitterInfoData* p = mEmitter->mFirstInfo; p; p = p->mNext)
     {
-        p->mMatrix.m[3][0] += vNew.x - vOld.x;
-        p->mMatrix.m[3][1] += vNew.y - vOld.y;
-        p->mMatrix.m[3][2] += vNew.z - vOld.z;
-        p->mMatrix.m[3][3] = 1.0f;
+        p->mMatrix.SetTranslation(PblVector3(p->mMatrix.m[3][0] + (vNew.x - vOld.x),
+                                             p->mMatrix.m[3][1] + (vNew.y - vOld.y),
+                                             p->mMatrix.m[3][2] + (vNew.z - vOld.z)));
     }
 
     if (!mIsChildPEO)
     {
-        const PblVector3 vMin(mMidPos.x - mMidSize.x - 450.0f, mMidPos.y - mMidSize.y - 450.0f,
-                              mMidPos.z - mMidSize.z - 450.0f);
-        const PblVector3 vMax(mMidSize.x + mMidPos.x + 450.0f, mMidSize.y + mMidPos.y + 450.0f,
-                              mMidSize.z + mMidPos.z + 450.0f);
+        PblVector3 vMin(mMidPos.x - mMidSize.x, mMidPos.y - mMidSize.y, mMidPos.z - mMidSize.z);
+        vMin.x -= 450.0f;
+        vMin.y -= 450.0f;
+        vMin.z -= 450.0f;
+        PblVector3 vMax(mMidSize.x + mMidPos.x, mMidSize.y + mMidPos.y, mMidSize.z + mMidPos.z);
+        vMax.x += 450.0f;
+        vMax.y += 450.0f;
+        vMax.z += 450.0f;
         if (!ParticleSystem::PrepareForRender(mEmitter, GetRenderPos(), ucViewport, fDist, uiFlags, _Sphere.w, vMin,
                                               vMax, GetLodData()->mMaxDist))
         {

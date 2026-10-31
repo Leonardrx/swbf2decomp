@@ -326,6 +326,17 @@ void UnitController::EnterState()
     case STATE_COMBAT:
         EnterCombat();
         return;
+    case STATE_CAPTURECP:
+    {
+        const CommandPost* pPost =
+            static_cast<const UnitCaptureCPInfo*>(GetCurCmd())->GetCommandPost();
+        if (!pPost)
+        {
+            return;
+        }
+        mAgent = new UnitTrooperAgent(this, pPost);
+        break;
+    }
     case STATE_WAIT_SECONDARY:
     {
 
@@ -343,20 +354,19 @@ void UnitController::EnterState()
     case STATE_UNBOARD:
         mAgent = new UnitUnBoardAgent(this);
         break;
+    case STATE_SC_HOLD:
+        mAgent = new UnitHoldAgent(this);
+        break;
+    case STATE_SC_FOLLOW:
+    {
+        const UnitFollowInfo* pInfo = static_cast<const UnitFollowInfo*>(GetCurCmd());
+        mAgent = new UnitFollowAgent(this, PblHandle<const GameObject>(pInfo->GetWho()),
+                                     pInfo->GetParam() != 0);
+        break;
+    }
     case STATE_RANDOM:
         mAgent = new UnitRandomAgent(this);
         break;
-    case STATE_CAPTURECP:
-    {
-        const CommandPost* pPost =
-            static_cast<const UnitCaptureCPInfo*>(GetCurCmd())->GetCommandPost();
-        if (!pPost)
-        {
-            return;
-        }
-        mAgent = new UnitTrooperAgent(this, pPost);
-        break;
-    }
     case STATE_CTFOFFENSE:
     {
         const UnitGoalAgentInfo* pInfo = static_cast<const UnitGoalAgentInfo*>(GetCurCmd());
@@ -380,16 +390,6 @@ void UnitController::EnterState()
         mAgent = new UnitDestroyAgent(this, target);
         break;
     }
-    case STATE_SC_FOLLOW:
-    {
-        const UnitFollowInfo* pInfo = static_cast<const UnitFollowInfo*>(GetCurCmd());
-        PblHandle<GameObject> who = pInfo->GetWho();
-        mAgent = new UnitFollowAgent(this, PblHandle<const GameObject>(Resolve(who)), pInfo->GetParam() != 0);
-        break;
-    }
-    case STATE_SC_HOLD:
-        mAgent = new UnitHoldAgent(this);
-        break;
     }
 }
 
@@ -575,7 +575,7 @@ void UnitController::ForceSetAttackHelperTarget(const GameObject* pTarget)
 // FUNCTION: SWBF2 0x00663dd0
 void UnitController::UpdateLodState()
 {
-    if (mLodStateUpdateTime + 0.5f > GameLoop::GetMissionTime())
+    if (GameLoop::GetMissionTime() < mLodStateUpdateTime + 0.5f)
     {
         return;
     }
@@ -614,14 +614,14 @@ void UnitController::UpdateLodState()
             }
         }
 
-        const Controllable* pOther = pCharacter->GetControllable();
-        if (!AIUtil::CanPotentiallySee(mOwner, static_cast<const Trackable*>(pOther)->GetGameObject(), 0))
+        if (!AIUtil::CanPotentiallySee(
+                mOwner, static_cast<const Trackable&>(*pCharacter->GetControllable()).GetGameObject(), 0))
         {
             iCharLod--;
         }
 
-        pOther = pCharacter->GetControllable();
-        const RedSceneObject& scene = *static_cast<const Trackable*>(pOther)->GetGameObject();
+        const RedSceneObject& scene =
+            *static_cast<const Trackable&>(*pCharacter->GetControllable()).GetGameObject();
         if (scene.PortalActive() && !scene.IsActive(pvs::GetCurrentFrame_()))
         {
             iCharLod--;
@@ -645,7 +645,7 @@ void UnitController::UpdateLodState()
 
     if (!AIDebug::SkipCameraForLODs() && iLod != 4)
     {
-        float fRadius = AIUtil::GetCollisionRadius(static_cast<Trackable*>(mOwner)->GetGameObject()) * 3.0f;
+        float fRadius = AIUtil::GetCollisionRadius(static_cast<Trackable&>(*mOwner).GetGameObject()) * 3.0f;
         if (CameraManager::sInstance->IsInsideAnyCamera(vMyPos, fRadius, (float)GetLODDistLow()))
         {
             iLod = 3;

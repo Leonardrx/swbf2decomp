@@ -222,16 +222,15 @@ bool NameDisplayThread::Update(float)
                     {
                         continue;
                     }
-                    const PblHandle<const GameObject>& target =
-                        pLocalUnit->mReticuleTarget[pLocalUnit->GetWpnChannel()];
-                    if (!(const GameObject*)target)
+                    if (!(const GameObject*)pLocalUnit->mReticuleTarget[pLocalUnit->GetWpnChannel()])
                     {
                         continue;
                     }
-                    if (target != pObject)
+                    if (pLocalUnit->mReticuleTarget[pLocalUnit->GetWpnChannel()] != pObject)
                     {
                         Controllable* pOnFoot = pCharacter->GetUnit();
-                        if (!pOnFoot || target != pOnFoot->GetGameObject())
+                        if (!pOnFoot ||
+                            pLocalUnit->mReticuleTarget[pLocalUnit->GetWpnChannel()] != pOnFoot->GetGameObject())
                         {
                             continue;
                         }
@@ -280,8 +279,8 @@ bool NameDisplayThread::Update(float)
         vToUnit.z = vPos.z - vEye.z;
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToUnit));
-        const PblVector3& vAt = mCamera.GetZAxis();
-        if (!(vDir.y * -vAt.y + vDir.x * -vAt.x + vDir.z * -vAt.z > 0.0f))
+        const PblVector3 vBack = -mCamera.GetZAxis();
+        if (vDir.y * vBack.y + vDir.x * vBack.x + vDir.z * vBack.z <= 0.0f)
         {
             continue;
         }
@@ -293,7 +292,11 @@ bool NameDisplayThread::Update(float)
         if (fDistance > fFadeRange)
         {
             int iAlpha = 335 - ((int)fDistance << 2);
-            ucAlpha = iAlpha < 0 ? 0 : (unsigned char)iAlpha;
+            ucAlpha = (unsigned char)iAlpha;
+            if (iAlpha < 0)
+            {
+                ucAlpha = 0;
+            }
             if (!ucAlpha)
             {
                 continue;

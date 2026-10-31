@@ -162,7 +162,7 @@ void UnitFollowAgent::EnterState()
         return;
 
     case 2:
-        if (!ResolveHandle(mTarget))
+        if (!mTarget)
         {
             SetNextState(100);
             return;
@@ -172,14 +172,13 @@ void UnitFollowAgent::EnterState()
     case 4:
         if (mCombatCmd.mWhat == 0)
         {
-            UnitCombatInfo temp(UnitCombatInfo::ENGAGE);
-            mCombatCmd = temp;
+            mCombatCmd = UnitCombatInfo(UnitCombatInfo::ENGAGE);
         }
         mCombatHelper.Init(reinterpret_cast<const UnitCombatInfo&>(mCombatCmd));
         return;
 
     case 5:
-        if (!ResolveHandle(mTarget))
+        if (!mTarget)
         {
             SetNextState(100);
             return;
@@ -192,9 +191,8 @@ void UnitFollowAgent::EnterState()
 
     for (unsigned int uTry = 1; uTry <= 20; ++uTry)
     {
-
-        const GameObject* pTargetA = ResolveHandle(mTarget);
-        const GameObject* pTargetB = ResolveHandle(mTarget);
+        const GameObject* pTargetA = mTarget;
+        const GameObject* pTargetB = mTarget;
 
         PblVector3 vPush = PblRandom::GetGlobalVector3();
 
@@ -202,13 +200,14 @@ void UnitFollowAgent::EnterState()
         vPush.y = (vPush.y * 20.0f) * 0.2f;
         vPush.z = (vPush.z * 20.0f) * 0.2f;
 
-        const float* pRow = &static_cast<const CollisionObject*>(pTargetA)->GetMatrix().m[0][0];
-        PblVector3 vRow((pRow[8] * 20.0f) * 0.5f, (pRow[9] * 20.0f) * 0.5f, (pRow[10] * 20.0f) * 0.5f);
+        const PblMatrix& rMatrix = pTargetA->GetMatrix();
+        PblVector3 vRow((rMatrix.m[2][0] * 20.0f) * 0.5f, (rMatrix.m[2][1] * 20.0f) * 0.5f,
+                        (rMatrix.m[2][2] * 20.0f) * 0.5f);
 
-        const PblVector3* pTargetPos = GetTargetPosition(pTargetB);
-        PblVector3 vDest(pTargetPos->x - vRow.x + vPush.x,
-                         pTargetPos->y - vRow.y + vPush.y,
-                         pTargetPos->z - vRow.z + vPush.z);
+        const PblVector3& rTargetPos = pTargetB->GetPosition();
+        PblVector3 vDest(rTargetPos.x - vRow.x + vPush.x,
+                         rTargetPos.y - vRow.y + vPush.y,
+                         rTargetPos.z - vRow.z + vPush.z);
 
         if (PathFinder::IsPointValid(vDest, 0, mCtrl->mOwner->GetGameObject()) && uTry < 20)
         {
@@ -260,42 +259,39 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
 
     mAttackHelper.Update();
 
-    const GameObject* pTarget = ResolveHandle(mTarget);
-    if (!pTarget)
+    if (!mTarget)
     {
         SetNextState(100);
         return;
     }
 
-    if (pTarget->GetControllable())
+    if (mTarget->GetControllable() && mTarget->GetControllable()->mCharacter)
     {
-        Character* pInner = static_cast<const Controllable*>(pTarget->GetControllable())->mCharacter;
-        if (pInner)
+        Controllable* pDeep = mTarget->GetControllable()->mCharacter->mVehicle;
+        if (pDeep)
         {
-            Controllable* pDeep = pInner->mVehicle;
-            if (pDeep)
+            Entity* pOwnerEntity = mCtrl->mOwner->GetEntity();
+            if (!pOwnerEntity->IsRtti(EntityDroideka::rttiHashEntityDroideka))
             {
-                Entity* pOwnerEntity = mCtrl->mOwner->GetEntity();
-                if (!pOwnerEntity->IsRtti(EntityDroideka::rttiHashEntityDroideka))
-                {
-
-                    GameObject* pDeepGameObject =
-                        static_cast<Trackable*>(pDeep)->GetGameObject();
-                    UnitCmdInfo cmdBoard = UnitBoardInfo(BuildHandle(pDeepGameObject), -1);
-                    mCtrl->PrependQueueCommand(cmdBoard);
-                    SetNextState(100);
-                    return;
-                }
+                GameObject* pDeepGameObject = static_cast<Trackable*>(pDeep)->GetGameObject();
+                UnitCmdInfo cmdBoard = UnitBoardInfo(PblHandle<GameObject>(pDeepGameObject), -1);
+                mCtrl->PrependQueueCommand(cmdBoard);
                 SetNextState(100);
                 return;
             }
+            SetNextState(100);
+            return;
         }
     }
 
     switch (mCurState)
     {
     case 2:
-        if (mTightFollowMode)
+        if (!mTightFollowMode)
+        {
+            SetNextState(5);
+            break;
+        }
         {
             bool bIsSeatedSoldier = false;
             GameObject* pSelfObj = mCtrl->mOwner->GetGameObject();
@@ -306,12 +302,11 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
             }
             else
             {
-
                 const PblMatrix& mine = mCtrl->mOwner->GetMatrix();
-                const PblVector3* theirPos = GetTargetPosition(ResolveHandle(mTarget));
-                float dx = theirPos->x - mine.m[3][0];
-                float dy = theirPos->y - mine.m[3][1];
-                float dz = theirPos->z - mine.m[3][2];
+                const PblVector3& theirPos = mTarget->GetPosition();
+                float dx = theirPos.x - mine.m[3][0];
+                float dy = theirPos.y - mine.m[3][1];
+                float dz = theirPos.z - mine.m[3][2];
                 if (dx * dx + dy * dy + dz * dz < 100.0f && CheckForForwardHintNodes())
                 {
                     SetNextState(6);
@@ -320,8 +315,7 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
             }
 
             float fScale = 2.0f;
-            const GameObject* pTargetNow = ResolveHandle(mTarget);
-            const PblVector3& vTargetVel = pTargetNow->GetVelocity();
+            const PblVector3& vTargetVel = mTarget->GetVelocity();
             if (vTargetVel.x * vTargetVel.x + vTargetVel.y * vTargetVel.y + vTargetVel.z * vTargetVel.z < 16.0f)
             {
                 fScale = 2.2f;
@@ -331,47 +325,33 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
                 fScale = 1.7f;
             }
 
-            FormationType eFormation = GetFormationType(mCtrl);
-            GameObject* pOwnerObj = mCtrl->mOwner->GetGameObject();
-            pTargetNow = ResolveHandle(mTarget);
-            PblVector3 vOffset = ReserveManager::ReserveOffset(pTargetNow, pOwnerObj, eFormation);
+            PblVector3 vOffset = ReserveManager::ReserveOffset(mTarget, mCtrl->mOwner->GetGameObject(),
+                                                               GetFormationType(mCtrl));
             vOffset.x *= fScale;
             vOffset.y *= fScale;
             vOffset.z *= fScale;
-            pTargetNow = ResolveHandle(mTarget);
-            mCtrl->mLowLevel.SetNavigator_FollowTarget(pTargetNow, vOffset);
+            mCtrl->mLowLevel.SetNavigator_FollowTarget(mTarget, vOffset);
 
             if (!mAttackHelper.HasTarget())
             {
-
-                if (SeatOf(ResolveHandle(mTarget)))
+                if (mTarget->mControllableList.GetFirst()->_pObject)
                 {
-                    if (ResolveHandleAt(&SeatOf(ResolveHandle(mTarget))->mReticuleTarget[0]))
+                    if (mTarget->mControllableList.GetFirst()->_pObject->mReticuleTarget[0])
                     {
-                        GameObject* pOccupant = ResolveHandleAt(&SeatOf(ResolveHandle(mTarget))->mReticuleTarget[0]);
-
-                        const GameObject* pOwnerGameObject =
-                            static_cast<const Trackable*>(mCtrl->mOwner)->GetGameObject();
-                        if (pOwnerGameObject->GetAffiliationToMe(pOccupant) < 0)
+                        if (mCtrl->mOwner->GetGameObject()->GetAffiliationToMe(
+                                mTarget->mControllableList.GetFirst()->_pObject->mReticuleTarget[0]) < 0)
                         {
-
-                            GameObject* pOccupant2 =
-                                const_cast<GameObject*>(ResolveHandle(const_cast<PblHandle<const GameObject>&>(
-                                    ResolveHandle(mTarget)->GetControllable()->mReticuleTarget[0])));
-                            mCtrl->mThreatManager.AddThreat(pOccupant2);
+                            mCtrl->mThreatManager.AddThreat(const_cast<GameObject*>(
+                                static_cast<const GameObject*>(mTarget->GetControllable()->mReticuleTarget[0])));
                         }
                     }
                 }
             }
             FaceTarget();
         }
-        else
-        {
-            SetNextState(5);
-        }
         break;
     case 3:
-        if (mTightFollowMode)
+        if (mTightFollowMode == true)
         {
             SetNextState(2);
         }
@@ -412,7 +392,6 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
         }
         else
         {
-
             SetNextState(IsInLooseRange() ? 3 : 5);
         }
         break;
@@ -425,12 +404,11 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
         }
         else
         {
-
             const PblMatrix& mine = mCtrl->mOwner->GetMatrix();
-            const PblVector3* theirs = GetTargetPosition(ResolveHandle(mTarget));
-            float dx = theirs->x - mine.m[3][0];
-            float dy = theirs->y - mine.m[3][1];
-            float dz = theirs->z - mine.m[3][2];
+            const PblVector3& theirs = mTarget->GetPosition();
+            float dx = theirs.x - mine.m[3][0];
+            float dy = theirs.y - mine.m[3][1];
+            float dz = theirs.z - mine.m[3][2];
             if (dx * dx + dy * dy + dz * dz > 400.0f)
             {
                 SetNextState(mTightFollowMode ? 2 : 5);
@@ -485,19 +463,8 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
         UnitAgent::PlayDamageEventVO(pInfo);
         return 0;
 
-    case AI::EVT_Vision_CanSeeEnemy:
-    case AI::EVT_Audible_CanHearEnemy:
-        if (mCurState != 3 || UnitAgent::EventHandler(pInfo) != 1)
-        {
-            return 0;
-        }
-        mCombatCmd = pInfo->mNextCmd;
-        SetNextState(4);
-        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
-        return 1;
-
     case AI::EVQ_SC_IsFollowingChr:
-        if (ResolveHandle(mTarget) != ResolveHandle(pInfo->mGameObject))
+        if (pInfo->mGameObject != mTarget)
         {
             return 0;
         }
@@ -513,7 +480,7 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
         return 1;
 
     case AI::EVT_SC_StopFollowChr:
-        if (ResolveHandle(mTarget) != ResolveHandle(pInfo->mGameObject))
+        if (pInfo->mGameObject != mTarget)
         {
             return -1;
         }
@@ -525,14 +492,25 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
 
     case AI::EVQ_GetSkillModifier:
 
-        if (ResolveHandle(mTarget) &&
-            PlayerControllerPtr(reinterpret_cast<Controllable*>(SeatOf(ResolveHandle(mTarget)))))
+        if (mTarget &&
+            PlayerControllerPtr(reinterpret_cast<Controllable*>(mTarget->mControllableList.GetFirst()->_pObject)))
         {
             pInfo->mInt = 6;
             return 1;
         }
         pInfo->mInt = 0;
         return 0;
+
+    case AI::EVT_Vision_CanSeeEnemy:
+    case AI::EVT_Audible_CanHearEnemy:
+        if (mCurState != 3 || UnitAgent::EventHandler(pInfo) != 1)
+        {
+            return 0;
+        }
+        mCombatCmd = pInfo->mNextCmd;
+        SetNextState(4);
+        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
+        return 1;
 
     default:
         return UnitAgent::EventHandler(pInfo);

@@ -197,22 +197,10 @@ void Chunk::SetData(ChunkDescriptor& desc)
     mNumTerrainCollisions = 0;
     mMaxTerrainCollisions = desc.mMaxTerrainCollisions;
     mTerrainImpactEffect = desc.mTerrainImpactEffect;
-    for (int i = 0; i < 3; i++)
-    {
-        mTrailEffect[i] = desc.mTrailEffect[i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mSmokeEffect[i] = desc.mSmokeEffect[i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mTrailAttachPoints[i] = desc.mTrailAttachPoints[i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        mSmokeAttachPoints[i] = desc.mSmokeAttachPoints[i];
-    }
+    memcpy(mTrailEffect, desc.mTrailEffect, sizeof(mTrailEffect));
+    memcpy(mSmokeEffect, desc.mSmokeEffect, sizeof(mSmokeEffect));
+    memcpy(mTrailAttachPoints, desc.mTrailAttachPoints, sizeof(mTrailAttachPoints));
+    memcpy(mSmokeAttachPoints, desc.mSmokeAttachPoints, sizeof(mSmokeAttachPoints));
     mPhysicsType = (ChunkPhysicsType)desc.mPhysicsType;
     mCoefficientOfRestitution = desc.mCoefficientOfRestitution;
     mCoefficientOfFriction = desc.mCoefficientOfFriction;
@@ -270,10 +258,12 @@ void Chunk::SetData(ChunkDescriptor& desc)
     rotation.m[3][1] = 0.0f;
     rotation.m[3][2] = 0.0f;
     rotation.m[3][3] = 1.0f;
-    mInverseWorldInertiaTensor = rotation.GetInverseFast() * mInverseBodyInertiaTensor * rotation;
+    const PblMatrix rotationInverse = rotation.GetInverseFast();
+    mInverseWorldInertiaTensor = rotationInverse * mInverseBodyInertiaTensor * rotation;
     mAngularMomentum = TransformCoord(desc.mOmega, bodyInertia * rotation);
     mOmega = TransformCoord(mAngularMomentum, mInverseWorldInertiaTensor);
-    mPrimitiveMatrix = localMatrix.GetInverseFast();
+    const PblMatrix primitiveInverse = localMatrix.GetInverseFast();
+    mPrimitiveMatrix = primitiveInverse;
 
     if (!desc.mKeepSoldierCollisions)
     {
@@ -606,94 +596,92 @@ bool Chunk::DoSimpleRigidCollision(const CollisionResult* pResult, CollisionObje
                                    Restrictor* pRestrictor)
 {
     const CollisionObjectType eType = pOther->GetCollisionType();
-    if (!mIsMoving)
+    if (mIsMoving)
     {
-        return CollisionObject::CollisionCallback(pResult, pOther, pRestrictor);
-    }
-
-    if (mNumTerrainCollisions >= mMaxTerrainCollisions && eType == COLL_TERRAIN)
-    {
-        if (mNumTerrainCollisions == mMaxTerrainCollisions)
+        if (mNumTerrainCollisions >= mMaxTerrainCollisions && eType == COLL_TERRAIN)
         {
-            PblVector3 vImpact = pResult->mCollisionPosition;
-            vImpact.y = RedTerrain::GetHoleHeight(vImpact.x, vImpact.z);
-            DoTerrainImpactEffect(vImpact);
+            if (mNumTerrainCollisions == mMaxTerrainCollisions)
+            {
+                PblVector3 vImpact = pResult->mCollisionPosition;
+                vImpact.y = RedTerrain::GetHoleHeight(vImpact.x, vImpact.z);
+                DoTerrainImpactEffect(vImpact);
+                ++mNumTerrainCollisions;
+            }
+            return true;
+        }
+
+        PblVector3& vVelocity = mVelocity;
+        const PblVector3& vNormal = pResult->mSeparationNormal;
+        const float fImpactSpeed = -(vVelocity.x * vNormal.x + vVelocity.y * vNormal.y +
+                                     vVelocity.z * vNormal.z);
+        if (fImpactSpeed > 0.0f)
+        {
+            FoleyFXCollider::CollisionCallback(eType, static_cast<FoleyFXCollidee*>(pOther), &GetPosition());
+            PlayImpactEffects(&mMatrix.GetTranslation(), &vVelocity);
+
+            if ((eType & (COLL_SOFT | COLL_RIGID)) && mMinDeathCollisionSpeed > 0.0f &&
+                vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z >
+                    mMinDeathCollisionSpeed * mMinDeathCollisionSpeed)
+            {
+                GameObject* pObject = pOther->GetGameObject();
+                if (pObject)
+                {
+                    DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
+                    pObject->InstantDeath(owner, true);
+                    return true;
+                }
+            }
+
+            const float fImpulse = (mCoefficientOfRestitution + 1.0f) * fImpactSpeed;
+            vVelocity.x += vNormal.x * fImpulse;
+            vVelocity.y += vNormal.y * fImpulse;
+            vVelocity.z += vNormal.z * fImpulse;
+
+            if (mSimpleFrictionConstant > 0.0f)
+            {
+                PblVector3 vTangent(
+                    vNormal.y * (vVelocity.x * vNormal.y - vVelocity.y * vNormal.x) -
+                        vNormal.z * (vVelocity.z * vNormal.x - vVelocity.x * vNormal.z),
+                    vNormal.z * (vVelocity.y * vNormal.z - vVelocity.z * vNormal.y) -
+                        vNormal.x * (vVelocity.x * vNormal.y - vVelocity.y * vNormal.x),
+                    vNormal.x * (vVelocity.z * vNormal.x - vVelocity.x * vNormal.z) -
+                        vNormal.y * (vVelocity.y * vNormal.z - vVelocity.z * vNormal.y));
+                D3DXVec3Normalize((D3DXVECTOR3*)&vTangent, (const D3DXVECTOR3*)&vTangent);
+                const float fSlip = (vVelocity.x * vTangent.x + vVelocity.y * vTangent.y +
+                                     vVelocity.z * vTangent.z) * mSimpleFrictionConstant * mOneOverMass;
+                vVelocity.x -= vTangent.x * fSlip;
+                vVelocity.y -= vTangent.y * fSlip;
+                vVelocity.z -= vTangent.z * fSlip;
+
+                const PblVector3& vAxis = mCollisionMatrix.GetYAxis();
+                const PblVector3& vCenter = mCollisionMatrix.GetTranslation();
+                PblVector3 vRadius(pResult->mCollisionPosition.x - vCenter.x,
+                                   pResult->mCollisionPosition.y - vCenter.y,
+                                   pResult->mCollisionPosition.z - vCenter.z);
+                const float fAlongAxis = vRadius.x * vAxis.x + vRadius.y * vAxis.y + vRadius.z * vAxis.z;
+                vRadius.x -= vAxis.x * fAlongAxis;
+                vRadius.y -= vAxis.y * fAlongAxis;
+                vRadius.z -= vAxis.z * fAlongAxis;
+                const float fRadius = sqrtf(vRadius.x * vRadius.x + vRadius.y * vRadius.y + vRadius.z * vRadius.z);
+                if (fRadius > 0.0f)
+                {
+                    float fOmega = sqrtf(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
+                                          vVelocity.z * vVelocity.z) / fRadius;
+                    if (vAxis.z * vVelocity.x - vAxis.x * vVelocity.z > 0.0f)
+                    {
+                        fOmega = -fOmega;
+                    }
+                    mOmega.x = vAxis.x * fOmega;
+                    mOmega.y = vAxis.y * fOmega;
+                    mOmega.z = vAxis.z * fOmega;
+                }
+            }
+        }
+
+        if (eType == COLL_TERRAIN || vNormal.y > 0.8f)
+        {
             ++mNumTerrainCollisions;
         }
-        return true;
-    }
-
-    const PblVector3& vNormal = pResult->mSeparationNormal;
-    const float fImpactSpeed = -(mVelocity.x * vNormal.x + mVelocity.y * vNormal.y +
-                                 mVelocity.z * vNormal.z);
-    if (fImpactSpeed > 0.0f)
-    {
-        FoleyFXCollider::CollisionCallback(eType, static_cast<FoleyFXCollidee*>(pOther), &GetPosition());
-        PlayImpactEffects(&mMatrix.GetTranslation(), &mVelocity);
-
-        if ((eType & (COLL_SOFT | COLL_RIGID)) && mMinDeathCollisionSpeed > 0.0f &&
-            mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z >
-                mMinDeathCollisionSpeed * mMinDeathCollisionSpeed)
-        {
-            GameObject* pObject = pOther->GetGameObject();
-            if (pObject)
-            {
-                DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
-                pObject->InstantDeath(owner, true);
-                return true;
-            }
-        }
-
-        const float fImpulse = (mCoefficientOfRestitution + 1.0f) * fImpactSpeed;
-        mVelocity.x += vNormal.x * fImpulse;
-        mVelocity.y += vNormal.y * fImpulse;
-        mVelocity.z += vNormal.z * fImpulse;
-
-        if (mSimpleFrictionConstant > 0.0f)
-        {
-
-            PblVector3 vTangent(
-                vNormal.y * (mVelocity.x * vNormal.y - mVelocity.y * vNormal.x) -
-                    vNormal.z * (mVelocity.z * vNormal.x - mVelocity.x * vNormal.z),
-                vNormal.z * (mVelocity.y * vNormal.z - mVelocity.z * vNormal.y) -
-                    vNormal.x * (mVelocity.x * vNormal.y - mVelocity.y * vNormal.x),
-                vNormal.x * (mVelocity.z * vNormal.x - mVelocity.x * vNormal.z) -
-                    vNormal.y * (mVelocity.y * vNormal.z - mVelocity.z * vNormal.y));
-            D3DXVec3Normalize((D3DXVECTOR3*)&vTangent, (const D3DXVECTOR3*)&vTangent);
-            const float fSlip = (mVelocity.x * vTangent.x + mVelocity.y * vTangent.y +
-                                 mVelocity.z * vTangent.z) * mSimpleFrictionConstant * mOneOverMass;
-            mVelocity.x -= vTangent.x * fSlip;
-            mVelocity.y -= vTangent.y * fSlip;
-            mVelocity.z -= vTangent.z * fSlip;
-
-            const PblVector3& vAxis = mCollisionMatrix.GetYAxis();
-            const PblVector3& vCenter = mCollisionMatrix.GetTranslation();
-            PblVector3 vRadius(pResult->mCollisionPosition.x - vCenter.x,
-                               pResult->mCollisionPosition.y - vCenter.y,
-                               pResult->mCollisionPosition.z - vCenter.z);
-            const float fAlongAxis = vRadius.x * vAxis.x + vRadius.y * vAxis.y + vRadius.z * vAxis.z;
-            vRadius.x -= vAxis.x * fAlongAxis;
-            vRadius.y -= vAxis.y * fAlongAxis;
-            vRadius.z -= vAxis.z * fAlongAxis;
-            const float fRadius = sqrtf(vRadius.x * vRadius.x + vRadius.y * vRadius.y + vRadius.z * vRadius.z);
-            if (fRadius > 0.0f)
-            {
-                float fOmega = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                      mVelocity.z * mVelocity.z) / fRadius;
-                if (vAxis.z * mVelocity.x - vAxis.x * mVelocity.z > 0.0f)
-                {
-                    fOmega = -fOmega;
-                }
-                mOmega.x = vAxis.x * fOmega;
-                mOmega.y = vAxis.y * fOmega;
-                mOmega.z = vAxis.z * fOmega;
-            }
-        }
-    }
-
-    if (eType == COLL_TERRAIN || vNormal.y > 0.8f)
-    {
-        ++mNumTerrainCollisions;
     }
     return CollisionObject::CollisionCallback(pResult, pOther, pRestrictor);
 }
@@ -898,6 +886,7 @@ ChunkCluster::~ChunkCluster()
 void ChunkCluster::RecalculateCenterAndRadius()
 {
     PblVector3 vCenter(0.0f, 0.0f, 0.0f);
+    float fRadius = 0.0f;
     int iCount = 0;
     for (int i = 0; i < 10; i++)
     {
@@ -916,11 +905,8 @@ void ChunkCluster::RecalculateCenterAndRadius()
     }
 
     float fInv = 1.0f / iCount;
-    vCenter.x *= fInv;
-    vCenter.y *= fInv;
-    vCenter.z *= fInv;
+    vCenter = fInv * vCenter;
 
-    float fRadius = 0.0f;
     for (int i = 0; i < 10; i++)
     {
         if (mChunks[i].IsValid())
@@ -929,7 +915,7 @@ void ChunkCluster::RecalculateCenterAndRadius()
             float fX = vPos.x - vCenter.x;
             float fY = vPos.y - vCenter.y;
             float fZ = vPos.z - vCenter.z;
-            float fReach = sqrtf(fY * fY + fX * fX + fZ * fZ) + mChunks[i].GetCollisionRadius() + 1.0f;
+            float fReach = mChunks[i].GetCollisionRadius() + sqrtf(fY * fY + fX * fX + fZ * fZ) + 1.0f;
             if (fReach > fRadius)
             {
                 fRadius = fReach;

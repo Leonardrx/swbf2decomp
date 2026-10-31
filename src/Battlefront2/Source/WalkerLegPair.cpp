@@ -180,9 +180,10 @@ void WalkerLegPair::SetupGroundCollision(const PblMatrix& mMatrix, float fPitch,
 
     for (int i = 0; i < FootCount; ++i)
     {
-        PblVector3 vStart(vOrigin.x + mMatrix.m[0][0] * pFeet[i].x + mMatrix.m[2][0] * pFeet[i].z,
-                          vOrigin.y + mMatrix.m[0][1] * pFeet[i].x + mMatrix.m[2][1] * pFeet[i].z + fLegLength,
-                          vOrigin.z + mMatrix.m[0][2] * pFeet[i].x + mMatrix.m[2][2] * pFeet[i].z);
+        PblVector3 vStart = vOrigin;
+        vStart.x = vStart.x + mMatrix.m[0][0] * pFeet[i].x + mMatrix.m[2][0] * pFeet[i].z;
+        vStart.y = vStart.y + mMatrix.m[0][1] * pFeet[i].x + mMatrix.m[2][1] * pFeet[i].z + fLegLength;
+        vStart.z = vStart.z + mMatrix.m[0][2] * pFeet[i].x + mMatrix.m[2][2] * pFeet[i].z;
         CollisionObject* pHitObject;
         float fHit = CollisionManager::RayHit(vStart, PblVector3(0.0f, -1.0f, 0.0f), fRayLength, pHitObject,
                                               NULL, NULL, 0, 0x90, false);
@@ -191,14 +192,7 @@ void WalkerLegPair::SetupGroundCollision(const PblMatrix& mMatrix, float fPitch,
 
     mFootHeightDifference = mFootHeight[Left] - mFootHeight[Right];
     float fBlend = mFootHeightDifference * -0.6f;
-    if (fBlend < -1.0f)
-    {
-        fBlend = -1.0f;
-    }
-    else if (fBlend > 1.0f)
-    {
-        fBlend = 1.0f;
-    }
+    fBlend = fBlend < -1.0f ? -1.0f : (fBlend > 1.0f ? 1.0f : fBlend);
     mBlendFactor += (fBlend - mBlendFactor) * 0.4f;
 
     if (mParent->mClass->mOrientRoll)

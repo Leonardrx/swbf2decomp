@@ -284,12 +284,9 @@ void UpdatInGameMovie()
         {
             StopInGameMoviePlay();
         }
-        return;
     }
-
-    switch (g_InGameMoviePlayerState)
+    else if (g_InGameMoviePlayerState == 1)
     {
-    case 1:
         if (g_InGameMoviePlayerFrame == 0)
         {
             GameSoundEngine::StopAll();
@@ -300,9 +297,9 @@ void UpdatInGameMovie()
             EnableSceneAndInterface(false);
         }
         ++g_InGameMoviePlayerFrame;
-        break;
-
-    case 2:
+    }
+    else if (g_InGameMoviePlayerState == 2)
+    {
         if (g_InGameMoviePlayerFrame == 4)
         {
             GameMovie::Play(ingame_movie_idname, "", 0, 0,
@@ -321,9 +318,9 @@ void UpdatInGameMovie()
             g_InGameMoviePlayerState = 3;
         }
         ++g_InGameMoviePlayerFrame;
-        break;
-
-    case 3:
+    }
+    else if (g_InGameMoviePlayerState == 3)
+    {
         if (GameMovie::IsOpen())
         {
             GameMovie::Update(1.0f);
@@ -333,7 +330,6 @@ void UpdatInGameMovie()
         {
             StopInGameMoviePlay();
         }
-        break;
     }
 }
 

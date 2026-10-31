@@ -216,7 +216,7 @@ void CombatHelper::EnterState()
                           mTargetPos.z - mMe.m[3][2]);
         if (vDelta.x * vDelta.x + vDelta.z * vDelta.z < 100.0f)
         {
-            const PblVector3 vDir = AIUtil::GetSafeNormalXZ(vDelta);
+            const PblVector3& vDir = AIUtil::GetSafeNormalXZ(vDelta);
             mTargetPos = PblVector3(vDir.x * 15.0f + mMe.m[3][0], mMe.m[3][1] + vDir.y * 15.0f,
                                     mMe.m[3][2] + vDir.z * 15.0f);
         }
@@ -263,7 +263,7 @@ void CombatHelper::EnterState()
         const PblMatrix& mMe = GetMe()->GetMatrix();
         PblVector3 vAway(mMe.m[3][0] - mFleeSrc.x, mMe.m[3][1] - mFleeSrc.y,
                          mMe.m[3][2] - mFleeSrc.z);
-        const PblVector3 vDir = AIUtil::GetSafeNormalXZ(vAway);
+        const PblVector3& vDir = AIUtil::GetSafeNormalXZ(vAway);
         PblVector3 vDest(vDir.x * 20.0f + mMe.m[3][0], mMe.m[3][1] + vDir.y * 20.0f,
                          vDir.z * 20.0f + mMe.m[3][2]);
 
@@ -272,9 +272,8 @@ void CombatHelper::EnterState()
         {
 
             const PblMatrix& mNow = GetMe()->GetMatrix();
-            vDest.x = mNow.m[2][0] * 20.0f + mMe.m[3][0];
-            vDest.y = mMe.m[3][1] + mNow.m[2][1] * 20.0f;
-            vDest.z = mNow.m[2][2] * 20.0f + mMe.m[3][2];
+            vDest = PblVector3(mNow.m[2][0] * 20.0f + mMe.m[3][0], mMe.m[3][1] + mNow.m[2][1] * 20.0f,
+                               mNow.m[2][2] * 20.0f + mMe.m[3][2]);
             GetLowLevel().SetNavigator_Goto(vDest, 0, false, false);
             mFleeTime = GameLoop::GetMissionTime() + 5.0f;
             break;

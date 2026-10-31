@@ -403,7 +403,14 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
             Character* pAttacker = damage.mDamageOwner.mCharacter;
             if ((!pAttacker || pAttacker->mPlayerId < 0) && fFloor > 0.0f && fFloor > fShield)
             {
-                mCurShield = (fShield + fShieldLost < fFloor) ? fShield + fShieldLost : fShieldLost;
+                if (fShield + fShieldLost >= fFloor)
+                {
+                    mCurShield = fShieldLost;
+                }
+                else
+                {
+                    mCurShield = fShield + fShieldLost;
+                }
             }
             ShieldChangeCallback(fShieldLost);
             SpreadDamageEvent(damage, bIsShot, vPos, 0.0f, fShieldLost);
@@ -423,7 +430,14 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
             Character* pAttacker = damage.mDamageOwner.mCharacter;
             if ((!pAttacker || pAttacker->mPlayerId < 0) && fFloor > 0.0f && fFloor > fHealth)
             {
-                mCurHealth = (fHealth + fHealthLost < fFloor) ? fHealth + fHealthLost : fFloor;
+                if (fHealth + fHealthLost >= fFloor)
+                {
+                    mCurHealth = fFloor;
+                }
+                else
+                {
+                    mCurHealth = fHealth + fHealthLost;
+                }
             }
             HealthChangeCallback(false, fHealthLost);
             SpreadDamageEvent(damage, bIsShot, vPos, fHealthLost, 0.0f);
@@ -439,7 +453,7 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
                         continue;
                     }
                     int iViewport = NetGame::GetJoystickIndex(it->mPlayerId);
-                    if (iViewport >= 0 && mIsAlive)
+                    if (iViewport >= 0 && IsAlive())
                     {
                         float fAmount;
                         if (mCurHealth > 0.0f)
@@ -454,8 +468,7 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
                         {
                             fAmount = 1.0f;
                         }
-                        RedColor color = RedColor::RED;
-                        color.a = (unsigned char)(int)(fAmount * 96.0f + 32.0f);
+                        RedColor color(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f));
                         float fTime = fAmount * 0.15f + 0.15f;
                         ScreenFilterEffect::Instance()->TimedFilter(iViewport, fTime, 0.0f, fTime, color,
                                                                     0xDE020766);
@@ -614,7 +627,7 @@ void Damageable::SpreadDamageEvent(const DamageDesc& damage, bool bIsShot, const
 // FUNCTION: SWBF2 0x004897d0
 void Damageable::HealthChangeCallback(bool, float)
 {
-    if (!(0.0f < mCurHealth))
+    if (mCurHealth <= 0.0f)
     {
         mIsAlive = false;
     }
@@ -660,7 +673,7 @@ void Damageable::HealthChangeCallback(bool, float)
         }
         bool bShow = false;
         if (!bUnbuilt && pStage->mPercent + 0.0001f > fRatio &&
-            (!(0.0f < pStage->mPercentStop) || !(fRatio < pStage->mPercentStop - 0.0001f)))
+            (pStage->mPercentStop <= 0.0f || fRatio >= pStage->mPercentStop - 0.0001f))
         {
             bShow = true;
         }

@@ -258,7 +258,7 @@ void FirstPersonRenderable::UpdateSoldierAimer(const PblMatrix& mMatrix)
     float fSpeedSq = vVelocity.x * vVelocity.x + vVelocity.z * vVelocity.z;
     if (mSoldierState == RUN)
     {
-        if (fSpeedSq >= 20.0f)
+        if (!(fSpeedSq < 20.0f))
         {
             fSpeed = fSpeedSq / 20.0f;
         }
@@ -282,13 +282,9 @@ void FirstPersonRenderable::UpdateSoldierAimer(const PblMatrix& mMatrix)
     const PblMatrix* pBone = kPose.Find(0x8629b159);
 
     PblMatrix mOffset = gMatrixIdentity;
-    PblMatrix mTemp;
     mOffset.RotateY(3.0f);
     mOffset.RotateZ(0.05f);
-    mOffset.m[3][0] = sFirstPersonOffsetX;
-    mOffset.m[3][1] = sFirstPersonOffsetY;
-    mOffset.m[3][2] = sFirstPersonOffsetZ;
-    mOffset.m[3][3] = 1.0f;
+    mOffset.SetTranslation(PblVector3(sFirstPersonOffsetX, sFirstPersonOffsetY, sFirstPersonOffsetZ));
 
     if (mOwner->GetControllableClass()->mCockpitTension > 0.0f)
     {
@@ -300,17 +296,10 @@ void FirstPersonRenderable::UpdateSoldierAimer(const PblMatrix& mMatrix)
         mCockpitRotation = PblQuaternion(mMatrix);
     }
 
-    PblQuaternion qRotation;
-    PblMatrix mRotation;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRotation), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRotation), reinterpret_cast<const D3DXQUATERNION*>(&mCockpitRotation)));
-    mRotation.m[3][0] = mMatrix.m[3][0];
-    mRotation.m[3][1] = mMatrix.m[3][1];
-    mRotation.m[3][2] = mMatrix.m[3][2];
-    mRotation.m[3][3] = 1.0f;
+    const PblMatrix mRotation(mCockpitRotation, mMatrix.GetTranslation());
 
     PblMatrix mBone = *pBone;
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&mBone));
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mModelMatrix), reinterpret_cast<const D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mRotation));
+    mModelMatrix = (mOffset * mBone) * mRotation;
 
     mModelMatrix.m[0][3] = 0.0f;
     mModelMatrix.m[1][3] = 0.0f;
@@ -350,12 +339,8 @@ void FirstPersonRenderable::UpdateDroidekaAimer(const PblMatrix& mMatrix)
     const PblMatrix* pBone = kPose.Find(0x8629b159);
 
     PblMatrix mOffset = gMatrixIdentity;
-    PblMatrix mTemp;
     mOffset.RotateY(3.2f);
-    mOffset.m[3][0] = 0.01f;
-    mOffset.m[3][1] = 0.35f;
-    mOffset.m[3][2] = -0.0f;
-    mOffset.m[3][3] = 1.0f;
+    mOffset.SetTranslation(PblVector3(0.01f, 0.35f, -0.0f));
 
     if (mOwner->GetControllableClass()->mCockpitTension > 0.0f)
     {
@@ -367,17 +352,10 @@ void FirstPersonRenderable::UpdateDroidekaAimer(const PblMatrix& mMatrix)
         mCockpitRotation = PblQuaternion(mMatrix);
     }
 
-    PblQuaternion qRotation;
-    PblMatrix mRotation;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRotation), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRotation), reinterpret_cast<const D3DXQUATERNION*>(&mCockpitRotation)));
-    mRotation.m[3][0] = mMatrix.m[3][0];
-    mRotation.m[3][1] = mMatrix.m[3][1];
-    mRotation.m[3][2] = mMatrix.m[3][2];
-    mRotation.m[3][3] = 1.0f;
+    const PblMatrix mRotation(mCockpitRotation, mMatrix.GetTranslation());
 
     PblMatrix mBone = *pBone;
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&mBone));
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mModelMatrix), reinterpret_cast<const D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mRotation));
+    mModelMatrix = (mOffset * mBone) * mRotation;
 
     const PblMatrix* pWeaponBone = kPose.Find(0x2b960099);
     Weapon* pWeapon = mOwner->GetWeaponPtr(mOwner->GetActiveWeaponChannel());
@@ -418,9 +396,7 @@ void FirstPersonRenderable::UpdateCockpitAimer(const PblMatrix& mMatrix)
                 fT = 1.0f;
             }
             float fS = 1.0f - fT;
-            vOffset.x = fS * 0.0f + fT * 0.0f;
-            vOffset.y = fS * -1.5f + fT * -1.4f;
-            vOffset.z = fS * -1.7f + fT * -1.0f;
+            vOffset = fS * PblVector3(0.0f, -1.5f, -1.7f) + fT * PblVector3(0.0f, -1.4f, -1.0f);
         }
         else
         {
@@ -462,15 +438,10 @@ void FirstPersonRenderable::UpdateCockpitAimer(const PblMatrix& mMatrix)
         {
             mCockpitTrans = pBone->GetTranslation();
         }
-        vPos.x += (pBone->m[3][0] - mCockpitTrans.x) * 0.2f;
-        vPos.y += (pBone->m[3][1] - mCockpitTrans.y) * 0.2f;
-        vPos.z += (pBone->m[3][2] - mCockpitTrans.z) * 0.2f;
+        vPos = mCamera.GetTranslation() + (pBone->GetTranslation() - mCockpitTrans) * 0.2f;
     }
 
-    PblQuaternion qRotation;
-    PblMatrix mRotation;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mRotation), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRotation), reinterpret_cast<const D3DXQUATERNION*>(&mCockpitRotation)));
-    mRotation.SetTranslation(vPos);
+    const PblMatrix mRotation(mCockpitRotation, vPos);
     mModelMatrix = mOffset * mRotation;
 }
 
@@ -952,11 +923,7 @@ void FirstPersonRenderable::RenderSoldier(unsigned int uFlags) const
     {
         fSavedFactor = RedLight::m_sGlobalDirectionalFactor[iLight];
         const GameObject* pIgnore = mOwner->GetGameObject();
-        const PblVector3& vLight = RedLight::GetGlobalDirectionalLight(iLight)->m_vDirection;
-        PblVector3 vDir;
-        vDir.x = -vLight.x;
-        vDir.y = -vLight.y;
-        vDir.z = -vLight.z;
+        const PblVector3 vDir = -RedLight::GetGlobalDirectionalLight(iLight)->m_vDirection;
         float& fShadowVal = const_cast<FirstPersonRenderable*>(this)->mShadowVal;
         if (CollisionManager::RayTest(mWeaponMatrix.GetTranslation(), vDir, 500.0f, &pIgnore, 1, 0))
         {
@@ -1009,7 +976,8 @@ void FirstPersonRenderable::RenderSoldier(unsigned int uFlags) const
 
     if (mCurrentWeapon)
     {
-        mCurrentWeapon->Render(PblMatrix(reinterpret_cast<const _D3DXMATRIXA16*>(&mWeaponMatrix)), &pose, RedColor::WHITE, uFlags, true);
+        const PblMatrix mWeapon(reinterpret_cast<const _D3DXMATRIXA16*>(&mWeaponMatrix));
+        mCurrentWeapon->Render(mWeapon, &pose, RedColor::WHITE, uFlags, true);
     }
 
     if (bShadow)
@@ -1283,25 +1251,23 @@ void FirstPersonCameraManager::Update(PblMatrix& rMatrix)
             mCameraPos = rMatrix.GetTranslation();
 
             PblMatrix mRotation = gMatrixIdentity;
-            PblMatrix mTemp;
             mRotation.RotateX(mCurRotVec.x);
             mRotation.RotateY(mCurRotVec.y);
             mRotation.RotateZ(mCurRotVec.z);
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mRotation), reinterpret_cast<const D3DXMATRIX*>(&rMatrix));
-            rMatrix = mTemp;
+            rMatrix = mRotation * rMatrix;
         }
         if (fT == 1.0f)
         {
-            if (++mCurrCamPt >= mNumPoints)
+            if (++mCurrCamPt < mNumPoints)
+            {
+                mCurrCamTime = mCamTime[mCurrCamPt];
+            }
+            else
             {
                 mCurRotVec = PblVector3(0.0f, 0.0f, 0.0f);
                 mCurrCamPt = -1;
                 mIsGoingProne = false;
                 mIsReturning = false;
-            }
-            else
-            {
-                mCurrCamTime = mCamTime[mCurrCamPt];
             }
         }
     }
@@ -1565,31 +1531,28 @@ float FirstPersonCameraManager::SetCameraPath(PblVector3* pPos, PblVector3* pPos
 {
     FirstPerson::IsActive(0);
     mNumPoints = uPoints;
-    PblHermiteVector3* pPosHermite = mHermPos;
-    PblHermiteVector3* pRotHermite = mHermRot;
     float fTotalTime = 0.0f;
     for (unsigned int i = 0; i < uPoints; ++i)
     {
-        if (i)
+        if (i == 0)
         {
-            pPosHermite[i].Set(pPos[i - 1], pPos[i], pPosSlope[i - 1], pPosSlope[i], 1.0f);
-            pRotHermite[i].Set(pRot[i - 1], pRot[i], pRotSlope[i - 1], pRotSlope[i], 1.0f);
-        }
-        else if (mCurrCamPt == -1)
-        {
-            const PblVector3 vZero(0.0f, 0.0f, 0.0f);
-            pPosHermite[0].Set(vZero, pPos[0], vZero, pPosSlope[0], 1.0f);
-            pRotHermite[0].Set(mCurRotVec, pRot[0], vZero, pRotSlope[0], 1.0f);
+            if (mCurrCamPt != -1)
+            {
+                float fT = 1.0f - mCurrCamTime / mCamTime[mCurrCamPt];
+                mHermPos[0].Set(mHermPos[mCurrCamPt].getValue(fT), pPos[0], mHermPos[mCurrCamPt].getSlope(fT), pPosSlope[0], 1.0f);
+                mHermRot[0].Set(mHermRot[mCurrCamPt].getValue(fT), pRot[0], mHermRot[mCurrCamPt].getSlope(fT), pRotSlope[0], 1.0f);
+            }
+            else
+            {
+                const PblVector3 vZero(0.0f, 0.0f, 0.0f);
+                mHermPos[0].Set(vZero, pPos[0], vZero, pPosSlope[0], 1.0f);
+                mHermRot[0].Set(mCurRotVec, pRot[0], vZero, pRotSlope[0], 1.0f);
+            }
         }
         else
         {
-            float fT = 1.0f - mCurrCamTime / mCamTime[mCurrCamPt];
-            const PblVector3 vPos = pPosHermite[mCurrCamPt].getValue(fT);
-            const PblVector3 vPosSlope = pPosHermite[mCurrCamPt].getSlope(fT);
-            const PblVector3 vRot = pRotHermite[mCurrCamPt].getValue(fT);
-            const PblVector3 vRotSlope = pRotHermite[mCurrCamPt].getSlope(fT);
-            pPosHermite[0].Set(vPos, pPos[0], vPosSlope, pPosSlope[0], 1.0f);
-            pRotHermite[0].Set(vRot, pRot[0], vRotSlope, pRotSlope[0], 1.0f);
+            mHermPos[i].Set(pPos[i - 1], pPos[i], pPosSlope[i - 1], pPosSlope[i], 1.0f);
+            mHermRot[i].Set(pRot[i - 1], pRot[i], pRotSlope[i - 1], pRotSlope[i], 1.0f);
         }
         mCamTime[i] = pTime[i];
         fTotalTime += pTime[i];

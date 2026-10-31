@@ -275,10 +275,11 @@ bool EntityMine::Update(float fDeltaTime)
 {
     const bool bClient = NetGame::IsEnabled() && NetGame::IsClient();
 
-    if (mStickInfo)
+    StickInfo* pStick = mStickInfo;
+    if (pStick)
     {
-        GameObject* pStuckTo = mStickInfo->mCollHandle.mObject;
-        if (pStuckTo && pStuckTo->mHandleId != mStickInfo->mCollHandle.mSavedHandleId)
+        GameObject* pStuckTo = pStick->mCollHandle.mObject;
+        if (pStuckTo && pStuckTo->mHandleId != pStick->mCollHandle.mSavedHandleId)
         {
             mParent = 0;
             delete mStickInfo;
@@ -287,27 +288,26 @@ bool EntityMine::Update(float fDeltaTime)
         }
         else
         {
-            PblQuaternion qRot;
+            D3DXQUATERNION qRot;
             PblMatrix mStick;
-            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mStick), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qRot), reinterpret_cast<const D3DXQUATERNION*>(&mStickInfo->mLocalRotation)));
-            mStick.m[3][0] = mStickInfo->mLocalPosition.x;
-            mStick.m[3][1] = mStickInfo->mLocalPosition.y;
-            mStick.m[3][2] = mStickInfo->mLocalPosition.z;
+            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mStick), D3DXQuaternionNormalize(&qRot, reinterpret_cast<const D3DXQUATERNION*>(&pStick->mLocalRotation)));
+            mStick.m[3][0] = pStick->mLocalPosition.x;
+            mStick.m[3][1] = pStick->mLocalPosition.y;
+            mStick.m[3][2] = pStick->mLocalPosition.z;
             mStick.m[3][3] = 1.0f;
             CollisionObject* pObject = mStickInfo->mCollObject;
-            if (pObject->mCollisionModel)
+            CollisionModel* pModel = pObject->mCollisionModel;
+            if (pModel)
             {
-                PblMatrix mBody = pObject->mCollisionModel->GetWorldMatrix(mStickInfo->mCollBodyID,
-                                                                           pObject->GetMatrix(), pObject->GetPose());
+                PblMatrix mBody = pModel->GetWorldMatrix(mStickInfo->mCollBodyID,
+                                                         pObject->GetMatrix(), pObject->GetPose());
                 mStick *= mBody;
             }
             SetMatrix(mStick);
             if (fDeltaTime > 0.0f)
             {
                 const float fInv = 1.0f / fDeltaTime;
-                mVelocity.x = (mMatrix.m[3][0] - mOldPosition.x) * fInv;
-                mVelocity.y = (mMatrix.m[3][1] - mOldPosition.y) * fInv;
-                mVelocity.z = (mMatrix.m[3][2] - mOldPosition.z) * fInv;
+                mVelocity = (mMatrix.GetTranslation() - mOldPosition) * fInv;
                 mOldPosition = mMatrix.GetTranslation();
             }
             mStationary = true;
@@ -319,10 +319,10 @@ bool EntityMine::Update(float fDeltaTime)
         return true;
     }
 
-    EntityMineClass* pClass = static_cast<EntityMineClass*>(mClass);
     const int iTimer = (int)mLifeTimer;
     if (iTimer != mPrevTimerVal)
     {
+        EntityMineClass* pClass = static_cast<EntityMineClass*>(mClass);
         const GameSound* pTick = &pClass->mTick;
         const float fTickPitch = pClass->mTickPitch;
         GameSoundControllable tick;
@@ -343,9 +343,9 @@ bool EntityMine::Update(float fDeltaTime)
 
     if (mLifeTimer <= fDeltaTime)
     {
-        if (!bClient && pClass->mExplosionExpire)
+        if (!bClient && static_cast<EntityMineClass*>(mClass)->mExplosionExpire)
         {
-            pClass->mExplosionExpire->CreateExplosion(
+            static_cast<EntityMineClass*>(mClass)->mExplosionExpire->CreateExplosion(
                 GetPosition(), DamageOwner(mOwner, this, mTeam, mClass, 0, 1.0f), false, COLL_UNKNOWN);
         }
         mNetDead = true;
@@ -354,57 +354,60 @@ bool EntityMine::Update(float fDeltaTime)
 
     if (!IsAlive())
     {
-        if (!bClient && pClass->mExplosionDeath)
+        if (!bClient && static_cast<EntityMineClass*>(mClass)->mExplosionDeath)
         {
-            pClass->mExplosionDeath->CreateExplosion(
+            static_cast<EntityMineClass*>(mClass)->mExplosionDeath->CreateExplosion(
                 GetPosition(), DamageOwner(mOwner, this, mTeam, mClass, 0, 1.0f), false, COLL_UNKNOWN);
         }
         mNetDead = true;
         return bClient;
     }
 
-    if (mStationary && pClass->mExplosionTrigger && pClass->mTriggerRadius > 0.0f)
+    if (mStationary && static_cast<EntityMineClass*>(mClass)->mExplosionTrigger &&
+        static_cast<EntityMineClass*>(mClass)->mTriggerRadius > 0.0f)
     {
         PblVector3 vPos = mMatrix.GetTranslation();
-        const float fRange =
-            pClass->mTriggerRadius > pClass->mSuppressRadius ? pClass->mTriggerRadius : pClass->mSuppressRadius;
+        const float fRange = static_cast<EntityMineClass*>(mClass)->mTriggerRadius >
+                                     static_cast<EntityMineClass*>(mClass)->mSuppressRadius
+                                 ? static_cast<EntityMineClass*>(mClass)->mTriggerRadius
+                                 : static_cast<EntityMineClass*>(mClass)->mSuppressRadius;
         GameObject* apObjects[64];
         const int iCount = CollisionManager::GetObjectsInRange(vPos, fRange, apObjects, 64, this, 42);
         for (int i = 0; i < iCount; ++i)
         {
-            GameObject* pObject = apObjects[i];
-            if (IsMyEnemy(pObject) && pObject->IsAlive())
+            if (IsMyEnemy(apObjects[i]) && apObjects[i]->IsAlive())
             {
-                if (pObject->GetEntityClass()->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass) &&
+                if (apObjects[i]->GetEntityClass()->IsRtti(EntitySoldierClass::rttiHashEntitySoldierClass) &&
                     static_cast<EntitySoldierClass*>(
-                        static_cast<GameObjectClass*>(pObject->GetEntityClass()))->mImmuneToMines)
+                        static_cast<GameObjectClass*>(apObjects[i]->GetEntityClass()))->mImmuneToMines)
                 {
                     continue;
                 }
 
-                const PblVector3 vCenter = pObject->GetCollisionObject()->GetCollisionCenter();
-                const float fRadius = pObject->GetCollisionObject()->GetCollisionRadius();
+                const PblVector3 vCenter = apObjects[i]->GetCollisionObject()->GetCollisionCenter();
+                const float fRadius = apObjects[i]->GetCollisionObject()->GetCollisionRadius();
                 const float fDX = vCenter.x - mMatrix.m[3][0];
                 const float fDY = vCenter.y - mMatrix.m[3][1];
                 const float fDZ = vCenter.z - mMatrix.m[3][2];
-                const float fReach = pClass->mTriggerRadius + fRadius;
+                const float fReach = static_cast<EntityMineClass*>(mClass)->mTriggerRadius + fRadius;
                 if (fReach * fReach > fDY * fDY + fDX * fDX + fDZ * fDZ)
                 {
-                    const PblVector3& vVelocity = pObject->GetVelocity();
+                    const PblVector3& vVelocity = apObjects[i]->GetVelocity();
                     if (vVelocity.y * fDY + fDX * vVelocity.x + vVelocity.z * fDZ >= 0.0f)
                     {
                         mTrigger = true;
                     }
                 }
             }
-            else if (IsMyFriend(pObject) && pObject->IsAlive() && pClass->mSuppressRadius > 0.0f)
+            else if (IsMyFriend(apObjects[i]) && apObjects[i]->IsAlive() &&
+                     static_cast<EntityMineClass*>(mClass)->mSuppressRadius > 0.0f)
             {
-                const PblVector3 vCenter = pObject->GetCollisionObject()->GetCollisionCenter();
-                const float fRadius = pObject->GetCollisionObject()->GetCollisionRadius();
+                const PblVector3 vCenter = apObjects[i]->GetCollisionObject()->GetCollisionCenter();
+                const float fRadius = apObjects[i]->GetCollisionObject()->GetCollisionRadius();
                 const float fDX = vCenter.x - vPos.x;
                 const float fDY = vCenter.y - vPos.y;
                 const float fDZ = vCenter.z - vPos.z;
-                const float fReach = pClass->mSuppressRadius + fRadius;
+                const float fReach = static_cast<EntityMineClass*>(mClass)->mSuppressRadius + fRadius;
                 if (fReach * fReach > fDY * fDY + fDX * fDX + fDZ * fDZ)
                 {
                     mTrigger = false;
@@ -420,9 +423,9 @@ bool EntityMine::Update(float fDeltaTime)
         {
             mTrailEmitterObj->DeactivateEffect();
         }
-        if (!bClient && pClass->mExplosionTrigger)
+        if (!bClient && static_cast<EntityMineClass*>(mClass)->mExplosionTrigger)
         {
-            pClass->mExplosionTrigger->CreateExplosion(
+            static_cast<EntityMineClass*>(mClass)->mExplosionTrigger->CreateExplosion(
                 GetPosition(), DamageOwner(mOwner, this, mTeam, mClass, 0, 1.0f), false, COLL_UNKNOWN);
         }
         mNetDead = true;
@@ -554,8 +557,7 @@ bool EntityMine::CollisionCallback(const CollisionResult* pResult, CollisionObje
         const float fRebound = pClass->mRebound;
         const float fFriction = pClass->mFriction * fDot * (fRebound + 1.0f);
         mVelocity -= vNormal * fDot;
-        float fScale = -(fFriction / sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                           mVelocity.z * mVelocity.z));
+        float fScale = -(fFriction / Length(mVelocity));
         if (!(1.0f > fScale))
         {
             fScale = 1.0f;

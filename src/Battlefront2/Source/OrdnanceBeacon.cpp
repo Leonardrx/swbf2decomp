@@ -120,14 +120,13 @@ bool OrdnanceBeacon::Update(float fDeltaTime)
         desc.mPosition.y += aim.m[2][1] * fDist;
         desc.mPosition.z += aim.m[2][2] * fDist;
 
-        PblRandom& rand = PblRandom::GetSim();
-        const float fRight =
-            (rand.GetFloat() - rand.GetFloat()) * static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
+        const float fRight = (PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) *
+                             static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
         desc.mPosition.x += aim.m[0][0] * fRight;
         desc.mPosition.y += aim.m[0][1] * fRight;
         desc.mPosition.z += aim.m[0][2] * fRight;
-        const float fUp =
-            (rand.GetFloat() - rand.GetFloat()) * static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
+        const float fUp = (PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) *
+                          static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
         desc.mPosition.x += aim.m[1][0] * fUp;
         desc.mPosition.y += aim.m[1][1] * fUp;
         desc.mPosition.z += aim.m[1][2] * fUp;
