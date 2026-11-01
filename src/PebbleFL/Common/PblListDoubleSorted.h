@@ -102,9 +102,9 @@ public:
     Node* GetFirst() const
     {
         PblListDouble::Node* pNext = mTerminator.mNext;
-        return pNext == &mTerminator
-            ? (Node*)pNext
-            : (Node*)((char*)pNext - offsetof(Node, mNode));
+        return pNext != &mTerminator
+            ? (Node*)((char*)pNext - offsetof(Node, mNode))
+            : (Node*)pNext;
     }
 
     Node* GetLast() const

@@ -94,6 +94,8 @@ Chunk::Chunk()
 // SYNTHETIC: SWBF2 0x004550c0
 // Chunk::~Chunk
 
+static const PblVector3 vGravity(0.0f, -9.8f, 0.0f);
+
 // FUNCTION: SWBF2 0x00455150
 void Chunk::ClearAll()
 {
@@ -115,7 +117,6 @@ void Chunk::ClearAll()
     mOmega.z = 0.0f;
     mOmega.y = 0.0f;
     mOmega.x = 0.0f;
-    static const PblVector3 vGravity(0.0f, -9.8f, 0.0f);
     mGravity = vGravity;
     mMaxTerrainCollisions = 0;
     mNumTerrainCollisions = 0;

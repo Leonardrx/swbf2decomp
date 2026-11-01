@@ -135,8 +135,7 @@ public:
 
     bool IsNeutralWhenEmpty() { return mIsNeutralWhenEmpty; }
 
-    // FUNCTION: SWBF2 0x005373e0
-    bool AvailableForAnyTeam() const { return mAvailableForAnyTeam; }
+    bool AvailableForAnyTeam() const;
     float mSwitchClassRadius;
     DamageEffectClass* mDamageEffectClass[10];
     AI::VOSound* mVOSoundList;

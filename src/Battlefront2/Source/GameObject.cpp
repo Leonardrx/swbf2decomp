@@ -632,6 +632,12 @@ void GameObjectInterpolator::GetMatrix(int iNetUniqueId, PblMatrix& mMatrix)
     mMatrix = PblMatrix(qBlend, vBlend);
 }
 
+// FUNCTION: SWBF2 0x005373e0
+bool GameObjectClass::AvailableForAnyTeam() const
+{
+    return mAvailableForAnyTeam;
+}
+
 // FUNCTION: SWBF2 0x00537400
 void GameObjectInterpolator::SetNext(int iNetUniqueId, const PblMatrix* pMatrix)
 {
