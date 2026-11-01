@@ -135,14 +135,17 @@ int UnitBoardAgent::EventHandler(AI::EventInfo* pInfo)
         {
             return 0;
         }
-        if (DistSq(GetCollisionObject(mVehicle.operator->())->GetPosition(), GetMe()->GetMatrix().GetTranslation()) <=
-            DistSq(GetCollisionObject(pInfo->mGameObject.operator->())->GetPosition(), GetMe()->GetMatrix().GetTranslation()))
+        Controllable* pMe = GetMe();
+        GameObject* pVehicle = mVehicle.operator->();
+        const float fVehicleDistSq = DistSq(pVehicle->GetPosition(), pMe->GetMatrix().GetTranslation());
+        pMe = GetMe();
+        GameObject* pEmptyVehicle = pInfo->mGameObject.operator->();
+        if (fVehicleDistSq > DistSq(pEmptyVehicle->GetPosition(), pMe->GetMatrix().GetTranslation()))
         {
-            return 0;
-        }
-        if (UnitAgent::EventHandler(pInfo) == 1)
-        {
-            return 1;
+            if (UnitAgent::EventHandler(pInfo) == 1)
+            {
+                return 1;
+            }
         }
         return 0;
     }

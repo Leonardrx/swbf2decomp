@@ -161,9 +161,8 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
     Engine::GetThreadUpdate()->Resume();
 
     const unsigned int uiChannels = mRenderer.mNumChannels;
-    const unsigned int uiFormat = mRenderer.mFormat;
     if (uiChannels != format.GetNumChannels()
-        || uiFormat != format.GetFormat())
+        || mRenderer.mFormat != format.GetFormat())
     {
         if (!bRestart)
         {
@@ -177,7 +176,7 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
 
     format.SetFrequency(mRenderer.mFrequency);
 
-    if (mEffectsEnabled
+    if (bEffects
         && !mDMO.CreateDMO(GUID_DSFX_STANDARD_I3DL2REVERB, format, format))
     {
         mEffectsEnabled = false;
@@ -211,14 +210,15 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
 
     unsigned char* pBuffer = (unsigned char*)mMixBuffer;
     mMixerInfo.mMixersPackets[0].mBuffer = pBuffer;
-    mMixerInfo.mMixersPackets[1].mBuffer = pBuffer + uiPacketSize;
-    unsigned char* pNext = pBuffer + uiPacketSize * 2;
+    pBuffer += uiPacketSize;
+    mMixerInfo.mMixersPackets[1].mBuffer = pBuffer;
+    pBuffer += uiPacketSize;
 
     mMixer.SetPackets(uiPacketSize, mMixerInfo.mMixersPackets, 2);
     mMixer.SetChannels(1, 2);
     mMixer.StreamNodeSinkNInput::SetConnectionArray(mMixerInfo.mMixerConns, 32);
     mMixer.SetGainArray(mMixerInfo.mMixerGains);
-    mMixer.SetMixBuffer((int*)pNext);
+    mMixer.SetMixBuffer((int*)pBuffer);
     mMixer.SetPacketArray(mMixerInfo.mPacketIO, mMixerInfo.mOffsets);
     mMixer.SetSynchronizedMixing(true);
     mMixer.SetSynchronizedActivation(false);
@@ -227,7 +227,7 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
     mMixer.SetStopOnLast(mEffectsEnabled);
 
     unsigned char* pSlice =
-        (unsigned char*)(((unsigned int)(pNext + uiMixBytes) + uiAlignment - 1)
+        (unsigned char*)(((unsigned int)(pBuffer + uiMixBytes) + uiAlignment - 1)
                          & ~(uiAlignment - 1));
     const unsigned int uiDMOInput = (uiDMOBytes / uiAlignment) * uiAlignment;
 

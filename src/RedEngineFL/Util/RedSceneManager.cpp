@@ -541,13 +541,10 @@ void RenderFarObjects()
     for (int i = 0; i < iCount; ++i)
     {
         RedSceneObject* p = objects[i];
-        float fRadius = p->_Sphere.w;
-        float fDist = (p->_Sphere.x - sRedSceneCamera.mPosition.x) * sRedSceneCamera.mFront.x
-                    + (p->_Sphere.y - sRedSceneCamera.mPosition.y) * sRedSceneCamera.mFront.y
-                    + (p->_Sphere.z - sRedSceneCamera.mPosition.z) * sRedSceneCamera.mFront.z
-                    + fRadius;
-        float fLimit = fRadius + fFarRange;
-        if (fDist < fLimit && !(fMinRatio > fRadius * fRadius / (fDist * fDist)))
+        float fDist = DotProduct(p->GetRenderPos() - sRedSceneCamera.mPosition, sRedSceneCamera.mFront)
+                    + p->_Sphere.w;
+        float fLimit = p->_Sphere.w + fFarRange;
+        if (!(fDist >= fLimit || fMinRatio > p->_Sphere.w * p->_Sphere.w / (fDist * fDist)))
         {
             if (fDist >= fLimit - 20.0f)
             {
@@ -564,7 +561,7 @@ void RenderFarObjects()
                     p->Render(3, 1.0f, p->_uiRenderFlags | 0x20000);
                 }
             }
-            else if (fFadeStart < fDist)
+            else if (!(fFadeStart >= fDist))
             {
                 p->Render(3, 1.0f, p->_uiRenderFlags | 0x20000);
             }
@@ -579,13 +576,10 @@ void RenderFarObjects()
         {
             continue;
         }
-        float fRadius = p->_Sphere.w;
-        float fDist = (p->_Sphere.x - sRedSceneCamera.mPosition.x) * sRedSceneCamera.mFront.x
-                    + (p->_Sphere.y - sRedSceneCamera.mPosition.y) * sRedSceneCamera.mFront.y
-                    + (p->_Sphere.z - sRedSceneCamera.mPosition.z) * sRedSceneCamera.mFront.z
-                    + fRadius;
+        float fDist = DotProduct(p->GetRenderPos() - sRedSceneCamera.mPosition, sRedSceneCamera.mFront)
+                    + p->_Sphere.w;
         float fAlpha = Min((fDist - fFadeStart) / 20.0f, 1.0f);
-        float fLimit = fRadius + fFarRange;
+        float fLimit = p->_Sphere.w + fFarRange;
         if (fDist >= fLimit - 20.0f)
         {
             fAlpha = (fLimit - fDist) * fAlpha / 20.0f;

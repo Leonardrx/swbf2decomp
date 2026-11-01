@@ -324,7 +324,7 @@ void PlayerController::Update(float dt)
     {
         if (fPitch * fPitch + fTurn * fTurn >= 0.9f)
         {
-            float fTurnBuildup = mOwner->GetTurnBuildup() + dt;
+            float fTurnBuildup = dt + mOwner->GetTurnBuildup();
             mOwner->SetTurnBuildup(fTurnBuildup < 1.0f ? fTurnBuildup : 1.0f);
             float fPitchBuildup = mOwner->GetPitchBuildup() + dt;
             mOwner->SetPitchBuildup(fPitchBuildup < 1.0f ? fPitchBuildup : 1.0f);
@@ -457,7 +457,10 @@ void PlayerController::Update(float dt)
         }
         if (!NetGame::IsClient())
         {
-            bCanExit = bCanExit && NetGame::CanExitVehicle(mOwner->mPlayerId);
+            if (!NetGame::CanExitVehicle(mOwner->mPlayerId))
+            {
+                bCanExit = false;
+            }
         }
     }
 
@@ -566,7 +569,8 @@ void PlayerController::Update(float dt)
             GameObject* pMe = mOwner->GetGameObject();
 
             if (pTarget && pTarget->GetDerivedRtti() == EntitySoldier::rttiHashEntitySoldier &&
-                GetInvisibility(pTarget) > 0.0f && pMe->GetAffiliationToMe(pTarget) < 0)
+                static_cast<const EntitySoldier*>(pTarget)->GetInvisibilityFactor() > 0.0f &&
+                pMe->GetAffiliationToMe(pTarget) < 0)
             {
                 pTarget = 0;
                 iBodyID = -1;
@@ -619,17 +623,17 @@ void PlayerController::Update(float dt)
                     const PblBox& box = pTarget->GetModel()->_mModel->_TotalBoundingBox;
                     PblVector3 vMid((box._vMax.x + box._vMin.x) * 0.5f, (box._vMax.y + box._vMin.y) * 0.5f,
                                     (box._vMax.z + box._vMin.z) * 0.5f);
-                    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&vMid), reinterpret_cast<const D3DXMATRIX*>(&GetObjectMatrix(pTarget)));
+                    vCenter = static_cast<const CollisionObject*>(pTarget)->GetMatrix().ApplyTransform(vMid);
                     float dx = box._vMax.x - box._vMin.x;
                     float dy = box._vMax.y - box._vMin.y;
                     float dz = box._vMax.z - box._vMin.z;
-                    fRadius = sqrtf(dy * dy + dx * dx + dz * dz) * 0.5f;
+                    fRadius = PblMath::Sqrt(dy * dy + dx * dx + dz * dz) * 0.5f;
                 }
 
                 float fPrio = TargetInfo::GetTargetPrio(vStart, vDir, vCenter, fRadius, fAngle, fRange, false);
                 bool bKeep = false;
 
-                if (fPrio >= 0.0f &&
+                if (!(fPrio < 0.0f) &&
                     (pTarget->mIsAlive || pTarget->mHealthType == HEALTH_TYPE_BUILDING_DEAD ||
                      pTarget->mHealthType == HEALTH_TYPE_BUILDING_UNBUILT) &&
                     pTarget->mIsTargetable && pTarget->IsVisibleToMe(pMe))
@@ -639,22 +643,17 @@ void PlayerController::Update(float dt)
                         iBodyID = pTarget->GetTargetBodyID(vStart, vDir);
                     }
                     PblVector3 vPoint = pTarget->GetTargetPoint(vStart, vDir, iBodyID);
-                    PblVector3 vBack(vStart.x - vPoint.x, vStart.y - vPoint.y, vStart.z - vPoint.z);
+                    PblVector3 vBack = vStart - vPoint;
                     PblVector3 vBackDir;
                     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vBackDir), reinterpret_cast<const D3DXVECTOR3*>(&vBack));
-                    vPoint.x += fRadius * vBackDir.x;
-                    vPoint.y += vBackDir.y * fRadius;
-                    vPoint.z += vBackDir.z * fRadius;
+                    vPoint += vBackDir * fRadius;
                     const GameObject* apIgnore[2] = { pMe, pTarget };
                     if (!CollisionManager::RayTest(vStart, vPoint, apIgnore, 2, 0x90))
                     {
                         bKeep = true;
-                        float dx = vCenter.x - vStart.x;
-                        float dy = vCenter.y - vStart.y;
-                        float dz = vCenter.z - vStart.z;
                         bLocked = ((1 << (pMe->GetAffiliationToMe(pTarget) + 1)) & iTargetSides) != 0 &&
                                   ((1 << pTarget->mHealthType) & iTargetTypes) != 0 &&
-                                  fRadius + fLockOnRange >= sqrtf(dx * dx + dy * dy + dz * dz);
+                                  fRadius + fLockOnRange >= Length(vCenter - vStart);
                         if (bHoldLock)
                         {
                             fTargetPrio = 0.0f;
@@ -676,9 +675,8 @@ void PlayerController::Update(float dt)
 
             if (fTargetPrio > 0.0f)
             {
-                PblVector3 vSearch(vDir.x * fRange * 0.5f + vStart.x, vDir.y * fRange * 0.5f + vStart.y,
-                                   vDir.z * fRange * 0.5f + vStart.z);
-                PblMatrix mInverse = GetObjectMatrix(pMe).GetInverse();
+                PblVector3 vSearch = vDir * fRange * 0.5f + vStart;
+                PblMatrix mInverse = static_cast<const CollisionObject*>(pMe)->GetMatrix().GetInverse();
                 GameObject* apObjects[300];
                 int iCount = CollisionManager::GetObjectsInRange(vSearch, fRange, apObjects, 300, pMe, 0x3b);
                 for (int i = 0; i < iCount; ++i)
@@ -701,7 +699,8 @@ void PlayerController::Update(float dt)
                         continue;
                     }
                     if (pObject->GetDerivedRtti() == EntitySoldier::rttiHashEntitySoldier &&
-                        GetInvisibility(pObject) > 0.0f && pMe->GetAffiliationToMe(pObject) < 0)
+                        static_cast<const EntitySoldier*>(pObject)->GetInvisibilityFactor() > 0.0f &&
+                        pMe->GetAffiliationToMe(pObject) < 0)
                     {
                         continue;
                     }
@@ -726,26 +725,23 @@ void PlayerController::Update(float dt)
                         const PblBox& box = pObject->GetModel()->_mModel->_TotalBoundingBox;
                         PblVector3 vMid((box._vMin.x + box._vMax.x) * 0.5f, (box._vMin.y + box._vMax.y) * 0.5f,
                                         (box._vMin.z + box._vMax.z) * 0.5f);
-                        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&vMid), reinterpret_cast<const D3DXMATRIX*>(&GetObjectMatrix(pObject)));
+                        vCenter = static_cast<const CollisionObject*>(pObject)->GetMatrix().ApplyTransform(vMid);
                         float dx = box._vMax.x - box._vMin.x;
                         float dy = box._vMax.y - box._vMin.y;
                         float dz = box._vMax.z - box._vMin.z;
-                        fRadius = sqrtf(dx * dx + dy * dy + dz * dz) * 0.5f;
+                        fRadius = PblMath::Sqrt(dx * dx + dy * dy + dz * dz) * 0.5f;
                     }
 
-                    Controllable* pControllable = pObject->GetControllable();
-                    if (pControllable && pControllable->mCharacter && pControllable->mCharacter->mVehicle &&
-                        pControllable->mCharacter->mVehicle->GetGameObject() == pMe)
+                    if (pObject->GetControllable() && pObject->GetControllable()->mCharacter &&
+                        pObject->GetControllable()->mCharacter->mVehicle &&
+                        pObject->GetControllable()->mCharacter->mVehicle->GetGameObject() == pMe)
                     {
                         continue;
                     }
 
                     if (bLockable)
                     {
-                        float dx = vCenter.x - vStart.x;
-                        float dy = vCenter.y - vStart.y;
-                        float dz = vCenter.z - vStart.z;
-                        bLockable = fRadius + fLockOnRange >= sqrtf(dx * dx + dy * dy + dz * dz);
+                        bLockable = fRadius + fLockOnRange >= Length(vCenter - vStart);
                     }
 
                     float fPrio = TargetInfo::GetTargetPrio(vStart, vDir, vCenter, fRadius, fLockOnAngle, fRange, false);
@@ -755,26 +751,22 @@ void PlayerController::Update(float dt)
                         fAIPrio = fPrioAI;
                         pAITarget = pObject;
                     }
-                    if (fPrio < 0.0f || fTargetPrio <= fPrio)
+                    if (fPrio >= 0.0f && fTargetPrio > fPrio)
                     {
-                        continue;
-                    }
-
-                    int iObjectBodyID = pObject->GetTargetBodyID(vStart, vDir);
-                    PblVector3 vPoint = pObject->GetTargetPoint(vStart, vDir, iObjectBodyID);
-                    PblVector3 vBack(vStart.x - vPoint.x, vStart.y - vPoint.y, vStart.z - vPoint.z);
-                    PblVector3 vBackDir;
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vBackDir), reinterpret_cast<const D3DXVECTOR3*>(&vBack));
-                    vPoint.x += fRadius * vBackDir.x;
-                    vPoint.y += vBackDir.y * fRadius;
-                    vPoint.z += vBackDir.z * fRadius;
-                    const GameObject* apIgnore[2] = { pMe, pObject };
-                    if (!CollisionManager::RayTest(vStart, vPoint, apIgnore, 2, 0x90))
-                    {
-                        iBodyID = iObjectBodyID;
-                        pTarget = pObject;
-                        bLocked = bLockable;
-                        fTargetPrio = fPrio;
+                        int iObjectBodyID = pObject->GetTargetBodyID(vStart, vDir);
+                        PblVector3 vPoint = pObject->GetTargetPoint(vStart, vDir, iObjectBodyID);
+                        PblVector3 vBack = vStart - vPoint;
+                        PblVector3 vBackDir;
+                        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vBackDir), reinterpret_cast<const D3DXVECTOR3*>(&vBack));
+                        vPoint += vBackDir * fRadius;
+                        const GameObject* apIgnore[2] = { pMe, pObject };
+                        if (!CollisionManager::RayTest(vStart, vPoint, apIgnore, 2, 0x90))
+                        {
+                            iBodyID = iObjectBodyID;
+                            pTarget = pObject;
+                            bLocked = bLockable;
+                            fTargetPrio = fPrio;
+                        }
                     }
                 }
             }
@@ -797,14 +789,7 @@ void PlayerController::Update(float dt)
             RecordRecentPlayerObject(mOwner->mPlayerId, pTarget);
             mOwner->mReticuleTarget[iChannel] = pTarget;
             mOwner->mAIReticuleTarget[iChannel] = pAITarget;
-            if (pTarget)
-            {
-                mOwner->mReticuleAffiliation[iChannel] = pMe->GetAffiliationToMe(pTarget);
-            }
-            else
-            {
-                mOwner->mReticuleAffiliation[iChannel] = 0;
-            }
+            mOwner->mReticuleAffiliation[iChannel] = pTarget ? pMe->GetAffiliationToMe(pTarget) : 0;
         }
     }
 

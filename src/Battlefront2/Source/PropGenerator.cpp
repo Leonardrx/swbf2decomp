@@ -536,23 +536,19 @@ void CreateTreeLineOnPath(unsigned int uPathName, PblFileChunk& chunk)
         switch (uProperty)
         {
         case 0x6850acc6:
-        {
-            EntityClass* pClass = EntityClass::Find(child._pFile->Read32());
-            if (pClass)
+            aClasses[iNumClasses] = EntityClass::Find(child._pFile->Read32());
+            if (aClasses[iNumClasses])
             {
-                aClasses[iNumClasses++] = pClass;
+                ++iNumClasses;
             }
             break;
-        }
         case 0xef838cc7:
-        {
-            EntityClass* pClass = EntityClass::Find(child._pFile->Read32());
-            if (pClass)
+            aOtherClasses[iNumOtherClasses] = EntityClass::Find(child._pFile->Read32());
+            if (aOtherClasses[iNumOtherClasses])
             {
-                aOtherClasses[iNumOtherClasses++] = pClass;
+                ++iNumOtherClasses;
             }
             break;
-        }
         case 0xbad71c66:
             bReverse = true;
             break;
@@ -563,36 +559,41 @@ void CreateTreeLineOnPath(unsigned int uPathName, PblFileChunk& chunk)
     }
 
     const RedPath* pPath = RedPath::Find(uPathName);
-    if (!pPath || pPath->GetNumPoints() < 2)
+    if (!pPath)
     {
         return;
     }
 
     PblVector3 vPrevious = pPath->GetPointPosition(0);
-    const float fSpacingSquared = fSpacing * fSpacing;
     for (int iPoint = 1; iPoint < pPath->GetNumPoints(); ++iPoint)
     {
         const PblVector3 vEnd = pPath->GetPointPosition(iPoint);
-        PblVector3 vDelta(vEnd.x - vPrevious.x, vEnd.y - vPrevious.y, vEnd.z - vPrevious.z);
-        while (vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z > fSpacingSquared)
+        // The remaining offset to the point, normalised in place into the step direction.
+        PblVector3 vStep(vEnd.x - vPrevious.x, vEnd.y - vPrevious.y, vEnd.z - vPrevious.z);
+        while (SquaredLength(vStep) > fSpacing * fSpacing)
         {
-            const float fInvLength = 1.0f / PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
-            const PblVector3 vDirection(vDelta.x * fInvLength, vDelta.y * fInvLength, vDelta.z * fInvLength);
-            if (iNumClasses)
+            const float fInvLength = 1.0f / PblMath::Sqrt(vStep.x * vStep.x + vStep.y * vStep.y + vStep.z * vStep.z);
+            vStep.x *= fInvLength;
+            vStep.y *= fInvLength;
+            vStep.z *= fInvLength;
+            if (iNumClasses > 0)
             {
-                const float fSign = bReverse ? -1.0f : 1.0f;
-                const PblVector3 vCenter(vPrevious.x + vDirection.x * fSpacing * 0.5f,
-                                         vPrevious.y + vDirection.y * fSpacing * 0.5f,
-                                         vPrevious.z + vDirection.z * fSpacing * 0.5f);
-                const PblVector3 vForward(-vDirection.z * fSign, 0.0f, vDirection.x * fSign);
                 EntityDesc desc;
-                desc.mMatrix = DirectionMatrix(vForward, PblVector3(0.0f, 1.0f, 0.0f), vCenter);
+                const float fSign = bReverse ? -1.0f : 1.0f;
+                const PblVector3 vUp(0.0f, 1.0f, 0.0f);
+                const PblVector3 vCenter(vPrevious.x + vStep.x * fSpacing * 0.5f,
+                                         vPrevious.y + vStep.y * fSpacing * 0.5f,
+                                         vPrevious.z + vStep.z * fSpacing * 0.5f);
+                const PblVector3 vForward = CrossProduct(vStep, vUp) * fSign;
+                desc.mMatrix = DirectionMatrix(vForward, vUp, vCenter);
                 aClasses[PblRandom::_Global.GetInt() % iNumClasses]->Build(desc);
             }
-            vPrevious.x += vDirection.x * fSpacing;
-            vPrevious.y += vDirection.y * fSpacing;
-            vPrevious.z += vDirection.z * fSpacing;
-            vDelta = PblVector3(vEnd.x - vPrevious.x, vEnd.y - vPrevious.y, vEnd.z - vPrevious.z);
+            vPrevious.x += vStep.x * fSpacing;
+            vPrevious.y += vStep.y * fSpacing;
+            vPrevious.z += vStep.z * fSpacing;
+            vStep.x = vEnd.x - vPrevious.x;
+            vStep.y = vEnd.y - vPrevious.y;
+            vStep.z = vEnd.z - vPrevious.z;
         }
     }
 }

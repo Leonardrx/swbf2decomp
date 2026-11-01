@@ -687,7 +687,7 @@ void ParticleEmitter::RenderAsEmitter(float fTime)
     for (;;)
     {
         const float fStart = pInfo->mStartTime + fDelay;
-        if (fTime < fStart)
+        if (!(fTime >= fStart))
         {
             break;
         }

@@ -2502,20 +2502,19 @@ void EntityFlyer::SideRollUpdate(float fDeltaTime)
 // FUNCTION: SWBF2 0x004b11d0
 void EntityFlyer::RollUpdate(float fDeltaTime)
 {
-    const float fTwoPi = 6.2831855f;
     if (mState == CRASHING)
     {
-        if (mRollTarget > 0.0f && fTwoPi * 2.0f > mRollTarget)
+        if (mRollTarget > 0.0f && PblMath::fTwoPi * 2.0f > mRollTarget)
         {
-            mRollTarget = fTwoPi * 2.0f;
+            mRollTarget = PblMath::fTwoPi * 2.0f;
         }
-        else if (0.0f > mRollTarget && mRollTarget > fTwoPi * -2.0f)
+        else if (0.0f > mRollTarget && mRollTarget > PblMath::fTwoPi * -2.0f)
         {
-            mRollTarget = fTwoPi * -2.0f;
+            mRollTarget = PblMath::fTwoPi * -2.0f;
         }
         else if (mRollTarget == 0.0f)
         {
-            mRollTarget = ((PblRandom::GetSim().GetInt() & 1) ? 1.0f : -1.0f) * fTwoPi * 2.0f;
+            mRollTarget = ((PblRandom::GetSim().GetInt() & 1) ? 1.0f : -1.0f) * PblMath::fTwoPi * 2.0f;
         }
     }
     else if (mState != FLYING)
@@ -2533,11 +2532,11 @@ void EntityFlyer::RollUpdate(float fDeltaTime)
             mRoll += fRollSpeed * fDeltaTime;
             if (mRoll > 3.1415927f)
             {
-                mRoll -= fTwoPi;
-                mRollTarget -= fTwoPi;
-                mBankRollAngle -= fTwoPi;
+                mRoll -= PblMath::fTwoPi;
+                mRollTarget -= PblMath::fTwoPi;
+                mBankRollAngle -= PblMath::fTwoPi;
             }
-            if (mRoll < mRollTarget)
+            if (!(mRoll >= mRollTarget))
             {
                 return;
             }
@@ -2547,11 +2546,11 @@ void EntityFlyer::RollUpdate(float fDeltaTime)
             mRoll -= fRollSpeed * fDeltaTime;
             if (-3.1415927f > mRoll)
             {
-                mRoll += fTwoPi;
-                mRollTarget += fTwoPi;
-                mBankRollAngle += fTwoPi;
+                mRoll += PblMath::fTwoPi;
+                mRollTarget += PblMath::fTwoPi;
+                mBankRollAngle += PblMath::fTwoPi;
             }
-            if (mRollTarget < mRoll)
+            if (!(mRollTarget >= mRoll))
             {
                 return;
             }
@@ -2565,31 +2564,29 @@ void EntityFlyer::RollUpdate(float fDeltaTime)
         return;
     }
 
-    if (!(0.25f > (float)fabs((double)mBankRollAngleDelta)))
+    if (0.25f > fabsf(mBankRollAngleDelta))
     {
-        return;
-    }
-    float fAbsTarget = (float)fabs((double)mRollTarget);
-    if (0.001f > (float)fabs((double)(fAbsTarget - 3.1415927f)))
-    {
-        float fSign = 0.0f > mBankRollAngleDelta ? -1.0f : 1.0f;
-        if (mGetSpeedSpeed > GetFlyerMinSpeed() * 0.9f)
+        float fAbsTarget = fabsf(mRollTarget);
+        if (0.001f > fabsf(fAbsTarget - 3.1415927f))
         {
-            RollAdd(fSign * 10.210176f);
+            if (mGetSpeedSpeed > GetFlyerMinSpeed() * 0.9f)
+            {
+                RollAdd((0.0f > mBankRollAngleDelta ? -1.0f : 1.0f) * 10.210176f);
+            }
+            else
+            {
+                RollAdd((0.0f > mBankRollAngleDelta ? -1.0f : 1.0f) * 3.926991f);
+            }
+            return;
         }
-        else
+        if (1.5707964f >= fabsf(fAbsTarget))
         {
-            RollAdd(fSign * 3.926991f);
+            mRollTarget = 0.0f;
         }
-        return;
-    }
-    if (1.5707964f >= fAbsTarget)
-    {
-        mRollTarget = 0.0f;
-    }
-    else
-    {
-        mInRoll = false;
+        else if (mInRoll)
+        {
+            mInRoll = false;
+        }
     }
 }
 

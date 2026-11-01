@@ -429,8 +429,12 @@ bool PblRegion::DoesRayIntersect(const PblVector3& rStart, const PblVector3& rEn
         {
             return false;
         }
-        return (float)fabs(mMatrix.m[2][0] * fWx + mMatrix.m[2][1] * fWy + mMatrix.m[2][2] * fWz) <=
-               mSize.y * fE0 + mSize.x * fE1;
+        if ((float)fabs(mMatrix.m[2][0] * fWx + mMatrix.m[2][1] * fWy + mMatrix.m[2][2] * fWz) >
+            mSize.y * fE0 + mSize.x * fE1)
+        {
+            return false;
+        }
+        return true;
     }
 
     case type_cylinder:
@@ -509,8 +513,7 @@ bool PblRegion::DoesRayIntersect(const PblVector3& rStart, const PblVector3& rEn
     }
 
     case type_plane:
-        return mSize.w > mMatrix.m[2][0] * rStart.x + mMatrix.m[2][1] * rStart.y + mMatrix.m[2][2] * rStart.z
-            && mMatrix.m[2][0] * rEnd.x + mMatrix.m[2][1] * rEnd.y + mMatrix.m[2][2] * rEnd.z > mSize.w;
+        return mSize.w > DotProduct(rStart, mMatrix[2]) && DotProduct(mMatrix[2], rEnd) > mSize.w;
     }
     return false;
 }

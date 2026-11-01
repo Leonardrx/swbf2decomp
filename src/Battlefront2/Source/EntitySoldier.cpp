@@ -8111,7 +8111,7 @@ void EntitySoldier::Move(float fDeltaTime, float fForward, float fStrafe, float 
 {
     if (mFlags & flags_isGrounded)
     {
-        float fDot = DotProduct(mVelocity, mGroundNormal);
+        float fDot = DotProduct(mGroundNormal, mVelocity);
         if (fDot < 0.0f)
         {
             mVelocity -= mGroundNormal * fDot;
@@ -8139,8 +8139,9 @@ void EntitySoldier::Move(float fDeltaTime, float fForward, float fStrafe, float 
     float fSlopeSide = 0.0f;
     if (mFlags & flags_isGrounded)
     {
-        fSlopeFront = -(vFront.y * fDeltaTime * GRAVITY_FORCE);
-        fSlopeSide = -(vSide.y * fDeltaTime * GRAVITY_FORCE);
+        float fGravityStep = fDeltaTime * GRAVITY_FORCE;
+        fSlopeFront = -(vFront.y * fGravityStep);
+        fSlopeSide = -(vSide.y * fGravityStep);
         float fUphill = vFront.y * fForward + vSide.y * fStrafe;
         if (fUphill > 0.0f)
         {

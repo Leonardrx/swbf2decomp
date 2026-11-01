@@ -428,36 +428,28 @@ float CoverHelper::IsHintSuitable_Combat(const BaseHint* pHint) const
     PblVector3 vMeToTarget(vTarget.x - vMe.x, 0.0f, vTarget.z - vMe.z);
     PblVector3 vHint = pHint->GetCollisionCenter();
     float fCosMax = PblMath::Cos(1.0471976f);
-    PblVector3 vTargetToHint(vHint.x - vTarget.x, vHint.y - vTarget.y, vHint.z - vTarget.z);
+    PblVector3 vTargetToHint = vHint - vTarget;
 
-    if (vTargetToHint.x * vMeToTarget.x + vTargetToHint.y * vMeToTarget.y + vTargetToHint.z * vMeToTarget.z >= 0.0f)
+    if (DotProduct(vTargetToHint, vMeToTarget) < 0.0f)
     {
-        return FLT_MAX;
+        PblVector3 vHintToTarget = vTarget - vHint;
+        if (DotProduct(pHint->GetZAxis(), AIUtil::GetSafeNormalXZ(vHintToTarget)) > fCosMax)
+        {
+            float fMaxDist = GetMaxHintDist();
+            float fDistSq = SquaredLengthXZ(vTargetToHint);
+            if (fDistSq < fMaxDist * fMaxDist)
+            {
+                float fNear = AttackPatterns::GetNear(GetMe());
+                if (fDistSq > fNear * fNear)
+                {
+                    float dx = vHint.x - vMe.x;
+                    float dz = vHint.z - vMe.z;
+                    return dz * dz * 2.25f + dx * dx * 2.25f + fDistSq;
+                }
+            }
+        }
     }
-
-    PblVector3 vHintToTarget(vTarget.x - vHint.x, vTarget.y - vHint.y, vTarget.z - vHint.z);
-    PblVector3 vDir = AIUtil::GetSafeNormalXZ(vHintToTarget);
-    const PblVector3& vZ = pHint->GetZAxis();
-    if (vZ.y * vDir.y + vZ.x * vDir.x + vZ.z * vDir.z <= fCosMax)
-    {
-        return FLT_MAX;
-    }
-
-    float fMaxDist = GetMaxHintDist();
-    float fDistSq = vTargetToHint.z * vTargetToHint.z + vTargetToHint.x * vTargetToHint.x;
-    if (fMaxDist * fMaxDist <= fDistSq)
-    {
-        return FLT_MAX;
-    }
-    float fNear = AttackPatterns::GetNear(GetMe());
-    if (fDistSq <= fNear * fNear)
-    {
-        return FLT_MAX;
-    }
-
-    float dx = vHint.x - vMe.x;
-    float dz = vHint.z - vMe.z;
-    return dz * dz * 2.25f + dx * dx * 2.25f + fDistSq;
+    return FLT_MAX;
 }
 
 // FUNCTION: SWBF2 0x00487bd0
