@@ -57,11 +57,13 @@ void __cdecl StreamSource::FileOpComplete(File* pFile, void* pCallbackData,
 
     pThis->mFlags &= ~flags_Reading;
 
-    if (!bSuccess)
+    if (bSuccess)
     {
-        pThis->mFile.Seek(pThis->mSegment.mOffset + pPacket->mPos);
+        pThis->mLock.Signal();
+        return;
     }
 
+    pThis->mFile.Seek(pThis->mSegment.mOffset + pPacket->mPos);
     pThis->mLock.Signal();
 }
 
@@ -115,10 +117,14 @@ void StreamSource::Flush()
     StartFlush();
 
     StreamPacket* pPacket;
-    while ((pPacket = GetPacket(0)) != 0)
+    do
     {
-        pPacket->Unlock();
-    }
+        pPacket = GetPacket(0);
+        if (pPacket != 0)
+        {
+            pPacket->Unlock();
+        }
+    } while (pPacket != 0);
 
     if ((mFlags & flags_LastPacket) != 0
         && GetCurrentPlayState() != playState_stopped)

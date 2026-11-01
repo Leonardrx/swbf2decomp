@@ -392,9 +392,7 @@ bool OrdnanceSticky::CheckCollision()
         if (fHit < 1.0f)
         {
             const float fAlong = fHit * fLength;
-            PblVector3 vHit(vDir.x * fAlong + vStart.x, vDir.y * fAlong + vStart.y,
-                            vDir.z * fAlong + vStart.z);
-            return !Collide(pHitObject, vHit, vNormal, CollisionManager::GetLastRayHitBodyId());
+            return !Collide(pHitObject, vDir * fAlong + vStart, vNormal, CollisionManager::GetLastRayHitBodyId());
         }
     }
     return true;

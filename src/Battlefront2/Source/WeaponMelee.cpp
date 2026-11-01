@@ -2590,19 +2590,19 @@ bool WeaponMelee::OverrideSoldierVelocity(float& fVelocityZ, float& fVelocityX, 
 // FUNCTION: SWBF2 0x00688f10
 bool WeaponMelee::OverrideSoldierEnergyRestore(float& fRestore) const
 {
-    const Combo::State* pState = &m_pCombo->m_aState[m_eComboState];
-    const bool bOverride = pState->m_bEnergyRestoreRateOverride;
-    if (!bOverride && pState->m_iEnergyRestoreRate == 0)
+    const Combo::State& state = m_pCombo->m_aState[m_eComboState];
+    if (!state.m_bEnergyRestoreRateOverride && state.m_iEnergyRestoreRate == 0)
     {
         return false;
     }
-    if (bOverride)
+    const bool bAdditive = !state.m_bEnergyRestoreRateOverride;
+    if (bAdditive)
     {
-        fRestore = (float)pState->m_iEnergyRestoreRate * 0.2f;
+        fRestore = (float)state.m_iEnergyRestoreRate * 0.2f + fRestore;
     }
     else
     {
-        fRestore = (float)pState->m_iEnergyRestoreRate * 0.2f + fRestore;
+        fRestore = (float)state.m_iEnergyRestoreRate * 0.2f;
     }
     return true;
 }

@@ -5828,7 +5828,7 @@ void RedRenderer::internalRenderZPrepassProg1(RenderItem* pItem, unsigned int ui
             const PblBox& box = pItem->pPrim->m_bbox;
             const PblVector3 vSize = (box._vMax - box._vMin) * (1.0f / 65534.0f);
             pRegs[13].SetFloats(vSize.x, vSize.y, vSize.z, 0.0f);
-            const PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
+            const PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
             pRegs[14].SetFloats(vCenter.x, vCenter.y, vCenter.z, 1.0f);
         }
         else
@@ -5879,7 +5879,7 @@ void RedRenderer::internalShaderBeginEnd(RenderItem* pItem, unsigned int uiShade
     bool bNewID = prevId.id != sortId.id;
     bool bNewShader;
     unsigned int uiPrevPass = ((unsigned int)RedRenderer::m_PrevSortID >> 16) & 3;
-    if (uiPrevPass == sortId.t_pass && prevId.t_customID == sortId.t_customID)
+    if (uiPrevPass == sortId.t_pass && (unsigned char)prevId.t_customID == (unsigned char)sortId.t_customID)
     {
         bNewShader = false;
     }
@@ -6075,7 +6075,12 @@ void RedRenderer::pcSetTexture(unsigned int uiStage, const RedTexture* pTexture)
     }
     m_curSetTextures[uiStage] = const_cast<RedTexture*>(pTexture);
 
-    if (pTexture && pTexture->m_uiLastFrameUsed < (unsigned int)RedRenderer::m_frameNumber)
+    if (!pTexture)
+    {
+        m_curSetTextures[uiStage] = 0;
+        return;
+    }
+    if (pTexture->m_uiLastFrameUsed < (unsigned int)RedRenderer::m_frameNumber)
     {
         const_cast<RedTexture*>(pTexture)->m_uiLastFrameUsed = RedRenderer::m_frameNumber;
         // GLOBAL: SWBF2 0x008eed68
@@ -6133,45 +6138,41 @@ void dx::StateManager_DX::FlushState()
             }
             break;
         case 9:
+        {
             m_pD3DDev->SetTransform((D3DTRANSFORMSTATETYPE)pState->m_dwValue0,
                                     (const D3DMATRIX*)m_CurrentState.m_Matrices[pState->m_dwValue0]);
-            memcpy(m_ChipState.m_Matrices[pState->m_dwValue0], m_CurrentState.m_Matrices[pState->m_dwValue0],
-                   sizeof(m_ChipState.m_Matrices[0]));
+            const D3DMATRIX matrix = *(const D3DMATRIX*)m_CurrentState.m_Matrices[pState->m_dwValue0];
+            memcpy(m_ChipState.m_Matrices[pState->m_dwValue0], &matrix, sizeof(D3DMATRIX));
             break;
+        }
         case 10:
+        {
+            const float* pChip = m_ChipState.m_VertexShaderConstants[pState->m_dwValue0];
             if (m_bForce
-                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][0]
-                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][0]
-                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][1]
-                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][1]
-                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][2]
-                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][2]
-                || m_ChipState.m_VertexShaderConstants[pState->m_dwValue0][3]
-                       != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][3])
+                || pChip[0] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][0]
+                || pChip[1] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][1]
+                || pChip[2] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][2]
+                || pChip[3] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][3])
             {
-                m_pD3DDev->SetVertexShaderConstantF(pState->m_dwValue0,
-                                                    m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 1);
-                memcpy(m_ChipState.m_VertexShaderConstants[pState->m_dwValue0],
-                       m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 16);
+                m_pD3DDev->SetVertexShaderConstantF(pState->m_dwValue0, m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 1);
+                memcpy(m_ChipState.m_VertexShaderConstants[pState->m_dwValue0], m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 16);
             }
             break;
+        }
         case 11:
+        {
+            const float* pChip = m_ChipState.m_PixelShaderConstants[pState->m_dwValue0];
             if (m_bForce
-                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][0]
-                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][0]
-                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][1]
-                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][1]
-                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][2]
-                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][2]
-                || m_ChipState.m_PixelShaderConstants[pState->m_dwValue0][3]
-                       != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][3])
+                || pChip[0] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][0]
+                || pChip[1] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][1]
+                || pChip[2] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][2]
+                || pChip[3] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][3])
             {
-                m_pD3DDev->SetPixelShaderConstantF(pState->m_dwValue0,
-                                                   m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 1);
-                memcpy(m_ChipState.m_PixelShaderConstants[pState->m_dwValue0],
-                       m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 16);
+                m_pD3DDev->SetPixelShaderConstantF(pState->m_dwValue0, m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 1);
+                memcpy(m_ChipState.m_PixelShaderConstants[pState->m_dwValue0], m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 16);
             }
             break;
+        }
         case 12:
             if (m_bForce
                 || m_ChipState.m_StreamData[pState->m_dwStage].m_pStreamData
@@ -6610,14 +6611,13 @@ void RedRenderer::pcSetFogForBlendMode(FOGFORBLEND_MODE eMode)
         return;
     }
 
-    RedColor color;
     switch (eMode)
     {
     case FOGFORBLEND_ADD:
         pcSetRenderState(D3DRS_FOGCOLOR, 0xFF000000);
-        return;
+        break;
     case FOGFORBLEND_MODULATE:
-        color = RedColor::WHITE * m_lightingScaleColor;
+        pcSetRenderState(D3DRS_FOGCOLOR, (RedColor::WHITE * m_lightingScaleColor).GetARGB());
         break;
     case FOGFORBLEND_MODULATE2X:
     {
@@ -6626,15 +6626,13 @@ void RedRenderer::pcSetFogForBlendMode(FOGFORBLEND_MODE eMode)
         grey.g = 0x80;
         grey.r = 0x80;
         grey.a = 0xFF;
-        color = grey * m_lightingScaleColor;
+        pcSetRenderState(D3DRS_FOGCOLOR, (grey * m_lightingScaleColor).GetARGB());
         break;
     }
     default:
-        color = RedRenderer::m_colorFog * m_lightingScaleColor;
+        pcSetRenderState(D3DRS_FOGCOLOR, (RedRenderer::m_colorFog * m_lightingScaleColor).GetARGB());
         break;
     }
-    pcSetRenderState(D3DRS_FOGCOLOR,
-                     (((((unsigned int)color.a << 8) | color.r) << 8 | color.g) << 8) | color.b);
 }
 
 // FUNCTION: SWBF2 0x006b94a0

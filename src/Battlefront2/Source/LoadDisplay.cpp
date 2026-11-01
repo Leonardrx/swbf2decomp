@@ -1233,12 +1233,11 @@ void LoadDisplay::ProgressIndicator::Init(int iNumLEDs, float fSpacing,
         m_pLED[i].SetPosition(fX, 0.0f);
 
         const float fIntensity = m_pIntensity[m_curOnLED];
-        const RedColor& onColor = m_pColor[m_curOnLED];
         RedColor color;
-        color.b = (unsigned char)(int)(onColor.b * fIntensity);
-        color.g = (unsigned char)(int)(onColor.g * fIntensity);
-        color.r = (unsigned char)(int)(onColor.r * fIntensity);
-        color.a = onColor.a;
+        color.b = (unsigned char)(int)(m_pColor[m_curOnLED].b * fIntensity);
+        color.g = (unsigned char)(int)(m_pColor[m_curOnLED].g * fIntensity);
+        color.r = (unsigned char)(int)(m_pColor[m_curOnLED].r * fIntensity);
+        color.a = m_pColor[m_curOnLED].a;
         m_pLED[i].SetColor(color);
 
         AddElement(&m_pLED[i]);

@@ -85,7 +85,7 @@ void AI::AIGoal::UnAssignAll()
 {
     for (PblList<Character>::Itor itor(mUnitList); itor; ++itor)
     {
-        UnitController* pController = itor->GetControllable() ? UnitControllerPtr(itor->GetControllable()->mCtrl) : 0;
+        UnitController* pController = !itor->GetControllable() ? 0 : UnitControllerPtr(itor->GetControllable()->mCtrl);
         if (pController)
         {
             PblHandle<GameObject> hNone;

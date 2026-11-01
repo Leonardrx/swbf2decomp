@@ -149,8 +149,7 @@ float RedRegion::GetIntersectionFactor(const PblVector3& vCenter, float fRadius)
     }
     case type_plane:
     {
-        float fDist = vCenter.x * mMatrix.m[2][0] + vCenter.y * mMatrix.m[2][1] +
-                      vCenter.z * mMatrix.m[2][2] - mSize.w;
+        float fDist = DotProduct(vCenter, mMatrix.GetZAxis()) - mSize.w;
         if (fDist >= fRadius)
         {
             return 0.0f;
@@ -226,33 +225,31 @@ const char* RedRegionFactory::GetPrefix() const
 // FUNCTION: SWBF2 0x006dce20
 bool RedRegion::IsVisible(const RedCamera* pCamera, float fExtra) const
 {
-    const PblVector3& vPos = mMatrix.GetTranslation();
-
     switch (mType)
     {
     case type_sphere:
-        return pCamera->ClassifySphere(vPos, fExtra + mSize.w, -1.0f) != RedCamera::VISIBILITY_NONE;
+        return pCamera->ClassifySphere(mMatrix.GetTranslation(), fExtra + mSize.w, -1.0f) != RedCamera::VISIBILITY_NONE;
     case type_box:
         return pCamera->ClassifyBox(mMatrix, PblVector3(fExtra + mSize.x, mSize.y + fExtra,
                                                         mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
-    case type_cylinder:
-        return pCamera->ClassifyBox(mMatrix, PblVector3(mSize.x + fExtra, mSize.y + fExtra,
-                                                        mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
+    case type_box_aligned:
+        return pCamera->ClassifyAABox(mMatrix.GetTranslation(), PblVector3(fExtra + mSize.x, mSize.y + fExtra,
+                                                                           mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
     case type_plane:
         return pCamera->ClassifyPlane(mMatrix.GetZAxis(),
                                       fExtra + mSize.w) != RedCamera::VISIBILITY_NONE;
-    case type_box_aligned:
-        return pCamera->ClassifyAABox(vPos, PblVector3(fExtra + mSize.x, mSize.y + fExtra,
-                                                       mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
-    case type_cylinder_xaligned:
-        return pCamera->ClassifyAABox(vPos, PblVector3(mSize.y + fExtra, mSize.x + fExtra,
-                                                       mSize.x + fExtra)) != RedCamera::VISIBILITY_NONE;
+    case type_cylinder:
+        return pCamera->ClassifyBox(mMatrix, PblVector3(mSize.x + fExtra, mSize.y + fExtra,
+                                                        mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
     case type_cylinder_yaligned:
-        return pCamera->ClassifyAABox(vPos, PblVector3(mSize.x + fExtra, mSize.y + fExtra,
-                                                       mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
+        return pCamera->ClassifyAABox(mMatrix.GetTranslation(), PblVector3(mSize.x + fExtra, mSize.y + fExtra,
+                                                                           mSize.z + fExtra)) != RedCamera::VISIBILITY_NONE;
+    case type_cylinder_xaligned:
+        return pCamera->ClassifyAABox(mMatrix.GetTranslation(), PblVector3(mSize.y + fExtra, mSize.x + fExtra,
+                                                                           mSize.x + fExtra)) != RedCamera::VISIBILITY_NONE;
     case type_cylinder_zaligned:
-        return pCamera->ClassifyAABox(vPos, PblVector3(mSize.x + fExtra, mSize.x + fExtra,
-                                                       mSize.y + fExtra)) != RedCamera::VISIBILITY_NONE;
+        return pCamera->ClassifyAABox(mMatrix.GetTranslation(), PblVector3(mSize.x + fExtra, mSize.x + fExtra,
+                                                                           mSize.y + fExtra)) != RedCamera::VISIBILITY_NONE;
     }
     return false;
 }

@@ -82,9 +82,9 @@ void MuzzleFlashRenderer::Render(int)
     for (int i = 0; i < mNumMuzzleFlashes; i++)
     {
         const MuzzleFlashData& data = mMuzzleFlashData[mCurrentBuffer][i];
-        RedColor color = data.mColor;
-        const float fDot = data.mDir.x * mCamera.m[2][0] + data.mDir.y * mCamera.m[2][1] +
+        const float fDot = data.mDir.y * mCamera.m[2][1] + data.mDir.x * mCamera.m[2][0] +
                            data.mDir.z * mCamera.m[2][2];
+        RedColor color = data.mColor;
         const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
         color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 255.0f);
         if (color.a)
@@ -95,9 +95,9 @@ void MuzzleFlashRenderer::Render(int)
     for (int i = 0; i < mOldNumMuzzleFlashes; i++)
     {
         const MuzzleFlashData& data = mMuzzleFlashData[1 - mCurrentBuffer][i];
-        RedColor color = data.mColor;
-        const float fDot = data.mDir.x * mCamera.m[2][0] + data.mDir.y * mCamera.m[2][1] +
+        const float fDot = data.mDir.y * mCamera.m[2][1] + data.mDir.x * mCamera.m[2][0] +
                            data.mDir.z * mCamera.m[2][2];
+        RedColor color = data.mColor;
         const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
         color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 128.0f);
         if (color.a)

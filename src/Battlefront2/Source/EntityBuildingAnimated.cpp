@@ -289,8 +289,7 @@ void EntityBuildingAnimated::Init()
             {
                 fGrow = _Sphere.w;
             }
-            SetRenderPos(PblVector3(vDir.x * fGrow + _Sphere.x, vDir.y * fGrow + _Sphere.y,
-                                    vDir.z * fGrow + _Sphere.z));
+            SetRenderPos(GetRenderPos() + vDir * fGrow);
             SetRenderRadius(_Sphere.w + fGrow);
             SetTestBBox(false);
         }

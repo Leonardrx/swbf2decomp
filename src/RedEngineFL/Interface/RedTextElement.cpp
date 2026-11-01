@@ -517,7 +517,8 @@ int RedTextElement::WriteCache(const unsigned short* pcText)
                     continue;
                 }
 
-                const RedFont::Glyph* pGlyph = m_pFont->FindGlyph(*pc);
+                const RedFont* pFont = m_pFont;
+                const RedFont::Glyph* pGlyph = pFont->FindGlyph(*pc);
                 if (!pGlyph)
                 {
                     continue;
@@ -535,7 +536,7 @@ int RedTextElement::WriteCache(const unsigned short* pcText)
 
                 const int iAdvance = (int)(pGlyph->width * fScaleX + 0.5f);
 
-                if (m_pFont->IsPrintingChar(*pc))
+                if (pFont->IsPrintingChar(*pc))
                 {
                     if (m_clip == 0 && m_uiWidth != 0
                         && iAdvance + iX > (int)m_uiWidth)

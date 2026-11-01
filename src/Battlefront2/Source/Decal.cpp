@@ -175,13 +175,14 @@ void DecalManager::Render(int value)
             const float fZ = pDecal->vPos.z - mCamera.m[3][2];
             const float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
 
-            static float sFadeRange = 50.0f;
-            if (fDist < 100.0f)
+            const float fMaxDistance = 100.0f;
+            static float sFadeRange = fMaxDistance * 0.5f;
+            if (fDist < fMaxDistance)
             {
                 itClass->m_totalFrameVertices += pDecal->numVertices;
                 itClass->m_totalFrameIndices += pDecal->numIndices;
                 ++itClass->m_totalVisible;
-                float fFade = (100.0f - fDist) / sFadeRange;
+                float fFade = (fMaxDistance - fDist) / sFadeRange;
                 if (fFade < 0.0f)
                 {
                     fFade = 0.0f;

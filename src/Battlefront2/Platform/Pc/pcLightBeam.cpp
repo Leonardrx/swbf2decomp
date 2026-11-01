@@ -53,10 +53,10 @@ static bool InitStaticData()
     *pIndex++ = 3;
     *pIndex++ = 9;
     *pIndex++ = 9;
-    for (i = 10; i < 16; i++)
+    for (i = 0; i < 6; i++)
     {
-        *pIndex++ = i - 7;
-        *pIndex++ = i;
+        *pIndex++ = i + 3;
+        *pIndex++ = i + 10;
     }
     *pIndex++ = 15;
     *pIndex++ = 15;
@@ -67,9 +67,9 @@ static bool InitStaticData()
     }
 
     s_afBeamAlpha[0] = 0.0f;
-    for (int iRing = 0; iRing < 6; iRing++)
+    for (i = 0; i < 6; i++)
     {
-        const float f = (float)iRing;
+        const float f = (float)i;
 
         float x = (f + 0.5f) * (1.0f / 3.0f) - 1.0f;
         if (x < 0.001f)
@@ -80,12 +80,12 @@ static bool InitStaticData()
         {
             x += 1.0f / 18.0f;
         }
-        s_avBeamRadius[iRing] = PblVector3(x, (float)sqrt((double)(1.0f - x * x)), 0.0f);
+        s_avBeamRadius[i] = PblVector3(x, (float)sqrt((double)(1.0f - x * x)), 0.0f);
 
         float a = f * 0.4f - 1.0f;
-        s_afBeamAlpha[2 * iRing + 1] = (float)sqrt((double)(1.0f - a * a));
+        s_afBeamAlpha[2 * i + 1] = (float)sqrt((double)(1.0f - a * a));
         a = (f + 1.0f) * (1.0f / 3.0f) - 1.0f;
-        s_afBeamAlpha[2 * iRing + 2] = (float)sqrt((double)(1.0f - a * a));
+        s_afBeamAlpha[2 * i + 2] = (float)sqrt((double)(1.0f - a * a));
     }
 
     pIndex = s_auiHaloIndices;
@@ -100,22 +100,22 @@ static bool InitStaticData()
         *pIndex++ = 0;
     }
     *pIndex++ = 1;
-    for (i = 17; i < 33; i++)
+    for (i = 0; i < 16; i++)
     {
-        *pIndex++ = i - 16;
-        *pIndex++ = i;
+        *pIndex++ = i + 1;
+        *pIndex++ = i + 17;
     }
     *pIndex++ = 1;
     *pIndex++ = 17;
 
     const float fStep = PblMath::fTwoPi * (1.0f / 16.0f);
-    for (int iSide = 0; iSide < 16; iSide++)
+    for (i = 0; i < 16; i++)
     {
         float fSin, fCos;
-        PblMath::SinCos(&fSin, &fCos, (float)iSide * fStep);
-        s_avHaloRadius[iSide] = PblVector3(-fSin, fCos, 0.0f);
-        PblMath::SinCos(&fSin, &fCos, ((float)iSide + 0.5f) * fStep);
-        s_avHaloRadius[16 + iSide] = PblVector3(-fSin, fCos, 0.0f);
+        PblMath::SinCos(&fSin, &fCos, (float)i * fStep);
+        s_avHaloRadius[i] = PblVector3(-fSin, fCos, 0.0f);
+        PblMath::SinCos(&fSin, &fCos, ((float)i + 0.5f) * fStep);
+        s_avHaloRadius[16 + i] = PblVector3(-fSin, fCos, 0.0f);
     }
 
     return true;

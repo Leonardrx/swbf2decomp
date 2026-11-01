@@ -810,8 +810,9 @@ float RedWater::RayHit(const PblVector3& vStart, const PblVector3& vDir, float f
                 {
                     fPatchX = fMax;
                 }
+                int iX = (int)fPatchX;
                 float fPatchZ = Clamp((m_worldCenterZ + fZ) * m_patchesPerMeter, 0.0f, fMax);
-                if (WaterExists((int)fPatchX, (int)fPatchZ))
+                if (WaterExists(iX, (int)fPatchZ))
                 {
                     if (!(t > fLength))
                     {
@@ -1122,9 +1123,7 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
             float fInv = 1.0f / (fCur - fPrev);
             float fA = fInv * fCur;
             float fB = fInv * fPrev;
-            vVerts[iNumVerts++] = PblVector3(s_screenCorners[iPrev].x * fA - s_screenCorners[i].x * fB,
-                                             s_screenCorners[iPrev].y * fA - s_screenCorners[i].y * fB,
-                                             s_screenCorners[iPrev].z * fA - s_screenCorners[i].z * fB);
+            vVerts[iNumVerts++] = s_screenCorners[iPrev] * fA - s_screenCorners[i] * fB;
         }
         if (fCur <= 0.0f)
         {

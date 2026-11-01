@@ -44,17 +44,16 @@ Source3D::Source3D(Properties* pProps)
 // FUNCTION: SWBF2 0x0073b050
 void Source3D::CalculateGain(float& rfGain) const
 {
-    const Properties* pProps = mProps;
     float fDistance = mDistanceLength;
-    float rollInDistance = pProps->mRollInDistance;
-    float minDistance = pProps->mMinDistance;
-    float maxDistance = pProps->mMaxDistance;
+    float rollInDistance = mProps->mRollInDistance;
+    float minDistance = mProps->mMinDistance;
+    float maxDistance = mProps->mMaxDistance;
 
     if (rollInDistance > fDistance)
     {
         float fOffset = rollInDistance - fDistance;
         rfGain = (rollInDistance - fOffset)
-               / (pProps->mRollOffFactor * mClosestListener->mRollOffFactor
+               / (mProps->mRollOffFactor * mClosestListener->mRollOffFactor
                     * fOffset
                   + rollInDistance);
     }
@@ -64,7 +63,7 @@ void Source3D::CalculateGain(float& rfGain) const
         rfGain = 1.0f;
     }
 
-    else if (fDistance >= pProps->mMuteDistance)
+    else if (fDistance >= mProps->mMuteDistance)
     {
         rfGain = 0.0f;
     }
@@ -73,7 +72,7 @@ void Source3D::CalculateGain(float& rfGain) const
         float fOffset = fDistance - minDistance;
         float fRange = maxDistance - minDistance;
         rfGain = (fRange - fOffset)
-               / (pProps->mRollOffFactor * mClosestListener->mRollOffFactor
+               / (mProps->mRollOffFactor * mClosestListener->mRollOffFactor
                     * fOffset
                   + fRange);
     }
@@ -90,15 +89,15 @@ void Source3D::CalculateGain(float& rfGain) const
     const ::PblVector3 right = pListener->mRight;
     const ::PblVector3 front = *pListener->mFront;
 
-    float fRight = right.x * vDirection.x
-                 + right.y * vDirection.y
-                 + right.z * vDirection.z;
+    float fRight = right.y * vDirection.y
+                 + vDirection.x * right.x
+                 + vDirection.z * right.z;
     float fCone = 1.0f - (float)fabs((double)fRight) * 2.0f;
 
-    float fFront = front.x * vDirection.x
-                 + front.y * vDirection.y
-                 + front.z * vDirection.z;
-    fCone *= -fFront;
+    float fFront = -(front.x * vDirection.x
+                     + front.y * vDirection.y
+                     + front.z * vDirection.z);
+    fCone *= fFront;
 
     if (mProps->mOffCentreGain > fCone)
     {
@@ -134,7 +133,7 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
         CalculateNormalizedDirection(vDirection);
 
         const ::PblVector3 vRight = mClosestListener->mRight;
-        const float fRawDot = vDirection.x * vRight.x + vDirection.y * vRight.y + vDirection.z * vRight.z;
+        const float fRawDot = vDirection.x * vRight.x + vRight.y * vDirection.y + vRight.z * vDirection.z;
         const float fDot = (fRawDot < -1.0f) ? -1.0f : ((fRawDot > 1.0f) ? 1.0f : fRawDot);
 
         float fLeft = 0.5f - fDot * 0.5f;
@@ -184,11 +183,13 @@ void Source3D::CalculateGain(float fGain, float fReverbGain, GainMatrix& rMatrix
     case EngineBase::speakerConfig_5point1:
     case EngineBase::speakerConfig_7point1:
     {
-        const float fLeft = 1.0f - fRight;
-        rMatrix.frontRight = fRight * fTotal;
-        rMatrix.rearRight = fRight * fTotal;
-        rMatrix.frontLeft = fLeft * fTotal;
-        rMatrix.rearLeft = fLeft * fTotal;
+        float fLeft = 1.0f - fRight;
+        fRight *= fTotal;
+        fLeft *= fTotal;
+        rMatrix.frontRight = fRight;
+        rMatrix.rearRight = fRight;
+        rMatrix.frontLeft = fLeft;
+        rMatrix.rearLeft = fLeft;
         return;
     }
 

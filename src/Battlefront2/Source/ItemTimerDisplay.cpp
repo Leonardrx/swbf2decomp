@@ -186,14 +186,14 @@ bool ItemTimerDisplay::DisplayThread::Update(float fDeltaTime)
         PblVector3 vDelta(vPos.x - vCamPos.x, vPos.y - vCamPos.y, vPos.z - vCamPos.z);
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
-        if (vDir.y * -mCamera.m[2][1] + vDir.x * -mCamera.m[2][0] + vDir.z * -mCamera.m[2][2] <= 0.0f)
+        if (DotProduct(vDir, -mCamera.GetZAxis()) <= 0.0f)
         {
             continue;
         }
 
-        float fDist = PblMath::Sqrt((vPos.x - vCamPos.x) * (vPos.x - vCamPos.x) +
-                            (vPos.y - vCamPos.y) * (vPos.y - vCamPos.y) +
-                            (vPos.z - vCamPos.z) * (vPos.z - vCamPos.z));
+        float fDist = PblMath::Sqrt((vPos.y - vCamPos.y) * (vPos.y - vCamPos.y) +
+                                    (vPos.x - vCamPos.x) * (vPos.x - vCamPos.x) +
+                                    (vPos.z - vCamPos.z) * (vPos.z - vCamPos.z));
         unsigned char uAlpha = 0xff;
         if (fDist > 20.0f)
         {

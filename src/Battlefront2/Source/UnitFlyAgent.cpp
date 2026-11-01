@@ -338,7 +338,8 @@ bool UnitFlyAgent::IsNearATAT()
             return false;
         }
         pFlyer->mAIEng.ai.mReactionThinkTime = 4.75f;
-        if (pFlyer->mClass->mCircleATATFrequency < PblRandom::GetGlobalFloat())
+        const float fFrequency = pFlyer->mClass->mCircleATATFrequency;
+        if (fFrequency < PblRandom::GetGlobalFloat())
         {
             return false;
         }
@@ -377,7 +378,10 @@ bool UnitFlyAgent::IsNearATAT()
         if (pFlyer->mTowCableWalker)
         {
             const PblVector3 vCircle = pFlyer->mPointToCircle;
-            if (SquaredLength(vCircle - vATAT) > 2500.0f)
+            const float dx = vCircle.x - vATAT.x;
+            const float dy = vCircle.y - vATAT.y;
+            const float dz = vCircle.z - vATAT.z;
+            if (dx * dx + dy * dy + dz * dz > 2500.0f)
             {
                 bFree = false;
             }
@@ -387,8 +391,8 @@ bool UnitFlyAgent::IsNearATAT()
         {
             const PblVector3& vFwd = pATAT->GetMatrix().GetZAxis();
             const bool bWasCircling = pFlyer->mbCirclingPoint;
-            pFlyer->mbCirclingPoint = true;
             vATAT += vFwd * 0.0f;
+            pFlyer->mbCirclingPoint = true;
             pFlyer->mPointToCircle = vATAT;
             if (!bWasCircling)
             {

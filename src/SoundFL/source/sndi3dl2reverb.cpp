@@ -27,70 +27,74 @@ I3DL2Reverb::I3DL2Reverb()
 // FUNCTION: SWBF2 0x0073bbb0
 bool I3DL2Reverb::Read(PblFileChunk& chunk, unsigned int uiPropertyID)
 {
+    bool bHandled = true;
     switch (uiPropertyID)
     {
     case 0x5676AB7Du:
         chunk._pFile->Read8();
         mRoomGain = Clamp(chunk._pFile->ReadFloat(), 0.0f, 1.0f);
         mFlags |= flags_roomGainChanged;
-        return true;
+        break;
     case 0x89695A93u:
         chunk._pFile->Read8();
         mRoomHFGain = Clamp(chunk._pFile->ReadFloat(), 0.0f, 1.0f);
         mFlags |= flags_roomHFGainChanged;
-        return true;
+        break;
     case 0xB3571EDAu:
         chunk._pFile->Read8();
         mRoomRollOff = Clamp(chunk._pFile->ReadFloat(), 0.0f, 10.0f);
         mFlags |= flags_roomRollOffChanged;
-        return true;
+        break;
     case 0x1C098B3Cu:
         chunk._pFile->Read8();
         mDecayTime = Clamp(chunk._pFile->ReadFloat(), 0.01f, 20.0f);
         mFlags |= flags_decayTimeChanged;
-        return true;
+        break;
     case 0x80D9B27Eu:
         chunk._pFile->Read8();
         mDecayHFRatio = Clamp(chunk._pFile->ReadFloat(), 0.01f, 2.0f);
         mFlags |= flags_decayHFRatioChanged;
-        return true;
+        break;
     case 0xF2C65989u:
         chunk._pFile->Read8();
         mERGain = Clamp(chunk._pFile->ReadFloat(), 0.0f, 1.0f);
         mFlags |= flags_erGainChanged;
-        return true;
+        break;
     case 0xBE463E19u:
         chunk._pFile->Read8();
         mERDelay = Clamp(chunk._pFile->ReadFloat(), 0.0f, 0.3f);
         mFlags |= flags_erDelayChanged;
-        return true;
+        break;
     case 0x6C408CFEu:
         chunk._pFile->Read8();
         mReverbGain = Clamp(chunk._pFile->ReadFloat(), 0.0f, 10.0f);
         mFlags |= flags_reverbGainChanged;
-        return true;
+        break;
     case 0xB2F683D8u:
         chunk._pFile->Read8();
         mReverbDelay = Clamp(chunk._pFile->ReadFloat(), 0.0f, 0.1f);
         mFlags |= flags_reverbDelayChanged;
-        return true;
+        break;
     case 0xC8A3E804u:
         chunk._pFile->Read8();
         mDiffusion = Clamp(chunk._pFile->ReadFloat(), 0.0f, 100.0f);
         mFlags |= flags_diffusionChanged;
-        return true;
+        break;
     case 0x72B9059Bu:
         chunk._pFile->Read8();
         mDensity = Clamp(chunk._pFile->ReadFloat(), 0.0f, 100.0f);
         mFlags |= flags_densityChanged;
-        return true;
+        break;
     case 0xE1A099A8u:
         chunk._pFile->Read8();
         mHFReference = Clamp(chunk._pFile->ReadFloat(), 20.0f, 20000.0f);
         mFlags |= flags_hrReferenceChanged;
-        return true;
+        break;
+    default:
+        bHandled = false;
+        break;
     }
-    return false;
+    return bHandled;
 }
 
 }

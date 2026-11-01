@@ -162,7 +162,8 @@ HUD::ElementMap* HUD::ElementMap::FindByIndex(int iIndex)
     for (PblListSingle::Node* pNode = HUD::ElementMap::sMapList.mHead.mNext;
          pNode != &HUD::ElementMap::sMapList.mHead; pNode = pNode->mNext, ++i)
     {
-        HUD::ElementMap* pMap = (HUD::ElementMap*)((char*)pNode - offsetof(HUD::ElementMap, mMapNode));
+        HUD::ElementMap* pMap = (HUD::ElementMap*)pNode->GetObjectA(&HUD::ElementMap::sMapList,
+                                                                     offsetof(HUD::ElementMap, mMapNode));
         if (i == iIndex)
         {
             return pMap;
@@ -3658,24 +3659,23 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
     float fLength = 0.0f;
     pKeys[0].length = 0.0f;
     pKeys[0].segmentIndex = 0;
-    LengthEntryT* pKey = pKeys + 1;
+    int iKey = 1;
     for (int i = 1; i < iNumPoints; ++i)
     {
         PblMatrix mStart(pPath->GetPointRotation(i - 1), pPath->GetPointPosition(i - 1));
         PblMatrix mEnd(pPath->GetPointRotation(i), pPath->GetPointPosition(i));
-        PblHermiteVector3& segment = pSegments[i - 1];
-        segment.Set(mStart.GetTranslation(), mEnd.GetTranslation(), mStart.GetZAxis(), mEnd.GetZAxis(), 1.0f);
+        pSegments[i - 1].Set(mStart.GetTranslation(), mEnd.GetTranslation(), mStart.GetZAxis(), mEnd.GetZAxis(), 1.0f);
         for (int j = 0; j < 10; ++j)
         {
-            PblVector3 vFrom = segment.getValue((float)j / 10.0f);
-            PblVector3 vTo = segment.getValue((float)(j + 1) / 10.0f);
+            PblVector3 vFrom = pSegments[i - 1].getValue((float)j / 10.0f);
+            PblVector3 vTo = pSegments[i - 1].getValue((float)(j + 1) / 10.0f);
             float fDX = vTo.x - vFrom.x;
             float fDY = vTo.y - vFrom.y;
             float fDZ = vTo.z - vFrom.z;
             fLength += PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
-            pKey->length = fLength;
-            pKey->segmentIndex = i - 1;
-            ++pKey;
+            pKeys[iKey].length = fLength;
+            pKeys[iKey].segmentIndex = i - 1;
+            ++iKey;
         }
     }
 
@@ -3691,7 +3691,7 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
         PblMatrix mPath = DirectionMatrix(vDir, vPathUp, vPosition);
 
         PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
-        float fOffsetLength = PblMath::Sqrt(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
+        float fOffsetLength = sqrtf(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
         float fRadius = PblRandom::GetSim().GetFloat() * fDensity;
         PblVector3 vOffset(vUnit.x / fOffsetLength * fRadius, vUnit.y / fOffsetLength * fRadius, 0.0f);
         vPosition = mPath.ApplyTransform(vOffset);

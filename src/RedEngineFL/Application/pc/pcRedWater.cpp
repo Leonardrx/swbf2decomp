@@ -1590,6 +1590,7 @@ static RedColor ReadColor(PblConfig::Data& data)
         f = 255.0f;
     }
     color.b = (unsigned char)(int)f;
+    unsigned char alpha;
     if (data.GetNumArgs() > 3)
     {
         float fAlpha = data.GetFloatArg(3);
@@ -1606,12 +1607,13 @@ static RedColor ReadColor(PblConfig::Data& data)
         {
             fClamped = fAlpha;
         }
-        color.a = (unsigned char)(int)fClamped;
+        alpha = (unsigned char)(int)fClamped;
     }
     else
     {
-        color.a = 255;
+        alpha = 255;
     }
+    color.a = alpha;
     return color;
 }
 
@@ -1698,88 +1700,84 @@ void* RedWater::PlatformReadCustomPatch(PblFileChunk* pChunk)
     }
 
     PblFileChunk patch = pChunk->ReadNextChild();
-    if (patch._iId != 0x4354504C)
+    pcRedPrimitive* pPrimitive = 0;
+    if (patch._iId == 0x4354504C)
     {
-        return 0;
-    }
+        PblBox bbox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        pcRedVertexBuffer* pVertexBuffer = 0;
+        pcRedIndexBuffer* pIndexBuffer = 0;
+        unsigned int uiVertexFormat = 0;
+        unsigned int uiNumVertices = 0;
+        unsigned int uiStartVertex = 0;
+        unsigned int uiStartIndex = 0;
+        unsigned int uiNumIndices = 0;
 
-    PblBox bbox;
-    bbox._vMin.x = bbox._vMin.y = bbox._vMin.z = 0.0f;
-    bbox._vMax.x = bbox._vMax.y = bbox._vMax.z = 0.0f;
-    pcRedVertexBuffer* pVertexBuffer = 0;
-    pcRedIndexBuffer* pIndexBuffer = 0;
-    unsigned int uiVertexFormat = 0;
-    unsigned int uiNumVertices = 0;
-    unsigned int uiStartVertex = 0;
-    unsigned int uiStartIndex = 0;
-    unsigned int uiNumIndices = 0;
-
-    while (patch.HasMoreChildren())
-    {
-        PblFileChunk child = patch.ReadNextChild();
-        switch (child._iId)
+        while (patch.HasMoreChildren())
         {
-        case 0x46554249:
-            uiNumIndices = child._pFile->Read32();
-            if (uiNumIndices)
+            PblFileChunk child = patch.ReadNextChild();
+            switch (child._iId)
             {
-                pIndexBuffer = pcRedIndexBuffer::Create(uiNumIndices, true, true);
-                unsigned short* pIndices = pIndexBuffer->Lock(uiNumIndices, uiStartIndex);
-                child._pFile->ReadData(pIndices, uiNumIndices * 2);
-                pIndexBuffer->Unlock();
-            }
-            break;
-        case 0x46554256:
-        {
-            unsigned int uiCount = child._pFile->Read32();
-            unsigned int uiStride = child._pFile->Read32();
-            unsigned int uiFormat = child._pFile->Read32();
-            if (!pVertexBuffer &&
-                (RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ||
-                 !(uiFormat & 0xF000)))
-            {
-                uiNumVertices = uiCount;
-                uiVertexFormat = uiFormat;
-                if (uiCount)
+            case 0x46554249:
+                uiNumIndices = child._pFile->Read32();
+                if (uiNumIndices)
                 {
-                    pVertexBuffer = pcRedVertexBuffer::Create(uiCount, uiStride, true, true);
-                    void* pVertices = pVertexBuffer->Lock(uiCount, uiStartVertex);
-                    child._pFile->ReadData(pVertices, uiStride * uiCount);
-                    pVertexBuffer->Unlock();
+                    pIndexBuffer = pcRedIndexBuffer::Create(uiNumIndices, true, true);
+                    unsigned short* pIndices = pIndexBuffer->Lock(uiNumIndices, uiStartIndex);
+                    child._pFile->ReadData(pIndices, uiNumIndices * 2);
+                    pIndexBuffer->Unlock();
                 }
+                break;
+            case 0x46554256:
+            {
+                unsigned int uiCount = child._pFile->Read32();
+                unsigned int uiStride = child._pFile->Read32();
+                unsigned int uiFormat = child._pFile->Read32();
+                if (!pVertexBuffer &&
+                    (RedRenderer::pcGetGeometryMode() != GEOMETRYMODE_UNCOMPRESSED ||
+                     !(uiFormat & 0xF000)))
+                {
+                    uiNumVertices = uiCount;
+                    uiVertexFormat = uiFormat;
+                    if (uiCount)
+                    {
+                        pVertexBuffer = pcRedVertexBuffer::Create(uiCount, uiStride, true, true);
+                        void* pVertices = pVertexBuffer->Lock(uiCount, uiStartVertex);
+                        child._pFile->ReadData(pVertices, uiStride * uiCount);
+                        pVertexBuffer->Unlock();
+                    }
+                }
+                break;
             }
-            break;
+            case 0x4F464E49:
+            {
+                float fMinX = child._pFile->ReadFloat();
+                float fMaxX = child._pFile->ReadFloat();
+                float fMinY = child._pFile->ReadFloat();
+                float fMaxY = child._pFile->ReadFloat();
+                PblBox info;
+                info._vMin.x = fMinX;
+                info._vMin.y = fMinY;
+                info._vMin.z = child._pFile->ReadFloat();
+                info._vMax.x = fMaxX;
+                info._vMax.y = fMaxY;
+                info._vMax.z = child._pFile->ReadFloat();
+                bbox = info;
+                break;
+            }
+            }
         }
-        case 0x4F464E49:
-        {
-            float fMinX = child._pFile->ReadFloat();
-            float fMaxX = child._pFile->ReadFloat();
-            float fMinY = child._pFile->ReadFloat();
-            float fMaxY = child._pFile->ReadFloat();
-            PblBox info;
-            info._vMin.x = fMinX;
-            info._vMin.y = fMinY;
-            info._vMin.z = child._pFile->ReadFloat();
-            info._vMax.x = fMaxX;
-            info._vMax.y = fMaxY;
-            info._vMax.z = child._pFile->ReadFloat();
-            bbox = info;
-            break;
-        }
-        }
-    }
 
-    if (pVertexBuffer && pIndexBuffer && (uiVertexFormat & 0xFFFF0FFF) == 0x222)
-    {
-        pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(
-            D3DPT_TRIANGLESTRIP, uiNumIndices - 2, uiVertexFormat, uiNumVertices,
-            uiStartVertex, pVertexBuffer, uiStartIndex, pIndexBuffer);
-        pPrimitive->m_bbox = bbox;
-        pIndexBuffer->Release();
-        pVertexBuffer->Release();
-        return pPrimitive;
+        if (pVertexBuffer && pIndexBuffer && (uiVertexFormat & 0xFFFF0FFF) == 0x222)
+        {
+            pPrimitive = pcRedPrimitive::Create(
+                D3DPT_TRIANGLESTRIP, uiNumIndices - 2, uiVertexFormat, uiNumVertices,
+                uiStartVertex, pVertexBuffer, uiStartIndex, pIndexBuffer);
+            pPrimitive->m_bbox = bbox;
+            pIndexBuffer->Release();
+            pVertexBuffer->Release();
+        }
     }
-    return 0;
+    return pPrimitive;
 }
 
 // FUNCTION: SWBF2 0x00720020
@@ -2061,8 +2059,8 @@ void RedWater::pcAccumulateNormalMap()
         float fAge = m_waterTimeStamp.GetElapsed() - event.startTime;
         float fRadius = fAge * 1.5f + event.radius;
         float fDX = pCamera->_Matrix.m[3][0] - event.worldPos.x;
-        float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
         float fDZ = pCamera->_Matrix.m[3][2] - event.worldPos.z;
+        float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
         if (fDY * fDY + fDX * fDX + fDZ * fDZ < WATEREVENT_MAX_VISIBLE_DISTANCESQR)
         {
             ++event.in_range;
@@ -2662,18 +2660,18 @@ void RedWater::pcRenderOceanWaterPatches()
 
     RedTextureTransform baseTransform;
     baseTransform.m_bTransform = 1;
+    baseTransform.m_Transform[1][1] = m_tilesV;
     baseTransform.m_Transform[0][0] = m_tilesU;
     baseTransform.m_Transform[1][0] = 0.0f;
     baseTransform.m_Transform[0][1] = 0.0f;
-    baseTransform.m_Transform[1][1] = m_tilesV;
     baseTransform.m_Transform[2][0] = m_tilesU * fScrollU;
     baseTransform.m_Transform[2][1] = m_tilesV * fScrollV;
     RedTextureTransform foamTransform;
     foamTransform.m_bTransform = 1;
+    foamTransform.m_Transform[1][1] = RedWater::m_foamTilesV;
     foamTransform.m_Transform[0][0] = RedWater::m_foamTilesU;
     foamTransform.m_Transform[1][0] = 0.0f;
     foamTransform.m_Transform[0][1] = 0.0f;
-    foamTransform.m_Transform[1][1] = RedWater::m_foamTilesV;
     foamTransform.m_Transform[2][0] = RedWater::m_foamTilesU * fScrollU;
     foamTransform.m_Transform[2][1] = RedWater::m_foamTilesV * fScrollV;
     s_pOceanWaterShader->SetBaseMap(RedTexture::Find(m_uiTextureHash), &baseTransform);

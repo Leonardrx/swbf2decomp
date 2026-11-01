@@ -363,31 +363,32 @@ void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     else
     {
         pRegs[40].SetFloats(m_colorSpecular.r * kInv255, m_colorSpecular.g * kInv255,
-                            m_colorSpecular.b * kInv255);
-        pRegs[40].component[3] = m_colorSpecular.a * kInv255;
+                            m_colorSpecular.b * kInv255, m_colorSpecular.a * kInv255);
     }
 
-    pRegs[41].SetFloats(s_vLightX.x * m_specSizeInv, s_vLightX.y * m_specSizeInv,
-                        s_vLightX.z * m_specSizeInv);
-    pRegs[42].SetFloats(m_specSizeInv * s_vLightY.x, m_specSizeInv * s_vLightY.y,
-                        m_specSizeInv * s_vLightY.z);
+    const PblVector3 vSpecX = s_vLightX * m_specSizeInv;
+    pRegs[41].SetFloats(vSpecX.x, vSpecX.y, vSpecX.z);
+    const PblVector3 vSpecY = m_specSizeInv * s_vLightY;
+    pRegs[42].SetFloats(vSpecY.x, vSpecY.y, vSpecY.z);
 
     pRegs[43].SetFloats(m_fOffsetU, m_fOffsetV, m_fViewAngleFactor, m_fVertexMinDistSqr);
 
-    if (s_fFadeStart > 0.0f && s_fFadeEnd > s_fFadeStart)
+    const float fFadeStart = s_fFadeStart;
+    const float fFadeEnd = s_fFadeEnd;
+    if (fFadeStart > 0.0f && fFadeEnd > fFadeStart)
     {
-        const float fInvRange = 1.0f / (s_fFadeEnd - s_fFadeStart);
+        const float fInvRange = 1.0f / (fFadeEnd - fFadeStart);
         pRegs[44].component[2] = 0.0f;
         pRegs[44].component[3] = 0.0f;
         if (pItem->flags & 0x20000)
         {
             pRegs[44].component[0] = fInvRange;
-            pRegs[44].component[1] = -(s_fFadeStart * fInvRange);
+            pRegs[44].component[1] = -(fFadeStart * fInvRange);
         }
         else
         {
             pRegs[44].component[0] = -fInvRange;
-            pRegs[44].component[1] = s_fFadeEnd * fInvRange;
+            pRegs[44].component[1] = fFadeEnd * fInvRange;
         }
     }
     else

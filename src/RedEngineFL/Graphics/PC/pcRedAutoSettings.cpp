@@ -965,6 +965,7 @@ void VidMode_Init(IDirect3D9* pD3D)
                     uiTexHeight = mode.Height;
                 }
 
+                IDirect3DTexture9* apTextures[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
                 unsigned int auiTexWidth[12] = {
                     uiTexWidth, uiTexWidth, uiTexWidth, uiTexWidth,
                     512, 256, 16, 2,
@@ -975,7 +976,6 @@ void VidMode_Init(IDirect3D9* pD3D)
                     256, 256, 16, 2,
                     256, 64, 4, uiTexHeight
                 };
-                IDirect3DTexture9* apTextures[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
                 bool bAllSurfaces = true;
 
@@ -991,9 +991,9 @@ void VidMode_Init(IDirect3D9* pD3D)
                     }
                 }
 
+                IDirect3DSurface9* apDepthStencil[2] = { 0, 0 };
                 unsigned int auiDepthWidth[2] = { uiTexWidth, 512 };
                 unsigned int auiDepthHeight[2] = { uiTexHeight, 256 };
-                IDirect3DSurface9* apDepthStencil[2] = { 0, 0 };
 
                 for (int i = 0; i < 2; ++i)
                 {
@@ -1038,7 +1038,6 @@ void VidMode_Init(IDirect3D9* pD3D)
                 }
 
                 IDirect3DTexture9* pMultiSampleTexture = 0;
-                bool bSupported = bAllSurfaces;
 
                 if (iMultiSampleType != 0)
                 {
@@ -1048,15 +1047,20 @@ void VidMode_Init(IDirect3D9* pD3D)
                     {
 
                         pMultiSampleTexture = 0;
-                        bSupported = false;
+                        bAllSurfaces = false;
                     }
                 }
 
-                pConfig->AddVidMode((int)mode.Width, (int)mode.Height,
-                                    (D3DMULTISAMPLE_TYPE)iMultiSampleType, uiQuality, bSupported);
-                if (bSupported)
+                if (bAllSurfaces)
                 {
+                    pConfig->AddVidMode((int)mode.Width, (int)mode.Height,
+                                        (D3DMULTISAMPLE_TYPE)iMultiSampleType, uiQuality, true);
                     uiBestArea = mode.Width * mode.Height;
+                }
+                else
+                {
+                    pConfig->AddVidMode((int)mode.Width, (int)mode.Height,
+                                        (D3DMULTISAMPLE_TYPE)iMultiSampleType, uiQuality, false);
                 }
 
                 for (int j = 0; j < 12; ++j)
@@ -1376,30 +1380,25 @@ void _LoadVendorDeviceOverrides()
             case HASH_VENDOR:
                 if (axtoi(szToken, 4) == (int)identifier.VendorId)
                 {
-                    uiLen = 0;
                     bVendorMatched = true;
-                    iKey = 0;
                 }
                 else if (bVendorMatched)
                 {
-                    uiLen = 0;
                     bDone = true;
-                    iKey = 0;
                 }
                 else
                 {
                     fskip(file, "vendor:");
                     iKey = HASH_VENDOR;
                     uiLen = 0;
+                    continue;
                 }
                 break;
 
             case HASH_DEVICE:
                 if (bDeviceMatched)
                 {
-                    uiLen = 0;
                     bDone = true;
-                    iKey = 0;
                     break;
                 }
 
@@ -1413,16 +1412,15 @@ void _LoadVendorDeviceOverrides()
 
                 if (pcId)
                 {
-                    uiLen = 0;
                     bDeviceMatched = true;
                     optionsFounds_ = true;
-                    iKey = 0;
                 }
                 else
                 {
                     fskip(file, "device:");
                     iKey = HASH_DEVICE;
                     uiLen = 0;
+                    continue;
                 }
                 break;
 
@@ -1431,15 +1429,11 @@ void _LoadVendorDeviceOverrides()
                 SetMasterQuality(&_RenderSettings, _RenderSettings.masterQuality);
 
                 _RenderSettings.masterQuality = 3;
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_GENERATION:
                 sHardwareGeneration = atoi(szToken);
                 SetMasterQuality(&_RenderSettings, sHardwareGeneration - 2);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_NONMASKABLE:
@@ -1455,20 +1449,14 @@ void _LoadVendorDeviceOverrides()
                         break;
                     }
                 }
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_DEFAULTWIDTH:
                 iRenderWidth = atoi(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_DEFAULTHEIGHT:
                 iRenderHeight = atoi(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_DISTORTION:
@@ -1480,69 +1468,46 @@ void _LoadVendorDeviceOverrides()
                     sCustomRenderPresets[1].distortion = bDistortion;
                     sCustomRenderPresets[2].distortion = bDistortion;
                 }
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TEXTUREQUALITY:
                 _RenderSettings.textureQuality = atotexq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TEXTUREDETAIL:
                 _RenderSettings.textureDetail = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_WATERQUALITY:
                 _RenderSettings.waterQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_PARTICLEQUALITY:
                 _RenderSettings.particleQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SHADOWQUALITY:
                 _RenderSettings.shadowQuality = atoq2(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SPECULARQUALITY:
                 _RenderSettings.specularQuality = atoq2(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TERRAINQUALITY:
                 _RenderSettings.terrainQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_BUMPMAPPING:
                 _RenderSettings.bumpMapping = atob(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_ENABLE_HDR:
                 _RenderSettings.mEnableHDR = atob(szToken);
-                uiLen = 0;
-                iKey = 0;
-                break;
-
-            default:
-                uiLen = 0;
-                iKey = 0;
                 break;
             }
+            uiLen = 0;
+            iKey = 0;
             break;
 
         default:
@@ -1640,30 +1605,25 @@ void _LoadVendorDeviceRenderCapOverrides()
             case HASH_VENDOR:
                 if (axtoi(szToken, 4) == (int)identifier.VendorId)
                 {
-                    uiLen = 0;
                     bVendorMatched = true;
-                    iKey = 0;
                 }
                 else if (bVendorMatched)
                 {
-                    uiLen = 0;
                     bDone = true;
-                    iKey = 0;
                 }
                 else
                 {
                     fskip(file, "vendor:");
                     iKey = HASH_VENDOR;
                     uiLen = 0;
+                    continue;
                 }
                 break;
 
             case HASH_DEVICE:
                 if (bDeviceMatched)
                 {
-                    uiLen = 0;
                     bDone = true;
-                    iKey = 0;
                     break;
                 }
 
@@ -1677,23 +1637,20 @@ void _LoadVendorDeviceRenderCapOverrides()
 
                 if (pcId)
                 {
-                    uiLen = 0;
                     bDeviceMatched = true;
-                    iKey = 0;
                 }
                 else
                 {
                     fskip(file, "device:");
                     iKey = HASH_DEVICE;
                     uiLen = 0;
+                    continue;
                 }
                 break;
 
             case HASH_GEOMETRYMODE:
                 _bOverride_geometry = true;
                 _RenderCapOverrides.geometry = atogeom(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_PIPELINE:
@@ -1704,112 +1661,77 @@ void _LoadVendorDeviceRenderCapOverrides()
                 _RenderCapOverrides.geometry = GEOMETRYMODE_UNCOMPRESSED;
                 _bOverride_shadowVolume = true;
                 _RenderCapOverrides.shadowVolume = SHADOWVOLUME_SOFTWARE;
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TEXTURECAPS:
                 _bOverride_textureCaps = true;
                 _RenderCapOverrides.textureCaps = atotexc(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SKINNING:
                 _bOverride_skinning = true;
                 _RenderCapOverrides.skinning = atoskin(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SHADOWVOLUMES:
                 _bOverride_shadowVolume = true;
                 _RenderCapOverrides.shadowVolume = atosv(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_BACKBUFFERCOPY:
                 _bOverride_backBufferCopy = true;
                 _RenderCapOverrides.backBufferCopy = atobbc(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_CUBEMAPS:
                 _bOverride_cubemaps = true;
                 _RenderCapOverrides.cubemaps = (atoi(szToken) != 0);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_VOLUMEMAPS:
                 _bOverride_volumemaps = true;
                 _RenderCapOverrides.volumemaps = (atoi(szToken) != 0);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_NONPOW2TEXTURES:
                 _bOverride_nonpow2textures = true;
                 _RenderCapOverrides.nonpow2textures = atotexpow2(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TEXTUREQUALITY:
                 RedAutoSettings::_RenderSettings.textureQuality = atotexq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TEXTUREDETAIL:
                 RedAutoSettings::_RenderSettings.textureDetail = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_WATERQUALITY:
                 RedAutoSettings::_RenderSettings.waterQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_PARTICLEQUALITY:
                 RedAutoSettings::_RenderSettings.particleQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SHADOWQUALITY:
                 RedAutoSettings::_RenderSettings.shadowQuality = atoq2(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_SPECULARQUALITY:
                 RedAutoSettings::_RenderSettings.specularQuality = atoq2(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_TERRAINQUALITY:
                 RedAutoSettings::_RenderSettings.terrainQuality = atoq(szToken);
-                uiLen = 0;
-                iKey = 0;
                 break;
 
             case HASH_BUMPMAPPING:
                 RedAutoSettings::_RenderSettings.bumpMapping = atob(szToken);
-                uiLen = 0;
-                iKey = 0;
-                break;
-
-            default:
-                uiLen = 0;
-                iKey = 0;
                 break;
             }
+            uiLen = 0;
+            iKey = 0;
             break;
 
         default:

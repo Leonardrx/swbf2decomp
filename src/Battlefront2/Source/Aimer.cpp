@@ -582,7 +582,7 @@ bool Aimer::Update(float fDeltaTime)
     const PblVector3 vAimPoint = mOwner->mTargetInfo.mAimPoint;
 
     PblMatrix mMount;
-    if (mPose && mParentMatrix == &static_cast<const CollisionObject&>(*mOwner->GetGameObject()).GetMatrix()
+    if (mPose && mParentMatrix == &mOwner->GetGameObject()->GetMatrix()
         && mClass->mParentHash)
     {
         const PblMatrix* pParentBone = mPose->Find(mClass->mParentHash);
@@ -610,11 +610,9 @@ bool Aimer::Update(float fDeltaTime)
         }
     }
 
-    const float t = mDirection.y * (mFirePos.y - mRootPos.y) + mDirection.x * (mFirePos.x - mRootPos.x)
-                  + mDirection.z * (mFirePos.z - mRootPos.z);
-    PblVector3 vDelta(vAimPoint.x - (mFirePos.x - mDirection.x * t),
-                      vAimPoint.y - (mFirePos.y - mDirection.y * t),
-                      vAimPoint.z - (mFirePos.z - mDirection.z * t));
+    const PblVector3 vFireOffset = mFirePos - mRootPos;
+    const float t = mDirection.y * vFireOffset.y + mDirection.x * vFireOffset.x + mDirection.z * vFireOffset.z;
+    const PblVector3 vDelta = vAimPoint - (mFirePos - mDirection * t);
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
 
@@ -629,9 +627,7 @@ bool Aimer::Update(float fDeltaTime)
         }
     }
 
-    const PblVector3 vAxis(mDirection.y * vDir.z - mDirection.z * vDir.y,
-                           mDirection.z * vDir.x - mDirection.x * vDir.z,
-                           mDirection.x * vDir.y - mDirection.y * vDir.x);
+    const PblVector3 vAxis = CrossProduct(mDirection, vDir);
     const float fOldPitch = mPitch;
     const float fOldYaw = mYaw;
 
@@ -668,9 +664,7 @@ bool Aimer::Update(float fDeltaTime)
 
         const PblMatrix mAim = DirectionMatrix(mDirection, mMount[1], mRootPos);
         const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[mCurrentBarrel];
-        const PblVector3 vOffset(barrel.mOffset.x + barrel.mFireOffset.x,
-                                 barrel.mOffset.y + barrel.mFireOffset.y,
-                                 barrel.mOffset.z + barrel.mFireOffset.z);
+        const PblVector3 vOffset = barrel.mOffset + barrel.mFireOffset;
         PblVector3 vPos;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mAim));
         mFirePos = vPos;
@@ -682,7 +676,7 @@ bool Aimer::Update(float fDeltaTime)
 
     if (mPose)
     {
-        SetupPose(static_cast<const CollisionObject&>(*mOwner->GetGameObject()).GetMatrix().GetInverseFast(), *mPose, false);
+        SetupPose(mOwner->GetGameObject()->GetMatrix().GetInverseFast(), *mPose, false);
     }
     return true;
 }

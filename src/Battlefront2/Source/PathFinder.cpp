@@ -687,7 +687,7 @@ bool PathFinder::GetClosestValidPoint(const PblVector3& rPos, PblVector3& rOut, 
 // FUNCTION: SWBF2 0x00611750
 float PathFinder::sInvertedTotalCost(const PathNode* pNode)
 {
-    float fCost = LengthXZ(sDestPos - pNode->GetPos()) + pNode->GetCostSoFar() + 0.01f;
+    float fCost = PblMath::Sqrt(SquaredLengthXZ(sDestPos - pNode->GetPos())) + pNode->GetCostSoFar() + 0.01f;
     if (fCost < HEAP_MAX_VALUE)
     {
         return HEAP_MAX_VALUE - fCost;

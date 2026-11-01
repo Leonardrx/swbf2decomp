@@ -377,9 +377,7 @@ void pcRedShaderDef::ReadState(PblFileChunk& chunk)
                 case 0x4f464e49:
                 {
                     ++iPass;
-                    m_states[iState].pass[iPass].uiPassCaps = 0;
-                    m_states[iState].pass[iPass].apVertexShaders = 0;
-                    m_states[iState].pass[iPass].pPixelShader = 0;
+                    m_states[iState].pass[iPass] = PassT();
                     m_states[iState].pass[iPass].uiPassCaps = (unsigned int)item._pFile->Read32();
                     m_states[iState].pass[iPass].apVertexShaders = new pcRedVertexShader*[255];
                     memset(m_states[iState].pass[iPass].apVertexShaders, 0, 255 * sizeof(pcRedVertexShader*));

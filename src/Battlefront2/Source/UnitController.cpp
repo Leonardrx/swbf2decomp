@@ -360,7 +360,7 @@ void UnitController::EnterState()
     case STATE_SC_FOLLOW:
     {
         const UnitFollowInfo* pInfo = static_cast<const UnitFollowInfo*>(GetCurCmd());
-        mAgent = new UnitFollowAgent(this, PblHandle<const GameObject>(pInfo->GetWho()),
+        mAgent = new UnitFollowAgent(this, static_cast<GameObject*>(pInfo->GetWho()),
                                      pInfo->GetParam() != 0);
         break;
     }
@@ -378,14 +378,14 @@ void UnitController::EnterState()
         break;
     case STATE_DEFEND:
     {
-        AI::GoalTarget target;
+        AI::GoalTarget target(AI::GTT_NONE);
         static_cast<const UnitGoalAgentInfo*>(GetCurCmd())->GetGoalTarget(target);
         mAgent = new UnitDefendAgent(this, target);
         break;
     }
     case STATE_DESTROY:
     {
-        AI::GoalTarget target;
+        AI::GoalTarget target(AI::GTT_NONE);
         static_cast<const UnitGoalAgentInfo*>(GetCurCmd())->GetGoalTarget(target);
         mAgent = new UnitDestroyAgent(this, target);
         break;

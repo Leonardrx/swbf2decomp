@@ -1718,15 +1718,16 @@ void DrawAllBeamBetween::Render(int)
         const float fMinZ = vPos2.z > vPos1.z ? vPos1.z : vPos2.z;
         const float fMinY = vPos2.y > vPos1.y ? vPos1.y : vPos2.y;
         const float fMinX = vPos2.x > vPos1.x ? vPos1.x : vPos2.x;
-        const float fMaxZ = vPos1.z > vPos2.z ? vPos1.z : vPos2.z;
-        const float fMaxY = vPos1.y > vPos2.y ? vPos1.y : vPos2.y;
-        const float fMaxX = vPos1.x > vPos2.x ? vPos1.x : vPos2.x;
         float fRadius = desc.mWidth * 2.0f;
-
-        PblVector3 vMin, vMax;
+        PblVector3 vMin;
         vMin.x = fMinX - fRadius;
         vMin.y = fMinY - fRadius;
         vMin.z = fMinZ - fRadius;
+
+        const float fMaxZ = vPos1.z > vPos2.z ? vPos1.z : vPos2.z;
+        const float fMaxY = vPos1.y > vPos2.y ? vPos1.y : vPos2.y;
+        const float fMaxX = vPos1.x > vPos2.x ? vPos1.x : vPos2.x;
+        PblVector3 vMax;
         vMax.x = fRadius + fMaxX;
         vMax.y = fRadius + fMaxY;
         vMax.z = fRadius + fMaxZ;
@@ -1738,9 +1739,12 @@ void DrawAllBeamBetween::Render(int)
             RedParticleRenderer::SubmitParticle(PIT_STREAK_HEAD, vPos1, desc.mColor, desc.mWidth, desc.mShift,
                                                 WholeTexture(), gVectorUnitX, gVectorUnitY);
             PblVector3 vMid;
-            vMid.x = (vPos2.x + vPos1.x) * 0.5f;
-            vMid.y = (vPos1.y + vPos2.y) * 0.5f;
-            vMid.z = (vPos1.z + vPos2.z) * 0.5f;
+            vMid.x = vPos2.x + vPos1.x;
+            vMid.y = vPos2.y + vPos1.y;
+            vMid.z = vPos2.z + vPos1.z;
+            vMid.x *= 0.5f;
+            vMid.y *= 0.5f;
+            vMid.z *= 0.5f;
             RedParticleRenderer::SubmitParticle(PIT_STREAK, vMid, desc.mColor, desc.mWidth,
                                                 desc.mRepetitions * 0.5f + desc.mShift,
                                                 WholeTexture(), gVectorUnitX, gVectorUnitY);
@@ -1757,10 +1761,14 @@ void DrawAllBeamBetween::Render(int)
             D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDelta);
 
             float fWidth = desc.mWidth;
+            PblVector3 vOffset;
+            vOffset.x = vDir.x * fWidth;
+            vOffset.y = vDir.y * fWidth;
+            vOffset.z = vDir.z * fWidth;
             PblVector3 vStart;
-            vStart.x = vPos1.x - vDir.x * fWidth;
-            vStart.y = vPos1.y - vDir.y * fWidth;
-            vStart.z = vPos1.z - vDir.z * fWidth;
+            vStart.x = vPos1.x - vOffset.x;
+            vStart.y = vPos1.y - vOffset.y;
+            vStart.z = vPos1.z - vOffset.z;
             RedParticleRenderer::SubmitParticle(PIT_STREAK_HEAD, vStart, desc.mColor, fWidth, 0.0f,
                                                 WholeTexture(), gVectorUnitX, gVectorUnitY);
             RedParticleRenderer::SubmitParticle(PIT_STREAK, vPos1, desc.mColor, desc.mWidth, 0.25f,
@@ -1768,10 +1776,13 @@ void DrawAllBeamBetween::Render(int)
             RedParticleRenderer::SubmitParticle(PIT_STREAK, vPos2, desc.mColor, desc.mWidth, 0.75f,
                                                 WholeTexture(), gVectorUnitX, gVectorUnitY);
             fWidth = desc.mWidth;
+            vOffset.x = fWidth * vDir.x;
+            vOffset.y = vDir.y * fWidth;
+            vOffset.z = vDir.z * fWidth;
             PblVector3 vEnd;
-            vEnd.x = fWidth * vDir.x + vPos2.x;
-            vEnd.y = vDir.y * fWidth + vPos2.y;
-            vEnd.z = vDir.z * fWidth + vPos2.z;
+            vEnd.x = vOffset.x + vPos2.x;
+            vEnd.y = vOffset.y + vPos2.y;
+            vEnd.z = vOffset.z + vPos2.z;
             RedParticleRenderer::SubmitParticle(PIT_STREAK_TAIL, vEnd, desc.mColor, fWidth, 1.0f,
                                                 WholeTexture(), gVectorUnitX, gVectorUnitY);
         }

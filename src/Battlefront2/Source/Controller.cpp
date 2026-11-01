@@ -139,13 +139,14 @@ void Controller::IncreaseTargetBubbleSize(float fIncrease)
 // FUNCTION: SWBF2 0x00485520
 float Controller::_GetTargetBubbleSize() const
 {
-    const GameObject* pObject = mOwner ? ((const Controllable*)mOwner)->GetGameObject() : 0;
+    Controllable* pOwner = mOwner;
+    const GameObject* pObject = pOwner ? ((const Controllable*)pOwner)->GetGameObject() : 0;
 
     float fStance = 1.0f;
     float fMaxSize = 1.5f;
-    if (mOwner)
+    if (pOwner)
     {
-        fStance = mOwner->GetTargetBubbleStanceModifier();
+        fStance = pOwner->GetTargetBubbleStanceModifier();
         bool bEnemy = !(pObject ? AIUtil::IsPlayerTeam(GetTeam(pObject)) : true);
         if (pObject->IsRtti(EntityFlyer::rttiHashEntityFlyer))
         {
@@ -161,11 +162,7 @@ float Controller::_GetTargetBubbleSize() const
     float fSpeed = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y
                          + vVelocity.z * vVelocity.z);
     float fMaxSpeed = pObject->GetMaxSpeed();
-    if (fMaxSpeed < 0.1f)
-    {
-        fMaxSpeed = 0.1f;
-    }
-    float fSpeedFactor = (fSpeed / fMaxSpeed * 0.6f + 1.0f) * fStance;
+    float fSpeedFactor = (fSpeed / (fMaxSpeed < 0.1f ? 0.1f : fMaxSpeed) * 0.6f + 1.0f) * fStance;
 
     float fRadius = AIUtil::GetCollisionRadius(pObject) * 2.0f;
     if (pObject->GetEntityType() == ENT_HOVER)
@@ -178,11 +175,7 @@ float Controller::_GetTargetBubbleSize() const
     }
 
     float fSize = mTargetBubbleSize * fSpeedFactor;
-    if (fSize > fMaxSize)
-    {
-        fSize = fMaxSize;
-    }
-    return (3.0f - mTotalVisFactor * 2.0f) * fRadius * fSize;
+    return (3.0f - mTotalVisFactor * 2.0f) * fRadius * (fSize > fMaxSize ? fMaxSize : fSize);
 }
 
 // FUNCTION: SWBF2 0x00485250

@@ -870,7 +870,7 @@ void EntityDroid::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, fl
 {
     const PblVector3& vCenter = GetCollisionCenter();
     PblVector3 vDiff = vCenter - vPos;
-    float fDist = sqrt(SquaredLength(vDiff));
+    float fDist = PblMath::Sqrt(SquaredLength(vDiff));
     if (fDist > 0.0001f)
     {
         float fEffect = CalcRadiusEffect(fDist, fInnerRadius, fOuterRadius);
@@ -1256,14 +1256,20 @@ bool EntityDroid::Update(float fDeltaTime)
         }
     }
 
-    float fMove = 0.0f;
+    float fMove;
     float fStrafe = 0.0f;
-    if (!(mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] &&
-          mWeapon[mWeaponIndex[0]]->mClass->mZoomRate != 0.0f) &&
-        mState != FROZEN)
+    if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] &&
+        mWeapon[mWeaponIndex[0]]->mClass->mZoomRate != 0.0f)
     {
-        fMove = mControlMove;
-        fStrafe = mControlStrafe;
+        fMove = 0.0f;
+    }
+    else
+    {
+        fMove = mState != FROZEN ? mControlMove : 0.0f;
+        if (mState != FROZEN)
+        {
+            fStrafe = mControlStrafe;
+        }
     }
     float fTurn = mControlTurn;
     float fPitch = mControlPitch;
@@ -1274,16 +1280,7 @@ bool EntityDroid::Update(float fDeltaTime)
     {
         fPitchSpeed /= mWeapon[mWeaponIndex[0]]->mZoomTurnScale;
     }
-    float fPitchValue = fPitchSpeed * fPitch * fDeltaTime + mPitchValue;
-    if (mClass->mMinPitch > fPitchValue)
-    {
-        fPitchValue = mClass->mMinPitch;
-    }
-    else if (fPitchValue > mClass->mMaxPitch)
-    {
-        fPitchValue = mClass->mMaxPitch;
-    }
-    mPitchValue = fPitchValue;
+    mPitchValue = Clamp(fPitchSpeed * fPitch * fDeltaTime + mPitchValue, mClass->mMinPitch, mClass->mMaxPitch);
 
     Move(fDeltaTime, fMove, fStrafe, fTurn);
 
@@ -1307,30 +1304,15 @@ bool EntityDroid::Update(float fDeltaTime)
         }
         else
         {
+            PblQuaternion qLook(
+                DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z), mMatrix.GetYAxis(), gVectorZero));
+            PblQuaternion qTilt(gVectorUnitX, -mClass->mCameraSettings.GetCameraTiltValue());
+            PblMatrix mCamera(qLook * qTilt, gVectorZero);
 
-            PblMatrix mLook =
-                DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z), mMatrix.GetYAxis(), gVectorZero);
-            PblQuaternion qLook = PblQuaternion(mLook);
-            float fTiltSin;
-            float fTiltCos;
-            float fTilt = -mClass->mCameraSettings.GetCameraTiltValue();
-            PblMath::SinCos(&fTiltSin, &fTiltCos, fTilt * 0.5f);
-            PblQuaternion qTilt;
-            qTilt._fX = fTiltSin * gVectorUnitX.x;
-            qTilt._fY = fTiltSin * gVectorUnitX.y;
-            qTilt._fZ = fTiltSin * gVectorUnitX.z;
-            qTilt._fS = fTiltCos;
-            PblQuaternion qCamera = qLook * qTilt;
-
-            PblMatrix mCamera(qCamera, gVectorZero);
-
-            mTargetInfo.mAimStart = mClass->mCameraSettings.CalcCameraPoint(mMatrix, mCamera);
-            float fAlong = mEyeDir.y * (mEyePoint.y - mTargetInfo.mAimStart.y) +
-                           mEyeDir.x * (mEyePoint.x - mTargetInfo.mAimStart.x) +
-                           mEyeDir.z * (mEyePoint.z - mTargetInfo.mAimStart.z);
-            mTargetInfo.mAimStart.x = fAlong * mEyeDir.x + mTargetInfo.mAimStart.x;
-            mTargetInfo.mAimStart.y = mTargetInfo.mAimStart.y + mEyeDir.y * fAlong;
-            mTargetInfo.mAimStart.z = mTargetInfo.mAimStart.z + mEyeDir.z * fAlong;
+            PblVector3& vAimStart = mTargetInfo.mAimStart;
+            vAimStart = mClass->mCameraSettings.CalcCameraPoint(mMatrix, mCamera);
+            float fAlong = DotProduct(mEyeDir, mEyePoint - vAimStart);
+            vAimStart += mEyeDir * fAlong;
         }
         const GameObject* pIgnore = this;
         CollisionObject* pHit;
@@ -1343,15 +1325,14 @@ bool EntityDroid::Update(float fDeltaTime)
     {
         mTargetInfo.mAimStart = mEyePoint;
         float fDist = 512.0f;
-        int iIndex = mWeaponIndex[0];
-        if (iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mTarget)
+        if (mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] && mWeapon[mWeaponIndex[0]]->mTarget)
         {
-            PblVector3 vTarget = mWeapon[iIndex]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
+            PblVector3 vTarget = mWeapon[mWeaponIndex[0]]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
             fDist = PblMath::Sqrt((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
-                          (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
-                          (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
+                                  (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
+                                  (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = mEyeDir * fDist + mEyePoint;
+        mTargetInfo.mAimPoint = mEyePoint + mEyeDir * fDist;
     }
 
     mGroundRatio = 0.0f;
@@ -1676,15 +1657,7 @@ float EntityDroid::GetSoundRadius() const
     const PblVector3& vVelocity = GetVelocity();
     float fRadius =
         PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z) * mClass->mNoiseFactor;
-    if (0.0f > fRadius)
-    {
-        return 0.0f;
-    }
-    if (fRadius > 50.0f)
-    {
-        return 50.0f;
-    }
-    return fRadius;
+    return Clamp(fRadius, 0.0f, 50.0f);
 }
 
 // FUNCTION: SWBF2 0x0049cf50

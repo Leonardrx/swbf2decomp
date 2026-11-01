@@ -484,8 +484,8 @@ bool Navigator::LookForCoverNodes()
 
         PblVector3 vToHint(vHint.x - vMyPos.x, vHint.y - vMyPos.y, vHint.z - vMyPos.z);
         PblVector3 vHintDir = AIUtil::GetSafeNormalXZ(vToHint);
-        const PblMatrix& mat = GetMatrix();
-        if (0.0f > mat.m[2][0] * vHintDir.x + mat.m[2][1] * vHintDir.y + mat.m[2][2] * vHintDir.z)
+        const PblVector3& vForward = GetMatrix().GetZAxis();
+        if (0.0f > vForward.x * vHintDir.x + vForward.y * vHintDir.y + vForward.z * vHintDir.z)
         {
             continue;
         }
@@ -510,8 +510,8 @@ bool Navigator::LookForCoverNodes()
     pBest->Reserve(pObj);
     PblVector3 vStart = GetMatrix().GetTranslation();
     PblVector3 vHint = pBest->GetCollisionCenter();
-    float fAlong = (vHint.x - vMyPos.x) * vDir.x + (vHint.y - vMyPos.y) * vDir.y + (vHint.z - vMyPos.z) * vDir.z;
-    PblVector3 vFoot(vMyPos.x + vDir.x * fAlong, vMyPos.y + vDir.y * fAlong, vMyPos.z + vDir.z * fAlong);
+    float fAlong = DotProduct(vHint - vMyPos, vDir);
+    PblVector3 vFoot = vMyPos + vDir * fAlong;
     if (PathFinder::TestTrivialStraightLineHit(vHint, vFoot, pObj) == true)
     {
         vFoot = vStart;

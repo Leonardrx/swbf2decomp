@@ -409,18 +409,16 @@ void pcOceanShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
 {
     if (uiPass == 0)
     {
-        PblMatrix mBase;
-        mBase.SetZAxis(m_textureTransform(2, 0), m_textureTransform(2, 1), 0.0f, 0.0f);
-        mBase.SetYAxis(m_textureTransform(1, 0), m_textureTransform(1, 1), 0.0f, 0.0f);
-        mBase.SetXAxis(m_textureTransform(0, 0), m_textureTransform(0, 1), 0.0f, 0.0f);
-        mBase.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
-        PblMatrix mFoam;
-        mFoam.SetZAxis(m_foamMapTransform(2, 0), m_foamMapTransform(2, 1), 0.0f, 0.0f);
-        mFoam.SetYAxis(m_foamMapTransform(1, 0), m_foamMapTransform(1, 1), 0.0f, 0.0f);
-        mFoam.SetXAxis(m_foamMapTransform(0, 0), m_foamMapTransform(0, 1), 0.0f, 0.0f);
-        mFoam.SetTranslation(0.0f, 0.0f, 0.0f, 1.0f);
-        RedRenderer::pcFFSetTextureTransform(0, mFoam);
-        RedRenderer::pcFFSetTextureTransform(1, mBase);
+        const D3DXMATRIXA16 mBase(m_textureTransform(0, 0), m_textureTransform(0, 1), 0.0f, 0.0f,
+                                  m_textureTransform(1, 0), m_textureTransform(1, 1), 0.0f, 0.0f,
+                                  m_textureTransform(2, 0), m_textureTransform(2, 1), 0.0f, 0.0f,
+                                  0.0f, 0.0f, 0.0f, 1.0f);
+        const D3DXMATRIXA16 mFoam(m_foamMapTransform(0, 0), m_foamMapTransform(0, 1), 0.0f, 0.0f,
+                                  m_foamMapTransform(1, 0), m_foamMapTransform(1, 1), 0.0f, 0.0f,
+                                  m_foamMapTransform(2, 0), m_foamMapTransform(2, 1), 0.0f, 0.0f,
+                                  0.0f, 0.0f, 0.0f, 1.0f);
+        RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(mFoam));
+        RedRenderer::pcFFSetTextureTransform(1, reinterpret_cast<const PblMatrix&>(mBase));
         RedRenderer::pcSetTexture(0, m_foamMap);
         RedRenderer::pcSetTexture(1, m_baseMap);
     }

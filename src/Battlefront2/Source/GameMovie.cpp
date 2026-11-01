@@ -307,9 +307,13 @@ void UpdatInGameMovie()
                             RedInterfaceScreen::GetScreenHeight(), false);
             while (!g_InGameMovieQueue.IsEmpty())
             {
-                unsigned int name;
-                g_InGameMovieQueue.Get(name);
-                const RedMovie::Properties* pProperty = RedMovie::Properties::FindByHashID(name);
+                const unsigned int* pName = 0;
+                if (!g_InGameMovieQueue.IsEmpty())
+                {
+                    pName = static_cast<const unsigned int*>(g_InGameMovieQueue.QueueBase::Get(
+                        sizeof(unsigned int), g_InGameMovieQueue.mElements, 12));
+                }
+                const RedMovie::Properties* pProperty = RedMovie::Properties::FindByHashID(*pName);
                 if (pProperty)
                 {
                     GameMovie::sRedMovie->Play(pProperty, true);

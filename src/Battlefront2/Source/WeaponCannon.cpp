@@ -735,16 +735,26 @@ bool WeaponCannon::Fire()
     desc.mDirection = vWorldDir;
     desc.mStrength = mStrength;
     desc.mOwner = mOwner->GetGameObject();
-    desc.mDamageOwner = DamageOwner(mOwner->mCharacter, mOwner->GetGameObject(), GetTeam(mOwner->GetGameObject()),
-                                    GetEntityClass(mOwner->GetGameObject()), mClass,
-                                    mOwner->GetOffenseMultiplier());
+    desc.mDamageOwner.mCharacter = mOwner->mCharacter;
+    desc.mDamageOwner.mGameObject = mOwner->GetGameObject();
+    desc.mDamageOwner.mDamageMultiplier = mOwner->GetOffenseMultiplier();
+    desc.mDamageOwner.mTeam = GetTeam(mOwner->GetGameObject());
+    desc.mDamageOwner.mClass = GetEntityClass(mOwner->GetGameObject());
+    desc.mDamageOwner.mWeapon = mClass;
     desc.mTarget = IsLocked() ? const_cast<GameObject*>(GetLocked()) : 0;
     desc.mBodyID = IsLocked() ? GetLockedTargetBodyId() : -1;
     desc.mFireWeapon = this;
 
     pClass = static_cast<const WeaponCannonClass*>(mClass);
-    const bool bSecondary = pClass->mSecondaryOrdnancePeriod && pClass->mSecondaryOrdnanceClass &&
-                            (mOrdCounter++ % pClass->mSecondaryOrdnancePeriod == 0);
+    bool bSecondary;
+    if (pClass->mSecondaryOrdnancePeriod && pClass->mSecondaryOrdnanceClass)
+    {
+        bSecondary = (mOrdCounter++ % pClass->mSecondaryOrdnancePeriod == 0);
+    }
+    else
+    {
+        bSecondary = false;
+    }
 
     bool bFlash = true;
     if (NetGame::IsEnabled())

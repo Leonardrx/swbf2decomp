@@ -260,11 +260,7 @@ bool UnitCTFOffenseAgent::IsFlagInAlliedHandsButNotMine() const
         return false;
     }
     const Character* pMe = mCtrl->mOwner->mCharacter;
-    if (pCarrier == pMe)
-    {
-        return false;
-    }
-    return pMe->mTeamPtr->GetAffiliation(pCarrier->mTeamNumber) > 0;
+    return pCarrier != pMe && pMe->mTeamPtr->GetAffiliation(pCarrier->mTeamNumber) > 0;
 }
 
 // FUNCTION: SWBF2 0x006649a0

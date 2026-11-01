@@ -763,7 +763,7 @@ float RedTerrain::_RayHit(const PblVector3& vStart, const PblVector3& vEnd, floa
 {
     const float fDeltaX = vStart.x - vEnd.x;
     const float fDeltaZ = vStart.z - vEnd.z;
-    if (fDeltaX * fDeltaX + fDeltaZ * fDeltaZ > fB * fB)
+    if (fDeltaZ * fDeltaZ + fDeltaX * fDeltaX > fB * fB)
     {
         const float fFirst = _RayHit(vStart,
                                      PblVector3((vEnd.x + vStart.x) * 0.5f, (vStart.y + vEnd.y) * 0.5f,
@@ -773,9 +773,7 @@ float RedTerrain::_RayHit(const PblVector3& vStart, const PblVector3& vEnd, floa
         {
             return fFirst * 0.5f;
         }
-        return _RayHit(PblVector3((vEnd.x + vStart.x) * 0.5f, (vStart.y + vEnd.y) * 0.5f,
-                                  (vEnd.z + vStart.z) * 0.5f),
-                       vEnd, fA, fB, bAbove) * 0.5f + 0.5f;
+        return _RayHit((vEnd + vStart) * 0.5f, vEnd, fA, fB, bAbove) * 0.5f + 0.5f;
     }
 
     if (GetInterpolatedHeight(vEnd.x, vEnd.z) > vEnd.y)

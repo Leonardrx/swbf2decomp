@@ -771,7 +771,7 @@ void EntityHoverClass::SetupDefaultColliderBodyFactors(ColliderBodyInfo& info, i
 namespace
 {
 
-void ReadSuspensionNode(const GameModel* pModel, unsigned int uNodeHash, PblVector3& rPos)
+inline void ReadSuspensionNode(const GameModel* pModel, unsigned int uNodeHash, PblVector3& rPos)
 {
     RedPose pose;
     pModel->GetRedModel(0)->SetupPose(pose);
@@ -816,6 +816,8 @@ void EntityHoverClass::SetProperty(unsigned int uProperty, const char* pszValue)
             sCurrentSection = 7;
             break;
         case 0xdbaa7975:
+            sCurrentSection = -1;
+            return;
         default:
             sCurrentSection = -1;
             return;
@@ -971,8 +973,8 @@ void EntityHoverClass::SetProperty(unsigned int uProperty, const char* pszValue)
         }
         else
         {
-            ammo.bFlagShareAmmo = 0;
             ammo.bFlagAmmoInfinite = 1;
+            ammo.bFlagShareAmmo = 0;
         }
         break;
     }

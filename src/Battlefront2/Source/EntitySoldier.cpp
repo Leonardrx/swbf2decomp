@@ -422,12 +422,7 @@ AI::EventInfo::EventInfo(EventType eType, float fFloat, int iInt)
 // FUNCTION: SWBF2 0x004de570
 void SoldierAnimator::ModifyLegMatrixByVehicle(const PblMatrix& lastVehicleMatrix, const PblMatrix& vehicleMatrix)
 {
-    PblMatrix mab;
-    {
-        PblMatrix ma;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&ma), reinterpret_cast<const D3DXMATRIX*>(&mLegMatrix), reinterpret_cast<const D3DXMATRIX*>(&lastVehicleMatrix));
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mab), reinterpret_cast<const D3DXMATRIX*>(&ma), reinterpret_cast<const D3DXMATRIX*>(&vehicleMatrix));
-    }
+    PblMatrix mab = mLegMatrix * lastVehicleMatrix * vehicleMatrix;
     mLegMatrix = NormalMatrix(mab.GetZAxis(), mLegMatrix.GetYAxis(),
                             mab.GetTranslation());
 }
@@ -1133,9 +1128,8 @@ void EntitySoldier::RecalculateAABB()
         SetCollisionCenter(mMatrix.GetTranslation());
         SetCollisionRadius(3.0f);
         float fRadius = GetCollisionRadius();
-        const PblVector3& vCenter = GetCollisionCenter();
-        mAABB = PblBox(vCenter.x - fRadius, vCenter.y - fRadius, vCenter.z - fRadius,
-                       vCenter.x + fRadius, vCenter.y + fRadius, vCenter.z + fRadius);
+        PblVector3 vExtent(fRadius, fRadius, fRadius);
+        mAABB.Set(GetCollisionCenter() - vExtent, GetCollisionCenter() + vExtent);
         return;
     }
 
@@ -1150,30 +1144,23 @@ void EntitySoldier::RecalculateAABB()
         SetCollisionCenter(mMatrix.GetTranslation());
         SetCollisionRadius(sCollisionRadius2[2]);
         float fRadius = GetCollisionRadius();
-        const PblVector3& vCenter = GetCollisionCenter();
-        mAABB = PblBox(vCenter.x - fRadius, vCenter.y - fRadius, vCenter.z - fRadius,
-                       vCenter.x + fRadius, vCenter.y + fRadius, vCenter.z + fRadius);
+        PblVector3 vExtent(fRadius, fRadius, fRadius);
+        mAABB.Set(GetCollisionCenter() - vExtent, GetCollisionCenter() + vExtent);
     }
     else if (mState == SoldierState::JUMP || mState == SoldierState::FALL)
     {
-        const PblVector3& vPos = mMatrix.GetTranslation();
-        const PblVector3& vUp = mMatrix.GetYAxis();
-        SetCollisionCenter(PblVector3(vPos.x + vUp.x, vPos.y + vUp.y, vPos.z + vUp.z));
+        SetCollisionCenter(mMatrix.GetTranslation() + mMatrix.GetYAxis());
         SetCollisionRadius(sCollisionRadius2[0]);
     }
     else
     {
         float fOffset = sCollisionOffset[mStanceIndex] + 0.1f;
-        const PblVector3& vPos = mMatrix.GetTranslation();
-        const PblVector3& vUp = mMatrix.GetYAxis();
-        SetCollisionCenter(PblVector3(fOffset * vUp.x + vPos.x, vPos.y + vUp.y * fOffset,
-                                      vPos.z + vUp.z * fOffset));
+        SetCollisionCenter(mMatrix.GetTranslation() + mMatrix.GetYAxis() * fOffset);
         SetCollisionRadius(sCollisionRadius2[mStanceIndex]);
         float fRadius = sCollisionRadius[mStanceIndex];
         float fHalfHeight = sCollisionHeight[mStanceIndex] * 0.5f + 0.1f;
-        const PblVector3& vCenter = GetCollisionCenter();
-        mAABB = PblBox(vCenter.x - fRadius, vCenter.y - fHalfHeight, vCenter.z - fRadius,
-                       vCenter.x + fRadius, vCenter.y + fHalfHeight, vCenter.z + fRadius);
+        PblVector3 vExtent(fRadius, fHalfHeight, fRadius);
+        mAABB.Set(GetCollisionCenter() - vExtent, GetCollisionCenter() + vExtent);
     }
 }
 
@@ -3696,11 +3683,9 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         float fSin;
         float fCos;
         PblMath::SinCos(&fSin, &fCos, mPitchOffset + mPitchValue);
-        PblVector3 vLocal(0.0f, fSin, fCos);
-        D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vAimDir), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&mAim));
+        vAimDir = mAim.ApplyRotation(PblVector3(0.0f, fSin, fCos));
     }
-    PblVector3 vEye;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vEye), reinterpret_cast<const D3DXVECTOR3*>(&sEyePointOffset[mStanceIndex]), reinterpret_cast<const D3DXMATRIX*>(&mAim));
+    PblVector3 vEye = mAim.ApplyTransform(sEyePointOffset[mStanceIndex]);
 
     bool bSpectator = false;
     if (NetGame::IsEnabled() &&
@@ -3715,12 +3700,8 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
          (mTracker && mTracker->IsFirstPersonView())) &&
         !mFlyingInFirstPerson)
     {
-        rMatrix = DirectionMatrix(PblVector3(-vAimDir.x, -vAimDir.y, -vAimDir.z), mAim.GetYAxis(), vEye);
-        const float fBack = mTargetInfo.mIsAiming ? 0.6f : 0.3f;
-        rMatrix.m[3][0] -= vAimDir.x * fBack;
-        rMatrix.m[3][1] -= vAimDir.y * fBack;
-        rMatrix.m[3][2] -= vAimDir.z * fBack;
-        rMatrix.m[3][3] = 1.0f;
+        rMatrix = DirectionMatrix(-vAimDir, mAim.GetYAxis(), vEye);
+        rMatrix.SetTranslation(rMatrix.GetTranslation() - vAimDir * (mTargetInfo.mIsAiming ? 0.6f : 0.3f));
         int iFirstPerson = GetFirstPersonIndex();
         if (iFirstPerson >= 0 && !mTargetInfo.mIsAiming)
         {
@@ -3730,24 +3711,21 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     else
     {
         int iCamera = (mState == SoldierState::SPRINT) ? 3 : mStanceIndex;
-        float fBlendTime = 0.0f;
-        if (mCameraSettingPrev != iCamera)
-        {
-            fBlendTime = mClass->mCameraSettingBlendTime[(iCamera > mCameraSettingPrev ? iCamera : mCameraSettingPrev) - 1];
-        }
-        const float fMoveTension = (mState == SoldierState::PRONE) ? 0.5f : 1.0f;
-        const float fAimTension = IsAlive() ? 1.0f : 0.1f;
-        CameraTrackSetting& rCamera = mClass->mCameraSettings[iCamera][mTargetInfo.mIsAiming];
+        float fBlendTime = (mCameraSettingPrev == iCamera)
+                               ? 0.0f
+                               : mClass->mCameraSettingBlendTime[(iCamera > mCameraSettingPrev ? iCamera : mCameraSettingPrev) - 1];
         if (fBlendTime > mCameraSettingTimer)
         {
-            rCamera.SetupCameraTrackMatrix(this, mClass->mCameraSettings[mCameraSettingPrev][mTargetInfo.mIsAiming],
-                                           mCameraSettingTimer / fBlendTime, rMatrix, fDeltaTime, mAim, vAimDir,
-                                           fMoveTension, fAimTension, this);
+            mClass->mCameraSettings[iCamera][mTargetInfo.mIsAiming].SetupCameraTrackMatrix(
+                this, mClass->mCameraSettings[mCameraSettingPrev][mTargetInfo.mIsAiming], mCameraSettingTimer / fBlendTime,
+                rMatrix, fDeltaTime, mAim, vAimDir, (mState == SoldierState::PRONE) ? 0.5f : 1.0f,
+                IsAlive() ? 1.0f : 0.1f, this);
         }
         else
         {
-            rCamera.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mAim, vAimDir, fMoveTension, fAimTension,
-                                           this);
+            mClass->mCameraSettings[iCamera][mTargetInfo.mIsAiming].SetupCameraTrackMatrix(
+                this, rMatrix, fDeltaTime, mAim, vAimDir, (mState == SoldierState::PRONE) ? 0.5f : 1.0f,
+                IsAlive() ? 1.0f : 0.1f, this);
         }
     }
 
@@ -3759,10 +3737,10 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     const bool bZoomBlur = mTargetInfo.mIsAiming && pWeapon && pWeapon->mClass->mZoomRate != 0.0f;
     const int iCam = CameraManager::sInstance->mUpdatedCameraId;
     MotionBlurEffect::Stop(0, iCam);
-    if (Controllable* pVehicle = mCharacter->mVehicle)
+    if (mCharacter->mVehicle)
     {
-        if (pVehicle->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover) &&
-            ((EntityHover*)pVehicle->GetEntity())->mClass->mBlurEffect > 0.0f)
+        if (mCharacter->mVehicle->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover) &&
+            ((EntityHover*)mCharacter->mVehicle->GetEntity())->mClass->mBlurEffect > 0.0f)
         {
             MotionBlurEffect::Start(0, 0.8f, iCam);
         }
@@ -4128,11 +4106,17 @@ EntitySoldierClass::EntitySoldierClass(unsigned int uHash)
     for (int i = 0; i < 8; ++i)
     {
         mWeaponClass[i] = 0;
+    }
+    for (int i = 0; i < 8; ++i)
+    {
         mWeaponAmmo[i].uiAmmo = 0;
         mWeaponAmmo[i].uiHeat = 0;
         mWeaponAmmo[i].bFlagAmmoInfinite = 0;
         mWeaponAmmo[i].bFlagShareHeat = 0;
         mWeaponAmmo[i].bFlagShareAmmo = 0;
+    }
+    for (int i = 0; i < 8; ++i)
+    {
         mWeaponChannel[i] = 0;
     }
 
@@ -4179,9 +4163,7 @@ EntitySoldierClass::EntitySoldierClass(unsigned int uHash)
     mImmuneToMines = false;
 
     mAimerClass = new AimerClass();
-    mAimerClass->mOffsetPos.x = 0.0f;
-    mAimerClass->mOffsetPos.y = 2.0f;
-    mAimerClass->mOffsetPos.z = 0.0f;
+    mAimerClass->mOffsetPos = PblVector3(0.0f, 2.0f, 0.0f);
 
     mCameraSettings[0][0].mCameraEyePointOffset.x = 0.0f;
     mCameraSettings[0][0].mCameraEyePointOffset.y = 1.8f;
@@ -4313,6 +4295,9 @@ EntitySoldierClass::EntitySoldierClass(unsigned int uHash)
     for (int i = 0; i < 4; ++i)
     {
         mUpperBodyAnimMask[i] = 0;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
         mLowerBodyAnimMask[i] = 0;
     }
     mSpecialSkeletonLowRes = 0;
@@ -4328,6 +4313,9 @@ EntitySoldierClass::EntitySoldierClass(unsigned int uHash)
     for (int i = 0; i < 8; ++i)
     {
         mDropItemClass[i] = 0;
+    }
+    for (int i = 0; i < 8; ++i)
+    {
         mDropItemProbability[i] = 0.0f;
     }
 
@@ -4347,15 +4335,9 @@ EntitySoldierClass::EntitySoldierClass(unsigned int uHash)
 
     mFleeLikeAHero = 0;
 
-    mTargetPointOffset[0].x = 0.0f;
-    mTargetPointOffset[0].y = 1.4f;
-    mTargetPointOffset[0].z = 0.0f;
-    mTargetPointOffset[1].x = 0.0f;
-    mTargetPointOffset[1].y = 0.6f;
-    mTargetPointOffset[1].z = 0.0f;
-    mTargetPointOffset[2].x = 0.0f;
-    mTargetPointOffset[2].y = 0.2f;
-    mTargetPointOffset[2].z = 0.0f;
+    mTargetPointOffset[0] = PblVector3(0.0f, 1.4f, 0.0f);
+    mTargetPointOffset[1] = PblVector3(0.0f, 0.6f, 0.0f);
+    mTargetPointOffset[2] = PblVector3(0.0f, 0.2f, 0.0f);
 }
 
 // FUNCTION: SWBF2 0x004f5cc0
@@ -7969,12 +7951,9 @@ bool EntitySoldier::JetJump()
 
     float fJet = mClass->mJetJump;
     float fForward = mControlMove > -0.1f ? mControlMove : -0.1f;
-    float fStrafe = mControlStrafe * -0.1f;
     const PblVector3& vFront = mMatrix.GetZAxis();
     const PblVector3& vRight = mMatrix.GetXAxis();
-    PblVector3 vPush = vRight * fStrafe + vFront * fForward + PblVector3(0.0f, 1.1f, 0.0f);
-    PblVector3 vDir;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vPush));
+    PblVector3 vDir = Normalize(vRight * (mControlStrafe * -0.1f) + vFront * fForward + PblVector3(0.0f, 1.1f, 0.0f));
     if (mPlayerId < 0)
     {
         const PblVector3& vAIDir = UnitControllerPtr(mCtrl)->GetLowLevel().mAIJetJumpDir;
@@ -7999,18 +7978,15 @@ bool EntitySoldier::JetJump()
             fVertical *= 1.5f;
         }
 
-        float fSpeed;
         if (mControlMove > 0.0f)
         {
-            fSpeed = mClass->mMaxSpeed * mControlMove;
+            mVelocity = vFront * (mClass->mMaxSpeed * mControlMove);
         }
         else
         {
-            fSpeed = mClass->mMaxStrafeSpeed * mControlMove;
+            mVelocity = vFront * (mClass->mMaxStrafeSpeed * mControlMove);
         }
-        mVelocity = vFront * fSpeed;
-        float fSide = -(mClass->mMaxStrafeSpeed * mControlStrafe);
-        mVelocity += vRight * fSide;
+        mVelocity += vRight * -(mClass->mMaxStrafeSpeed * mControlStrafe);
         mVelocity.y = fVertical;
 
         bool bAnimated = true;
@@ -9305,7 +9281,7 @@ void EntitySoldier::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, 
 
     if (mClass && mClass->mChunkDescriptors[0])
     {
-        if (mClass->mChunkFrequency >= PblRandom::GetSim().GetFloat())
+        if (PblRandom::GetSim().GetFloat() <= mClass->mChunkFrequency)
         {
             mFlags |= flags_forceChunkDeath;
             return;
@@ -9316,9 +9292,8 @@ void EntitySoldier::ApplyRadiusPush(const PblVector3& vPos, float fInnerRadius, 
         }
     }
 
-    const PblVector3& vCenter = GetCollisionCenter();
-    PblVector3 vDiff(vCenter.x - vPos.x, vCenter.y - vPos.y, vCenter.z - vPos.z);
-    float fDist = PblMath::Sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+    PblVector3 vDiff = GetCollisionCenter() - vPos;
+    float fDist = Length(vDiff);
     if (fDist > 0.0001f)
     {
         float fEffect = CalcRadiusEffect(fDist, fInnerRadius, fOuterRadius);
@@ -9951,20 +9926,20 @@ bool EntitySoldier::CyclePosition(bool bForward)
         }
     }
 
-    Controllable* pVehicle = mCharacter->mVehicle;
-    PblList<Controllable>::Itor it(&pVehicle->mNode);
+    PblList<Controllable>::Itor itVehicle(&mCharacter->mVehicle->mNode);
+    Controllable* pVehicle = itVehicle;
+    PblList<Controllable>::Itor it(itVehicle);
     for (;;)
     {
-        Controllable* pSeat = it;
-        if (pSeat && (pSeat->mPilotType == PILOT_VEHICLE || pSeat->mPilotType == PILOT_VEHICLESELF) &&
+        if (it && (it->mPilotType == PILOT_VEHICLE || it->mPilotType == PILOT_VEHICLESELF) &&
             !(pVehicle && pVehicle->GetEntity()->IsRtti(PassengerSlot::rttiHashPassengerSlot) &&
-              pSeat->GetEntity()->IsRtti(PassengerSlot::rttiHashPassengerSlot)))
+              it->GetEntity()->IsRtti(PassengerSlot::rttiHashPassengerSlot)))
         {
-            if (!pSeat->GetPilot())
+            if (!it->GetPilot())
             {
                 break;
             }
-            if (pSeat->GetPilot()->mPlayerId < 0 && mPlayerId >= 0 && !pSeat->GetPilot()->mCharacter->mRemote)
+            if (it->GetPilot()->mPlayerId < 0 && mPlayerId >= 0 && !it->GetPilot()->mCharacter->mRemote)
             {
                 break;
             }
@@ -9977,7 +9952,7 @@ bool EntitySoldier::CyclePosition(bool bForward)
         {
             --it;
         }
-        if ((Controllable*)it == pVehicle)
+        if ((Controllable*)it == (Controllable*)itVehicle)
         {
             return false;
         }
@@ -9990,7 +9965,7 @@ bool EntitySoldier::CyclePosition(bool bForward)
     }
     Controllable* pOldPilot = pSeat->GetPilot();
 
-    pVehicle->SetPilot(0);
+    itVehicle->SetPilot(0);
     pSeat->SetPilot(0);
     mCharacter->SetVehicle(pSeat);
     pSeat->SetPilot(this);
@@ -10003,10 +9978,9 @@ bool EntitySoldier::CyclePosition(bool bForward)
         }
         for (int iChannel = 0; iChannel < 2; ++iChannel)
         {
-            int iIndex = mWeaponIndex[iChannel];
-            if (iIndex >= 0 && mWeapon[iIndex])
+            if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]])
             {
-                mWeapon[iIndex]->Deselect(mActiveChannel, false);
+                mWeapon[mWeaponIndex[iChannel]]->Deselect(mActiveChannel, false);
             }
             mWeaponIndex[iChannel] = -1;
         }
@@ -10036,10 +10010,9 @@ bool EntitySoldier::CyclePosition(bool bForward)
         mActiveIndex = mWeaponIndex[mActiveChannel];
         for (int iChannel = 0; iChannel < 2; ++iChannel)
         {
-            int iIndex = mWeaponIndex[iChannel];
-            if (iIndex >= 0 && mWeapon[iIndex])
+            if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]])
             {
-                mWeapon[iIndex]->Select(iChannel, false);
+                mWeapon[mWeaponIndex[iChannel]]->Select(iChannel, false);
             }
         }
         SetAlert(false);

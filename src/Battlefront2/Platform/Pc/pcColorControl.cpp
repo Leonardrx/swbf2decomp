@@ -135,8 +135,8 @@ void ColorControl::Update(float fDeltaTime)
 
         for (int i = 0; i < 256; i++)
         {
-            float fValue = pow(((float)i * (1.0f / 255.0f) - 0.5f + fOffset) * fScale + 0.5f,
-                               fExponent);
+            float fValue = powf(((float)i * (1.0f / 255.0f) - 0.5f + fOffset) * fScale + 0.5f,
+                                fExponent);
             if (fValue < 0.0f)
             {
                 fValue = 0.0f;

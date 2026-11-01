@@ -864,11 +864,12 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
     unsigned int emptySlot = 64;
     for (unsigned int i = arrayStartIndex; i < arrayEndIndex; ++i)
     {
+        Target& target = mTargetPlayer[i];
         bool targetIsVisible = mTargetPlayerInfo[i].GetVisible();
-        if (IsTargetObjectTypeAllowed(mTargetPlayer[i].obj, playerObject, mLockedObj != mTargetPlayer[i].obj,
+        if (IsTargetObjectTypeAllowed(target.obj, playerObject, target.obj != mLockedObj,
                                       mTargetsAllowedFilter, mNewNumNearestTargets, GetDisplayIconsEverything()))
         {
-            bool targetIsLocked = mLockedObj == mTargetPlayer[i].obj;
+            bool targetIsLocked = target.obj == mLockedObj;
             float autoLoseTime;
             float autoLoseDotProd;
             float autoLoseDistSquare;
@@ -890,16 +891,16 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
 
             if (0.0f > autoLoseTime)
             {
-                mTargetPlayer[i].timer = 0.0f;
+                target.timer = 0.0f;
             }
             else
             {
-                const PblVector3& targetPos = mTargetPlayer[i].obj->GetMatrix().GetTranslation();
+                PblVector3 targetPos = target.obj->GetMatrix().GetTranslation();
                 PblVector3 toTargetVector(targetPos.x - playerControllable->mEyePoint.x,
                                           targetPos.y - playerControllable->mEyePoint.y,
                                           targetPos.z - playerControllable->mEyePoint.z);
                 float dot;
-                if (mTargetPlayer[i].obj == playerObject)
+                if (target.obj == playerObject)
                 {
                     dot = 1.0f;
                 }
@@ -907,35 +908,35 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                 {
                     PblVector3 direction;
                     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&direction), reinterpret_cast<const D3DXVECTOR3*>(&toTargetVector));
-                    dot = direction.x * playerControllable->mEyeDir.x + direction.y * playerControllable->mEyeDir.y +
+                    dot = playerControllable->mEyeDir.x * direction.x + direction.y * playerControllable->mEyeDir.y +
                           direction.z * playerControllable->mEyeDir.z;
                 }
 
-                if (dot < autoLoseDotProd ||
-                    autoLoseDistSquare < toTargetVector.x * toTargetVector.x + toTargetVector.y * toTargetVector.y +
-                                             toTargetVector.z * toTargetVector.z ||
-                    (autoLoseVisibilityCheck && !targetIsVisible))
+                if (dot >= autoLoseDotProd &&
+                    autoLoseDistSquare >= toTargetVector.x * toTargetVector.x + toTargetVector.y * toTargetVector.y +
+                                              toTargetVector.z * toTargetVector.z &&
+                    (!autoLoseVisibilityCheck || targetIsVisible))
                 {
-                    mTargetPlayer[i].timer += deltaTime;
+                    target.timer = 0.0f;
                 }
                 else
                 {
-                    mTargetPlayer[i].timer = 0.0f;
+                    target.timer += deltaTime;
                 }
 
-                if (mTargetPlayer[i].timer >= autoLoseTime)
+                if (target.timer >= autoLoseTime)
                 {
                     if (targetIsLocked)
                     {
                         SetLockedTarget(NULL, &mTargetPlayerInfo[i]);
                     }
-                    mTargetPlayer[i].SetObj(NULL, NULL);
+                    target.SetObj(NULL, NULL);
                     mTargetPlayerInfo[i].Clean();
                 }
                 else if (dot > 0.98f && mForceNewLock && !mForceNewLockTarget &&
-                         IsTargetObjectTypeAllowed(mTargetPlayer[i].obj, playerObject, false, mTargetsAllowedFilter,
+                         IsTargetObjectTypeAllowed(target.obj, playerObject, false, mTargetsAllowedFilter,
                                                    mNewNumNearestTargets, GetDisplayIconsEverything()) &&
-                         (mTargetHistory.IsEmpty() || !mTargetHistory.Check(mTargetPlayer[i].obj)))
+                         (mTargetHistory.IsEmpty() || !mTargetHistory.Check(target.obj)))
                 {
                     if (maxDotIndex == 64 || dot > maxDot)
                     {
@@ -945,17 +946,17 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                 }
             }
         }
-        else if (mTargetPlayer[i].obj)
+        else if (target.obj)
         {
-            if (mLockedObj == mTargetPlayer[i].obj)
+            if (target.obj == mLockedObj)
             {
                 SetLockedTarget(NULL, &mTargetPlayerInfo[i]);
             }
-            mTargetPlayer[i].SetObj(NULL, NULL);
+            target.SetObj(NULL, NULL);
             mTargetPlayerInfo[i].Clean();
         }
 
-        if (emptySlot == 64 && !mTargetPlayer[i].obj)
+        if (emptySlot == 64 && !target.obj)
         {
             emptySlot = i;
         }
@@ -1013,53 +1014,54 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                 objectLeft = 0;
                 for (unsigned int objI = 0; objI < objectCount; ++objI)
                 {
-                    if (objectArray[objI])
+                    GameObject*& object = objectArray[objI];
+                    if (object)
                     {
-                        GameObject* targetGameObjectVehicle = Controllable::GetVehicleIfAttached(objectArray[objI]);
-                        if (targetGameObjectVehicle && targetGameObjectVehicle != objectArray[objI])
+                        GameObject* targetGameObjectVehicle = Controllable::GetVehicleIfAttached(object);
+                        if (targetGameObjectVehicle && targetGameObjectVehicle != object)
                         {
                             bool vehicleAllowed =
                                 IsTargetObjectTypeAllowed(targetGameObjectVehicle, playerObject, !mForceNewLock && !mAutoLock,
                                                           mTargetsAllowedFilter, mNewNumNearestTargets, GetDisplayIconsEverything());
                             if (vehicleAllowed)
                             {
-                                objectArray[objI] = targetGameObjectVehicle;
+                                object = targetGameObjectVehicle;
                             }
-                            else if (objectArray[objI]->GetCollisionType() != COLL_ATTACHED ||
-                                     !IsTargetObjectTypeAllowed(objectArray[objI], playerObject,
+                            else if (object->GetCollisionType() != COLL_ATTACHED ||
+                                     !IsTargetObjectTypeAllowed(object, playerObject,
                                                                 !mForceNewLock && !mAutoLock, mTargetsAllowedFilter,
                                                                 mNewNumNearestTargets, GetDisplayIconsEverything()))
                             {
-                                objectArray[objI] = NULL;
+                                object = NULL;
                             }
                         }
-                        else if (!IsTargetObjectTypeAllowed(objectArray[objI], playerObject, !mForceNewLock && !mAutoLock,
+                        else if (!IsTargetObjectTypeAllowed(object, playerObject, !mForceNewLock && !mAutoLock,
                                                             mTargetsAllowedFilter, mNewNumNearestTargets,
                                                             GetDisplayIconsEverything()))
                         {
-                            objectArray[objI] = NULL;
+                            object = NULL;
                         }
 
-                        if (objectArray[objI] && (!mForceNewLock || !mTargetHistory.Check(objectArray[objI])))
+                        if (object && (!mForceNewLock || !mTargetHistory.Check(object)))
                         {
                             if (!mForceNewLock)
                             {
                                 for (unsigned int k = arrayStartIndex; k < arrayEndIndex; ++k)
                                 {
-                                    if (objectArray[objI] == mTargetPlayer[k].obj)
+                                    if (object == mTargetPlayer[k].obj)
                                     {
-                                        objectArray[objI] = NULL;
+                                        object = NULL;
                                         break;
                                     }
                                 }
                             }
 
-                            if (objectArray[objI])
+                            if (object)
                             {
-                                PblVector3 targetPos = objectArray[objI]->GetCollisionCenter();
-                                if (objectArray[objI]->GetCollisionType() == COLL_ATTACHED)
+                                PblVector3 targetPos = object->GetCollisionCenter();
+                                if (object->GetCollisionType() == COLL_ATTACHED)
                                 {
-                                    const PblMatrix& objMatrix = objectArray[objI]->GetMatrix();
+                                    const PblMatrix& objMatrix = object->GetMatrix();
                                     targetPos.x += objMatrix.m[1][0] * 0.4f;
                                     targetPos.y += objMatrix.m[1][1] * 0.4f;
                                     targetPos.z += objMatrix.m[1][2] * 0.4f;
@@ -1069,7 +1071,7 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                                                    (targetPos.y - playerPosition.y) * (targetPos.y - playerPosition.y) +
                                                    (targetPos.z - playerPosition.z) * (targetPos.z - playerPosition.z);
                                 float dot;
-                                if (objectArray[objI] == playerObject)
+                                if (object == playerObject)
                                 {
                                     dot = 1.0f;
                                 }
@@ -1106,25 +1108,25 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                                     {
                                         if (!mLockVisibleFilter ||
                                             AIUtil::CanSeePosition(playerControllable->mEyePoint, playerControllable,
-                                                                   targetPos, objectArray[objI]))
+                                                                   targetPos, object))
                                         {
                                             maxDistSquare = distSquare;
                                             newGameObjectIdx = objI;
                                         }
                                         else
                                         {
-                                            objectArray[objI] = NULL;
+                                            object = NULL;
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    objectArray[objI] = NULL;
+                                    object = NULL;
                                 }
                             }
                         }
                     }
-                    if (objectArray[objI])
+                    if (object)
                     {
                         objectLeft++;
                     }

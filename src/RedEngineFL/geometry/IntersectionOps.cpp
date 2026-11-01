@@ -144,12 +144,12 @@ void Frustum::GetBaseEdges(Ray<Vector3<float> >* pEdges) const
 {
     Vector3<float> right = normalize(cross(up_, fwd_));
     pEdges[0].dir_ = fwd_ * far_ + up_ * height_ + right * width_;
-    pEdges[0].orig_ = center_;
     pEdges[1].dir_ = fwd_ * far_ - up_ * height_ + right * width_;
-    pEdges[1].orig_ = center_;
     pEdges[2].dir_ = fwd_ * far_ - up_ * height_ - right * width_;
-    pEdges[2].orig_ = center_;
     pEdges[3].dir_ = fwd_ * far_ + up_ * height_ - right * width_;
+    pEdges[0].orig_ = center_;
+    pEdges[1].orig_ = center_;
+    pEdges[2].orig_ = center_;
     pEdges[3].orig_ = center_;
 }
 

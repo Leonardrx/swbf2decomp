@@ -332,13 +332,11 @@ void ChaseCamera::SetupCamera(RedCamera* pCamera, float fDeltaTime)
         {
             PblQuaternion qNew = PblQuaternion(mMatrix);
 
-            PblQuaternion qRot = Interpolate(qOld, qNew, fRotBlend);
-            mMatrix = PblMatrix(qRot, vPos);
+            mMatrix = PblMatrix(Interpolate(qOld, qNew, fRotBlend), vPos);
 
             vPos += vOldPos;
             vPos *= 0.5f;
-            PblQuaternion qMid = Interpolate(qOld, qNew, 0.5f);
-            PblMatrix mMid(qMid, vPos);
+            PblMatrix mMid(Interpolate(qOld, qNew, 0.5f), vPos);
 
             float fSwing = Length(vDelta) * 0.5f * (1.0f - fBlend);
             mMatrix.SetTranslation(mMid.GetTranslation() + mMid.GetZAxis() * fSwing);

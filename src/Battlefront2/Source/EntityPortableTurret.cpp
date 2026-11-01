@@ -143,8 +143,12 @@ bool EntityPortableTurret::Update(float fDeltaTime)
 
     if (!(NetGame::IsEnabled() && NetGame::IsClient()))
     {
-        if ((!IsAlive() && !mClass->mDestroyedModel && !mClass->mUnbuiltModel) || mLifeTimer > mClass->mLifeTime ||
-            mMatrix.m[3][1] < -500.0f)
+        if (!IsAlive() && !mClass->mDestroyedModel && !mClass->mUnbuiltModel)
+        {
+            Kill();
+            return false;
+        }
+        if (mLifeTimer > mClass->mLifeTime || mMatrix.m[3][1] < -500.0f)
         {
             Kill();
             return false;
@@ -162,13 +166,13 @@ bool EntityPortableTurret::Update(float fDeltaTime)
     if (!mStationary)
     {
         float fHalfDrop = mClass->mGravity * -9.8f * 0.5f * fDeltaTime;
-        mVelocity.y += fHalfDrop;
-        PblVector3 vStep(mVelocity.x * fDeltaTime, mVelocity.y * fDeltaTime, mVelocity.z * fDeltaTime);
+        mVelocity.y = fHalfDrop + mVelocity.y;
+        PblVector3 vStep = mVelocity * fDeltaTime;
         const PblVector3& vPos = GetPosition();
         SetPosition(PblVector3(vPos.x + vStep.x, vPos.y + vStep.y, vPos.z + vStep.z));
         mAABB._vMax = mAABB._vMax + mVelocity * fDeltaTime;
         mAABB._vMin = mAABB._vMin + mVelocity * fDeltaTime;
-        mVelocity.y += fHalfDrop;
+        mVelocity.y = fHalfDrop + mVelocity.y;
         if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -500.0f)
         {
             Kill();
@@ -214,7 +218,7 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
     if (pOther->GetCollisionType() != COLL_SOFT && pOther->GetCollisionType() != COLL_RIGID)
     {
         const PblVector3& vNormal = pResult->mSeparationNormal;
-        float fDot = vNormal.x * mVelocity.x + mVelocity.y * vNormal.y + mVelocity.z * vNormal.z;
+        float fDot = DotProduct(mVelocity, vNormal);
         if (fDot < 0.0f)
         {
             if (pOther->GetCollisionType() == COLL_WATER)
@@ -236,17 +240,15 @@ bool EntityPortableTurret::CollisionCallback(const CollisionResult* pResult, Col
             else
             {
                 float fRebound = mClass->mRebound;
-                float fFriction = mClass->mFriction * fDot * (fRebound + 1.0f);
+                float fFriction = mClass->mFriction * fDot;
                 mVelocity -= vNormal * fDot;
-                float fScale = -(fFriction / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                float fScale = -(fFriction * (fRebound + 1.0f) / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                                            mVelocity.z * mVelocity.z));
                 if (!(1.0f > fScale))
                 {
                     fScale = 1.0f;
                 }
-                mVelocity.x -= fScale * mVelocity.x;
-                mVelocity.y -= mVelocity.y * fScale;
-                mVelocity.z -= mVelocity.z * fScale;
+                mVelocity -= mVelocity * fScale;
                 float fBounce = fRebound * fDot;
                 mVelocity -= vNormal * fBounce;
             }

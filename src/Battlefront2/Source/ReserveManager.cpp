@@ -259,15 +259,17 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
     case FT_DOUBLEFILE:
     {
         const float fRow = (float)(iOrder / 2) + 0.25f;
+        const PblVector3 vBack = PblVector3(0.0f, 0.0f, -1.0f) * fRow;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return PblVector3(fSide * 0.75f + fRow * 0.0f, fSide * 0.0f + fRow * 0.0f, fSide * 0.0f + fRow * -1.0f);
+        return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
 
     case FT_CONVOY:
     {
         const float fRow = (float)(iOrder / 2) - 0.25f;
+        const PblVector3 vBack = PblVector3(0.0f, 0.0f, 1.0f) * fRow;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return PblVector3(fSide * 0.75f + fRow * 0.0f, fSide * 0.0f + fRow * 0.0f, fSide * 0.0f + fRow);
+        return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
 
     case FT_DOUBLEFILE_RAND:
@@ -278,12 +280,13 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
         {
             random.GetVector3();
         }
-        const PblVector3 vRand = random.GetVector3();
+        const PblVector3 vJitter = random.GetVector3() * 0.2f;
         const float fRow = (float)(iOrder / 2) + 0.25f;
+        const PblVector3 vBack = PblVector3(0.0f, 0.0f, -1.0f) * fRow;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return PblVector3(fRow * 0.0f + (fSide * 0.75f + vRand.x * 0.2f),
-                          fRow * 0.0f + (fSide * 0.0f + vRand.y * 0.2f),
-                          fRow * -1.0f + (fSide * 0.0f + vRand.z * 0.2f));
+        return PblVector3(vBack.x + (fSide * 0.75f + vJitter.x),
+                          vBack.y + (fSide * 0.0f + vJitter.y),
+                          vBack.z + (fSide * 0.0f + vJitter.z));
     }
 
     case FT_CIRCLE:
@@ -298,7 +301,8 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
     {
         const float fRow = (float)(iOrder / 2) + 0.25f;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return PblVector3(fSide * 0.75f + fSide * fRow, fSide * 0.0f + fRow * 0.0f, fSide * 0.0f + fRow * -1.0f);
+        const PblVector3 vBack = PblVector3(fSide, 0.0f, -1.0f) * fRow;
+        return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
 
     default:

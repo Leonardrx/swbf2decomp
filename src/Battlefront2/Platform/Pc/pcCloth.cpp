@@ -73,16 +73,14 @@ void EntityCloth::PlatformRender(unsigned char ucViewport, RedColor color, unsig
     {
         pVertices[i].pos.SetPos(m_pPos[i].x, m_pPos[i].y, m_pPos[i].z);
         pVertices[i].normal.SetNormal(m_pNormal[i]);
-        pVertices[i].uv.u = pTexCoords[i].x;
-        pVertices[i].uv.v = pTexCoords[i].y;
+        pVertices[i].uv.SetUV(pTexCoords[i].x, pTexCoords[i].y);
     }
     ClothVertex* pBack = pVertices + mData->m_uiNumParticles;
     for (unsigned int i = 0; i < mData->m_uiNumParticles; ++i)
     {
         pBack[i].pos.SetPos(m_pPos[i].x, m_pPos[i].y, m_pPos[i].z);
         pBack[i].normal.SetNormal(PblVector3(-m_pNormal[i].x, -m_pNormal[i].y, -m_pNormal[i].z));
-        pBack[i].uv.u = pTexCoords[i].x;
-        pBack[i].uv.v = pTexCoords[i].y;
+        pBack[i].uv.SetUV(pTexCoords[i].x, pTexCoords[i].y);
     }
     pPrimitive->EndVertexData();
 

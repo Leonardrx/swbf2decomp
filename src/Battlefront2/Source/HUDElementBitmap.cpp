@@ -491,7 +491,8 @@ void HUD::ElementBitmap::CopyToBitmaps(RedBitmapElement* const pBitmaps, unsigne
         }
         if (pGroup)
         {
-            bitmap.Enable(pGroup->AddElement(&bitmap));
+            const bool bAdded = pGroup->AddElement(&bitmap);
+            bitmap.Enable(bAdded);
         }
     }
 }

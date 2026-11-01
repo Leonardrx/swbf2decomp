@@ -1879,10 +1879,10 @@ bool EntityFlyer::UpdateIndirect(float fDeltaTime)
         if (!mFollowingPath || mState != FLYING || !IsAlive() || !(0.0f >= mAIEng.ai.mFreeFlyTime) || mInRoll ||
             mInFlip)
         {
-            float fThrust = 1.0f;
-            float fStrafe = 0.0f;
-            float fTurn = 0.0f;
             float fPitch = 0.0f;
+            float fTurn = 0.0f;
+            float fStrafe = 0.0f;
+            float fThrust = 1.0f;
             float fSpeedScale = 1.0f;
             if (mState != TAKEOFF)
             {
@@ -5121,20 +5121,16 @@ void EntityFlyer::DoTrick(Trick eTrick)
     if (!mInRoll && !mInFlip && mEnergyBar.SpendEnergy(fEnergy))
     {
         mSoundTrick.Stop(true);
-        const GameSound* pSound;
         switch (eTrick)
         {
         case SIDE_ROLL:
             SideRoll();
-            pSound = &mClass->mSoundTrick;
             break;
         case FLIP_UP:
             FlipAdd(-3.1415927f);
-            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN:
             FlipAdd(3.1415927f);
-            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_UP_RIGHT:
             FlipAdd(-3.1415927f);
@@ -5146,7 +5142,6 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(3.926991f);
             }
-            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN_RIGHT:
             FlipAdd(3.1415927f);
@@ -5158,7 +5153,6 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(-3.926991f);
             }
-            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_UP_LEFT:
             FlipAdd(-3.1415927f);
@@ -5170,7 +5164,6 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(-3.926991f);
             }
-            pSound = &mClass->mSoundFlip;
             break;
         case FLIP_DOWN_LEFT:
             FlipAdd(3.1415927f);
@@ -5182,12 +5175,11 @@ void EntityFlyer::DoTrick(Trick eTrick)
             {
                 RollAdd(3.926991f);
             }
-            pSound = &mClass->mSoundFlip;
             break;
         default:
-            pSound = &mClass->mSoundFlip;
             break;
         }
+        const GameSound* pSound = eTrick == SIDE_ROLL ? &mClass->mSoundTrick : &mClass->mSoundFlip;
         const PblMatrix& mMine = GetMatrix();
         mSoundTrick.Play(pSound, &mMine.GetTranslation(), &GetVelocity(), true);
         mLastTrickPerformed = eTrick;
@@ -5280,9 +5272,9 @@ static float sGetHeight(const PblVector3& vPos, const PblVector3& vDir, float fD
     }
     float fSin, fCos;
     PblMath::SinCos(&fSin, &fCos, fAngle);
-    float fX = vPos.x + (vDir.x * fCos - vDir.z * fSin) * fDist;
-    float fZ = vPos.z + (vDir.z * fCos + vDir.x * fSin) * fDist;
-    float fHeight = RedTerrain::GetInterpolatedHeight(fX, fZ);
+    PblVector3 vOffset(vDir.x * fCos - vDir.z * fSin, 0.0f, vDir.z * fCos + vDir.x * fSin);
+    PblVector3 vPoint = vPos + vOffset * fDist;
+    float fHeight = RedTerrain::GetInterpolatedHeight(vPoint.x, vPoint.z);
     return fHeight > AIUtil::gMinFlyHeight ? fHeight : AIUtil::gMinFlyHeight;
 }
 

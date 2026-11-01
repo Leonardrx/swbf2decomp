@@ -449,7 +449,7 @@ void FishParticleManager::SpawnFloatingFish(const PblVector3& vPos, float fRadiu
             if (fTotal >= fPick)
             {
                 float fDist = PblRandom::_Global.GetFloat() * fRadius;
-                PblVector3 vSpawn(vPos.x + vDir.x * fDist, vPos.y + vDir.y * fDist, vPos.z + vDir.z * fDist);
+                PblVector3 vSpawn = vPos + vDir * fDist;
                 pFish->RespawnFish(vSpawn, sFishTypes[i - 1], FISH_FLOAT);
                 break;
             }

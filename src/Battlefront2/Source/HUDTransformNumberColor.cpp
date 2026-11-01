@@ -115,19 +115,17 @@ RedColor HUD::TransformNumberColor::CalculateOutputColor(float fInput) const
     {
         ++i;
     }
-    const NumberColor& high = mMapping[(i == mNumMappings) ? i - 1 : i];
-    const RedColor highColor = high.color;
-    const NumberColor& low = mMapping[i ? i - 1 : 0];
-    const RedColor lowColor = low.color;
+    const NumberColor high = mMapping[(i == mNumMappings) ? i - 1 : i];
+    const NumberColor low = mMapping[i ? i - 1 : 0];
     const float fDelta = high.number - low.number;
     RedColor result;
     if (fDelta == 0.0f)
     {
-        result = highColor;
+        result = high.color;
     }
     else
     {
-        result = Interpolate(lowColor, highColor, (fValue - low.number) / fDelta);
+        result = Interpolate(low.color, high.color, (fValue - low.number) / fDelta);
     }
     return result;
 }

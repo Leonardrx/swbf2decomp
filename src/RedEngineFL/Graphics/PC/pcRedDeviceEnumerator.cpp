@@ -737,7 +737,7 @@ void Enumerate(unsigned int uiMinColorChannelBits, unsigned int uiMinAlphaChanne
                  pFmt->_pObject != adapterFormatList._head._pObject;
                  pFmt = pFmt->_pNext)
             {
-                if (pFmt->_pObject->format == displayMode.Format)
+                if (pFmt->_pObject->format == pDisplayMode->displayMode.Format)
                 {
                     bFound = true;
                     break;

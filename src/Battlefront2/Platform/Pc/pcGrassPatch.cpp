@@ -196,8 +196,9 @@ void GrassPatchClass::RenderMaxDist(const PblMatrix& matrix, float fMaxDist,
     {
         return;
     }
-    static float FADE = 20.0f;
+    const float fFadeDistance = 20.0f;
     float alpha = 1.0f;
+    static float FADE = fFadeDistance;
     if (uiFlags & 0x20000000)
     {
         float end = RedRenderer::pcGetNearSceneEnd();
@@ -219,17 +220,20 @@ void GrassPatchClass::RenderMaxDist(const PblMatrix& matrix, float fMaxDist,
             alpha = (end - distance) / (end - start);
         }
     }
-    else if (distance > fMaxDist - FADE)
+    else
     {
         static float inverseFADE = 1.0f / FADE;
-        alpha = 1.0f - (distance - (fMaxDist - FADE)) * inverseFADE;
-        if (alpha < 0.0f)
+        if (distance > fMaxDist - FADE)
         {
-            alpha = 0.0f;
-        }
-        if (alpha > 1.0f)
-        {
-            alpha = 1.0f;
+            alpha = 1.0f - (distance - (fMaxDist - FADE)) * inverseFADE;
+            if (alpha < 0.0f)
+            {
+                alpha = 0.0f;
+            }
+            if (alpha > 1.0f)
+            {
+                alpha = 1.0f;
+            }
         }
     }
     RedColorValue faded = color;

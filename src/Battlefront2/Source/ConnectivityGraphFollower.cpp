@@ -104,8 +104,8 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         mDestNode2 = mDestNode == pToArc->n1 ? pToArc->n2 : pToArc->n1;
         mUseDest2ForWeights = pArc1 && pArc2
-                              && DistSq(mDestNode->GetCenter(), mDestPos)
-                                     > DistSq(mDestNode2->GetCenter(), mDestPos);
+                              && DistSq(mDestNode2->GetCenter(), mDestPos)
+                                     < DistSq(mDestNode->GetCenter(), mDestPos);
         return GotoNextLeg();
     }
 
@@ -132,7 +132,7 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            if (DistSq(pFromArc->n2->GetCenter(), vFrom) > DistSq(pFromArc->n1->GetCenter(), vFrom))
+            if (DistSq(pFromArc->n1->GetCenter(), vFrom) < DistSq(pFromArc->n2->GetCenter(), vFrom))
             {
                 mCurDestNode = pFromArc->n2;
             }
@@ -193,7 +193,7 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            if (DistSq(pFromArc->n2->GetCenter(), vFrom) > DistSq(pFromArc->n1->GetCenter(), vFrom))
+            if (DistSq(pFromArc->n1->GetCenter(), vFrom) < DistSq(pFromArc->n2->GetCenter(), vFrom))
             {
                 mCurDestNode = pFromArc->n2;
             }
@@ -231,9 +231,9 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
     mDestNode2 = mDestNode == pToArc->n1 ? pToArc->n2 : pToArc->n1;
     mUseDest2ForWeights =
         pArc1 && pArc2
-        && DistSq(mDestNode->GetCenter(), mDestPos) > DistSq(mDestNode2->GetCenter(), mDestPos);
+        && DistSq(mDestNode2->GetCenter(), mDestPos) < DistSq(mDestNode->GetCenter(), mDestPos);
     mCurArc = const_cast<ConnectivityArc*>(pFromArc);
-    mCurDestNode = const_cast<ConnectivityNode*>(pOther);
+    mCurDestNode = mCurDestNode == pFromArc->n1 ? pFromArc->n2 : pFromArc->n1;
     mCurDestPos = mCurDestNode->GetRandomPointInside(ConnectivityGraphFollower::GetNodeBufferRadius(mCtrl));
     return true;
 }

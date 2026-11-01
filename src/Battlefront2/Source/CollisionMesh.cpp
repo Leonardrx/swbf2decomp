@@ -654,15 +654,12 @@ void CollisionMesh::__GetTriHits(const PblVector3& vPos, float fRadius2, const P
 
     if (!pNode->isleaf)
     {
-
-        CollisionTreeNode* pLChild = pNode + 1;
-        CollisionTreeNode* pGChild = (CollisionTreeNode*)pNode->data;
         CollisionAABB lAABB;
-        lAABB = CollisionAABB(aabb, pLChild->aabb);
+        lAABB = CollisionAABB(aabb, (pNode + 1)->aabb);
         CollisionAABB gAABB;
-        gAABB = CollisionAABB(aabb, pGChild->aabb);
-        ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pLChild, lAABB, list, pCache);
-        ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pGChild, gAABB, list, pCache);
+        gAABB = CollisionAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
+        ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pNode + 1, lAABB, list, pCache);
+        ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, (CollisionTreeNode*)pNode->data, gAABB, list, pCache);
         return;
     }
 

@@ -702,6 +702,9 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
 {
     switch (pInfo->mType)
     {
+    case AI::EVT_None:
+        return 0;
+
     case AI::EVT_EmptyVehicle:
         if (!ShouldAgentGetInNearbyVehicle(static_cast<GameObject*>(pInfo->mGameObject)))
         {
@@ -734,6 +737,12 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
 
     case AI::EVT_Damaged:
         return HandleDamagedEvent(pInfo);
+
+    case AI::EVT_SC_FollowChr:
+    case AI::EVT_SC_FollowChrLoose:
+    case AI::EVT_SC_GetIntoVehicle:
+    case AI::EVT_SC_GetOutOfVehicle:
+        return HandleSquadCommandEvent(pInfo);
 
     case AI::EVT_Vehicle_WaitForPickUp:
         pInfo->mNextCmd = UnitWaitSecondaryInfo(pInfo->mFloat, false);
@@ -772,12 +781,6 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
             ControllerManager::RequestControllerUpdateASAP(mCtrl);
         }
         return 1;
-
-    case AI::EVT_SC_FollowChr:
-    case AI::EVT_SC_FollowChrLoose:
-    case AI::EVT_SC_GetIntoVehicle:
-    case AI::EVT_SC_GetOutOfVehicle:
-        return HandleSquadCommandEvent(pInfo);
 
     case AI::EVQ_GetSkillModifier:
         pInfo->mInt = 0;

@@ -219,20 +219,16 @@ void SoldierElement::RenderUsingContext(const PblMatrix& mContext, const RedColo
     mPos = mContext.GetTranslation();
 
     PblMatrix mScreen = mContext;
-    mScreen[1] = mContext[1] * -1.0f;
+    mScreen[1] = mScreen[1] * -1.0f;
     mScreen.m[1][3] = 0.0f;
 
     float fScale = 0.75f / RedRenderer::GetScreenAspectRatio() * mDepth;
-    mScreen[3] *= fScale;
+    mScreen[3] = mScreen[3] * fScale;
     mScreen.m[3][3] = 1.0f;
 
     PblMatrix mWorld(mRotation, mTranslation);
-
-    PblMatrix mScaling;
     mWorld.Scale(mScale);
-    D3DXMatrixMultiply((D3DXMATRIX*)&mScaling, (const D3DXMATRIX*)&mWorld,
-                       (const D3DXMATRIX*)&mScreen);
-    mScreen = mScaling;
+    mScreen = mWorld * mScreen;
 
     RedPose pose;
 
@@ -278,15 +274,13 @@ void SoldierElement::RenderUsingContext(const PblMatrix& mContext, const RedColo
     PblMatrix mRender = mScreen;
     if (mState == SoldierState::PRONE)
     {
+        mRender[1] = mGroundNormal;
+        mRender.m[1][3] = 0.0f;
+
         PblVector3 vBack = -mScreen[2];
         PblVector3 vCross = CrossProduct(vBack, mGroundNormal);
         mRender[0] = Normalize(vCross);
         mRender.m[0][3] = 0.0f;
-
-        mRender.m[1][0] = mGroundNormal.x;
-        mRender.m[1][1] = mGroundNormal.y;
-        mRender.m[1][2] = mGroundNormal.z;
-        mRender.m[1][3] = 0.0f;
 
         vCross = CrossProduct(mScreen[0], mGroundNormal);
         mRender[2] = Normalize(vCross);
@@ -329,12 +323,11 @@ void SoldierElement::RenderUsingContext(const PblMatrix& mContext, const RedColo
         }
     }
 
-    RedModel* pRedModel = (RedModel*)mModel->GetRedModel(0);
     if (mClass->mOverrideTextureHash)
     {
 
         RedShadingPose shadingPose;
-        shadingPose.BindToModel(pRedModel);
+        shadingPose.BindToModel((RedModel*)mModel->GetRedModel(0));
         if (RedShadingState* pState = shadingPose.CreateShadingState(0xdc5803e9))
         {
             pState->GetIntParam(0x891891e9) = mClass->mOverrideTextureHash;
@@ -346,11 +339,11 @@ void SoldierElement::RenderUsingContext(const PblMatrix& mContext, const RedColo
                 pState->GetIntParam(0x891891e9) = mClass->mOverrideTextureHash2;
             }
         }
-        pRedModel->Render(&mRender, &pose, color, 0x4000000, &shadingPose);
+        ((RedModel*)mModel->GetRedModel(0))->Render(&mRender, &pose, color, 0x4000000, &shadingPose);
     }
     else
     {
-        pRedModel->Render(&mRender, &pose, color, 0x4000000, 0);
+        ((RedModel*)mModel->GetRedModel(0))->Render(&mRender, &pose, color, 0x4000000, 0);
     }
 
     for (unsigned int i = 0; i < mModel->mClothCount; ++i)

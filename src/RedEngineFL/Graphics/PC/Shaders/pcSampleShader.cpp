@@ -177,14 +177,10 @@ void pcSampleShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 
     pcRedVertexShaderConstantRegister* pRegs =
         RedRenderer::pcLockVertexShaderConstants(40, 2);
-    pRegs[40].component[2] = m_inputOffsetX;
-    pRegs[40].component[3] = m_inputOffsetY;
-    pRegs[40].component[0] = 1.0f / (float)(uiWidth - 1);
-    pRegs[40].component[1] = 1.0f / (float)(uiHeight - 1);
-    pRegs[41].component[2] = 0.0f;
-    pRegs[41].component[3] = 1.0f;
-    pRegs[41].component[1] = -(m_outputY * fScaleY - 1.0f);
-    pRegs[41].component[0] = m_outputX * fScaleX - 1.0f;
+    pRegs[40].SetFloats(1.0f / (float)(uiWidth - 1), 1.0f / (float)(uiHeight - 1),
+                        m_inputOffsetX, m_inputOffsetY);
+    pRegs[41].SetFloats(m_outputX * fScaleX - 1.0f, -(m_outputY * fScaleY - 1.0f),
+                        0.0f, 1.0f);
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &m_scale.r, 1);

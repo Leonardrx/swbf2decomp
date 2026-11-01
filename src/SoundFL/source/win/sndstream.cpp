@@ -40,9 +40,10 @@ void Stream::Flush(bool bThreadPaused, bool bFlushRenderers)
     mSource.Stop();
     mSource.Update();
 
-    const Info* pInfo = mInfoList.IsEmpty()
-        ? 0
-        : (const Info*)ObjectList::Itor(&mInfoList).GetObjectA(&mInfoList);
+    const Info* pInfo = !mInfoList.IsEmpty()
+        ? (const Info*)((ObjectList::Node*)mInfoList.GetFirst()->GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->GetObjectA()
+        : 0;
     const unsigned int uiNumSubstreams = pInfo->mNumSubstreams;
 
     for (unsigned int i = 0; i < uiNumSubstreams; ++i)

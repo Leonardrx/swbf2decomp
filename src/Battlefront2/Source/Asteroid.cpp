@@ -484,7 +484,6 @@ void Asteroid::Kill()
     if (pClass->mNumChildren > 0)
     {
         EntityDesc desc;
-        desc.mMatrix = gMatrixIdentity;
         desc.mPlayerId = 0;
         for (int i = 0; i < pClass->mNumChildren; ++i)
         {

@@ -1385,12 +1385,12 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
 
     for (PblList<RedLight>::Itor it(s_GlobalList); it != s_GlobalList.End(); ++it)
     {
-        RedLight* pLight = it;
-        if ((pLight->m_uiHideInView & (1 << uiView)) || !pLight->IsVisible(pCamera))
+        if ((it->m_uiHideInView & (1 << uiView)) || !it->IsVisible(pCamera))
         {
             continue;
         }
 
+        RedLight* pLight = it;
         switch (pLight->m_eType)
         {
         case TYPE_DIRECTIONAL:

@@ -462,8 +462,8 @@ void pcWaterShader::Render_Prog2(const RenderItem* pItem, unsigned int uiPass) c
         if (uiPass == 1)
         {
             pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 4);
-            pRegs[40].component[3] = 0.5f;
-            pRegs[40].SetFloats(-s_vSpecularDirection.x, -s_vSpecularDirection.y, -s_vSpecularDirection.z);
+            const PblVector3 vLightDirection = -s_vSpecularDirection;
+            pRegs[40].SetFloats(vLightDirection.x, vLightDirection.y, vLightDirection.z, 0.5f);
             pRegs[41].SetFloats(_IdentityMatrix._11, _IdentityMatrix._21, 0.0f, 1.0f);
             pRegs[42].SetFloats(_IdentityMatrix._12, _IdentityMatrix._22, 0.0f, 1.0f);
             pRegs[43].SetFloats(0.0f, 0.5f, -0.5f, 0.0f);
@@ -481,16 +481,11 @@ void pcWaterShader::Render_Prog2(const RenderItem* pItem, unsigned int uiPass) c
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 6);
         pRegs[40].component[3] = 32.0f;
         pRegs[40].SetFloats(-s_vSpecularDirection.x, -s_vSpecularDirection.y, -s_vSpecularDirection.z);
-        pRegs[41].component[3] = 0.0f;
-        pRegs[41].SetFloats(0.0f, 0.5f, -0.5f);
-        pRegs[42].component[3] = m_normalMapTransform1(2, 0);
-        pRegs[42].SetFloats(m_normalMapTransform1(0, 0), m_normalMapTransform1(1, 0), 0.0f);
-        pRegs[43].component[3] = m_normalMapTransform1(2, 1);
-        pRegs[43].SetFloats(m_normalMapTransform1(0, 1), m_normalMapTransform1(1, 1), 0.0f);
-        pRegs[44].component[3] = m_normalMapTransform2(2, 0);
-        pRegs[44].SetFloats(m_normalMapTransform2(0, 0), m_normalMapTransform2(1, 0), 0.0f);
-        pRegs[45].component[3] = m_normalMapTransform2(2, 1);
-        pRegs[45].SetFloats(m_normalMapTransform2(0, 1), m_normalMapTransform2(1, 1), 0.0f);
+        pRegs[41].SetFloats(0.0f, 0.5f, -0.5f, 0.0f);
+        pRegs[42].SetFloats(m_normalMapTransform1(0, 0), m_normalMapTransform1(1, 0), 0.0f, m_normalMapTransform1(2, 0));
+        pRegs[43].SetFloats(m_normalMapTransform1(0, 1), m_normalMapTransform1(1, 1), 0.0f, m_normalMapTransform1(2, 1));
+        pRegs[44].SetFloats(m_normalMapTransform2(0, 0), m_normalMapTransform2(1, 0), 0.0f, m_normalMapTransform2(2, 0));
+        pRegs[45].SetFloats(m_normalMapTransform2(0, 1), m_normalMapTransform2(1, 1), 0.0f, m_normalMapTransform2(2, 1));
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         RedRenderer::pcSetTexture(0, m_normalMap1);

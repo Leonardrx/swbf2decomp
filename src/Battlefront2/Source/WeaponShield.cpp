@@ -263,35 +263,38 @@ bool WeaponShield::Update(float fDeltaTime)
     }
     else
     {
-        if (m_pAmmoCounter->HasInfiniteAmmo())
+        if (!m_pAmmoCounter->HasInfiniteAmmo())
         {
-            if (mTrigger->IsPressed())
+            if (fCurShield > 0.0f)
             {
-                bShielded = !bShielded;
+                bShielded = true;
             }
         }
-        else if (fCurShield > 0.0f)
+        else if (mTrigger->IsPressed())
         {
-            bShielded = true;
+            bShielded = !bShielded;
         }
     }
 
     if (bShielded)
     {
         mOwner->GetGameObject()->SetAddShield(static_cast<const WeaponShieldClass*>(mClass)->mAddShield);
-        FLEffectClass* pShieldEffectClass = static_cast<const WeaponShieldClass*>(mClass)->mShieldEffect;
-        if (!mShieldEffect && pShieldEffectClass)
+        if (!mShieldEffect)
         {
-            mSoundControl.Play(&static_cast<const WeaponShieldClass*>(mClass)->mSoundShield,
-                               &mOwner->GetGameObject()->GetMatrix().GetTranslation(),
-                               &mOwner->GetGameObject()->GetVelocity(), true);
-            PlayFireSound(false);
-            mShieldEffect = pShieldEffectClass->BuildEffect();
-            if (mShieldEffect)
+            FLEffectClass* pShieldEffectClass = static_cast<const WeaponShieldClass*>(mClass)->mShieldEffect;
+            if (pShieldEffectClass)
             {
-                mShieldEffect->AttachEffectToObject(mOwner->GetGameObject(),
-                                                    static_cast<const WeaponShieldClass*>(mClass)->mCollisionBody->mMatrix, true);
-                mShieldEffect->ActivateEffect();
+                mSoundControl.Play(&static_cast<const WeaponShieldClass*>(mClass)->mSoundShield,
+                                   &mOwner->GetGameObject()->GetMatrix().GetTranslation(),
+                                   &mOwner->GetGameObject()->GetVelocity(), true);
+                PlayFireSound(false);
+                mShieldEffect = pShieldEffectClass->BuildEffect();
+                if (mShieldEffect)
+                {
+                    mShieldEffect->AttachEffectToObject(mOwner->GetGameObject(),
+                                                        static_cast<const WeaponShieldClass*>(mClass)->mCollisionBody->mMatrix, true);
+                    mShieldEffect->ActivateEffect();
+                }
             }
         }
         if (mSoundControl.GetPlaying())

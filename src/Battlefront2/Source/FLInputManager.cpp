@@ -503,37 +503,43 @@ bool FLInputManager::Update(float fDeltaTime)
                     const AmmoCounter* pAmmo = pWeapon->m_pAmmoCounter;
                     const float fNumClips = pAmmo->GetNumClips();
 
-                    char acBuffer[32];
-                    if (fRounds >= (float)INT_MAX || pClass->mAmmoCounterClass.mAmmoPerRound == 0.0f)
+                    const bool bNoClips =
+                        fRounds >= (float)INT_MAX || pClass->mAmmoCounterClass.mAmmoPerRound == 0.0f;
+                    const bool bInfinite = fNumClips == FLT_MAX;
+
+                    int iClip;
+                    int iTotal;
+                    if (bNoClips)
                     {
-                        sprintf(acBuffer, "* : ");
+                        iClip = -1;
+                        iTotal = -1;
                     }
                     else
                     {
                         const float fCurClip = pAmmo->mCurClip;
-                        const int iClip = (int)(fCurClip * fRounds);
-                        const int iTotal =
-                            (fNumClips == FLT_MAX) ? -1 : (int)((fCurClip + fNumClips) * fRounds);
+                        iClip = (int)(fCurClip * fRounds);
+                        iTotal = bInfinite ? -1 : (int)((fCurClip + fNumClips) * fRounds);
+                    }
 
-                        if (iClip == -1)
+                    char acBuffer[32];
+                    if (iClip == -1)
+                    {
+                        if (iTotal == -1)
                         {
-                            if (iTotal == -1)
-                            {
-                                sprintf(acBuffer, "* : ");
-                            }
-                            else
-                            {
-                                sprintf(acBuffer, "%d : ", iTotal);
-                            }
-                        }
-                        else if (iTotal == -1)
-                        {
-                            sprintf(acBuffer, "%d / * : ", iClip);
+                            sprintf(acBuffer, "* : ");
                         }
                         else
                         {
-                            sprintf(acBuffer, "%d / %d : ", iClip, iTotal);
+                            sprintf(acBuffer, "%d : ", iTotal);
                         }
+                    }
+                    else if (iTotal == -1)
+                    {
+                        sprintf(acBuffer, "%d / * : ", iClip);
+                    }
+                    else
+                    {
+                        sprintf(acBuffer, "%d / %d : ", iClip, iTotal);
                     }
 
                     unsigned short awLine[256];

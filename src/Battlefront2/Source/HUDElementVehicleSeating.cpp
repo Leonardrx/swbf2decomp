@@ -145,35 +145,36 @@ void HUD::ElementVehicleSeating::Read(PblConfig& config, Factory::ItemCallback p
         PblConfig::Data data = config.ReadNextData();
         if (config.m_pChunk->PeekNextChildId() == 0x504f4353)
         {
-            unsigned int i;
-            for (i = 0; i < 4; ++i)
+            bool bFound = false;
+            for (unsigned int i = 0; i < 4; ++i)
             {
                 if (mMarkerTemplates[i].GetNameHash() == data.GetId())
                 {
                     PblConfig scope(config.ReadNextScope(), true);
                     mMarkerTemplates[i].Read(scope, 0, 0);
+                    bFound = true;
                     break;
                 }
                 if (mMarkerTextTemplate[i].GetNameHash() == data.GetId())
                 {
                     PblConfig scope(config.ReadNextScope(), true);
                     mMarkerTextTemplate[i].Read(scope, 0, 0);
+                    bFound = true;
                     break;
                 }
             }
-            if (i < 4)
-            {
-                continue;
-            }
 
-            if (mBackdrop.GetNameHash() == data.GetId())
+            if (!bFound)
             {
-                PblConfig scope(config.ReadNextScope(), true);
-                mBackdrop.Read(scope, 0, 0);
-            }
-            else
-            {
-                ReadChild(config, data, pCallback, pUserData);
+                if (mBackdrop.GetNameHash() == data.GetId())
+                {
+                    PblConfig scope(config.ReadNextScope(), true);
+                    mBackdrop.Read(scope, 0, 0);
+                }
+                else
+                {
+                    ReadChild(config, data, pCallback, pUserData);
+                }
             }
         }
         else

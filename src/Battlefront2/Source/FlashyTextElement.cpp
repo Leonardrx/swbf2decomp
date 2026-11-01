@@ -127,11 +127,11 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
         fLeft -= fShift;
     }
 
-    if (mDrawBG && mState != FLASHY_STATE_DELAY)
+    if (mDrawBG && mState > FLASHY_STATE_DELAY)
     {
         int iExpandX = mBGExpandX;
-        int iExpandY = mBGExpandY;
         float fX = (float)mBGOffsetX + fLeft - (float)iExpandX;
+        int iExpandY = mBGExpandY;
         float fY = (float)mBGOffsetY + fTop - (float)iExpandY;
         float fWidth = (float)(iExpandX * 2) + (mWidth ? (float)mWidth : fRight - fLeft) + (float)mTail;
         float fHeight = (float)(iExpandY * 2) + (fBottom - fTop);
@@ -146,10 +146,10 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
             bgColor = RedColor(0x96, 0x96, 0x96, color.a);
         }
 
-        float fY1 = fHeight + fY;
-        float fCapX = fHeight + fX;
         if (mXFlipped)
         {
+            float fY1 = fHeight + fY;
+            float fCapX = fHeight + fX;
             RenderBitmap(mContext, bgColor, mHashLeft, fCapX, fY, fX, fY1);
             float fMidX = fWidth + fX;
             RenderBitmap(mContext, bgColor, mHashMid, fMidX, fY, fCapX, fY1);
@@ -164,6 +164,8 @@ void FlashyTextElement::RenderUsingContext(const PblMatrix& mContext, const RedC
         }
         else
         {
+            float fCapX = fHeight + fX;
+            float fY1 = fHeight + fY;
             if (mFlipped)
             {
                 RenderBitmap(mContext, bgColor, mHashLeft, fX, fY1, fCapX, fY);

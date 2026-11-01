@@ -49,8 +49,6 @@ void SoftOutput::Connect(StreamNodeSource* const pSource, unsigned int uiOutput,
 // FUNCTION: SWBF2 0x00746be0
 void SoftOutput::Connect()
 {
-    StreamNodeSource* pSource = &mMixer;
-
     if (mEffectsEnabled)
     {
         mSplitter.StreamNodeSink::Connect(&mMixer, 0);
@@ -58,10 +56,12 @@ void SoftOutput::Connect()
         mDMO.StreamNodeSink::Connect(&mSplitter, 1);
         mMixerOutput.StreamNodeSinkNInput::Connect(&mDMO, 0, 1);
         mPostOutputMixFlusher.StreamNodeSink::Connect(&mMixerOutput, 0);
-        pSource = &mPostOutputMixFlusher;
+        mRenderer.StreamNodeSink::Connect(&mPostOutputMixFlusher, 0);
     }
-
-    mRenderer.StreamNodeSink::Connect(pSource, 0);
+    else
+    {
+        mRenderer.StreamNodeSink::Connect(&mMixer, 0);
+    }
 }
 
 // FUNCTION: SWBF2 0x00746c80

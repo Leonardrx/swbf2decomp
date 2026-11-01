@@ -1450,7 +1450,7 @@ inline void UpdateCollisionSphere(EntityWalker* pWalker)
     pWalker->RecalculateAABB();
 }
 
-void SmashParkedFlyer(EntityWalker* pWalker, CollisionObject* pOther, Entity* pEntity)
+inline void SmashParkedFlyer(EntityWalker* pWalker, CollisionObject* pOther, Entity* pEntity)
 {
     if (pOther->GetCollisionType() == COLL_STATIC && pWalker->mClass->mSmashParkedFlyers && pEntity &&
         pEntity->IsRtti(EntityFlyer::rttiHashEntityFlyer))
@@ -2573,20 +2573,22 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
             GameObject* pObject = pOther->GetGameObject();
             if (pObject && pObject->IsRtti(EntitySoldier::rttiHashEntitySoldier))
             {
-                pObject->InstantDeath(DamageOwner(mCharacter, this, GetTeam(), mClass, 0, 1.0f), true);
+                DamageOwner owner(mCharacter, this, GetTeam(), mClass, 0, 1.0f);
+                pObject->InstantDeath(owner, true);
             }
         }
         break;
     case COLL_TERRAIN:
         for (int i = 0; i < mLegPairCount; ++i)
         {
-            if (mLegPairs[i]->FootTerrainCollision(pResult))
+            const bool bFootHit = mLegPairs[i]->FootTerrainCollision(pResult);
+            if (bFootHit)
             {
                 if (pRestrictor)
                 {
                     pRestrictor->AddRestriction(PblVector3(0.0f, 1.0f, 0.0f));
                 }
-                return true;
+                return bFootHit;
             }
         }
         m_bIsGrounded = true;
@@ -2625,8 +2627,8 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
 
             FoleyFXCollider::CollisionCallback(pOther->GetCollisionType(), pOther, &GetPosition());
             PlayImpactEffects(&mMatrix.GetTranslation(), &mVelocity);
-            PblVector3 vPos = mMatrix.GetTranslation();
             PblVector3 vVel = mVelocity;
+            PblVector3 vPos = mMatrix.GetTranslation();
             VehicleEngine::Collision(mClass, vPos, vVel);
 
             if (-fThreshold > fApproach)
@@ -2649,8 +2651,8 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
                         owner.mTeam = pOther->GetGameObject()->GetTeam();
                         owner.mClass = pOther->GetGameObject()->GetGameObjectClass();
                     }
-                    GameObject* pObject = pOther->GetGameObject();
                     const DamageDesc desc(owner, fDamage);
+                    GameObject* pObject = pOther->GetGameObject();
                     if (!pObject || (!pObject->IsRtti(EntityHover::rttiHashEntityHover) &&
                                      !pObject->IsRtti(EntityWalker::rttiHashEntityWalker)))
                     {
@@ -2675,14 +2677,17 @@ bool EntityWalker::CollisionCallback(const CollisionResult* pResult, CollisionOb
             return false;
         }
         float fOverlap = pResult->mOverlap;
-        float fHorizontal = PblMath::Sqrt((vSeparation.x * fOverlap) * (vSeparation.x * fOverlap) +
-                                  (vSeparation.z * fOverlap) * (vSeparation.z * fOverlap));
+        float fPushX = vSeparation.x * fOverlap;
+        float fPushZ = vSeparation.z * fOverlap;
+        float fHorizontal = PblMath::Sqrt(fPushX * fPushX + fPushZ * fPushZ);
         if (fHorizontal > 0.0f)
         {
             float fDist = fOverlap * fOverlap / fHorizontal;
-            PblVector3 vFlat(vSeparation.x, 0.0f, vSeparation.z);
-            PblVector3 vDir;
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
+            PblVector3 vDir = vSeparation;
+            vDir.y = 0.0f;
+            PblVector3 vNormal;
+            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
+            vDir = vNormal;
             float fMax = fHorizontal * 2.0f;
             if (!(fMax > fDist))
             {
@@ -3264,8 +3269,8 @@ void EntityWalker::BuildWorldMatrices()
 void EntityWalker::UpdateState(float fDeltaTime, float fMove, float fStrafe, float& rTurnSpeed, float fTurn)
 {
     const float fFrameTime = fDeltaTime;
-    float fAbsMove = fabsf(fMove);
-    float fAbsStrafe = fabsf(fStrafe);
+    float fAbsMove = fMove < 0.0f ? -fMove : fMove;
+    float fAbsStrafe = fStrafe < 0.0f ? -fStrafe : fStrafe;
 
     unsigned int uiAttackControls = mAttackControlTimer >= ATTACK_CONTROL_DELAY ? m_uiAttackControls : 0;
     bool bAttacking = uiAttackControls != 0 || m_uiAttackAnim != 0;
@@ -3386,41 +3391,38 @@ void EntityWalker::UpdateState(float fDeltaTime, float fMove, float fStrafe, flo
 
     float fYaw;
     bool bDefault = true;
-    if (mPlayerId >= 0)
+    if (mPlayerId >= 0 && pClass->mSteerAtYawLimit && (fMinYaw > mYawValue || mYawValue > fMaxYaw))
     {
-        if (pClass->mSteerAtYawLimit && (fMinYaw > mYawValue || mYawValue > fMaxYaw))
+        fYaw = ((fMinYaw > mYawValue ? fMinYaw : fMaxYaw) - mYawValue) * 2.0f;
+        bDefault = false;
+    }
+    else if (mPlayerId >= 0 && pClass->mCorrectAimForSteering)
+    {
+        if (bWalk)
         {
-            fYaw = ((fMinYaw > mYawValue ? fMinYaw : fMaxYaw) - mYawValue) * 2.0f;
-            bDefault = false;
-        }
-        else if (pClass->mCorrectAimForSteering)
-        {
-            if (bWalk)
+            if ((mYawValue <= 0.0f && fAbsMove * pClass->m_fThrustAngleToStrafe_Tan > -fStrafe) ||
+                (mYawValue >= 0.0f && fAbsMove * pClass->m_fThrustAngleToStrafe_Tan > fStrafe))
             {
-                if ((mYawValue <= 0.0f && fAbsMove * pClass->m_fThrustAngleToStrafe_Tan > -fStrafe) ||
-                    (mYawValue >= 0.0f && fAbsMove * pClass->m_fThrustAngleToStrafe_Tan > fStrafe))
-                {
-                    fYaw = (atan2f(fStrafe, fAbsMove) - mYawValue) * 0.95f;
-                    bDefault = false;
-                }
-                else if (!pClass->mSteerAtStrafeLimit)
-                {
-                    fYaw = (atan2f(fStrafe * pClass->m_fThrustAngleToStrafe_Tan, fAbsStrafe) - mYawValue) * 0.95f;
-                    bDefault = false;
-                }
+                fYaw = (atan2f(fStrafe, fAbsMove) - mYawValue) * 0.95f;
+                bDefault = false;
             }
             else if (!pClass->mSteerAtStrafeLimit)
             {
-                if (fAbsStrafe > 0.1f)
-                {
-                    fYaw = (atan2f(fStrafe * pClass->m_fThrustAngleToStrafe_Tan, fAbsStrafe) - mYawValue) * 0.95f;
-                }
-                else
-                {
-                    fYaw = 0.0f;
-                }
+                fYaw = (atan2f(fStrafe * pClass->m_fThrustAngleToStrafe_Tan, fAbsStrafe) - mYawValue) * 0.95f;
                 bDefault = false;
             }
+        }
+        else if (!pClass->mSteerAtStrafeLimit)
+        {
+            if (fAbsStrafe > 0.1f)
+            {
+                fYaw = (atan2f(fStrafe * pClass->m_fThrustAngleToStrafe_Tan, fAbsStrafe) - mYawValue) * 0.95f;
+            }
+            else
+            {
+                fYaw = 0.0f;
+            }
+            bDefault = false;
         }
     }
     if (bDefault)

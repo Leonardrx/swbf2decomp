@@ -31,9 +31,10 @@ void SkyStars::_PlatformCleanup()
 void SkyStars::_PlatformRenderField(const StarField& field, unsigned int,
                                     const PblMatrix** ppMatrices, int iNumMatrices) const
 {
+    const PblBox box(-1.5f, -0.5f, -1.5f, 1.5f, 1.5f, 1.5f);
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(D3DPT_POINTLIST, 0x102, 16,
                                                          field.uiNumStars, 0, false);
-    pPrimitive->m_bbox = PblBox(-1.5f, -0.5f, -1.5f, 1.5f, 1.5f, 1.5f);
+    pPrimitive->m_bbox = box;
     Star* pVertices = (Star*)pPrimitive->BeginVertexData();
     if (!pVertices)
     {
@@ -45,9 +46,9 @@ void SkyStars::_PlatformRenderField(const StarField& field, unsigned int,
     {
         float fCycle = m_fTwinkleTimer * m_fTwinkleFrequency;
         unsigned int uCycle = (unsigned int)fCycle;
-        float fFraction = fCycle - (float)uCycle;
         unsigned int uSeed0 = uCycle ^ 0xc71c2830u;
         unsigned int uSeed1 = (uCycle + 1) ^ 0xc71c2830u;
+        float fFraction = fCycle - (float)uCycle;
         for (unsigned int i = 0; i < field.uiNumStars; ++i)
         {
             uSeed0 = uSeed0 * 1664525u + 1013904223u;

@@ -596,7 +596,8 @@ void BirdParticleManager::FlockRandomBirds(const PblVector3& vPosition, const Pb
 void BirdParticleManager::SpawnGroundBirds()
 {
     CameraManager* pCameraManager = CameraManager::Instance();
-    int iCam = PblRandom::GetGlobalInt() % pCameraManager->GetNumCameras();
+    const unsigned int uNumCameras = pCameraManager->GetNumCameras();
+    int iCam = PblRandom::GetGlobalInt() % uNumCameras;
     PblMatrix mCamera = pCameraManager->GetCamera(iCam)->GetMatrix();
     const D3DXVECTOR3& vDir = *(const D3DXVECTOR3*)&mCamera.m[2][0];
     const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
@@ -608,8 +609,7 @@ void BirdParticleManager::SpawnGroundBirds()
     PblVector3 vForward;
     D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
 
-    PblVector3 vCenter(vCamPos.x + vForward.x * 45.0f, vCamPos.y + vForward.y * 45.0f,
-                       vCamPos.z + vForward.z * 45.0f);
+    const PblVector3 vCenter = vCamPos + vForward * 45.0f;
 
     int iNumGround = 0;
     for (int i = 0; i < 15; ++i)
@@ -621,13 +621,12 @@ void BirdParticleManager::SpawnGroundBirds()
         }
     }
 
-    for (int i = 3 - iNumGround; i > 0; --i)
+    const int iNumToSpawn = 3 - iNumGround;
+    for (int i = 0; i < iNumToSpawn; ++i)
     {
         float fForward = PblRandom::_Global.GetFloat();
         float fSide = PblRandom::_Global.GetFloat();
-        PblVector3 vPos(vCenter.x + (vSide.x * fSide + vForward.x * fForward) * 8.0f,
-                        vCenter.y + (vSide.y * fSide + vForward.y * fForward) * 8.0f,
-                        vCenter.z + (vSide.z * fSide + vForward.z * fForward) * 8.0f);
+        PblVector3 vPos = vCenter + (vSide * fSide + vForward * fForward) * 8.0f;
         vPos.y = RedTerrain::GetHoleHeight(vPos);
 
         CollisionObject* pHit = 0;
@@ -641,13 +640,14 @@ void BirdParticleManager::SpawnGroundBirds()
             {
                 const float fStep = 1.0f / (float)sNumBirdTypes;
                 float fAccumulated = 0.0f;
-                for (int iType = 0; iType < sNumBirdTypes; ++iType)
+                for (int iType = 1; iType <= sNumBirdTypes; ++iType)
                 {
                     fAccumulated += fStep;
                     if (fAccumulated >= fChoice)
                     {
-                        vPos.y += sBirdTypes[iType].mSize * 0.125f;
-                        pBird->RespawnGroundBird(vPos, sBirdTypes[iType]);
+                        const BirdParticleType& type = sBirdTypes[iType - 1];
+                        vPos.y += type.mSize * 0.125f;
+                        pBird->RespawnGroundBird(vPos, type);
                         break;
                     }
                 }
@@ -1009,7 +1009,8 @@ bool BirdParticleManager::Update(float fDeltaTime)
         if (mFlockTimer > 25.0f)
         {
             CameraManager* pCameraManager = CameraManager::Instance();
-            int iCam = PblRandom::GetGlobalInt() % pCameraManager->GetNumCameras();
+            const unsigned int uNumCameras = pCameraManager->GetNumCameras();
+            int iCam = PblRandom::GetGlobalInt() % uNumCameras;
             PblMatrix mCamera = pCameraManager->GetCamera(iCam)->GetMatrix();
             const D3DXVECTOR3& vDir = *(const D3DXVECTOR3*)&mCamera.m[2][0];
             const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
@@ -1026,10 +1027,7 @@ bool BirdParticleManager::Update(float fDeltaTime)
                 vSide = PblVector3(-vSide.x, -vSide.y, -vSide.z);
             }
 
-            float fAhead = PblRandom::_Global.GetFloat() + 1.5f;
-            PblVector3 vPos(vCamPos.x + (vForward.x * fAhead - vSide.x * 1.1f) * 20.0f,
-                            vCamPos.y + (vForward.y * fAhead - vSide.y * 1.1f) * 20.0f,
-                            vCamPos.z + (vForward.z * fAhead - vSide.z * 1.1f) * 20.0f);
+            PblVector3 vPos = vCamPos + (vForward * (PblRandom::_Global.GetFloat() + 1.5f) - vSide * 1.1f) * 20.0f;
 
             if (sFlockMinHeight < -1024.0f)
             {
@@ -1051,7 +1049,7 @@ bool BirdParticleManager::Update(float fDeltaTime)
                 vPos.z += vUp.z * 5.0f;
             }
 
-            FlockRandomBirds(vPos, PblVector3(vSide.x * 5.0f, vSide.y * 5.0f, vSide.z * 5.0f));
+            FlockRandomBirds(vPos, vSide * 5.0f);
         }
 
         if (mStandTimer > 35.0f)

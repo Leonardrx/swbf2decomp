@@ -150,8 +150,7 @@ int UnitDefendAgent::EventHandler(AI::EventInfo* pInfo)
     case AI::EVT_EndInvisibility:
         if (UnitAgent::EventHandler(pInfo) == AI::EVT_Handled)
         {
-            pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(),
-                                          PblVector3(0, 0, 0), PblHandle<GameObject>());
+            pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
             if (mCurState != 3)
             {
                 mCombatCmd = pInfo->mNextCmd;

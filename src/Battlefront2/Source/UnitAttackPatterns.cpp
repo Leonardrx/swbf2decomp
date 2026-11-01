@@ -870,7 +870,7 @@ void AttackPatterns::SetGlanceDest()
     {
         PblVector3 vTarget = GetAttackHelper()->GetLastSeenTargetPos();
         PblVector3 vDir = AIUtil::GetSafeNormalXZ(vTarget - vPos);
-        float fDot = vFwd.x * vDir.x + vFwd.y * vDir.y + vFwd.z * vDir.z;
+        float fDot = DotProduct(vFwd, vDir);
         PblVector3 vSide = AIUtil::GetSafeNormalXZ(vFwd - vDir * fDot);
 
         float fMyRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius();

@@ -411,6 +411,8 @@ void PE_ChunkLoader::LoadGeometry(ParticleGeometry& geometry, PblConfig& config)
                 geometry.mType = ParticleGeometry::PT_SPARK;
                 break;
             case 0x8a8743bfu:
+                geometry.mType = ParticleGeometry::PT_PARTICLE;
+                break;
             default:
                 geometry.mType = ParticleGeometry::PT_PARTICLE;
                 break;
@@ -419,13 +421,13 @@ void PE_ChunkLoader::LoadGeometry(ParticleGeometry& geometry, PblConfig& config)
         case 0xfa784eabu:
         {
             unsigned int uiMode = PblHash(data.GetStringArg(0));
-            if (uiMode == 0x06a6a0a5u)
+            if (uiMode != 0x06a6a0a5u)
             {
-                geometry.mBlendMode = BLEND_ADDITIVE;
+                geometry.mBlendMode = uiMode != 0x6bfbd198u ? BLEND_NORMAL : BLEND_BLUR;
             }
             else
             {
-                geometry.mBlendMode = uiMode == 0x6bfbd198u ? BLEND_BLUR : BLEND_NORMAL;
+                geometry.mBlendMode = BLEND_ADDITIVE;
             }
             break;
         }

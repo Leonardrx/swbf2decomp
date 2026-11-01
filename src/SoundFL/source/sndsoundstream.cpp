@@ -211,7 +211,8 @@ void SoundStream::Properties::Read(PblFileChunk& chunk)
             for (PblListSingle::Node* pNode = smPropertyList.mHead.mNext;
                  pNode != &smPropertyList.mHead; pNode = pNode->mNext)
             {
-                Properties* const pParent = reinterpret_cast<Properties*>(reinterpret_cast<char*>(pNode) - offsetof(Properties, mNode));
+                Properties* const pParent = static_cast<Properties*>(pNode->GetObjectA(
+                    &smPropertyList, offsetof(Properties, mNode)));
                 if (pParent->mHashID != uiParentID)
                 {
                     continue;
@@ -565,14 +566,16 @@ void SoundStream::Play(bool bRestart)
         return;
     }
 
-    unsigned int uiSegmentID = (unsigned int)mProperties->mSelObjectWeightList->GetObjectA();
-    const StreamBase::Info* pInfo = StreamBase::Info::Find(mProperties->mStreamID);
+    const unsigned int uiSegmentID = (unsigned int)mProperties->mSelObjectWeightList->GetObjectA();
+    const unsigned int uiStreamID = mProperties->mStreamID;
+    const StreamBase::Info* pInfo = StreamBase::Info::Find(uiStreamID);
     if (!pInfo)
     {
         return;
     }
+    unsigned int uiSearchKey = uiSegmentID;
     const StreamBase::Segment* pSegment = (const StreamBase::Segment*)bsearch(
-        &uiSegmentID, pInfo->mSegments, pInfo->mNumSegments, sizeof(StreamBase::Segment),
+        &uiSearchKey, pInfo->mSegments, pInfo->mNumSegments, sizeof(StreamBase::Segment),
         StreamBase::Segment::CompareSearch);
     if (!pSegment)
     {

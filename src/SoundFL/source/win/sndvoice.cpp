@@ -229,7 +229,14 @@ void Voice::Update()
         {
             if (eMixConfig > Engine::mixConfig_Invalid)
             {
-                if (eMixConfig <= Engine::mixConfig_DirectSoundSoftware)
+                if (eMixConfig > Engine::mixConfig_DirectSoundSoftware)
+                {
+                    if (eMixConfig == Engine::mixConfig_Disabled)
+                    {
+                        SourceTransport::Stop();
+                    }
+                }
+                else
                 {
                     if (GetSourceI3DL2Changed() && Get3DMode())
                     {
@@ -237,24 +244,21 @@ void Voice::Update()
                     }
 
                     PlayState ePlayState;
-                    mPlaybackPosition = mSourceResampler.mSource.SourceTransport::mPlaybackPosition;
-                    if (eMixConfig == Engine::mixConfig_Software)
+                    if (eMixConfig != Engine::mixConfig_Software)
                     {
-                        ePlayState = mSourceResampler.mSource.GetPlayState();
+                        mPlaybackPosition = mSourceResampler.mSource.SourceTransport::mPlaybackPosition;
+                        ePlayState = mRenderer.GetPlayState();
                     }
                     else
                     {
-                        ePlayState = mRenderer.GetPlayState();
+                        mPlaybackPosition = mSourceResampler.mSource.SourceTransport::mPlaybackPosition;
+                        ePlayState = mSourceResampler.mSource.GetPlayState();
                     }
                     SetPlayState(ePlayState);
                     if (ePlayState == playState_stopped)
                     {
                         mPlaybackPosition = 0;
                     }
-                }
-                else if (eMixConfig == Engine::mixConfig_Disabled)
-                {
-                    SourceTransport::Stop();
                 }
             }
         }
@@ -269,12 +273,15 @@ void Voice::Update()
     if (GetPlayState() == playState_playing && Get3DMode()
         && GetPlayState() == playState_playing)
     {
-        const Engine::MixConfig eCurrentMix = Engine::GetMixConfig();
-        if (eCurrentMix == Engine::mixConfig_DirectSoundHardware
-            || eCurrentMix == Engine::mixConfig_DirectSoundSoftware)
+        switch (Engine::GetMixConfig())
         {
+        case Engine::mixConfig_DirectSoundHardware:
+        case Engine::mixConfig_DirectSoundSoftware:
             mRenderer.Source3D::CopyParameters(*this);
             mRenderer.SetDopplerMode(false);
+            break;
+        default:
+            break;
         }
     }
 

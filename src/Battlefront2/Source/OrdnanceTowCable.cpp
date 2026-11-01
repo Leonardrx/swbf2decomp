@@ -314,7 +314,7 @@ void OrdnanceTowCable::RecalculateCenterAndRadius()
     PblVector3 vDelta(vOwnerPos.x - vEndPos.x, vOwnerPos.y - vEndPos.y, vOwnerPos.z - vEndPos.z);
     PblVector3 vDir;
     D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDelta);
-    if (vDir.x * vDir.x + vDir.y * vDir.y + vDir.z * vDir.z < 0.0001f)
+    if (vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z < 0.0001f)
     {
         SetRenderRadius(fOwnerRadius > fEndRadius ? fOwnerRadius : fEndRadius);
         SetRenderPos(vOwnerPos);
@@ -328,10 +328,8 @@ void OrdnanceTowCable::RecalculateCenterAndRadius()
     float fX = vOwnerEdge.x - vEndEdge.x;
     float fY = vOwnerEdge.y - vEndEdge.y;
     float fZ = vOwnerEdge.z - vEndEdge.z;
-    SetRenderRadius(PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ) * 0.5f);
-    PblVector3 vCenter((vEndEdge.x + vOwnerEdge.x) * 0.5f, (vEndEdge.y + vOwnerEdge.y) * 0.5f,
-                       (vEndEdge.z + vOwnerEdge.z) * 0.5f);
-    SetRenderPos(vCenter);
+    SetRenderRadius(PblMath::Sqrt(fY * fY + fX * fX + fZ * fZ) * 0.5f);
+    SetRenderPos((vEndEdge + vOwnerEdge) * 0.5f);
 }
 
 // FUNCTION: SWBF2 0x006081c0

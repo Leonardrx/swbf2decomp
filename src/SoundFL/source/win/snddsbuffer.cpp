@@ -45,29 +45,28 @@ unsigned int __cdecl DSBuffer::CreateBuffers(bool b3D, bool bProperties,
                                              unsigned int uiCount,
                                              IDirectSound* pDirectSound)
 {
-    Engine::smErrorsEnabled = false;
     unsigned int uiCreated = 0;
-    const unsigned int uiBaseFlags = uiFlags | (b3D ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
-                                           | 0x100A0;
     if (!pDirectSound)
     {
         pDirectSound = (IDirectSound*)Engine::smDirectSound;
     }
+    Engine::smErrorsEnabled = false;
 
     do
     {
         DSBuffer& rBuffer = pBuffers[uiCreated];
-        const bool bSetupEffects = b3D && pDirectSound == (IDirectSound*)Engine::smDirectSound
+        const bool bSetupEffects = b3D && (IDirectSound*)Engine::smDirectSound == pDirectSound
                                    && Engine::smHardwareEffectsAvailable;
         const unsigned int uiChannels = b3D ? 1 : (bProperties ? 2 : 1);
         WaveFormat format(SampleInfo::format_PCM16, uiChannels, 44100, !b3D, 0);
 
-        unsigned int uiBufferFlags = uiBaseFlags;
+        unsigned int uiBufferFlags = uiFlags | (b3D ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
+                                     | 0x100A0;
+        rBuffer.mDirectSound = (IDirectSound*)Engine::smDirectSound;
         if ((uiBufferFlags & (DSBCAPS_LOCHARDWARE | DSBCAPS_LOCSOFTWARE)) == 0)
         {
             uiBufferFlags |= DSBCAPS_LOCDEFER;
         }
-        rBuffer.mDirectSound = (IDirectSound*)Engine::smDirectSound;
         if (uiBufferFlags & DSBCAPS_LOCDEFER)
         {
             rBuffer.mResourcesAcquired = 0;
@@ -275,8 +274,9 @@ bool DSBuffer::Create(SampleInfo::Format eFormat, unsigned int uiNumChannels,
 {
     WaveFormat format(eFormat, uiNumChannels, uiSampleRate, !b3D, ulChannelMask);
 
-    mDirectSound = pDirectSound ? pDirectSound
-                                : (IDirectSound*)Engine::smDirectSound;
+    IDirectSound* pSound = pDirectSound ? pDirectSound
+                                        : (IDirectSound*)Engine::smDirectSound;
+    mDirectSound = pSound;
 
     unsigned int uiBufferFlags;
     unsigned int uiBufferBytes;
@@ -295,9 +295,9 @@ bool DSBuffer::Create(SampleInfo::Format eFormat, unsigned int uiNumChannels,
     else
     {
         uiBufferFlags = uiFlags
-                      | (b3D ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
-                      | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLVOLUME
-                      | DSBCAPS_CTRLFREQUENCY;
+                      | ((b3D ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
+                         | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLVOLUME
+                         | DSBCAPS_CTRLFREQUENCY);
         if ((uiBufferFlags & (DSBCAPS_LOCHARDWARE | DSBCAPS_LOCSOFTWARE)) == 0)
         {
             uiBufferFlags |= DSBCAPS_LOCDEFER;
@@ -318,7 +318,7 @@ bool DSBuffer::Create(SampleInfo::Format eFormat, unsigned int uiNumChannels,
 
     desc.guid3DAlgorithm = DS3DALG_DEFAULT;
 
-    if (!Engine::Succeeded(mDirectSound->CreateSoundBuffer(
+    if (!Engine::Succeeded(pSound->CreateSoundBuffer(
                                &desc, (IDirectSoundBuffer**)&mBuffer, 0),
                            "source\\win\\snddsbuffer.cpp", 222))
     {
@@ -856,8 +856,10 @@ bool DSBuffer::Set3DParams(DS3DBUFFER& rParams, bool bDeferred) const
 
     if (mBuffer3D->SetAllParameters(&rParams, dwApply) < 0)
     {
+        bool bResult = true;
+
         HRESULT hr = mBuffer3D->SetMinDistance(rParams.flMinDistance, dwApply);
-        bool bResult = Engine::Succeeded(hr, "source\\win\\snddsbuffer.cpp", 544);
+        bResult &= Engine::Succeeded(hr, "source\\win\\snddsbuffer.cpp", 544);
 
         hr = mBuffer3D->SetMaxDistance(rParams.flMaxDistance, dwApply);
         bResult &= Engine::Succeeded(hr, "source\\win\\snddsbuffer.cpp", 546);

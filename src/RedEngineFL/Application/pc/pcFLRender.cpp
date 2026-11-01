@@ -189,25 +189,24 @@ void ReflectionRegion::_UpdateReflectionMatrix()
     const float inverse = 1.0f / ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() +
                                    m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) +
                                   m_reflectionPlane.GetC() * m_reflectionPlane.GetC());
-    const float twice = inverse * -2.0f;
     m_reflectionMat.m[0][0] = ((m_reflectionPlane.GetB() * m_reflectionPlane.GetB() -
                                 m_reflectionPlane.GetA() * m_reflectionPlane.GetA()) +
                                m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
-    m_reflectionMat.m[0][1] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
-    m_reflectionMat.m[0][2] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
-    m_reflectionMat.m[1][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
+    m_reflectionMat.m[0][1] = (inverse * -2.0f * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
+    m_reflectionMat.m[0][2] = (inverse * -2.0f * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[1][0] = (inverse * -2.0f * m_reflectionPlane.GetA()) * m_reflectionPlane.GetB();
     m_reflectionMat.m[1][1] = ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() -
                                 m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) +
                                m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
-    m_reflectionMat.m[1][2] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
-    m_reflectionMat.m[2][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
-    m_reflectionMat.m[2][1] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[1][2] = (inverse * -2.0f * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[2][0] = (inverse * -2.0f * m_reflectionPlane.GetA()) * m_reflectionPlane.GetC();
+    m_reflectionMat.m[2][1] = (inverse * -2.0f * m_reflectionPlane.GetB()) * m_reflectionPlane.GetC();
     m_reflectionMat.m[2][2] = ((m_reflectionPlane.GetA() * m_reflectionPlane.GetA() +
                                 m_reflectionPlane.GetB() * m_reflectionPlane.GetB()) -
                                m_reflectionPlane.GetC() * m_reflectionPlane.GetC()) * inverse;
-    m_reflectionMat.m[3][0] = (twice * m_reflectionPlane.GetA()) * m_reflectionPlane.GetD();
-    m_reflectionMat.m[3][1] = (twice * m_reflectionPlane.GetB()) * m_reflectionPlane.GetD();
-    m_reflectionMat.m[3][2] = (twice * m_reflectionPlane.GetC()) * m_reflectionPlane.GetD();
+    m_reflectionMat.m[3][0] = (inverse * -2.0f * m_reflectionPlane.GetA()) * m_reflectionPlane.GetD();
+    m_reflectionMat.m[3][1] = (inverse * -2.0f * m_reflectionPlane.GetB()) * m_reflectionPlane.GetD();
+    m_reflectionMat.m[3][2] = (inverse * -2.0f * m_reflectionPlane.GetC()) * m_reflectionPlane.GetD();
 }
 
 // GLOBAL: SWBF2 0x008f6da0
@@ -793,6 +792,7 @@ void FLRenderer::AddReflectionObject(char reflectionID, const PblBox& box, bool 
     const PblMatrix& mView = RedRenderer::GetCamera()->GetMatrixInverse();
 
     PblVector3 aPoints[32];
+    PblVector3* pPoints = aPoints;
     if (!bVisible)
     {
         return;
@@ -811,7 +811,6 @@ void FLRenderer::AddReflectionObject(char reflectionID, const PblBox& box, bool 
     aPoints[3].z = -aPoints[3].z;
 
     int nPoints = 4;
-    PblVector3* pPoints = aPoints;
     PblVector3* pClipped;
     int nClipped;
 
@@ -1341,10 +1340,7 @@ void FLRenderer::Render()
                     mSaved = pCamera->GetMatrix();
                     PblMatrix mPushed = mSaved;
                     float fPush = GetNearPlane() * (fZoom - 1.0f);
-                    mPushed.m[3][0] = mSaved.m[3][0] + mSaved.m[2][0] * fPush;
-                    mPushed.m[3][1] = mSaved.m[3][1] + mSaved.m[2][1] * fPush;
-                    mPushed.m[3][2] = mSaved.m[3][2] + mSaved.m[2][2] * fPush;
-                    mPushed.m[3][3] = 1.0f;
+                    mPushed.SetTranslation(mSaved.GetTranslation() + mSaved.GetZAxis() * fPush);
                     pCamera->SetMatrix(mPushed);
                     m_pViewCamera[mView]->SetNearFarPlane(GetNearPlane() * fZoom,
                                                           GetNearSceneFadeEnd() * fZoom);

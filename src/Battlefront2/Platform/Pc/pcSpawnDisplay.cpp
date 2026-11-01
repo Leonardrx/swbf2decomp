@@ -708,10 +708,14 @@ bool SpawnDisplay::Update(float fDeltaTime)
     RedAmbientLight& ambient = RedInterfaceScreen::s_lightingState.ambientLight;
     ambient.SetTopColor(sAmbientTop);
     ambient.SetBottomColor(sAmbientBottom);
-    RedColorValue average((sAmbientBottom.r + sAmbientTop.r) * 0.5f,
-                          (sAmbientBottom.g + sAmbientTop.g) * 0.5f,
-                          (sAmbientBottom.b + sAmbientTop.b) * 0.5f,
-                          (sAmbientBottom.a + sAmbientTop.a) * 0.5f);
+    RedColorValue average(sAmbientBottom.r + sAmbientTop.r,
+                          sAmbientBottom.g + sAmbientTop.g,
+                          sAmbientBottom.b + sAmbientTop.b,
+                          sAmbientBottom.a + sAmbientTop.a);
+    average.r *= 0.5f;
+    average.g *= 0.5f;
+    average.b *= 0.5f;
+    average.a *= 0.5f;
     ambient.SetColor(average);
 
     m_pEntityElement->SetSelected(true);
@@ -739,11 +743,9 @@ bool SpawnDisplay::Update(float fDeltaTime)
         return true;
     }
 
-    bool bOwnerAlive = false;
-    if (mOwner && mOwner->GetControllable() && mOwner->GetControllable()->GetGameObject())
-    {
-        bOwnerAlive = GetDamageable(mOwner->GetControllable()->GetGameObject())->IsAlive();
-    }
+    const bool bOwnerAlive = (mOwner && mOwner->GetControllable() && mOwner->GetControllable()->GetGameObject())
+                                 ? mOwner->GetControllable()->GetGameObject()->IsAlive()
+                                 : false;
     if (mWasOwnerAliveLastUpdate && !bOwnerAlive)
     {
         mMode = eSPAWNDISPLAY;

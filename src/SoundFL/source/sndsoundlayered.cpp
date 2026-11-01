@@ -490,7 +490,11 @@ void SoundLayered::SetProperties(const Properties* pProps, SoundLayer* (__cdecl*
         SoundLayer* pSound = pLayerCreate();
         if (!pSound)
         {
-            FreeLayers(pLayerDestroy);
+            while (!mSoundList.IsEmpty())
+            {
+                pLayerDestroy((SoundLayer*)mSoundList.GetFirst()->GetObjectA(
+                    &mSoundList, offsetof(SoundLayer, mLayerNode)));
+            }
             return;
         }
         mSoundList.AddLast(&pSound->mLayerNode);

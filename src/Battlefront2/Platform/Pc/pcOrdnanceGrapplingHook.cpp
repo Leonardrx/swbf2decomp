@@ -129,11 +129,13 @@ pcRedPrimitive* sCreateGrapplingHookCompressedGeometry(const PblBox& box, const 
         CableCompressedVertex& front = pVertices[i * 2];
         CableCompressedVertex& back = pVertices[i * 2 + 1];
         front.pos.SetPos(vFront);
-        front.uv.SetUV(pTexCoords[(i & 1) ? 2 : 0].u, pTexCoords[(i & 1) ? 2 : 0].v);
+        front.uv.SetUV((i & 1) ? pTexCoords[2].u : pTexCoords[0].u,
+                       (i & 1) ? pTexCoords[2].v : pTexCoords[0].v);
         front.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
 
         back.pos.SetPos(vFront - vOffset * 0.04f);
-        back.uv.SetUV(pTexCoords[(i & 1) ? 3 : 1].u, pTexCoords[(i & 1) ? 3 : 1].v);
+        back.uv.SetUV((i & 1) ? pTexCoords[3].u : pTexCoords[1].u,
+                      (i & 1) ? pTexCoords[3].v : pTexCoords[1].v);
         back.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
     }
     pPrimitive->EndVertexData();

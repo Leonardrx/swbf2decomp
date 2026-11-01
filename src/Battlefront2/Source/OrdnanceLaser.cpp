@@ -338,10 +338,12 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
                 t = fElapsed / pClass->mDamageTransitionPeriod;
                 t = Clamp(t, 0.0f, 1.0f);
             }
-            color.b = (unsigned char)(int)(pClass->mEndGlowColor.b * t + color.b * (1.0f - t) + 0.5f);
-            color.g = (unsigned char)(int)(pClass->mEndGlowColor.g * t + color.g * (1.0f - t) + 0.5f);
-            color.r = (unsigned char)(int)(pClass->mEndGlowColor.r * t + color.r * (1.0f - t) + 0.5f);
-            color.a = (unsigned char)(int)(pClass->mEndGlowColor.a * t + color.a * (1.0f - t) + 0.5f);
+            RedColor fadedColor;
+            fadedColor.b = (unsigned char)(int)(pClass->mEndGlowColor.b * t + color.b * (1.0f - t) + 0.5f);
+            fadedColor.g = (unsigned char)(int)(pClass->mEndGlowColor.g * t + color.g * (1.0f - t) + 0.5f);
+            fadedColor.r = (unsigned char)(int)(pClass->mEndGlowColor.r * t + color.r * (1.0f - t) + 0.5f);
+            fadedColor.a = (unsigned char)(int)(pClass->mEndGlowColor.a * t + color.a * (1.0f - t) + 0.5f);
+            color = fadedColor;
         }
     }
 
@@ -359,9 +361,7 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
 
     const float fRadius = (fWidth * 3.0f + mGrowLength) * 2.0f;
     const PblVector3 vExtent(fRadius, fRadius, fRadius);
-    const PblVector3 vMax = mPosition + vExtent;
-    const PblVector3 vMin = mPosition - vExtent;
-    RedParticleRenderer::SubmitBounds(vMin, vMax);
+    RedParticleRenderer::SubmitBounds(mPosition - vExtent, mPosition + vExtent);
 
     RedParticleRenderer::TexCoords texCoords;
     texCoords.u0 = 0;
@@ -376,8 +376,7 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
         RedParticleRenderer::SubmitTexture(pClass->mTextureId, BLEND_NORMAL, 0);
         RedParticleRenderer::SubmitParticle(PIT_LASER_START, mPosition, laserColor, fWidth, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
-        const PblVector3 vTail = mPosition - vDir * fLaserLength;
-        RedParticleRenderer::SubmitParticle(PIT_LASER_END, vTail, laserColor, fWidth * 0.5f, 1.0f,
+        RedParticleRenderer::SubmitParticle(PIT_LASER_END, mPosition - vDir * fLaserLength, laserColor, fWidth * 0.5f, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
     }
 
@@ -389,8 +388,7 @@ void OrdnanceLaser::Render(unsigned char, float, unsigned int)
         fWidth *= 2.0f;
         RedParticleRenderer::SubmitParticle(PIT_LASER_START, mPosition, glowColor, fWidth, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
-        const PblVector3 vTail = mPosition - vDir * fGlowLength;
-        RedParticleRenderer::SubmitParticle(PIT_LASER_END, vTail, glowColor, fWidth * 0.8f, 1.0f,
+        RedParticleRenderer::SubmitParticle(PIT_LASER_END, mPosition - vDir * fGlowLength, glowColor, fWidth * 0.8f, 1.0f,
                                             texCoords, gVectorUnitX, gVectorUnitY);
     }
 }

@@ -114,20 +114,15 @@ Thread::~Thread()
 // FUNCTION: SWBF2 0x006576f0
 void Thread::ActivateThread(int iOrder, ThreadType eThreadType)
 {
-    ThreadGroup* pTurnList = sTurnThreadList;
-    ThreadGroup* pGroup;
+    ThreadGroup* pGroup = sTurnThreadList;
+    bool bClientTurnList = pGroup == &sClientTurnThreadList;
     if (eThreadType == PER_FRAME)
     {
         pGroup = sFrameThreadList;
     }
-    else if (NetGame::IsEnabled() && pTurnList == &sClientTurnThreadList &&
-             eThreadType != PER_TURN)
+    else if (NetGame::IsEnabled() && bClientTurnList && eThreadType != PER_TURN)
     {
         pGroup = &sClientLocalTurnThreadList;
-    }
-    else
-    {
-        pGroup = pTurnList;
     }
 
     pGroup = pGroup->FindCreate(-iOrder);

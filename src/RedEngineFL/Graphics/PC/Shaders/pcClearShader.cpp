@@ -248,7 +248,14 @@ void pcClearShader::_Init(unsigned int uiFlags,
     m_pVertexFormat = pcRedVertexFormat::Create(uiFlags, uiFlags);
     m_pTex = 0;
     m_pAlphaMaskTex = 0;
-    m_blendMode = (m_uiMaterialFlags & 4) ? BLENDMODE_BLEND : BLENDMODE_NONE;
+    if (m_uiMaterialFlags & 4)
+    {
+        m_blendMode = BLENDMODE_BLEND;
+    }
+    else
+    {
+        m_blendMode = BLENDMODE_NONE;
+    }
 }
 
 // FUNCTION: SWBF2 0x00706e40

@@ -243,12 +243,12 @@ bool OrdnanceGrenade::CheckCollision()
 {
     PblVector3 vStart = GetOldPosition();
     const PblVector3& vEnd = GetPosition();
-    PblVector3 vDir(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
-    const float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+    const PblVector3 vDelta = vEnd - vStart;
+    const float fDist = PblMath::Sqrt(vDelta.y * vDelta.y + vDelta.x * vDelta.x + vDelta.z * vDelta.z);
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;
-        vDir *= fInv;
+        const PblVector3 vDir = vDelta * fInv;
 
         CollisionObject* pHitObject = 0;
         const GameObject* pIgnore = GetOwner();
@@ -259,10 +259,8 @@ bool OrdnanceGrenade::CheckCollision()
                                                     mCheckStaticCollision ? 0x13BA : 0x132A, true);
         if (fHit < 1.0f)
         {
-            const float fAlong = fHit * fLength;
-            PblVector3 vHit(vDir.x * fAlong + vStart.x, vDir.y * fAlong + vStart.y,
-                            vDir.z * fAlong + vStart.z);
-            return !Collide(pHitObject, vHit, vNormal, CollisionManager::GetLastRayHitBodyId());
+            return !Collide(pHitObject, vDir * (fHit * fLength) + vStart, vNormal,
+                            CollisionManager::GetLastRayHitBodyId());
         }
     }
     return true;

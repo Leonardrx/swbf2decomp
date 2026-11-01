@@ -112,7 +112,7 @@ inline void PblVector3::MulY(float value)
 
 inline const float LengthXZ(const PblVector3& vector)
 {
-    return sqrtf(vector.x * vector.x + vector.z * vector.z);
+    return PblMath::Sqrt(vector.x * vector.x + vector.z * vector.z);
 }
 
 inline const float SquaredLengthXZ(const PblVector3& vector)

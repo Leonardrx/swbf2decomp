@@ -2850,8 +2850,9 @@ void ResortSessions(bool bForward)
         }
         if (cEra)
         {
-            const char* pcSep = strchr(pKey->map, '_');
-            if (pcSep && pcSep > pKey->map)
+            const char* pcMapName = pKey->map;
+            const char* pcSep = strchr(pcMapName, '_');
+            if (pcSep && pcSep > pcMapName)
             {
                 const char cMapEra = (char)tolower(pcSep[-1]);
                 if (cMapEra && cMapEra != cEra)

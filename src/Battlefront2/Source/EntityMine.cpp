@@ -276,7 +276,7 @@ bool EntityMine::Update(float fDeltaTime)
         if (pStuckTo && pStuckTo->mHandleId != pStick->mCollHandle.mSavedHandleId)
         {
             mParent = 0;
-            delete mStickInfo;
+            delete pStick;
             mStickInfo = 0;
             mStationary = false;
         }
@@ -300,8 +300,7 @@ bool EntityMine::Update(float fDeltaTime)
             SetMatrix(mStick);
             if (fDeltaTime > 0.0f)
             {
-                const float fInv = 1.0f / fDeltaTime;
-                mVelocity = (mMatrix.GetTranslation() - mOldPosition) * fInv;
+                mVelocity = (mMatrix.GetTranslation() - mOldPosition) / fDeltaTime;
                 mOldPosition = mMatrix.GetTranslation();
             }
             mStationary = true;
@@ -316,15 +315,14 @@ bool EntityMine::Update(float fDeltaTime)
     const int iTimer = (int)mLifeTimer;
     if (iTimer != mPrevTimerVal)
     {
-        EntityMineClass* pClass = static_cast<EntityMineClass*>(mClass);
-        const GameSound* pTick = &pClass->mTick;
-        const float fTickPitch = pClass->mTickPitch;
+        const GameSound* pTick = &static_cast<EntityMineClass*>(mClass)->mTick;
+        const float fTickPitch = static_cast<EntityMineClass*>(mClass)->mTickPitch;
         GameSoundControllable tick;
         tick.Play(pTick, (const PblVector3*)mMatrix.m[3], 0, true);
         Snd::VoiceVirtual* pVoice = tick.GetVoiceVirtual();
-        if (pVoice && pClass->mLifeSpan > 0.0f)
+        if (pVoice && static_cast<EntityMineClass*>(mClass)->mLifeSpan > 0.0f)
         {
-            const float fLife = mLifeTimer / pClass->mLifeSpan;
+            const float fLife = mLifeTimer / static_cast<EntityMineClass*>(mClass)->mLifeSpan;
             pVoice->SetPitch(pTick->GetPitch() * ((1.0f - fLife) * fTickPitch + fLife));
         }
         mPrevTimerVal = iTimer;
@@ -426,10 +424,14 @@ bool EntityMine::Update(float fDeltaTime)
         return bClient;
     }
 
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()) && mMatrix.m[3][1] < -500.0f)
+    if (!(NetGame::IsEnabled() && NetGame::IsClient()))
     {
-        Kill();
-        return false;
+        const PblVector3 vPos = mMatrix.GetTranslation();
+        if (vPos.y < -500.0f)
+        {
+            Kill();
+            return false;
+        }
     }
     return EntityItem::Update(fDeltaTime);
 }

@@ -737,8 +737,7 @@ void FLEffectObject::InterpolateWorldMatrix()
         const int iNetId = m_hobjAttachedToObject->mNetUniqueId;
         gameObjectInterpolator.GetMatrix(iNetId, mInterpolated);
 
-        PblMatrix mInverse = mSmoothed.GetInverseFast();
-        m_mWorldMatrix = m_mWorldMatrix * mInverse;
+        m_mWorldMatrix = m_mWorldMatrix * mSmoothed.GetInverseFast();
         m_mWorldMatrix = m_mWorldMatrix * mInterpolated;
         UpdatedWorldMatrix();
     }

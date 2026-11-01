@@ -462,8 +462,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     if (((OrdnanceBulletClass*)mClass)->mStraightBullet && mCheckStaticCollision)
     {
-        const float fSpeed = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                   mVelocity.z * mVelocity.z);
+        const float fSpeed = Length(mVelocity);
         const float fInv = 1.0f / fSpeed;
         const PblVector3 vDir(mVelocity.x * fInv, mVelocity.y * fInv, mVelocity.z * fInv);
         const GameObject* pOwner = static_cast<GameObject*>(mOwner);
@@ -482,7 +481,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     mOldPosition = mPosition;
     const float fStep = mLifeTime > fDeltaTime ? fDeltaTime : mLifeTime;
-    mPosition += mVelocity * fStep;
+    mPosition = mPosition + mVelocity * fStep;
     mOffscreenTime += fDeltaTime;
     if (!Ordnance::Update(fDeltaTime))
     {
@@ -502,15 +501,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
                 float fT;
                 if (pClass->mDamageTransitionPeriod > 0.0f)
                 {
-                    fT = fAge / pClass->mDamageTransitionPeriod;
-                    if (0.0f > fT)
-                    {
-                        fT = 0.0f;
-                    }
-                    else if (fT > 1.0f)
-                    {
-                        fT = 1.0f;
-                    }
+                    fT = Clamp(fAge / pClass->mDamageTransitionPeriod, 0.0f, 1.0f);
                 }
                 else
                 {

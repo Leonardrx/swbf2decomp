@@ -638,11 +638,11 @@ bool RenderObject(RedSceneObject* pObject, unsigned int uiFlags, int iClip)
             fZoom = RedRenderer::GetCamera()->GetZoom();
         }
         float fFadeStart = FLRenderer::GetNearSceneFadeStart() * fZoom;
-        float fDist = (pObject->_Sphere.x - sRedSceneCamera.mPosition.x) * sRedSceneCamera.mFront.x
-                    + (pObject->_Sphere.y - sRedSceneCamera.mPosition.y) * sRedSceneCamera.mFront.y
-                    + (pObject->_Sphere.z - sRedSceneCamera.mPosition.z) * sRedSceneCamera.mFront.z
-                    + pObject->_Sphere.w - fFadeStart;
         float fRadius = pObject->_Sphere.w;
+        float fDist = (pObject->_Sphere.y - sRedSceneCamera.mPosition.y) * sRedSceneCamera.mFront.y
+                    + (pObject->_Sphere.x - sRedSceneCamera.mPosition.x) * sRedSceneCamera.mFront.x
+                    + (pObject->_Sphere.z - sRedSceneCamera.mPosition.z) * sRedSceneCamera.mFront.z
+                    + fRadius - fFadeStart;
         if (0.0f > fDist)
         {
             return false;

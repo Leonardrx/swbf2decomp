@@ -483,7 +483,7 @@ bool EntityItem::CollisionCallback(const CollisionResult* pResult, CollisionObje
     if (pOther->GetCollisionType() != COLL_SOFT && pOther->GetCollisionType() != COLL_RIGID)
     {
         const PblVector3& vNormal = pResult->mSeparationNormal;
-        float fDot = DotProduct(mVelocity, vNormal);
+        float fDot = DotProduct(vNormal, mVelocity);
         if (fDot < 0.0f)
         {
             if (pOther->GetCollisionType() == COLL_WATER)
@@ -513,9 +513,7 @@ bool EntityItem::CollisionCallback(const CollisionResult* pResult, CollisionObje
                 {
                     fScale = 1.0f;
                 }
-                mVelocity.x -= fScale * mVelocity.x;
-                mVelocity.y -= mVelocity.y * fScale;
-                mVelocity.z -= mVelocity.z * fScale;
+                mVelocity -= mVelocity * fScale;
                 float fBounce = fRebound * fDot;
                 mVelocity -= vNormal * fBounce;
             }

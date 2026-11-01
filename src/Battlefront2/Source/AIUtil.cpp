@@ -450,10 +450,7 @@ bool AIUtil::GetLeadPosition(float fTime, const Controllable* pMe, const GameObj
     PblVector3 vTarget = pTarget->GetTargetPoint(pMe->mEyePoint, pMe->mEyeDir, -1);
     const PblVector3& vMyVel = GetVelocity(pMe->GetGameObject());
     const PblVector3& vHisVel = GetVelocity(pTarget);
-    const PblVector3 vRel(vHisVel.x - vMyVel.x, vHisVel.y - vMyVel.y, vHisVel.z - vMyVel.z);
-    vTarget.x = vRel.x * fTime + vTarget.x;
-    vTarget.y = vRel.y * fTime + vTarget.y;
-    vTarget.z = vRel.z * fTime + vTarget.z;
+    vTarget += (vHisVel - vMyVel) * fTime;
     const Aimer* pAimer = pMe->GetCurAimer();
     return pAimer->GetLeadPos(vTarget, GetVelocity(pTarget), pvLead);
 }
@@ -538,10 +535,10 @@ static void sCalculateTurnControls(const Controllable* pMe, float fScale, const 
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vLocal));
 
+        float fPitch = 0.0f;
         const float fRate = Clamp(fPitchRate, 1.0f, 3.0f);
         const float fGain = 5.0f - fRate;
 
-        float fPitch = 0.0f;
         if (vDir.y < 0.0f)
         {
             fPitch = Max(vDir.y * fGain, -1.0f);
@@ -551,26 +548,27 @@ static void sCalculateTurnControls(const Controllable* pMe, float fScale, const 
             fPitch = Min(vDir.y * fGain, 1.0f);
         }
         *pfPitch = fPitch * fPitch * (fPitch < 0.0f ? -1.0f : 1.0f);
-        return;
-    }
-
-    const PblVector3& vRight = mEye.GetXAxis();
-    const PblVector3& vFwd = mEye.GetZAxis();
-    const PblVector3 vFlat = vToDest2 - vRight * DotProduct(vRight, vToDest2);
-    if (DotProduct(vFwd, vFlat) > 0.0f)
-    {
-        float fPitch = -DotProduct(vRight, CrossProduct(vFwd, GetSafeNormal(vFlat)));
-        const float fDiv = fScale * fPitchRate;
-        if (fDiv > 0.0f)
-        {
-            fPitch /= fDiv;
-        }
-        *pfPitch = fPitch;
-        *pfPitch = Clamp(fPitch, -1.0f, 1.0f);
     }
     else
     {
-        *pfPitch = 0.0f;
+        const PblVector3& vRight = mEye.GetXAxis();
+        const PblVector3& vFwd = mEye.GetZAxis();
+        const PblVector3 vFlat = vToDest2 - vRight * DotProduct(vRight, vToDest2);
+        if (DotProduct(vFwd, vFlat) > 0.0f)
+        {
+            float fPitch = -DotProduct(vRight, CrossProduct(vFwd, GetSafeNormal(vFlat)));
+            const float fDiv = fScale * fPitchRate;
+            if (fDiv > 0.0f)
+            {
+                fPitch /= fDiv;
+            }
+            *pfPitch = fPitch;
+            *pfPitch = Clamp(*pfPitch, -1.0f, 1.0f);
+        }
+        else
+        {
+            *pfPitch = 0.0f;
+        }
     }
 }
 }
@@ -1397,7 +1395,7 @@ float AIUtil::GetCollisionRadius(const GameObject* pObj)
         const float fBarrierX = pHover->mBarrierX;
         if (fBarrierX > 0.0f)
         {
-            return PblMath::Sqrt(pHover->mBarrierZ * pHover->mBarrierZ + fBarrierX * fBarrierX) * 0.5f;
+            return sqrtf(pHover->mBarrierZ * pHover->mBarrierZ + fBarrierX * fBarrierX) * 0.5f;
         }
     }
 
@@ -1929,8 +1927,7 @@ bool AIUtil::ResolveCollision(const GameObject* pMe, const GameObject* pOther)
                     const PblVector3 vDelta(vOtherPos.x - vMyPos.x, vOtherPos.y - vMyPos.y,
                                             vOtherPos.z - vMyPos.z);
                     const PblVector3 vToOther = GetSafeNormal(vDelta);
-                    const PblVector3 vToMe(-vToOther.x, -vToOther.y, -vToOther.z);
-                    const float fMyDot = vMyDir.y * vToMe.y + vMyDir.x * vToMe.x + vMyDir.z * vToMe.z;
+                    const float fMyDot = vMyDir.y * -vToOther.y + vMyDir.x * -vToOther.x + vMyDir.z * -vToOther.z;
                     const float fOtherDot = vOtherDir.y * vToOther.y + vOtherDir.x * vToOther.x + vOtherDir.z * vToOther.z;
                     return fOtherDot > fMyDot;
                 }

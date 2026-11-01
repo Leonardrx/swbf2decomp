@@ -672,16 +672,17 @@ void DSBufferRenderer::UpdateObject()
 
             if (Source2D3D::Get3DMode())
             {
+                SourceI3DL2Interpolated* const pI3DL2 = this;
 
-                SourceI3DL2::mFlags =
-                    (unsigned short)(SourceI3DL2::mFlags
+                pI3DL2->SourceI3DL2::mFlags =
+                    (unsigned short)(pI3DL2->SourceI3DL2::mFlags
                                      | (unsigned int)
                                            SourceI3DL2::flags_forceUpdate);
 
-                SourceI3DL2Interpolated::Update(Source3D::mClosestListener,
-                                                Source3D::mPos3D,
-                                                Source3D::mProps->mSpaceDistance,
-                                                false);
+                pI3DL2->Update(Source3D::mClosestListener,
+                               Source3D::mPos3D,
+                               Source3D::mProps->mSpaceDistance,
+                               false);
             }
 
             Engine::SetupDirectSoundEffects(this, this);
@@ -897,13 +898,9 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
     const bool bHardwareEffects = Engine::smHardwareEffectsAvailable;
     const bool b3DMono = b3D && uiNumChannels == 1;
 
-    float fMs = fBufferMs;
-
-    if (Engine::GetDSCaps().dwMaxHwMixingAllBuffers == 0
-        && 500.0f > fMs)
-    {
-        fMs = 500.0f;
-    }
+    float fMs = (Engine::GetDSCaps().dwMaxHwMixingAllBuffers == 0 && 500.0f > fBufferMs)
+                    ? 500.0f
+                    : fBufferMs;
 
     if (Engine::GetMinStreamBufferSizeMs() > fMs)
     {
@@ -940,8 +937,6 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
                 ? DSBCAPS_LOCHARDWARE
                 : DSBCAPS_LOCSOFTWARE;
 
-        const bool bProperties = bHardwareEffects && b3DMono;
-
         const unsigned int uiBufferFlags =
             (unsigned int)(b3DMono ? DSBCAPS_CTRL3D : DSBCAPS_CTRLPAN)
             | uiLocation
@@ -949,7 +944,7 @@ bool DSBufferRenderer::SetFormat(SampleInfo::Format eFormat,
                              | DSBCAPS_CTRLFREQUENCY);
 
         if (DSBuffer::Create(eFormat, uiNumChannels, uiFrequency, uiLength,
-                             b3DMono, bProperties, uiBufferFlags, false, true,
+                             b3DMono, bHardwareEffects && b3DMono, uiBufferFlags, false, true,
                              pDirectSound, ulFlags, true))
         {
 

@@ -773,8 +773,8 @@ bool CollisionManager::I_GetObjectsFromList(const PblVector3& vMin, const PblVec
                                             TreeGridCallback pCallback, TreeGridCallbackData* pData,
                                             PblList<CollisionObject>& list)
 {
-    float fDist = 1.0f;
     PblList<CollisionObject>::Itor it(list);
+    float fDist = 1.0f;
     while (CollisionObject* pObject = it)
     {
         ++it;
@@ -785,7 +785,7 @@ bool CollisionManager::I_GetObjectsFromList(const PblVector3& vMin, const PblVec
         bool bOverlaps = true;
         for (int i = 0; i < 3; ++i)
         {
-            if ((&vCenter.x)[i] - fRadius > (&vMax.x)[i] || (&vMin.x)[i] > (&vCenter.x)[i] + fRadius)
+            if (vMax[i] < vCenter[i] - fRadius || vCenter[i] + fRadius < vMin[i])
             {
                 bOverlaps = false;
                 break;
@@ -968,14 +968,9 @@ int CollisionManager::I_GetObjectsInRegion(const RedRegion& rRegion, GameObject*
     data.mRegion = &rRegion;
     data.mMe = pIgnore;
 
-    PblVector3 vMin;
-    vMin.x = rRegion.mMatrix.GetTranslation().x - rRegion.mSize.w;
-    vMin.y = rRegion.mMatrix.GetTranslation().y - rRegion.mSize.w;
-    vMin.z = rRegion.mMatrix.GetTranslation().z - rRegion.mSize.w;
-    PblVector3 vMax;
-    vMax.x = rRegion.mMatrix.GetTranslation().x + rRegion.mSize.w;
-    vMax.y = rRegion.mMatrix.GetTranslation().y + rRegion.mSize.w;
-    vMax.z = rRegion.mMatrix.GetTranslation().z + rRegion.mSize.w;
+    PblVector3 vSize(rRegion.mSize.w, rRegion.mSize.w, rRegion.mSize.w);
+    PblVector3 vMin = rRegion.mMatrix.GetTranslation() - vSize;
+    PblVector3 vMax = rRegion.mMatrix.GetTranslation() + vSize;
     if (mTreeGrid)
     {
         TreeGridCache::CallbackOnRect(mTreeGrid, vMin, vMax, GetObjectsRegionCallback, &data);
@@ -1145,10 +1140,10 @@ void CollisionManager::UpdateSimple(PblList<CollisionObject>& list, int iFilter)
         vCameraPos[i] = CameraManager::Instance()->GetCamera(i)->GetMatrix().GetTranslation();
     }
 
+    PblList<CollisionObject>::Itor it(list);
     bool bDistanceGated = !NetGame::IsEnabled() || NetGame::IsClient();
     bool bClient = NetGame::IsEnabled() && NetGame::IsClient();
 
-    PblList<CollisionObject>::Itor it(list);
     while (CollisionObject* pObject = it)
     {
         bool bMine = pObject->GetGameObject() &&

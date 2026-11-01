@@ -79,32 +79,45 @@ void UnitWaitAgent::UpdateStatePostVision(float dt)
 {
     AttackHelper& attack = mAttackHelper;
     attack.Update();
-    if (mCurState != 2)
+    switch (mCurState)
     {
-        return;
-    }
-
-    if (AIUtil::GetRandomIntPerSecond(1, 9) == 2)
+    case 2:
     {
-        SetNewSearchHeading();
-    }
-
-    GameObject* pObj = GetMe()->GetGameObject();
-    if (pObj && pObj->GetMaxSpeed() == 0.0f)
-    {
-        if (attack.HasTarget())
+        if (AIUtil::GetRandomIntPerSecond(1, 9) == 2)
         {
-            mTargetTimer = GameLoop::GetMissionTime();
+            SetNewSearchHeading();
         }
-        else if (GameLoop::GetMissionTime() > mTargetTimer + AIUtil::gStationaryWaitTime)
-        {
-            GetLowLevel().SetExitVehicle(0);
-            return;
-        }
-    }
 
-    UnitAgent::FaceTargetCommon(HEIGHT_COUNT, true,
-                                PblVector3(mSearchPos.x + 0.0f, mSearchPos.y + 1.6f, mSearchPos.z + 0.0f));
+        GameObject* pObj = GetMe()->GetGameObject();
+        if (pObj && pObj->GetMaxSpeed() == 0.0f)
+        {
+            if (attack.HasTarget())
+            {
+                mTargetTimer = GameLoop::GetMissionTime();
+            }
+            else if (GameLoop::GetMissionTime() > mTargetTimer + AIUtil::gStationaryWaitTime)
+            {
+                GetLowLevel().SetExitVehicle(0);
+                return;
+            }
+        }
+
+        if (attack.GetVisibleTarget())
+        {
+            GetLowLevel().SetHeading(attack.GetVisibleTarget());
+        }
+        else if (attack.HasTarget())
+        {
+            const PblVector3& vLastSeen = attack.GetLastSeenTargetPos();
+            GetLowLevel().SetHeading(PblVector3(vLastSeen.x + 0.0f, vLastSeen.y + 1.6f, vLastSeen.z + 0.0f), 0.0f);
+        }
+        else
+        {
+            GetLowLevel().SetHeading(PblVector3(mSearchPos.x + 0.0f, mSearchPos.y + 1.6f, mSearchPos.z + 0.0f), 0.0f);
+        }
+        break;
+    }
+    }
 }
 
 // FUNCTION: SWBF2 0x0066b660

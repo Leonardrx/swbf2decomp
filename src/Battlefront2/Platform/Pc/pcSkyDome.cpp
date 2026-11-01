@@ -147,13 +147,17 @@ void SkyDome::Render(int value)
                                        6.2831855f);
 
             const PblMatrix& camMatrix = pCamera->GetMatrix();
-            PblVector3 pos = camMatrix.GetTranslation();
             if (rDome.mType == STATIC_HEIGHT)
             {
-                float fHeight = mDomeHeight + rDome.mOffset;
+                PblVector3 pos = camMatrix.GetTranslation();
+                float fHeight = rDome.mOffset + mDomeHeight;
                 pos.y = fHeight - (fHeight - pos.y) * rDome.mMovementScale;
+                mat.SetTranslation(pos);
             }
-            mat.SetTranslation(pos);
+            else
+            {
+                mat.SetTranslation(camMatrix.GetTranslation());
+            }
 
             for (int j = 0; j < rDome.mNumEffectData; ++j)
             {
@@ -167,12 +171,13 @@ void SkyDome::Render(int value)
                 rDome.mModel->GetBoneMatrix(rData.hardPoint, boneMat);
                 PblMatrix product = boneMat * mat;
                 boneMat = product;
-                rData.pos = boneMat.GetTranslation();
+                const PblVector3& vEffectPos = boneMat.GetTranslation();
+                rData.pos = vEffectPos;
 
                 const PblVector3& camPos = camMatrix.GetTranslation();
                 const PblVector3& camZ = camMatrix.GetZAxis();
-                if (camZ.y * (rData.pos.y - camPos.y) + (rData.pos.x - camPos.x) * camZ.x +
-                        camZ.z * (rData.pos.z - camPos.z) < 0.0f)
+                if (camZ.y * (vEffectPos.y - camPos.y) + (vEffectPos.x - camPos.x) * camZ.x +
+                        camZ.z * (vEffectPos.z - camPos.z) < 0.0f)
                 {
                     rData.effect->Update(0.0f);
                     rData.effect->Render(0, 1.0f, 0);

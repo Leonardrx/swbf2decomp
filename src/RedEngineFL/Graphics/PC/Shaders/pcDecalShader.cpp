@@ -192,10 +192,7 @@ void pcDecalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 1);
     const RedColorValue color(pItem->tweakColor);
-    pRegs[39].component[0] = color.r;
-    pRegs[39].component[1] = color.g;
-    pRegs[39].component[2] = color.b;
-    pRegs[39].component[3] = color.a;
+    pRegs[39].SetFloats(color.r, color.g, color.b, color.a);
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
     RedRenderer::pcLoadFormat(m_pVertexFormat);
 

@@ -677,12 +677,8 @@ void Damageable::HealthChangeCallback(bool, float)
         {
             return;
         }
-        bool bShow = false;
-        if (!bUnbuilt && pStage->mPercent + 0.0001f > fRatio &&
-            (pStage->mPercentStop <= 0.0f || fRatio >= pStage->mPercentStop - 0.0001f))
-        {
-            bShow = true;
-        }
+        const bool bShow = !bUnbuilt && pStage->mPercent + 0.0001f > fRatio &&
+                           (pStage->mPercentStop <= 0.0f || fRatio >= pStage->mPercentStop - 0.0001f);
 
         if (!(mDamageEffect[i] == 0))
         {
@@ -699,7 +695,7 @@ void Damageable::HealthChangeCallback(bool, float)
         }
         else if (bShow)
         {
-            FLEffectClass* pEffectClass = FLEffect::s_EffectClasses.Find(pStage->mNameHash);
+            FLEffectClass* pEffectClass = FLEffect::Get(pStage->mNameHash);
             if (!pEffectClass)
             {
                 continue;
@@ -728,9 +724,8 @@ void Damageable::HealthChangeCallback(bool, float)
                 mDamageEffect[i]->AttachEffectToObject(pGeometry, pStage->mHardPoint, mOffset, true);
             }
             GameObject* pOwner = GetGameObject();
-            mDamageEffectSound[i].Play(&pStage->mSound,
-                                       reinterpret_cast<const PblVector3*>(&mDamageEffect[i]->m_mWorldMatrix.m[3][0]),
-                                       &pOwner->GetVelocity(), true);
+            const PblVector3* pEffectPos = reinterpret_cast<const PblVector3*>(&mDamageEffect[i]->m_mWorldMatrix.m[3][0]);
+            mDamageEffectSound[i].Play(&pStage->mSound, pEffectPos, &pOwner->GetVelocity(), true);
         }
     }
 }

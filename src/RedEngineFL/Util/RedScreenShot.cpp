@@ -223,12 +223,12 @@ void GetFrameBufferDimensions(unsigned int& uiWidth, unsigned int& uiHeight)
 bool GetPoissonDiscSamples(SamplePoint* pSamples, int iNumSamples, const SamplePoint& start,
                            float fMinDist, const SamplePoint& min, const SamplePoint& max)
 {
-    pSamples[0] = start;
     const float fMinDistSq = fMinDist * fMinDist;
+    pSamples[0] = start;
     --iNumSamples;
-    for (int i = 0; i < iNumSamples; ++i)
+    int iNew = 1;
+    for (int i = 0; i < iNumSamples; ++i, ++iNew)
     {
-        const int iNew = i + 1;
         int iAttempts = 0;
         bool bPlaced = false;
         while (!bPlaced)
@@ -239,8 +239,8 @@ bool GetPoissonDiscSamples(SamplePoint* pSamples, int iNumSamples, const SampleP
             bPlaced = true;
             for (int j = 0; j < iNew; ++j)
             {
-                float dx = pSamples[iNew].x - pSamples[j].x;
                 float dy = pSamples[iNew].y - pSamples[j].y;
+                float dx = pSamples[iNew].x - pSamples[j].x;
                 if (fMinDistSq > dx * dx + dy * dy)
                 {
                     bPlaced = false;

@@ -646,88 +646,6 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         AddTargetableCollision(pszValue);
         break;
 
-    case 0x74e63ee8:
-    case 0x07d00083:
-    case 0x330acaab:
-    case 0x8cf29543:
-    case 0x7cdccf2a:
-    case 0xfec8cea9:
-    {
-        PblVector3 vCenter = mModel->_mModel->_BoundingSphere.GetCenter();
-
-        char acName[32];
-        char acType[32];
-        char acParent[32];
-        float x, y, z, a, b, c;
-        sscanf(pszValue, "%s %s %s %f %f %f %f %f %f", acName, acType, acParent, &x, &y, &z, &a, &b, &c);
-
-        PblMatrix matrix = gMatrixIdentity;
-        matrix.m[3][0] = x;
-        matrix.m[3][1] = y;
-        matrix.m[3][2] = z;
-        matrix.m[3][3] = 1.0f;
-
-        CollisionPrimitive primitive;
-
-        float fDX = vCenter.x - x;
-        float fDY = vCenter.y - y;
-        float fDZ = vCenter.z - z;
-        float fRadius;
-        switch (PblTEMPHash(acType))
-        {
-        case 0x1ccafdcc:
-            primitive.SetBox(a, b, c, -1.0f);
-            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
-            fRadius = (float)sqrt((double)(a * a + b * b + c * c)) + fRadius;
-            break;
-        case 0x4a182b8f:
-            primitive.SetCylinder(a, b);
-            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
-            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
-            break;
-        case 0x73f51491:
-            primitive.SetAACylinder(a, b);
-            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
-            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
-            break;
-        default:
-            primitive.SetSphere(a);
-            fRadius = PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ) + a;
-            break;
-        }
-        mPotentialCollisionRadius = __max(mPotentialCollisionRadius, fRadius);
-
-        CollisionMask terrainMask = mCollisionModel.GetCollisionMask(COLL_TERRAIN);
-        CollisionMask staticMask = mCollisionModel.GetCollisionMask(COLL_STATIC);
-        CollisionMask rigidMask = mCollisionModel.GetCollisionMask(COLL_RIGID);
-        CollisionMask softMask = mCollisionModel.GetCollisionMask(COLL_SOFT);
-        CollisionMask ordnanceMask = mCollisionModel.GetCollisionMask(COLL_ORDNANCE);
-        CollisionMask targetableMask = mCollisionModel.GetCollisionMask(COLL_TARGETABLE);
-
-        mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, acName, matrix, PblTEMPHash(acParent)));
-
-        int iMaskId = mCollisionModel.GetMaskId(PblHash(acName));
-        if (iMaskId >= 0)
-        {
-            switch (uProperty)
-            {
-            case 0x74e63ee8: targetableMask.SetId(iMaskId); break;
-            case 0x330acaab: ordnanceMask.SetId(iMaskId); break;
-            case 0x07d00083: softMask.SetId(iMaskId); break;
-            case 0x7cdccf2a: terrainMask.SetId(iMaskId); break;
-            case 0x8cf29543: staticMask.SetId(iMaskId); break;
-            case 0xfec8cea9: rigidMask.SetId(iMaskId); break;
-            }
-            mCollisionModel.SetCollisionMask(COLL_TERRAIN, terrainMask);
-            mCollisionModel.SetCollisionMask(COLL_STATIC, staticMask);
-            mCollisionModel.SetCollisionMask(COLL_RIGID, rigidMask);
-            mCollisionModel.SetCollisionMask(COLL_SOFT, softMask);
-            mCollisionModel.SetCollisionMask(COLL_ORDNANCE, ordnanceMask);
-            mCollisionModel.SetCollisionMask(COLL_TARGETABLE, targetableMask);
-        }
-        break;
-    }
-
     case 0xda328455:
     {
         if ((unsigned int)sCurrentChunk > 9)
@@ -776,9 +694,7 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         if (!mChunkDescriptors[sCurrentChunk]->mPrimitive || CollisionBodyPrimitive::Find(PblHash(acName)))
         {
             PblBox box = mChunkDescriptors[sCurrentChunk]->mModel->_mModel->_TotalBoundingBox;
-            float fCenterX = (box._vMin.x + box._vMax.x) * 0.5f;
-            float fCenterY = (box._vMin.y + box._vMax.y) * 0.5f;
-            float fCenterZ = (box._vMin.z + box._vMax.z) * 0.5f;
+            PblVector3 vCenter = (box._vMin + box._vMax) * 0.5f;
 
             CollisionPrimitive primitive;
             PblMatrix matrix = gMatrixIdentity;
@@ -786,14 +702,92 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
             float fHalfY = (float)fabs((double)(box._vMax.y - box._vMin.y)) * 0.5f;
             float fHalfZ = (float)fabs((double)(box._vMax.z - box._vMin.z)) * 0.5f;
             primitive.SetSphere(PblMath::Sqrt(fHalfX * fHalfX + fHalfY * fHalfY + fHalfZ * fHalfZ));
-            matrix.m[3][0] = fCenterX;
-            matrix.m[3][1] = fCenterY;
-            matrix.m[3][2] = fCenterZ;
+            matrix[3] = vCenter;
             matrix.m[3][3] = 1.0f;
             mChunkDescriptors[sCurrentChunk]->mPrimitive = new CollisionBodyPrimitive(primitive, "", matrix, 0);
         }
         sCurrentSmoke = 0;
         sCurrentTrail = 0;
+        break;
+    }
+
+    case 0x74e63ee8:
+    case 0x07d00083:
+    case 0x330acaab:
+    case 0x8cf29543:
+    case 0x7cdccf2a:
+    case 0xfec8cea9:
+    {
+        PblVector3 vCenter = mModel->_mModel->_BoundingSphere.GetCenter();
+
+        char acName[32];
+        char acType[32];
+        char acParent[32];
+        float x, y, z, a, b, c;
+        sscanf(pszValue, "%s %s %s %f %f %f %f %f %f", acName, acType, acParent, &x, &y, &z, &a, &b, &c);
+
+        PblVector3 vPos(x, y, z);
+        PblMatrix matrix = gMatrixIdentity;
+        matrix.m[3][0] = vPos.x;
+        matrix.m[3][1] = vPos.y;
+        matrix.m[3][2] = vPos.z;
+        matrix.m[3][3] = 1.0f;
+
+        CollisionPrimitive primitive;
+
+        float fRadius;
+        switch (PblTEMPHash(acType))
+        {
+        case 0x1ccafdcc:
+            primitive.SetBox(a, b, c, -1.0f);
+            fRadius = Length(vCenter - vPos);
+            fRadius = (float)sqrt((double)(a * a + b * b + c * c)) + fRadius;
+            break;
+        case 0x4a182b8f:
+            primitive.SetCylinder(a, b);
+            fRadius = Length(vCenter - vPos);
+            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
+            break;
+        case 0x73f51491:
+            primitive.SetAACylinder(a, b);
+            fRadius = Length(vCenter - vPos);
+            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
+            break;
+        default:
+            primitive.SetSphere(a);
+            fRadius = Length(vCenter - vPos) + a;
+            break;
+        }
+        mPotentialCollisionRadius = __max(mPotentialCollisionRadius, fRadius);
+
+        CollisionMask terrainMask = mCollisionModel.GetCollisionMask(COLL_TERRAIN);
+        CollisionMask staticMask = mCollisionModel.GetCollisionMask(COLL_STATIC);
+        CollisionMask rigidMask = mCollisionModel.GetCollisionMask(COLL_RIGID);
+        CollisionMask softMask = mCollisionModel.GetCollisionMask(COLL_SOFT);
+        CollisionMask ordnanceMask = mCollisionModel.GetCollisionMask(COLL_ORDNANCE);
+        CollisionMask targetableMask = mCollisionModel.GetCollisionMask(COLL_TARGETABLE);
+
+        mCollisionModel.AddBody(new CollisionBodyPrimitive(primitive, acName, matrix, PblTEMPHash(acParent)));
+
+        int iMaskId = mCollisionModel.GetMaskId(PblHash(acName));
+        if (iMaskId >= 0)
+        {
+            switch (uProperty)
+            {
+            case 0x74e63ee8: targetableMask.SetId(iMaskId); break;
+            case 0x330acaab: ordnanceMask.SetId(iMaskId); break;
+            case 0x07d00083: softMask.SetId(iMaskId); break;
+            case 0x7cdccf2a: terrainMask.SetId(iMaskId); break;
+            case 0x8cf29543: staticMask.SetId(iMaskId); break;
+            case 0xfec8cea9: rigidMask.SetId(iMaskId); break;
+            }
+            mCollisionModel.SetCollisionMask(COLL_TERRAIN, terrainMask);
+            mCollisionModel.SetCollisionMask(COLL_STATIC, staticMask);
+            mCollisionModel.SetCollisionMask(COLL_RIGID, rigidMask);
+            mCollisionModel.SetCollisionMask(COLL_SOFT, softMask);
+            mCollisionModel.SetCollisionMask(COLL_ORDNANCE, ordnanceMask);
+            mCollisionModel.SetCollisionMask(COLL_TARGETABLE, targetableMask);
+        }
         break;
     }
 
@@ -918,14 +912,15 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
     case 0xa8fb54e9:
-    {
-        unsigned int uTrail = sCurrentTrail - 1;
-        if ((unsigned int)sCurrentChunk <= 9 && uTrail <= 2)
+        if ((unsigned int)sCurrentChunk <= 9)
         {
-            mChunkDescriptors[sCurrentChunk]->mTrailAttachPoints[uTrail] = PblTEMPHash(pszValue);
+            unsigned int uTrail = sCurrentTrail - 1;
+            if (uTrail <= 2)
+            {
+                mChunkDescriptors[sCurrentChunk]->mTrailAttachPoints[uTrail] = PblTEMPHash(pszValue);
+            }
         }
         break;
-    }
     case 0xd350c3de:
         if ((unsigned int)sCurrentChunk <= 9 && (unsigned int)sCurrentSmoke <= 2)
         {
@@ -934,14 +929,15 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         }
         break;
     case 0x472e0410:
-    {
-        unsigned int uSmoke = sCurrentSmoke - 1;
-        if ((unsigned int)sCurrentChunk <= 9 && uSmoke <= 2)
+        if ((unsigned int)sCurrentChunk <= 9)
         {
-            mChunkDescriptors[sCurrentChunk]->mSmokeAttachPoints[uSmoke] = PblTEMPHash(pszValue);
+            unsigned int uSmoke = sCurrentSmoke - 1;
+            if (uSmoke <= 2)
+            {
+                mChunkDescriptors[sCurrentChunk]->mSmokeAttachPoints[uSmoke] = PblTEMPHash(pszValue);
+            }
         }
         break;
-    }
 
     default:
         if (!AttachedEffectsClass::SetProperty(uProperty, pszValue) &&

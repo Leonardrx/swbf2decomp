@@ -490,19 +490,18 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
 
     sRadius = mMeshCollisionRadius;
     sWorld2Collision = meshMatrix.GetInverseFast();
-    PblVector3 vLocalPos;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocalPos, (const D3DXVECTOR3*)&matrix.GetTranslation(),
+    PblVector3 vTransformed;
+    D3DXVec3TransformCoord((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.GetTranslation(),
                            (const D3DXMATRIX*)&sWorld2Collision);
-    sLocalPos = vLocalPos;
-    PblVector3 vRow;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[0][0], (const D3DXMATRIX*)&sWorld2Collision);
-    sPrimitiveInCollision[0] = vRow;
+    sLocalPos = vTransformed;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.m[0][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[0] = vTransformed;
     sPrimitiveInCollision.m[0][3] = 0.0f;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[1][0], (const D3DXMATRIX*)&sWorld2Collision);
-    sPrimitiveInCollision[1] = vRow;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.m[1][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[1] = vTransformed;
     sPrimitiveInCollision.m[1][3] = 0.0f;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow, (const D3DXVECTOR3*)&matrix.m[2][0], (const D3DXMATRIX*)&sWorld2Collision);
-    sPrimitiveInCollision[2] = vRow;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.m[2][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[2] = vTransformed;
     sPrimitiveInCollision.m[2][3] = 0.0f;
     sPrimitiveInCollision.SetTranslation(sLocalPos);
 
@@ -538,10 +537,9 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
         aCorners[7].z = vBoxMax.z;
         for (i = 0; i < 8; ++i)
         {
-            PblVector3 v;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&v, (const D3DXVECTOR3*)&aCorners[i],
+            D3DXVec3TransformCoord((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&aCorners[i],
                                    (const D3DXMATRIX*)&sWorld2Collision);
-            aCorners[i] = v;
+            aCorners[i] = vTransformed;
         }
         PblVector3 vMin = aCorners[0];
         PblVector3 vMax = aCorners[0];
@@ -582,10 +580,9 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
         }
 
         float fRadius = pObject->GetCollisionRadius();
-        PblVector3 vCenter;
-        D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter, (const D3DXVECTOR3*)&pObject->GetCollisionCenter(),
+        D3DXVec3TransformCoord((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&pObject->GetCollisionCenter(),
                                (const D3DXMATRIX*)&sWorld2Collision);
-        pCache = ((CollisionMesh*)pMesh)->GetTriHits(vCenter, fRadius, vMin, vMax, *sTriList, pSoldier);
+        pCache = ((CollisionMesh*)pMesh)->GetTriHits(vTransformed, fRadius, vMin, vMax, *sTriList, pSoldier);
     }
 
     for (int iPoly = 0; iPoly < sCollTriList->mPolyCount; ++iPoly)

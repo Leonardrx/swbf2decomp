@@ -455,8 +455,7 @@ int ScriptCB_PlayAudioStream(lua_State*)
     pStream->Source::mFlags |= 0x12;
     pStream->SetBus(Snd::Bus::FindByHashID(PblHash(pcBus)));
     pStream->SeekSegment(pStream->FindSegment(PblHash(pcSegment)));
-    pStream->SourceBus::Play(pStream);
-    pStream->SourceTransport::Play(true);
+    pStream->Play(true);
     return iReturns;
 }
 

@@ -45,19 +45,18 @@ bool StreamDSDMO::CreateDMO(const _GUID& rCLSID, const StreamFormat& rIn,
 
     if (mDMO.Create(rCLSID, &rIn, &rOut))
     {
-        unsigned long ulSize = 0;
-        unsigned long ulMaxLookahead = 0;
-        unsigned long ulAlignment = 0;
+        unsigned long ulSize;
+        unsigned long ulMaxLookahead;
+        unsigned long ulAlignment;
 
-        if (Engine::Succeeded(mDMO.GetMediaObject()->GetInputSizeInfo(
-                                  0, &ulSize, &ulMaxLookahead, &ulAlignment),
-                              kFile, 58))
+        const HRESULT hr = mDMO.GetMediaObject()->GetInputSizeInfo(
+            0, &ulSize, &ulMaxLookahead, &ulAlignment);
+        if (Engine::Succeeded(hr, kFile, 58))
         {
             const unsigned int uiInputFrameSize =
                 SampleInfo::GetFrameSize(rIn.GetFormat()) * rIn.GetNumChannels();
             mInputFrameSize = uiInputFrameSize;
 
-            unsigned int uiMinSize = ulSize;
             for (unsigned int i = 0; i < 9; ++i)
             {
                 if (rCLSID.Data1 != kStandardEffects[i]->Data1)
@@ -71,14 +70,14 @@ bool StreamDSDMO::CreateDMO(const _GUID& rCLSID, const StreamFormat& rIn,
                 const unsigned int uiRounded =
                     ((uiLatencyBytes - 1 + uiInputFrameSize) / uiInputFrameSize)
                     * uiInputFrameSize;
-                if (uiMinSize < uiRounded)
+                if (ulSize < uiRounded)
                 {
-                    uiMinSize = uiRounded;
+                    ulSize = uiRounded;
                 }
                 break;
             }
 
-            mMinSize = uiMinSize;
+            mMinSize = ulSize;
             mAlignment = ulAlignment;
             mAudioFrameSize =
                 SampleInfo::GetFrameSize(rOut.GetFormat()) * rOut.GetNumChannels();

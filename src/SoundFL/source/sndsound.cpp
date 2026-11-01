@@ -457,9 +457,8 @@ void Sound::Properties::SetupVoiceVirtual(VoiceVirtualBus* pVoice, Source3D* pSo
 
     if (GetRandomPlayPosition())
     {
-        const float fLength = (float)pSample->mLengthSamples;
-        pVoice->mPlaybackPosition =
-            (unsigned int)(sndRandom.GetFloat() * fLength);
+        const unsigned int uiLength = pSample->mLengthSamples;
+        pVoice->mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * uiLength);
         pVoice->SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
     }
 
@@ -546,8 +545,8 @@ void Sound::Play(bool bRestart)
     SetSample((const Sample*)mProperties->mSelObjectWeightList->GetObjectA());
     if (mProperties->GetRandomPlayPosition())
     {
-        const float fLength = (float)mSample->mLengthSamples;
-        mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * fLength);
+        const unsigned int uiLength = mSample->mLengthSamples;
+        mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * uiLength);
         SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
     }
 

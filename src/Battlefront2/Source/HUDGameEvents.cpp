@@ -1307,18 +1307,23 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
     if (pWeapon != weaponData.weapon || pWeaponClass != weaponData.weaponClass ||
         uWeaponHash != weaponData.weaponHash)
     {
-        HUD::Event(weaponEvents.disable, true).Send();
-        HUD::Event(weaponEvents.lockOnDisable, true).Send();
-        HUD::Event(weaponEvents.targetDisable, true).Send();
-        HUD::Event(weaponEvents.targetDisableShieldName, true).Send();
+        HUD::Event evDisable(weaponEvents.disable, true);
+        evDisable.Send();
+        HUD::Event evLockOnDisable(weaponEvents.lockOnDisable, true);
+        evLockOnDisable.Send();
+        HUD::Event evTargetDisable(weaponEvents.targetDisable, true);
+        evTargetDisable.Send();
+        HUD::Event evShieldNameDisable(weaponEvents.targetDisableShieldName, true);
+        evShieldNameDisable.Send();
         UpdateHackWeapon(0, events.vehicleHackingTime, events.vehicleHackingTimeFraction,
                          events.vehicleHackingTimeDisable, 0x6d2f8d98, data.vehicleHacking);
         if (pWeapon && !data.scopeActive && !data.unknownBool00D8)
         {
-            HUD::Event(weaponEvents.change, uWeaponHash).Send();
+            HUD::Event evChange(weaponEvents.change, uWeaponHash);
+            evChange.Send();
 
-            unsigned short acFilename[256];
             unsigned short acName[256];
+            unsigned short acFilename[256];
             const unsigned short* pLabel = pWeaponClass->mLabel;
             if (!pLabel)
             {
@@ -1326,7 +1331,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 pLabel = acFilename;
             }
             PblUnicode::ustrlcpy(acName, pLabel, 256);
-            HUD::Event(weaponEvents.name, (const wchar_t*)acName).Send();
+            HUD::Event evName(weaponEvents.name, (const wchar_t*)acName);
+            evName.Send();
         }
         weaponData.weapon = pWeapon;
         weaponData.weaponClass = pWeaponClass;
@@ -1340,7 +1346,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
     if (const PlayerProfile::tProfile* pProfile = pCharacter->GetProfile())
     {
         const float fAlpha = pProfile->mGameOptions.mReticuleAlpha;
-        HUD::Event(events.reticuleAlpha, fAlpha).Send();
+        HUD::Event evAlpha(events.reticuleAlpha, fAlpha);
+        evAlpha.Send();
         data.unknownFloat00D0 = fAlpha;
     }
 
@@ -1349,7 +1356,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
     {
         if (!bShowReticule)
         {
-            HUD::Event(weaponEvents.reticuleDisable, true).Send();
+            HUD::Event evReticuleDisable(weaponEvents.reticuleDisable, true);
+            evReticuleDisable.Send();
         }
         weaponData.showReticule = bShowReticule;
     }
@@ -1393,14 +1401,19 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             }
             if (!data.scopeActive && !data.unknownBool00D8)
             {
-                HUD::Event(weaponEvents.ammoTotalBullets, static_cast<unsigned int>(iTotalBullets)).Send();
-                HUD::Event(weaponEvents.ammoTotalFraction, fTotalFraction).Send();
+                HUD::Event evTotalBullets(weaponEvents.ammoTotalBullets, static_cast<unsigned int>(iTotalBullets));
+                evTotalBullets.Send();
+                HUD::Event evTotalFraction(weaponEvents.ammoTotalFraction, fTotalFraction);
+                evTotalFraction.Send();
             }
-            HUD::Event(weaponEvents.ammoClipBullets, static_cast<unsigned int>(iClipBullets)).Send();
-            HUD::Event(weaponEvents.ammoClipFraction, fClipFraction).Send();
+            HUD::Event evClipBullets(weaponEvents.ammoClipBullets, static_cast<unsigned int>(iClipBullets));
+            evClipBullets.Send();
+            HUD::Event evClipFraction(weaponEvents.ammoClipFraction, fClipFraction);
+            evClipFraction.Send();
             if (iTotalBullets == -1)
             {
-                HUD::Event(weaponEvents.ammoInfinite, true).Send();
+                HUD::Event evInfinite(weaponEvents.ammoInfinite, true);
+                evInfinite.Send();
             }
             weaponData.ammoTotalFraction = fTotalFraction;
             weaponData.clipTotalFraction = fClipFraction;
@@ -1448,7 +1461,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             if (1.0f - pBar->m_fEnergy / pBarClass->m_fEnergyMax >
                 1.0f - pBarClass->m_fEnergyOverheat / pBarClass->m_fEnergyMax)
             {
-                HUD::Event(events.weaponsOverheat, true).Send();
+                HUD::Event evOverheat(events.weaponsOverheat, true);
+                evOverheat.Send();
                 pBarClass = pWeapon->m_pEnergyBar->m_pClass;
                 float fFraction = (pBarClass->m_fEnergyMax - pBarClass->m_fEnergyOverheat) /
                                   (pBarClass->m_fEnergyMax - pWeapon->m_pEnergyBar->m_fEnergy);
@@ -1471,8 +1485,10 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
 
         if (!bNoClips)
         {
-            HUD::Event(weaponEvents.heat, fHeat).Send();
-            HUD::Event(weaponEvents.refire, fRefire).Send();
+            HUD::Event evHeat(weaponEvents.heat, fHeat);
+            evHeat.Send();
+            HUD::Event evRefire(weaponEvents.refire, fRefire);
+            evRefire.Send();
         }
         else
         {
@@ -1486,11 +1502,13 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fEnergyHeat = 1.0f;
             }
-            HUD::Event(weaponEvents.heat, fEnergyHeat).Send();
+            HUD::Event evHeat(weaponEvents.heat, fEnergyHeat);
+            evHeat.Send();
             pBar = pWeapon->m_pEnergyBar;
             const float fUsed = 1.0f - pBar->m_fEnergy / pBar->m_pClass->m_fEnergyMax;
             const float fOverheat = 1.0f - pBar->m_pClass->m_fEnergyOverheat / pBar->m_pClass->m_fEnergyMax;
-            HUD::Event(weaponEvents.refire, fOverheat > fUsed ? 0.0f : fRefire).Send();
+            HUD::Event evRefire(weaponEvents.refire, fOverheat > fUsed ? 0.0f : fRefire);
+            evRefire.Send();
         }
 
         PblHandle<GameObject const> hTarget =
@@ -1509,8 +1527,10 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
 
         if (weaponData.target != hTarget)
         {
-            HUD::Event(weaponEvents.targetDisable, true).Send();
-            HUD::Event(weaponEvents.targetDisableShieldName, true).Send();
+            HUD::Event evTargetDisable(weaponEvents.targetDisable, true);
+            evTargetDisable.Send();
+            HUD::Event evShieldNameDisable(weaponEvents.targetDisableShieldName, true);
+            evShieldNameDisable.Send();
             weaponData.targetHealth = -1.0f;
             if (hTarget)
             {
@@ -1519,17 +1539,21 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 GameObjectGetNames(hTarget, &pName, &pClassName);
                 if (pName)
                 {
-                    HUD::Event(weaponEvents.targetName, (const wchar_t*)pName).Send();
+                    HUD::Event evTargetName(weaponEvents.targetName, (const wchar_t*)pName);
+                    evTargetName.Send();
                 }
                 if (pClassName)
                 {
-                    HUD::Event(weaponEvents.targetClassName, (const wchar_t*)pClassName).Send();
+                    HUD::Event evTargetClassName(weaponEvents.targetClassName, (const wchar_t*)pClassName);
+                    evTargetClassName.Send();
                 }
             }
             else
             {
-                HUD::Event(weaponEvents.targetTeamColor, &gLocalColor).Send();
-                HUD::Event(weaponEvents.targetTeamColorBright, &gLocalColor).Send();
+                HUD::Event evTeamColor(weaponEvents.targetTeamColor, &gLocalColor);
+                evTeamColor.Send();
+                HUD::Event evTeamColorBright(weaponEvents.targetTeamColorBright, &gLocalColor);
+                evTeamColorBright.Send();
                 UpdateHackWeapon(0, events.vehicleHackingTime, events.vehicleHackingTimeFraction,
                                  events.vehicleHackingTimeDisable, 0x6d2f8d98, data.vehicleHacking);
             }
@@ -1544,15 +1568,19 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 hTarget->GetTeam()
                     ? Team::GetColorByAffiliation(Team::sTeams[pObject->GetTeam()]->GetAffiliation(hTarget->GetTeam()))
                     : gLocalColor;
-            HUD::Event(weaponEvents.targetTeamColor, &color).Send();
+            HUD::Event evTeamColor(weaponEvents.targetTeamColor, &color);
+            evTeamColor.Send();
 
-            int iMax = color.g > color.b ? color.g : color.b;
-            if (color.r > iMax)
+            const int iGreen = color.g;
+            const int iBlue = color.b;
+            int iMax = iGreen > iBlue ? iGreen : iBlue;
+            const int iRed = color.r;
+            if (iRed > iMax)
             {
-                iMax = color.r;
+                iMax = iRed;
             }
             const float fScale = 382.5f / (float)iMax;
-            float fR = (float)color.r * fScale;
+            float fR = (float)iRed * fScale;
             if (0.0f > fR)
             {
                 fR = 0.0f;
@@ -1561,7 +1589,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fR = 255.0f;
             }
-            float fG = (float)color.g * fScale;
+            float fG = (float)iGreen * fScale;
             if (0.0f > fG)
             {
                 fG = 0.0f;
@@ -1570,7 +1598,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fG = 255.0f;
             }
-            float fB = (float)color.b * fScale;
+            float fB = (float)iBlue * fScale;
             if (0.0f > fB)
             {
                 fB = 0.0f;
@@ -1584,7 +1612,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             bright.r = (unsigned char)(int)fR;
             bright.a = 0xff;
             bright.b = (unsigned char)(int)fB;
-            HUD::Event(weaponEvents.targetTeamColorBright, &bright).Send();
+            HUD::Event evTeamColorBright(weaponEvents.targetTeamColorBright, &bright);
+            evTeamColorBright.Send();
 
             if (pTargetObject)
             {
@@ -1599,16 +1628,20 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                     if (fShield != weaponData.targetHealth)
                     {
                         const float fMaxShield = pTargetObject->mMaxShield;
-                        HUD::Event(weaponEvents.targetHealth, static_cast<unsigned int>((int)fShield)).Send();
-                        HUD::Event(weaponEvents.targetHealthFraction, fShield / fMaxShield).Send();
+                        HUD::Event evHealth(weaponEvents.targetHealth, static_cast<unsigned int>((int)fShield));
+                        evHealth.Send();
+                        HUD::Event evHealthFraction(weaponEvents.targetHealthFraction, fShield / fMaxShield);
+                        evHealthFraction.Send();
                         weaponData.targetHealth = fShield;
                     }
-                    HUD::Event(weaponEvents.targetShieldName,
-                               (const wchar_t*)RedLocalizeDB::Find(0x66049aa8, false)).Send();
+                    HUD::Event evShieldName(weaponEvents.targetShieldName,
+                                            (const wchar_t*)RedLocalizeDB::Find(0x66049aa8, false));
+                    evShieldName.Send();
                 }
                 else
                 {
-                    HUD::Event(weaponEvents.targetDisableShieldName, true).Send();
+                    HUD::Event evShieldNameDisable(weaponEvents.targetDisableShieldName, true);
+                    evShieldNameDisable.Send();
                     if (!pTargetObject->GetGameObjectClass()->mbHideHealthBar)
                     {
                         float fHealth = pTargetObject->mCurHealth;
@@ -1619,8 +1652,10 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                         if (fHealth != weaponData.targetHealth)
                         {
                             const float fMaxHealth = pTargetObject->mMaxHealth;
-                            HUD::Event(weaponEvents.targetHealth, static_cast<unsigned int>((int)fHealth)).Send();
-                            HUD::Event(weaponEvents.targetHealthFraction, fHealth / fMaxHealth).Send();
+                            HUD::Event evHealth(weaponEvents.targetHealth, static_cast<unsigned int>((int)fHealth));
+                            evHealth.Send();
+                            HUD::Event evHealthFraction(weaponEvents.targetHealthFraction, fHealth / fMaxHealth);
+                            evHealthFraction.Send();
 
                             weaponData.targetHealth = fShield;
                         }
@@ -1647,7 +1682,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         {
             if (!pLocked)
             {
-                HUD::Event(weaponEvents.lockOnDisable, true).Send();
+                HUD::Event evLockOnDisable(weaponEvents.lockOnDisable, true);
+                evLockOnDisable.Send();
             }
             weaponData.targetLocked = const_cast<GameObject*>(pLocked);
         }
@@ -1672,10 +1708,10 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 {
                     gameObjectInterpolator.GetMatrix(pRoot->GetNetUniqueId(), mSmoothed);
                 }
-                const PblVector3& vPos = pRoot->GetMatrix().GetTranslation();
-                fOffsetX = mSmoothed.m[3][0] - vPos.x;
-                fOffsetY = mSmoothed.m[3][1] - vPos.y;
-                fOffsetZ = mSmoothed.m[3][2] - vPos.z;
+                const PblVector3 vOffset = mSmoothed.GetTranslation() - pRoot->GetMatrix().GetTranslation();
+                fOffsetX = vOffset.x;
+                fOffsetY = vOffset.y;
+                fOffsetZ = vOffset.z;
             }
 
             const int iBodyId = pWeapon->GetLockedTargetBodyId();
@@ -1690,7 +1726,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                                    (const D3DXMATRIX*)&pCamera->GetMatrixInverse());
             if (vCamera.z >= 0.0f)
             {
-                HUD::Event(weaponEvents.lockOnDisable, true).Send();
+                HUD::Event evLockOnDisable(weaponEvents.lockOnDisable, true);
+                evLockOnDisable.Send();
             }
             else
             {
@@ -1698,7 +1735,8 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 vScreen.x = vScreen.x * 0.5f + 0.5f;
                 vScreen.y = vScreen.y * 0.5f + 0.5f;
                 vScreen.z = 0.0f;
-                HUD::Event(weaponEvents.lockOnPosition, &vScreen).Send();
+                HUD::Event evLockOnPosition(weaponEvents.lockOnPosition, &vScreen);
+                evLockOnPosition.Send();
             }
         }
     }
@@ -1718,11 +1756,13 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         {
             fMultiplier = fEnemyMultiplier;
         }
-        HUD::Event(fMultiplier > 1.0f ? weaponEvents.targetHitCritical : weaponEvents.targetHit, true).Send();
+        HUD::Event evHit(fMultiplier > 1.0f ? weaponEvents.targetHitCritical : weaponEvents.targetHit, true);
+        evHit.Send();
         const RedColor color = fHitFriend != 0.0f ? Team::GetColorByAffiliation(1)
                              : fHitEnemy != 0.0f ? Team::GetColorByAffiliation(-1)
                                                  : gLocalColor;
-        HUD::Event(weaponEvents.targetHitColor, &color).Send();
+        HUD::Event evHitColor(weaponEvents.targetHitColor, &color);
+        evHitColor.Send();
     }
 }
 
@@ -2240,11 +2280,7 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     HUD::Event ev4(events.energy, fEnergy);
     ev4.Send();
     const float fEnergyMax = pBar->m_pClass->m_fEnergyMax;
-    float fFraction = 0.0f;
-    if (fEnergyMax > 0.0f)
-    {
-        fFraction = pBar->m_fEnergy / fEnergyMax;
-    }
+    const float fFraction = fEnergyMax > 0.0f ? pBar->m_fEnergy / fEnergyMax : 0.0f;
     HUD::Event ev5(events.energyFraction, (float)fabs((double)fFraction));
     ev5.Send();
     if (pBar->m_bOverheat)

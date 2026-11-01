@@ -1682,8 +1682,8 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
         fBank = fMaxBank;
     }
 
-    float fWeave = 1.0f;
     float fTime = GameLoop::GetMissionTime() + (float)(((unsigned int)this >> 2) & 0xf);
+    float fWeave = 1.0f;
     if (!AIUtil::gGroundFlyerMap)
     {
         fWeave = 2.0f;
@@ -1697,9 +1697,9 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
 
     float fDelta = mSplineRoll - mCurRoll;
     float fAccel;
-    if (((float)fabs((double)mRollVelocity) / pClass->mPathRollValues.mRollSpeed + 1.0f) *
-            pClass->mPathRollValues.mRollTolerance >
-        (float)fabs((double)fDelta))
+    if ((float)fabs((double)fDelta) <
+        ((float)fabs((double)mRollVelocity) / pClass->mPathRollValues.mRollSpeed + 1.0f) *
+            pClass->mPathRollValues.mRollTolerance)
     {
         fAccel = -((0.0f > mRollVelocity ? -1.0f : 1.0f) * pClass->mPathRollValues.mRollAcceleration);
     }
@@ -1717,8 +1717,9 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
     mCurRoll = mRollVelocity * fElapsed + mCurRoll;
 
     float fDamp = Clamp(pClass->mPathRollValues.mRollDampening * fElapsed, 0.0f, 1.0f);
+    const float fRoll = (fTarget - mCurRoll) * fDamp + mCurRoll;
     mYaw = fYaw;
-    mCurRoll = (fTarget - mCurRoll) * fDamp + mCurRoll;
+    mCurRoll = fRoll;
     return mCurRoll;
 }
 

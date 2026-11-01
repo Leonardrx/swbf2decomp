@@ -534,7 +534,10 @@ bool PauseMenu::Update(float fDeltaTime)
     {
         SpawnDisplay::EnableViewport(iViewport, false);
         EnableDisplays(iViewport, false);
-        EnableScreenGroups(false);
+        for (int i = 0; i < 5; ++i)
+        {
+            HUD::gScreenGroup[i].Enable(false);
+        }
     }
 
     if (mFreecamView && PauseMenu::IsPauseAllowed() && pGuiInputs->IsSelectPressed())
@@ -543,7 +546,10 @@ bool PauseMenu::Update(float fDeltaTime)
         {
             GameLoop::Resume();
             EnableDisplays(mViewport, false);
-            EnableScreenGroups(false);
+            for (int i = 0; i < 5; ++i)
+            {
+                HUD::gScreenGroup[i].Enable(false);
+            }
             _SetPauseAudio(false);
         }
         else

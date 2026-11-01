@@ -220,7 +220,14 @@ EntityHologram::EntityHologram(EntityHologramClass* pClass, const EntityDesc& de
         m_pLightBeam = new LightBeam();
         m_pLightBeam->SetLength(pClass->m_fHeight);
         float fFadeLength = pClass->m_fHeight * kfHoloBeamFadeLengthFactor;
-        m_pLightBeam->SetFadeLength(fFadeLength < kfHoloBeamFadeLength ? fFadeLength : kfHoloBeamFadeLength);
+        if (fFadeLength < kfHoloBeamFadeLength)
+        {
+            m_pLightBeam->SetFadeLength(fFadeLength);
+        }
+        else
+        {
+            m_pLightBeam->SetFadeLength(kfHoloBeamFadeLength);
+        }
         m_pLightBeam->SetDrawDistance(pClass->m_fVisibleDistance);
         m_pLightBeam->SetInitialWidth(pClass->m_fBeamInitialWidth);
         m_pLightBeam->SetFinalWidth(pClass->m_fSize * kfHoloBeamWidthCone);
@@ -288,7 +295,7 @@ EntityHologram::EntityHologram(EntityHologramClass* pClass, const EntityDesc& de
         if (fDist > fRadius * 2.0f)
         {
             vCenter = Interpolate(vCenter, vReflected, fRadius / fDist);
-            fRadius *= 2.0f;
+            fRadius += fRadius;
         }
         else
         {
@@ -304,7 +311,7 @@ EntityHologram::EntityHologram(EntityHologramClass* pClass, const EntityDesc& de
         fRadius *= 1.1f;
     }
     SetRenderRadius(fRadius);
-    Activate();
+    AddToScene();
 
     _Thread.SetOwner(this);
     SetModel(pClass->m_pHoloModel);
@@ -680,8 +687,10 @@ void EntityHologram::Render(unsigned char ucViewport, float fDist, unsigned int 
 
             PblMatrix mModel(gMatrixIdentity);
             PblMatrix mTemp;
-            mModel.RotateX(m_fTilt);
-            mModel.RotateY(pClass->m_fRotateRate * m_fRotateTimer);
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mModel), reinterpret_cast<const D3DXMATRIX*>(&mModel),
+                               D3DXMatrixRotationX(reinterpret_cast<D3DXMATRIX*>(&mTemp), m_fTilt));
+            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mModel), reinterpret_cast<const D3DXMATRIX*>(&mModel),
+                               D3DXMatrixRotationY(reinterpret_cast<D3DXMATRIX*>(&mTemp), pClass->m_fRotateRate * m_fRotateTimer));
 
             mModel.m[3][0] += 0.0f;
             mModel.m[3][1] += pClass->m_fHeight;
@@ -700,9 +709,8 @@ void EntityHologram::Render(unsigned char ucViewport, float fDist, unsigned int 
             RedRenderer::GetCamera()->GetFrustum(fNear, fUnused, fUnused, fUnused);
             const PblVector3& vZ = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
             const PblVector3& vEye = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
-            const PblVector3& vModel = mModel.GetTranslation();
-            float fDepth =
-                -fNear - (vZ.y * (vModel.y - vEye.y) + vZ.x * (vModel.x - vEye.x) + vZ.z * (vModel.z - vEye.z));
+            const PblVector3 vToModel = mModel.GetTranslation() - vEye;
+            float fDepth = -fNear - (vZ.y * vToModel.y + vZ.x * vToModel.x + vZ.z * vToModel.z);
             if (fDepth > 0.0f)
             {
                 if (fSize > fDepth)

@@ -255,14 +255,10 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
     {
         const PblVector3 vWander((rand.GetFloat() - rand.GetFloat()) * 0.5f * mVineXSpread, 0.2f,
                                  (rand.GetFloat() - rand.GetFloat()) * 0.5f * mVineZSpread);
-        vDir.x += vWander.x;
-        vDir.y += vWander.y;
-        vDir.z += vWander.z;
+        vDir = vDir + vWander;
         vDir = Normalize(vDir);
 
-        vPos.x += vDir.x * fSize * mVineSpread;
-        vPos.y += vDir.y * fSize * mVineSpread;
-        vPos.z += vDir.z * fSize * mVineSpread;
+        vPos = vPos + vDir * fSize * mVineSpread;
 
         fScale = ((float)iLeft + 1.0f) * 0.25f;
         fSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
@@ -282,20 +278,14 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
                                          0.8f);
         vBranch = Normalize(vBranch);
         const int iSplit = (int)((rand.GetFloat() * 0.5f + 0.25f) * (float)iLeft);
-        CreateVineBranch(PblVector3(vBranch.x * fSize * mVineSpread + vPos.x,
-                                    vBranch.y * fSize * mVineSpread + vPos.y,
-                                    vBranch.z * fSize * mVineSpread + vPos.z),
-                         vBranch, iSplit, rand);
+        CreateVineBranch(vBranch * fSize * mVineSpread + vPos, vBranch, iSplit, rand);
 
         vBranch = Interpolate(vDir,
                               PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
                                          (rand.GetFloat() - rand.GetFloat()) * mVineZSpread),
                               0.8f);
         vBranch = Normalize(vBranch);
-        CreateVineBranch(PblVector3(vBranch.x * fSize * mVineSpread + vPos.x,
-                                    vBranch.y * fSize * mVineSpread + vPos.y,
-                                    vBranch.z * fSize * mVineSpread + vPos.z),
-                         vBranch, iLeft - iSplit, rand);
+        CreateVineBranch(vBranch * fSize * mVineSpread + vPos, vBranch, iLeft - iSplit, rand);
     }
 }
 

@@ -182,16 +182,9 @@ bool OrdnanceBeam::Update(float fDeltaTime)
             fRemaining;
         mLength += fDist;
         fRemaining -= fDist;
-        vPos.x += mDirection.x * fDist;
-        vPos.y += mDirection.y * fDist;
-        vPos.z += mDirection.z * fDist;
+        vPos += mDirection * fDist;
 
-        const float fHalf = mLength * 0.5f;
-        PblVector3 vCenter;
-        vCenter.x = mPosition.x + mDirection.x * fHalf;
-        vCenter.y = mPosition.y + mDirection.y * fHalf;
-        vCenter.z = mPosition.z + mDirection.z * fHalf;
-        SetRenderPos(vCenter);
+        SetRenderPos(mPosition + mDirection * (mLength * 0.5f));
         SetRenderRadius(mLength + 1.0f);
 
         if (pHit)

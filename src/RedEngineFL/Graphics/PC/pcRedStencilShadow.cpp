@@ -725,9 +725,8 @@ void ShadowData::GenerateSkin(const PblMatrix* pBoneMatrices, int iNumBoneMatric
 
         const PblVector3 d1 = pV[a] - pV[b];
         const PblVector3 d2 = pV[c] - pV[b];
-        const float nx = d2.y * d1.z - d2.z * d1.y;
-        const float ny = d2.z * d1.x - d1.z * d2.x;
-        const float nz = d1.y * d2.x - d2.y * d1.x;
+        D3DXVECTOR3 n;
+        D3DXVec3Cross(&n, (const D3DXVECTOR3*)&d2, (const D3DXVECTOR3*)&d1);
         do
         {
             _edgeList[e].mark = 0x80;
@@ -737,10 +736,10 @@ void ShadowData::GenerateSkin(const PblMatrix* pBoneMatrices, int iNumBoneMatric
             c = _edgeList[e].vertex;
         } while (e != i);
         PblVector4 plane;
-        plane.x = nx;
-        plane.y = ny;
-        plane.z = nz;
-        plane.w = -(pV[a].x * nx + pV[a].y * ny + pV[a].z * nz);
+        plane.x = n.x;
+        plane.y = n.y;
+        plane.z = n.z;
+        plane.w = -(pV[a].x * n.x + pV[a].y * n.y + pV[a].z * n.z);
         _facePlanes[iPlane++] = plane;
     }
 }
