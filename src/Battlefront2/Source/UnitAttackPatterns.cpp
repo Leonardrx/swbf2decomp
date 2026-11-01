@@ -334,9 +334,9 @@ bool AttackPatterns::GetInRange()
     if (GetNear() * GetNear() > fDistSq)
     {
         PblVector3 vStep = vDir * 15.0f;
-        vDest.x = vStep.x + vPos.x;
-        vDest.y = vStep.y + vPos.y;
-        vDest.z = vStep.z + vPos.z;
+        vDest.x = vPos.x + vStep.x;
+        vDest.y = vPos.y + vStep.y;
+        vDest.z = vPos.z + vStep.z;
     }
     else
     {
@@ -700,7 +700,11 @@ void AttackPatterns::DoFlank()
             }
 
             float fDist = CombatUtil::GetWeaponOptimalRange(GetMe()) * fSide;
-            PblVector3 vDest(vSideDir.x * fDist + vTarget.x, vSideDir.y * fDist + vTarget.y, vSideDir.z * fDist + vTarget.z);
+            PblVector3 vStep = vSideDir * fDist;
+            PblVector3 vDest;
+            vDest.x = vTarget.x + vStep.x;
+            vDest.y = vTarget.y + vStep.y;
+            vDest.z = vTarget.z + vStep.z;
             mOwner->GetLowLevel().SetNavigator_Slide(vDest, NULL);
             bResetTimer = true;
         }
@@ -876,15 +880,12 @@ void AttackPatterns::SetGlanceDest()
     else
     {
         float fAhead = fSpeed * 3.0f;
-        mGlancePos = vFwd * fAhead + vPos;
+        mGlancePos = fAhead * vFwd + vPos;
     }
 
     mOwner->GetLowLevel().SetNavigator_Slide(mGlancePos, NULL);
 
-    const PblVector3& vMe = GetMe()->GetMatrix().GetTranslation();
-    float dx = mGlancePos.x - vMe.x;
-    float dz = mGlancePos.z - vMe.z;
-    mClosestXZSq = dz * dz + dx * dx;
+    mClosestXZSq = SquaredLengthXZ(mGlancePos - GetMe()->GetMatrix().GetTranslation());
     mClosestTime = GameLoop::GetMissionTime();
     mIsPathing = false;
 }

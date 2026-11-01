@@ -424,16 +424,22 @@ struct DebugVertex
 // FUNCTION: SWBF2 0x006f2dd0
 void RedDebug::_DrawRadius(const Radius& radius)
 {
+    const PblVector3 vMin(-512.0f, -512.0f, -512.0f);
+    const PblVector3 vMax(512.0f, 512.0f, 512.0f);
     const PblVector3 vCamera = RedRenderer::GetCamera()->GetMatrix().GetTranslation();
     PblMatrix mWorld;
     mWorld.Reset();
     mWorld.SetTranslation(vCamera);
+    const float fX = radius._vPos.x - vCamera.x;
+    const float fY = radius._vPos.y - vCamera.y;
+    const float fZ = radius._vPos.z - vCamera.z;
+    const float fHalfHeight = radius._fHeight * 0.5f;
 
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(
         D3DPT_TRIANGLESTRIP, 0x1082, 12, 66, 0, false);
-    const PblBox bounds(PblVector3(-512.0f, -512.0f, -512.0f), PblVector3(512.0f, 512.0f, 512.0f));
+    const PblBox bounds(vMin, vMax);
     pPrimitive->m_bbox = bounds;
-    CompressedPos::s_vMin = bounds._vMin;
+    CompressedPos::s_vMin = vMin;
     CompressedPos::s_vScale = PblVector3{ 0.015625238f, 0.015625238f, 0.015625238f };
     CompressedPos::s_vScaleInv = PblVector3{ 63.999023f, 63.999023f, 63.999023f };
 
@@ -442,13 +448,9 @@ void RedDebug::_DrawRadius(const Radius& radius)
     {
         return;
     }
-    const float fX = radius._vPos.x - vCamera.x;
-    const float fY = radius._vPos.y - vCamera.y;
-    const float fZ = radius._vPos.z - vCamera.z;
-    const float fHalfHeight = radius._fHeight * 0.5f;
     const float fBottom = -fHalfHeight + fY;
     const float fTop = fY + fHalfHeight;
-    for (unsigned int i = 0; i <= 32; ++i)
+    for (unsigned int i = 0; i < 33; ++i)
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (float)i * 0.19634955f);

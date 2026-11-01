@@ -531,12 +531,6 @@ void SpawnDisplay::Show(Character* pCharacter)
 
         switch (mMode)
         {
-        case eSIDESELECT:
-            mGroupTimer.Enable(false);
-            mGroupTimer.Visible(false);
-            mBackdropModel.Enable(false);
-            mBackdropModel.Visible(false);
-            break;
         case eSPAWNDISPLAY:
             if (!GameLoop::GetCanSwitchSides())
             {
@@ -595,6 +589,12 @@ void SpawnDisplay::Show(Character* pCharacter)
             mBackdropModel.Visible(false);
             break;
         }
+        case eSIDESELECT:
+            mGroupTimer.Enable(false);
+            mGroupTimer.Visible(false);
+            mBackdropModel.Enable(false);
+            mBackdropModel.Visible(false);
+            break;
         }
 
         if (mFirstShow)
@@ -706,8 +706,8 @@ bool SpawnDisplay::Update(float fDeltaTime)
     RedInterfaceScreen::s_directionalLight[0].SetDirection(sLightDir);
     RedInterfaceScreen::s_directionalLight[0].SetColor(sLightColor);
     RedAmbientLight& ambient = RedInterfaceScreen::s_lightingState.ambientLight;
-    ambient.SetTopColor(sAmbientTop);
     ambient.SetBottomColor(sAmbientBottom);
+    ambient.SetTopColor(sAmbientTop);
     RedColorValue average(sAmbientBottom.r + sAmbientTop.r,
                           sAmbientBottom.g + sAmbientTop.g,
                           sAmbientBottom.b + sAmbientTop.b,
@@ -743,8 +743,9 @@ bool SpawnDisplay::Update(float fDeltaTime)
         return true;
     }
 
-    const bool bOwnerAlive = (mOwner && mOwner->GetControllable() && mOwner->GetControllable()->GetGameObject())
-                                 ? mOwner->GetControllable()->GetGameObject()->IsAlive()
+    Character* pOwner = mOwner;
+    const bool bOwnerAlive = (pOwner && pOwner->GetControllable() && pOwner->GetControllable()->GetGameObject())
+                                 ? pOwner->GetControllable()->GetGameObject()->IsAlive()
                                  : false;
     if (mWasOwnerAliveLastUpdate && !bOwnerAlive)
     {
@@ -1097,6 +1098,7 @@ void SpawnDisplay::ChangeMode(Mode)
     {
     case eSPAWNDISPLAY:
     case eCHANGECLASS:
+    {
         if (m_pEntityElement->GetGroup())
         {
             m_pEntityElement->GetGroup()->RemoveElement(m_pEntityElement);
@@ -1118,10 +1120,8 @@ void SpawnDisplay::ChangeMode(Mode)
             m_pGuiManager->PushScreen(acBuffer, 0, 0);
             SelectTeam(mTeamNumber);
         }
-        {
-            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
-            event.Send();
-        }
+        HUD::Event evMapMode(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 2);
+        evMapMode.Send();
         mTextReady.Enable(false);
         mTextReady.Visible(false);
         mGroupTimer.Enable(false);
@@ -1138,7 +1138,9 @@ void SpawnDisplay::ChangeMode(Mode)
             m_pBackButton1->Enable(false);
         }
         break;
+    }
     case eFINISHED:
+    {
         m_pEntityElement->Enable(false);
         m_pEntityElement->Visible(false);
         sprintf(acScreen, "ifs_readyselect%i", 1);
@@ -1150,10 +1152,8 @@ void SpawnDisplay::ChangeMode(Mode)
             }
             m_pGuiManager->PushScreen(acScreen, 0, 0);
         }
-        {
-            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
-            event.Send();
-        }
+        HUD::Event evMapMode(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapMode, 0);
+        evMapMode.Send();
         mGroupTimer.Enable(true);
         mGroupTimer.Visible(true);
         mTextReady.Enable(true);
@@ -1163,6 +1163,7 @@ void SpawnDisplay::ChangeMode(Mode)
         BootDisplay::Instance(0)->SetSpawnMode(false);
         HeroMessageDisplay::Instance(0)->SetSpawnMode(false);
         break;
+    }
     case eSIDESELECT:
     {
         _snprintf(acScreen, 32, "ifs_sideselect1");
@@ -1183,10 +1184,8 @@ void SpawnDisplay::ChangeMode(Mode)
         static_cast<RedGroupElement*>(RedInterfaceElement::Find(acBuffer))->AddElement(m_pEntityElement);
         m_pEntityElement->Enable(true);
         m_pEntityElement->Visible(true);
-        {
-            HUD::Event event(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapDisable, true);
-            event.Send();
-        }
+        HUD::Event evMapDisable(HUD::GameEvents::gPlayerEvents[mPlayerIdx].mapDisable, true);
+        evMapDisable.Send();
         BootDisplay::Instance(0)->SetSpawnMode(false);
         HeroMessageDisplay::Instance(0)->SetSpawnMode(false);
         UpdateSideSelectText(1);

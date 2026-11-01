@@ -245,7 +245,8 @@ void HUD::ElementVehicleSeating::UpdateSeatingState(unsigned int uSeat, SeatingS
             PblMatrix mHardpoint;
             if (pModel->GetBoneMatrix(sHPNames[uSeat], mHardpoint))
             {
-                const float fDepth = mBackdrop.GetDepth() * Red3DModelElementLite::GetDepthMultiplier(true);
+                float fDepth = mBackdrop.GetDepth();
+                fDepth *= Red3DModelElementLite::GetDepthMultiplier(true);
                 const float fInvDepth = 1.0f / fDepth;
                 const PblVector3 vPos = mHardpoint.GetTranslation();
                 vOffset.x = fInvDepth * vPos.x;
@@ -256,15 +257,17 @@ void HUD::ElementVehicleSeating::UpdateSeatingState(unsigned int uSeat, SeatingS
         else
         {
             float fY = 0.0f;
-            for (unsigned int i = uSeat; i > 0; --i)
+            unsigned int i = uSeat;
+            while (i > 0)
             {
-                const RedFont* pFont = mSeatingText[i - 1].GetFont();
+                --i;
+                const RedFont* pFont = mSeatingText[i].GetFont();
                 fY -= pFont ? (float)pFont->GetHeight() : 0.0f;
             }
             vOffset.y = fY;
         }
 
-        const RedFont* pFont = rText.GetFont();
+        const RedFont* pFont = mSeatingText[uSeat].GetFont();
         fTextOffset = vOffset.y - (pFont ? (float)pFont->GetHeight() * 0.5f : 0.0f);
     }
 

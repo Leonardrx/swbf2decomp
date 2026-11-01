@@ -618,7 +618,11 @@ bool Util_AddToHierarchy(RedInterfaceElement* pElement, const char* pcName)
     else
     {
         RedInterfaceElement* pParent = RedInterfaceElement::Find(acParent);
-        if (!pParent || !pParent->IsGroup())
+        if (!pParent)
+        {
+            return false;
+        }
+        if (!pParent->IsGroup())
         {
             return false;
         }
@@ -640,6 +644,8 @@ bool Util_CreateGroupInHierarchy(const char* pcName)
         pGroup->SetUseSafezone(true);
         pCurCreateScreenGroup = pGroup;
         pCurCreateObject = pGroup;
+        pGroup->AddToSearchList(pcName);
+        return true;
     }
     else
     {
@@ -4528,11 +4534,8 @@ int ScriptCB_SetIFaceLighting(lua_State* L)
         Lua_Callbacks::TableReadColor("bottom", bottom);
         rAmbient.SetTopColor(top);
         rAmbient.SetBottomColor(bottom);
-        RedColorValue mean;
-        mean.r = (top.r + bottom.r) * 0.5f;
-        mean.g = (top.g + bottom.g) * 0.5f;
-        mean.b = (top.b + bottom.b) * 0.5f;
-        mean.a = (top.a + bottom.a) * 0.5f;
+        RedColorValue sum(top.r + bottom.r, top.g + bottom.g, top.b + bottom.b, top.a + bottom.a);
+        RedColorValue mean(sum.r * 0.5f, sum.g * 0.5f, sum.b * 0.5f, sum.a * 0.5f);
         rAmbient.SetColor(mean);
     }
     lua_settop(LuaHelper::mState, -2);

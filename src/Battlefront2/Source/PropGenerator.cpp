@@ -232,10 +232,9 @@ void PropGenerator::SortClusters()
         afScore.SetSize(iNum);
     }
 
-    PropCluster** ppClusters = mClusterObjectArray + iFirst;
     for (int i = 0; i < iNum; i++)
     {
-        PropCluster* pCluster = ppClusters[i];
+        PropCluster* pCluster = mClusterObjectArray[iFirst + i];
         afScore[i] = FLT_MAX;
         for (int iCam = 0; iCam < iNumCameras; iCam++)
         {
@@ -261,9 +260,9 @@ void PropGenerator::SortClusters()
             {
                 afScore[i] = fJ;
                 afScore[j] = fI;
-                PropCluster* pSwap = ppClusters[i];
-                ppClusters[i] = ppClusters[j];
-                ppClusters[j] = pSwap;
+                PropCluster* pSwap = mClusterObjectArray[iFirst + i];
+                mClusterObjectArray[iFirst + i] = mClusterObjectArray[iFirst + j];
+                mClusterObjectArray[iFirst + j] = pSwap;
             }
         }
     }
@@ -304,18 +303,14 @@ void PropGenerator::Update()
         FlushClusterObjects_();
     }
 
-    CameraManager* pCameraManager = CameraManager::Instance();
-    int iNumCameras = pCameraManager->GetNumCameras();
+    int iNumCameras = CameraManager::Instance()->GetNumCameras();
 
     for (int iCam = 0; iCam < iNumCameras; iCam++)
     {
-        const PblMatrix& mCamera = pCameraManager->GetCamera(iCam)->GetMatrix();
+        const PblMatrix& mCamera = CameraManager::Instance()->GetCamera(iCam)->GetMatrix();
         PblMatrix& mLast = m_amCamera[iCam];
 
-        float dx = mCamera.m[3][0] - mLast.m[3][0];
-        float dy = mCamera.m[3][1] - mLast.m[3][1];
-        float dz = mCamera.m[3][2] - mLast.m[3][2];
-        if (dx * dx + dy * dy + dz * dz > 40000.0f ||
+        if (SquaredLength(mCamera.GetTranslation() - mLast.GetTranslation()) > 40000.0f ||
             mLast.m[2][0] * mCamera.m[2][0] + mLast.m[2][1] * mCamera.m[2][1] +
                     mLast.m[2][2] * mCamera.m[2][2] < 0.7f)
         {
@@ -348,7 +343,7 @@ void PropGenerator::Update()
 
     for (int iCam = 0; iCam < iNumCameras; iCam++)
     {
-        RedCamera* pCamera = pCameraManager->GetCamera(iCam);
+        RedCamera* pCamera = CameraManager::Instance()->GetCamera(iCam);
         float fNear, fFar, fWidth, fHeight;
         pCamera->GetFrustum(fNear, fFar, fWidth, fHeight);
 
@@ -359,63 +354,49 @@ void PropGenerator::Update()
         float fSecHeight = sqrtf(1.0f / (fTanHeight * fTanHeight) + 1.0f);
 
         const PblMatrix& m = m_amCamera[iCam];
-        const float* vRight = m.m[0];
-        const float* vUp = m.m[1];
-        const float* vAt = m.m[2];
-        const float* vPos = m.m[3];
+        const PblVector3& vRight = m.GetXAxis();
+        const PblVector3& vUp = m.GetYAxis();
+        const PblVector3& vAt = m.GetZAxis();
+        const PblVector3& vPos = m.GetTranslation();
+        bool bAtUp = vAt.y > 0.0f;
 
-        float fWidthDist = mClusterCellWidth * fSecWidth * 0.5f;
-        PblVector3 vWidthStart(vPos[0] + vAt[0] * fWidthDist,
-                               vPos[1] + vAt[1] * fWidthDist,
-                               vPos[2] + vAt[2] * fWidthDist);
-        float fHeightDist = mClusterCellWidth * fSecHeight * 0.5f;
-        PblVector3 vHeightStart(vPos[0] + vAt[0] * fHeightDist,
-                                vPos[1] + vAt[1] * fHeightDist,
-                                vPos[2] + vAt[2] * fHeightDist);
+        PblVector3 vWidthStart = vPos + vAt * (mClusterCellWidth * fSecWidth * 0.5f);
+        PblVector3 vHeightStart = vPos + vAt * (mClusterCellWidth * fSecHeight * 0.5f);
         float fWidthOffset = (fSecWidth - 1.0f) * mClusterCellWidth * 0.5f;
         float fHeightOffset = (fSecHeight - 1.0f) * mClusterCellWidth * 0.5f;
-        bool bAtUp = vAt[1] > 0.0f;
 
-        if ((vUp[1] + vAt[1] * fTanHeight > 0.0f) == bAtUp)
+        if ((vUp.y + vAt.y * fTanHeight > 0.0f) == bAtUp)
         {
             avStart[iNumLines] = vWidthStart;
-            avDir[iNumLines] = PblVector3(vUp[0] * fTanHeight - vAt[0],
-                                          vUp[1] * fTanHeight - vAt[1],
-                                          vUp[2] * fTanHeight - vAt[2]);
-            avSide[iNumLines] = PblVector3(vRight[0], vRight[1], vRight[2]);
+            avDir[iNumLines] = -vAt + vUp * fTanHeight;
+            avSide[iNumLines] = vRight;
             afSlope[iNumLines] = fTanWidth;
             afOffset[iNumLines] = fWidthOffset;
             iNumLines++;
         }
-        if ((vAt[1] * fTanHeight - vUp[1] > 0.0f) == bAtUp)
+        if ((vAt.y * fTanHeight - vUp.y > 0.0f) == bAtUp)
         {
             avStart[iNumLines] = vWidthStart;
-            avDir[iNumLines] = PblVector3(-vAt[0] - vUp[0] * fTanHeight,
-                                          -vAt[1] - vUp[1] * fTanHeight,
-                                          -vAt[2] - vUp[2] * fTanHeight);
-            avSide[iNumLines] = PblVector3(-vRight[0], -vRight[1], -vRight[2]);
+            avDir[iNumLines] = -vAt - vUp * fTanHeight;
+            avSide[iNumLines] = -vRight;
             afSlope[iNumLines] = fTanWidth;
             afOffset[iNumLines] = fWidthOffset;
             iNumLines++;
         }
-        if ((vRight[1] + vAt[1] * fTanWidth > 0.0f) == bAtUp)
+        if ((vRight.y + vAt.y * fTanWidth > 0.0f) == bAtUp)
         {
             avStart[iNumLines] = vHeightStart;
-            avDir[iNumLines] = PblVector3(vRight[0] * fTanWidth - vAt[0],
-                                          vRight[1] * fTanWidth - vAt[1],
-                                          vRight[2] * fTanWidth - vAt[2]);
-            avSide[iNumLines] = PblVector3(-vUp[0], -vUp[1], -vUp[2]);
+            avDir[iNumLines] = -vAt + vRight * fTanWidth;
+            avSide[iNumLines] = -vUp;
             afSlope[iNumLines] = fTanHeight;
             afOffset[iNumLines] = fHeightOffset;
             iNumLines++;
         }
-        if ((vAt[1] * fTanWidth - vRight[1] > 0.0f) == bAtUp)
+        if ((vAt.y * fTanWidth - vRight.y > 0.0f) == bAtUp)
         {
             avStart[iNumLines] = vHeightStart;
-            avDir[iNumLines] = PblVector3(-vAt[0] - vRight[0] * fTanWidth,
-                                          -vAt[1] - vRight[1] * fTanWidth,
-                                          -vAt[2] - vRight[2] * fTanWidth);
-            avSide[iNumLines] = PblVector3(vUp[0], vUp[1], vUp[2]);
+            avDir[iNumLines] = -vAt - vRight * fTanWidth;
+            avSide[iNumLines] = vUp;
             afSlope[iNumLines] = fTanHeight;
             afOffset[iNumLines] = fHeightOffset;
             iNumLines++;
@@ -428,13 +409,13 @@ void PropGenerator::Update()
         avDir[i].y = 0.0f;
         avStart[i].y = 0.0f;
         avSide[i].y = 0.0f;
-        afDirLength[i] = sqrtf(avDir[i].x * avDir[i].x + avDir[i].z * avDir[i].z);
-        afSideLength[i] = sqrtf(avSide[i].x * avSide[i].x + avSide[i].z * avSide[i].z);
+        afDirLength[i] = PblMath::Sqrt(avDir[i].x * avDir[i].x + avDir[i].z * avDir[i].z);
+        afSideLength[i] = PblMath::Sqrt(avSide[i].x * avSide[i].x + avSide[i].z * avSide[i].z);
     }
 
     float fStep = mClusterCellWidth * 0.7071f;
     float fMaxDist;
-    if (pCameraManager->GetNumCameras() > 1)
+    if (CameraManager::Instance()->GetNumCameras() > 1)
     {
         fMaxDist = mClusterCellWidth + 50.0f;
     }
@@ -473,17 +454,18 @@ void PropGenerator::Update()
                     continue;
                 }
 
-                PropCluster* pCluster = mClusterObjectArray[iNextCluster++];
+                int iCellZ = iIndex / mClusterMapWidth;
+                int iCellX = iIndex - iCellZ * mClusterMapWidth;
                 float fHalfMap = (float)mClusterMapWidth * 0.5f;
-                float fCellX = ((float)(iIndex % mClusterMapWidth) - fHalfMap + 0.5f) * mClusterCellWidth;
-                float fCellZ = ((float)(iIndex / mClusterMapWidth) - fHalfMap + 0.5f) * mClusterCellWidth;
+                float fCellX = ((float)iCellX - fHalfMap + 0.5f) * mClusterCellWidth;
+                float fCellZ = ((float)iCellZ - fHalfMap + 0.5f) * mClusterCellWidth;
+                PropCluster* pCluster = mClusterObjectArray[iNextCluster++];
 
                 if (pCluster->mMapIndex != -1)
                 {
-
                     PblVector3 vCellPos(fCellX, 10.0f, -fCellZ);
                     float fNewScore = CalcDistScore_(pCluster, vCellPos, true);
-                    if (CalcDistScore_(pCluster, pCluster->GetRenderPos(), false) < fNewScore)
+                    if (!(fNewScore <= CalcDistScore_(pCluster, pCluster->GetRenderPos(), false)))
                     {
                         continue;
                     }

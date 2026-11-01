@@ -308,7 +308,8 @@ void FreeCamera::UpdateTranslation(const ProcessedInputs& rInputs, float fDeltaT
     vMove = vOut;
 
     float fScale = mMultiplier * fDeltaTime;
-    mMatrix[3] = mMatrix[3] + vMove * fScale;
+    vMove *= fScale;
+    mMatrix[3] = mMatrix[3] + vMove;
     mMatrix.m[3][3] = 1.0f;
 }
 

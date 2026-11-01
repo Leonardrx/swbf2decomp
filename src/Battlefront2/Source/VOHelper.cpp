@@ -387,7 +387,7 @@ void _Play(VOType eType, const GameObject* pSpeaker, const GameObject* pTarget,
         const Team* pTeam = Team::sTeams[pTarget->GetTeam()];
         for (int i = 0; i < pTeam->mMemberCount; ++i)
         {
-            const Character* pCharacter = pTeam->mMemberArray[i];
+            const Character* pCharacter = pTeam->GetMemberPtr(i);
             if (!pCharacter || !pCharacter->mUnit)
             {
                 continue;

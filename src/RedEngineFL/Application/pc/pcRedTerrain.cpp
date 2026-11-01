@@ -307,9 +307,9 @@ void TerrainRenderable::Render(int value)
         }
         RedCamera farCamera(*pCamera);
         float fZoom = pCamera->GetZoom();
-        float fFadeStart = (uiFlags & 0x200000) ? FLRenderer::GetNearPlane()
-                                                : FLRenderer::GetNearSceneFadeStart();
-        farCamera.SetNearFarPlane(fFadeStart * fZoom, m_fFarTerrainMaxDistance);
+        farCamera.SetNearFarPlane((uiFlags & 0x200000) ? FLRenderer::GetNearPlane() * fZoom
+                                                       : FLRenderer::GetNearSceneFadeStart() * fZoom,
+                                  m_fFarTerrainMaxDistance);
     }
 
     float fNear, fFar, fWidth, fHeight;
@@ -318,7 +318,7 @@ void TerrainRenderable::Render(int value)
     const PblVector3& vRight = mCamera.GetXAxis();
     const PblVector3& vUp = mCamera.GetYAxis();
     const PblVector3& vAt = mCamera.GetZAxis();
-    PblVector3 vPos(mCamera.m[3][0], mCamera.m[3][1], mCamera.m[3][2]);
+    PblVector3 vPos = mCamera.GetTranslation();
 
     float fHalfWidth = fFar * 0.5f * fWidth / fNear;
     float fHalfHeight = fFar * 0.5f * fHeight / fNear;
@@ -349,8 +349,8 @@ void TerrainRenderable::Render(int value)
     int iMaxX = _CalcPatchX(box._vMax.x);
     int iMinZ = _CalcPatchZ(box._vMin.z);
     int iMaxZ = _CalcPatchZ(box._vMax.z);
-    const int iNumPatches = RedTerrain::_iPatchesPerDimension;
-    if (iMaxX < 0 || iMinX >= iNumPatches || iMaxZ < 0 || iMinZ >= iNumPatches)
+    if (iMaxX < 0 || iMinX >= RedTerrain::_iPatchesPerDimension || iMaxZ < 0 ||
+        iMinZ >= RedTerrain::_iPatchesPerDimension)
     {
         return;
     }
@@ -358,22 +358,22 @@ void TerrainRenderable::Render(int value)
     {
         iMinX = 0;
     }
-    if (iMaxX >= iNumPatches)
+    if (iMaxX >= RedTerrain::_iPatchesPerDimension)
     {
-        iMaxX = iNumPatches - 1;
+        iMaxX = RedTerrain::_iPatchesPerDimension - 1;
     }
     if (iMinZ < 0)
     {
         iMinZ = 0;
     }
-    if (iMaxZ >= iNumPatches)
+    if (iMaxZ >= RedTerrain::_iPatchesPerDimension)
     {
-        iMaxZ = iNumPatches - 1;
+        iMaxZ = RedTerrain::_iPatchesPerDimension - 1;
     }
 
     int iStepX = 1;
     int iStepZ = 1;
-    if (-vAt.x < 0.0f)
+    if (-pCamera->GetMatrix().GetZAxis().x < 0.0f)
     {
         int iTemp = iMinX;
         iMinX = iMaxX;
@@ -381,7 +381,7 @@ void TerrainRenderable::Render(int value)
         iStepX = -1;
     }
     iMaxX += iStepX;
-    if (-vAt.z < 0.0f)
+    if (-pCamera->GetMatrix().GetZAxis().z < 0.0f)
     {
         int iTemp = iMinZ;
         iMinZ = iMaxZ;
@@ -417,13 +417,6 @@ void TerrainRenderable::Render(int value)
     }
 
     float fHalfPatch = (float)RedTerrain::_iPatchPointsPerDimension * RedTerrain::_fMetersPerPoint * 0.5f;
-    float afExtentZ[5];
-    float afExtentX[5];
-    for (int i = 0; i < 5; ++i)
-    {
-        afExtentZ[i] = (float)fabs(avNormal[i].z * fHalfPatch);
-        afExtentX[i] = (float)fabs(avNormal[i].x * fHalfPatch);
-    }
 
     for (int iZ = iMinZ; iZ != iMaxZ; iZ += iStepZ)
     {
@@ -433,13 +426,14 @@ void TerrainRenderable::Render(int value)
         float afRowDist[5];
         for (int i = 0; i < 5; ++i)
         {
-            afRowDist[i] = afDist[i] - (avNormal[i].z * fZ - afExtentZ[i] - afExtentX[i]);
+            afRowDist[i] = afDist[i] - (avNormal[i].z * fZ - (float)fabs(avNormal[i].z * fHalfPatch) -
+                                        (float)fabs(avNormal[i].x * fHalfPatch));
         }
 
         int iLastPlane = 0;
         for (int iX = iMinX; iX != iMaxX; iX += iStepX)
         {
-            Patch& patch = m_aPatches[iZ * iNumPatches + iX];
+            Patch& patch = m_aPatches[iZ * RedTerrain::_iPatchesPerDimension + iX];
             float fX = (float)((RedTerrain::_iPatchPointsPerDimension >> 1) +
                                (iX << RedTerrain::_iPatchPointsPerDimensionLog2)) * RedTerrain::_fMetersPerPoint -
                        RedTerrain::_fTerrainCenterX;
@@ -461,7 +455,7 @@ void TerrainRenderable::Render(int value)
             {
                 const PblVector3& vNormal = avNormal[iPlane];
                 if (iPlane != iLastPlane &&
-                    vNormal.x * fX + vNormal.y * fCenterY - (float)fabs(vNormal.y) * fExtentY > afRowDist[iPlane])
+                    vNormal.x * fX + fCenterY * vNormal.y - (float)fabs(vNormal.y) * fExtentY > afRowDist[iPlane])
                 {
                     break;
                 }
@@ -483,10 +477,7 @@ void TerrainRenderable::Render(int value)
             {
                 PblMatrix mWorld = gMatrixIdentity;
                 const PblBox& bbox = patch.apPrim[0]->m_bbox;
-                mWorld.m[3][0] = bbox._vMin.x;
-                mWorld.m[3][1] = 0.0f;
-                mWorld.m[3][2] = bbox._vMin.z;
-                mWorld.m[3][3] = 1.0f;
+                mWorld.SetTranslation(PblVector3(bbox._vMin.x, 0.0f, bbox._vMin.z));
                 for (unsigned int uiPass = 0; uiPass < patch.uiNumPasses; ++uiPass)
                 {
                     RedRenderer::pcRenderPrimitive(patch.apPrim[uiPass],
@@ -496,15 +487,7 @@ void TerrainRenderable::Render(int value)
                                                    0, 0);
                 }
             }
-            else if (pcTerrainShader2::IsEnabled())
-            {
-                RedRenderer::pcRenderPrimitive(patch.apPrim[0],
-                                               patch.apShader2[0],
-                                               gMatrixIdentity,
-                                               RedColor::WHITE,
-                                               uiFlags | 0x1000000, 0, 0, 0);
-            }
-            else
+            else if (!pcTerrainShader2::IsEnabled())
             {
                 if (m_bEnablePixelLighting)
                 {
@@ -516,6 +499,14 @@ void TerrainRenderable::Render(int value)
                 }
                 RedRenderer::pcRenderPrimitive(patch.apPrim[0],
                                                patch.apShader[0],
+                                               gMatrixIdentity,
+                                               RedColor::WHITE,
+                                               uiFlags | 0x1000000, 0, 0, 0);
+            }
+            else
+            {
+                RedRenderer::pcRenderPrimitive(patch.apPrim[0],
+                                               patch.apShader2[0],
                                                gMatrixIdentity,
                                                RedColor::WHITE,
                                                uiFlags | 0x1000000, 0, 0, 0);

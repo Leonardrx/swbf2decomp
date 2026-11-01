@@ -623,8 +623,7 @@ bool RepairHelper::Update(float dt)
     if ((bTouching || fDistSq < 25.0f) && bInRange && !bTooClose)
     {
         if (!bTouching ||
-            AIUtil::DirectLineToTarget(GetMe()->GetGameObject(),
-                                       *reinterpret_cast<const PblVector3*>(&pTargetCollision->GetMatrix().m[3][0])))
+            AIUtil::DirectLineToTarget(GetMe()->GetGameObject(), pTargetCollision->GetMatrix()[3]))
         {
             GetCtrl()->GetLowLevel().SetNavigator_Stationary();
             mSearchTime = GameLoop::GetMissionTime();

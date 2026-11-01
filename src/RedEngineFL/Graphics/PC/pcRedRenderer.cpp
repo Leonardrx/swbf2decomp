@@ -5163,7 +5163,8 @@ unsigned int RedRenderer::SubmitOcclusionQuery(const PblMatrix& mWorld, Occlusio
     m_occlusionQueries[uiIndex].worldMat.m[1][1] = vScale.y * m_occlusionQueries[uiIndex].worldMat.m[1][1];
     m_occlusionQueries[uiIndex].worldMat.m[2][2] = vScale.z * m_occlusionQueries[uiIndex].worldMat.m[2][2];
     m_occlusionQueries[uiIndex].shape = eShape;
-    return sOcclusionQuerySubmitIndex++;
+    ++sOcclusionQuerySubmitIndex;
+    return sOcclusionQuerySubmitIndex - 1;
 }
 
 // FUNCTION: SWBF2 0x006b41b0
@@ -6168,33 +6169,35 @@ void dx::StateManager_DX::FlushState()
             break;
         }
         case 10:
-        {
-            const float* pChip = m_ChipState.m_VertexShaderConstants[pState->m_dwValue0];
-            if (m_bForce
-                || pChip[0] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][0]
-                || pChip[1] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][1]
-                || pChip[2] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][2]
-                || pChip[3] != m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][3])
+            if (!m_bForce)
             {
-                m_pD3DDev->SetVertexShaderConstantF(pState->m_dwValue0, m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 1);
-                memcpy(m_ChipState.m_VertexShaderConstants[pState->m_dwValue0], m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 16);
+                const float* pChip = m_ChipState.m_VertexShaderConstants[pState->m_dwValue0];
+                if (pChip[0] == m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][0]
+                    && pChip[1] == m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][1]
+                    && pChip[2] == m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][2]
+                    && pChip[3] == m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0][3])
+                {
+                    break;
+                }
             }
+            m_pD3DDev->SetVertexShaderConstantF(pState->m_dwValue0, m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 1);
+            memcpy(m_ChipState.m_VertexShaderConstants[pState->m_dwValue0], m_CurrentState.m_VertexShaderConstants[pState->m_dwValue0], 16);
             break;
-        }
         case 11:
-        {
-            const float* pChip = m_ChipState.m_PixelShaderConstants[pState->m_dwValue0];
-            if (m_bForce
-                || pChip[0] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][0]
-                || pChip[1] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][1]
-                || pChip[2] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][2]
-                || pChip[3] != m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][3])
+            if (!m_bForce)
             {
-                m_pD3DDev->SetPixelShaderConstantF(pState->m_dwValue0, m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 1);
-                memcpy(m_ChipState.m_PixelShaderConstants[pState->m_dwValue0], m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 16);
+                const float* pChip = m_ChipState.m_PixelShaderConstants[pState->m_dwValue0];
+                if (pChip[0] == m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][0]
+                    && pChip[1] == m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][1]
+                    && pChip[2] == m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][2]
+                    && pChip[3] == m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0][3])
+                {
+                    break;
+                }
             }
+            m_pD3DDev->SetPixelShaderConstantF(pState->m_dwValue0, m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 1);
+            memcpy(m_ChipState.m_PixelShaderConstants[pState->m_dwValue0], m_CurrentState.m_PixelShaderConstants[pState->m_dwValue0], 16);
             break;
-        }
         case 12:
             if (m_bForce
                 || m_ChipState.m_StreamData[pState->m_dwStage].m_pStreamData

@@ -727,12 +727,13 @@ void TreeGrid::CallbackOnFatRay(const PblVector3& rFrom, const PblVector3& rTo, 
                                 TreeGridCallback pCallback, TreeGridCallbackData* pData)
 {
     int aiExtents[4] = { 0, 0, 0, 0 };
-    PblVector3 vDir(rTo.x - rFrom.x, rTo.y - rFrom.y, rTo.z - rFrom.z);
-    PblVector3 vNormal;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
-
-    PblVector3 vHalf(vNormal.x * fRadius * 0.5f, vNormal.y * fRadius * 0.5f,
-                     vNormal.z * fRadius * 0.5f);
+    PblVector3 vHalf;
+    {
+        PblVector3 vDir(rTo.x - rFrom.x, rTo.y - rFrom.y, rTo.z - rFrom.z);
+        PblVector3 vNormal;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vDir));
+        vHalf = PblVector3(vNormal.x * fRadius * 0.5f, vNormal.y * fRadius * 0.5f, vNormal.z * fRadius * 0.5f);
+    }
     PblVector3 vSide(vHalf.z, 0.0f, -vHalf.x);
     PblVector3 vFrom(rFrom.x + (-vHalf.x - vSide.x), rFrom.y + (-vHalf.y - vSide.y),
                      rFrom.z + (-vHalf.z - vSide.z));

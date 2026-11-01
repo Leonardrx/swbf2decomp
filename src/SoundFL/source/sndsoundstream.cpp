@@ -315,8 +315,8 @@ bool SoundStream::Properties::SetupStream(Stream* pStream, unsigned int uiSegmen
 
     if (GetRandomPlayPosition())
     {
-        const float fLength = (float)pSegment->mLengthSamples;
-        pStream->mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * fLength);
+        const unsigned int uiLength = pSegment->mLengthSamples;
+        pStream->mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * (float)uiLength);
         pStream->SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
     }
     return true;
@@ -567,30 +567,28 @@ void SoundStream::Play(bool bRestart)
     const unsigned int uiSegmentID = (unsigned int)mProperties->mSelObjectWeightList->GetObjectA();
     const unsigned int uiStreamID = mProperties->mStreamID;
     const StreamBase::Info* pInfo = StreamBase::Info::Find(uiStreamID);
-    if (!pInfo)
+    if (pInfo)
     {
-        return;
-    }
-    unsigned int uiSearchKey = uiSegmentID;
-    const StreamBase::Segment* pSegment = (const StreamBase::Segment*)bsearch(
-        &uiSearchKey, pInfo->mSegments, pInfo->mNumSegments, sizeof(StreamBase::Segment),
-        StreamBase::Segment::CompareSearch);
-    if (!pSegment)
-    {
-        return;
-    }
+        unsigned int uiSearchKey = uiSegmentID;
+        const StreamBase::Segment* pSegment = (const StreamBase::Segment*)bsearch(
+            &uiSearchKey, pInfo->mSegments, pInfo->mNumSegments, sizeof(StreamBase::Segment),
+            StreamBase::Segment::CompareSearch);
+        if (pSegment)
+        {
+            SetPitch(mProperties->SourceVariation::CalculatePitch(mProperties->mPitch));
+            SetGain(mProperties->SourceVariation::CalculateGain(mProperties->mGain));
+            SetSample((const Sample*)pSegment);
+            if (mProperties->GetRandomPlayPosition())
+            {
+                const unsigned int uiLength = pSegment->mLength;
+                mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * (float)uiLength);
+                SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
+            }
 
-    SetPitch(mProperties->SourceVariation::CalculatePitch(mProperties->mPitch));
-    SetGain(mProperties->SourceVariation::CalculateGain(mProperties->mGain));
-    SetSample((const Sample*)pSegment);
-    if (mProperties->GetRandomPlayPosition())
-    {
-        mPlaybackPosition = (unsigned int)(sndRandom.GetFloat() * (float)pSegment->mLength);
-        SourceTransport::mFlags |= SourceTransport::flags_updatePlaybackPosition;
+            SourceBus::Play(this);
+            VoiceVirtual::Play(bRestart);
+        }
     }
-
-    SourceBus::Play(this);
-    VoiceVirtual::Play(bRestart);
 }
 
 }

@@ -310,9 +310,9 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
             {
                 bIsSeatedSoldier = false;
                 Controllable* pMe = mCtrl->mOwner;
-                const CollisionObject& rTarget = *mTarget.operator->();
+                const GameObject* pTarget = mTarget.operator->();
                 const PblMatrix& mine = pMe->GetMatrix();
-                const PblVector3& theirPos = rTarget.GetPosition();
+                const PblVector3& theirPos = pTarget->GetPosition();
                 float dx = theirPos.x - mine.m[3][0];
                 float dy = theirPos.y - mine.m[3][1];
                 float dz = theirPos.z - mine.m[3][2];
@@ -408,9 +408,9 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
         else
         {
             Controllable* pMe = mCtrl->mOwner;
-            const CollisionObject& rTarget = *mTarget.operator->();
+            const GameObject* pTarget = mTarget.operator->();
             const PblMatrix& mine = pMe->GetMatrix();
-            const PblVector3& theirs = rTarget.GetPosition();
+            const PblVector3& theirs = pTarget->GetPosition();
             float dx = theirs.x - mine.m[3][0];
             float dy = theirs.y - mine.m[3][1];
             float dz = theirs.z - mine.m[3][2];
@@ -448,7 +448,7 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
         }
         mCombatCmd = pInfo->mNextCmd;
         SetNextState(4);
-        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
+        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
         return 1;
 
     case AI::EVT_Damaged:
@@ -460,8 +460,7 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
             }
             mCombatCmd = pInfo->mNextCmd;
             SetNextState(4);
-            pInfo->mNextCmd =
-                UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
+            pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
             return 1;
         }
         UnitAgent::DamagedEventPlayerCentricness(pInfo);
@@ -502,7 +501,7 @@ int UnitFollowAgent::EventHandler(AI::EventInfo* pInfo)
         }
         mCombatCmd = pInfo->mNextCmd;
         SetNextState(4);
-        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
+        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
         return 1;
 
     case AI::EVQ_GetSkillModifier:

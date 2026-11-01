@@ -663,7 +663,7 @@ bool Aimer::Update(float fDeltaTime)
 
         const PblMatrix mAim = DirectionMatrix(mDirection, mMount[1], mRootPos);
         const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[mCurrentBarrel];
-        const PblVector3 vOffset = barrel.mOffset + barrel.mFireOffset;
+        const PblVector3 vOffset = barrel.mFireOffset + barrel.mOffset;
         PblVector3 vPos;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mAim));
         mFirePos = vPos;

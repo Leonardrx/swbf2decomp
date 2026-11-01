@@ -858,8 +858,8 @@ void Character::ChangeClass(int iClassIndex)
             {
                 bAvailable = pWeaponClass->mMedalsTypeToUnlock == -1 ||
                              pMedals->IsAwardAvailable(pWeaponClass->mMedalsTypeToUnlock);
-                if (bAvailable && pWeaponClass->mMedalsTypeToLock != -1 &&
-                    pMedals->IsAwardAvailable(pWeaponClass->mMedalsTypeToLock))
+                short sLock = pWeaponClass->mMedalsTypeToLock;
+                if (bAvailable && sLock != -1 && pMedals->IsAwardAvailable(sLock))
                 {
                     bAvailable = false;
                 }
@@ -879,8 +879,11 @@ void Character::ChangeClass(int iClassIndex)
                     float fNumClips = pAmmo->mNumClips;
                     int iChannel = GetWeaponChannelByWeaponIndex(pEntity, i);
                     float fFraction = (fNumClips + fCurClip) / fMaxClips;
-                    int iOld = iAmmoCount[iChannel]++;
-                    fAmmo[iChannel] = (fFraction + (float)iOld * fAmmo[iChannel]) / (float)iAmmoCount[iChannel];
+                    int iOld = iAmmoCount[iChannel];
+                    float fOldTotal = (float)iOld * fAmmo[iChannel];
+                    int iNew = iOld + 1;
+                    iAmmoCount[iChannel] = iNew;
+                    fAmmo[iChannel] = (fFraction + fOldTotal) / (float)iNew;
                 }
             }
         }
@@ -923,8 +926,8 @@ void Character::ChangeClass(int iClassIndex)
         {
             bAvailable = GetWeaponClass(pWeapon)->mMedalsTypeToUnlock == -1 ||
                          pMedals->IsAwardAvailable(GetWeaponClass(pWeapon)->mMedalsTypeToUnlock);
-            if (bAvailable && GetWeaponClass(pWeapon)->mMedalsTypeToLock != -1 &&
-                pMedals->IsAwardAvailable(GetWeaponClass(pWeapon)->mMedalsTypeToLock))
+            short sLock = GetWeaponClass(pWeapon)->mMedalsTypeToLock;
+            if (bAvailable && sLock != -1 && pMedals->IsAwardAvailable(sLock))
             {
                 bAvailable = false;
             }
@@ -1105,12 +1108,13 @@ void Character::Spawn(const PblMatrix& mMatrix)
 
     if (mPost && mSpawnSlot >= 0)
     {
-        mPost->PopSpawnQueue(mPlayerId >= 0, mTeamNumber == GetTeam(mPost->GetGameObject()));
+        bool bPlayer = mPlayerId >= 0;
+        mPost->PopSpawnQueue(bPlayer, mTeamNumber == GetTeam(mPost->GetGameObject()));
         mSpawnSlot = -1;
     }
 
     if (mPlayerId >= 0 &&
-        ((NetGame::GetNumLocalPlayers() == 1 && mPlayerId == NetGame::GetLocalIndex(0)) ||
+        ((NetGame::GetNumLocalPlayers() == 1 && NetGame::GetLocalIndex(0) == mPlayerId) ||
          NetGame::GetNumLocalPlayers() > 1))
     {
         VoiceOverManager::sInstance->Enable(true);
@@ -1345,7 +1349,8 @@ void Character::Died()
     {
         --mTeamPtr->mMemberActive;
     }
-    if (pDeadObject->mVanishing)
+    const bool bVanishing = pDeadObject->mVanishing;
+    if (bVanishing)
     {
         mDelayTimer = 0.0001f;
         return;
@@ -1378,10 +1383,13 @@ void Character::Died()
             GetPlayerStats(pKiller).AddAllyKill(this, pDeadObject);
         }
         pKiller->mAdrenaline.AddKill();
-        bMessage = bPlayer;
         if (!NetGame::IsEnabled() && CameraManager::Instance()->GetNumCameras() == 1)
         {
-            bMessage |= pKiller->mPlayerId >= 0 || pKiller->mHeroFlag;
+            bMessage = bPlayer | (pKiller->mPlayerId >= 0 || pKiller->mHeroFlag);
+        }
+        else
+        {
+            bMessage = bPlayer;
         }
         if (pKiller == this)
         {

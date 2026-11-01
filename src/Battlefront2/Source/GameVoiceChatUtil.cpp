@@ -123,10 +123,9 @@ bool __cdecl SendVoice(NetPacket* packet, unsigned char destination, unsigned in
                         ++i;
                     } while (i < count);
                 }
-                Snd::Queue<NetPacket*,4>& queue = GameVoiceChat::gPacketQueue[i];
-                if (!queue.IsFull())
+                if (!GameVoiceChat::gPacketQueue[i].IsFull())
                 {
-                    queue.Add(packet);
+                    GameVoiceChat::gPacketQueue[i].Add(packet);
                     return true;
                 }
             }

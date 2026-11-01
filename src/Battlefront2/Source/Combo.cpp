@@ -115,8 +115,9 @@ bool Combo::Deflect::TestDeflect(const PblMatrix& mSoldier, const PblVector3& vF
     const int iMax = m_iDeflectAngleMax;
     if (iMin != iMax)
     {
-        const float fAngle = atan2f(-DotProduct(mSoldier.GetXAxis(), vDir),
-                                   -DotProduct(mSoldier.GetZAxis(), vDir));
+        const float fSide = -DotProduct(mSoldier.GetXAxis(), vDir);
+        const float fFront = -DotProduct(mSoldier.GetZAxis(), vDir);
+        const float fAngle = atan2f(fSide, fFront);
         const float fMin = iMin * 0.017453292f;
         const float fMax = iMax * 0.017453292f;
         if (iMin < iMax)
@@ -960,23 +961,34 @@ bool Combo::Condition::TestVelocity(float fX, float fY, float fZ) const
         if (m_bVelocityYSigned)
         {
             fRef = GetVelocityYRef();
+            if (m_bVelocityYLess)
+            {
+                if (fY > fRef)
+                {
+                    return false;
+                }
+            }
+            else if (fRef > fY)
+            {
+                return false;
+            }
         }
         else
         {
             fRef = GetVelocityYRef();
             fY *= fY;
             fRef *= fRef;
-        }
-        if (m_bVelocityYLess)
-        {
-            if (fY > fRef)
+            if (m_bVelocityYLess)
+            {
+                if (fY > fRef)
+                {
+                    return false;
+                }
+            }
+            else if (fRef > fY)
             {
                 return false;
             }
-        }
-        else if (fRef > fY)
-        {
-            return false;
         }
     }
     if (m_uiVelocityXZMagCnd)
@@ -1555,7 +1567,7 @@ void Combo::Deflect::_ReadConfig(PblConfig& config, const Combo& combo, const ch
             break;
 
         case 0xd9ae70ee:
-            if (data.GetNumArgs() && data.IsStringArg(0))
+            if (data.IsStringArg(0))
             {
                 const char* pcName = data.GetStringArg(0);
                 const char* pcScope = strrchr(pcName, '_');
@@ -1665,7 +1677,8 @@ void Combo::Deflect::_ReadConfig(PblConfig& config, const Combo& combo, const ch
                     PblConfig scope(config.ReadNextScope(), true);
                     if (pAnimData && eAnimation != SoldierAnimationBank::INVALID_COMBO_ANIMATION)
                     {
-                        if (!pAnimData->m_bReadFromConfig)
+                        const bool bReadFromConfig = pAnimData->m_bReadFromConfig;
+                        if (!bReadFromConfig)
                         {
                             pAnimData->ReadConfig(scope, pcName);
                         }
@@ -1673,9 +1686,13 @@ void Combo::Deflect::_ReadConfig(PblConfig& config, const Combo& combo, const ch
                         {
                             SoldierAnimationData* pLower =
                                 SoldierAnimationData::Find(eAnimation, SoldierAnimType::LOWER);
-                            if (pLower && !pLower->m_bReadFromConfig)
+                            if (pLower)
                             {
-                                pLower->ConvertScope(*pAnimData);
+                                const bool bLowerReadFromConfig = pLower->m_bReadFromConfig;
+                                if (!bLowerReadFromConfig)
+                                {
+                                    pLower->ConvertScope(*pAnimData);
+                                }
                             }
                         }
                     }

@@ -534,10 +534,7 @@ void pcRefractionShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPa
     color.b = (unsigned char)(int)(color.b * (pItem->tweakColor.b * (1.0f / 255.0f)) + 0.5f);
     color.a = (unsigned char)(int)(color.a * (pItem->tweakColor.a * (1.0f / 255.0f)) + 0.5f);
 
-    s_d3dMat.Diffuse.r = color.r * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.g = color.g * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.b = color.b * (1.0f / 255.0f);
-    s_d3dMat.Diffuse.a = color.a * (1.0f / 255.0f);
+    s_d3dMat.Diffuse = RedColorValue(color);
     s_d3dMat.Ambient = s_d3dMat.Diffuse;
     RedRenderer::pcGetDevice()->SetMaterial(&s_d3dMat);
 
@@ -563,25 +560,36 @@ void pcRefractionShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPa
 
     RedRenderer::pcSetCullMode((m_material.materialFlags & 0x10000) ? PCREDCULL_NONE : PCREDCULL_BACK);
 
+    const RedTextureTransform& diffuse = m_material.diffuseTexTransform;
+    const D3DXMATRIXA16 mDiffuseTransform(diffuse(0, 0), diffuse(0, 1), 0.0f, 0.0f,
+                                          diffuse(1, 0), diffuse(1, 1), 0.0f, 0.0f,
+                                          diffuse(2, 0), diffuse(2, 1), 0.0f, 0.0f,
+                                          0.0f, 0.0f, 0.0f, 1.0f);
+    const RedTextureTransform& bump = m_bumpMapTransform;
+    const D3DXMATRIXA16 mBumpTransform(bump(0, 0), bump(0, 1), 0.0f, 0.0f,
+                                       bump(1, 0), bump(1, 1), 0.0f, 0.0f,
+                                       bump(2, 0), bump(2, 1), 0.0f, 0.0f,
+                                       0.0f, 0.0f, 0.0f, 1.0f);
+
     switch (pItem->uiShaderState)
     {
     case 0:
     case 2:
         RedRenderer::pcSetTexture(0, RedTexture::Find(m_material.diffuseMapHash));
-        FFSetTextureTransform_(0, m_material.diffuseTexTransform);
+        RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(mDiffuseTransform));
         break;
 
     case 1:
         if (uiPass != 0)
         {
             RedRenderer::pcSetTexture(0, RedTexture::Find(m_material.diffuseMapHash));
-            FFSetTextureTransform_(0, m_material.diffuseTexTransform);
+            RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(mDiffuseTransform));
             break;
         }
 
     case 3:
         RedRenderer::pcSetTexture(0, RedTexture::Find(m_material.bumpMapHash));
-        FFSetTextureTransform_(0, m_bumpMapTransform);
+        RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(mBumpTransform));
         if (m_refractionMap)
         {
             RedRenderer::pcSetTexture(1, m_refractionMap);
@@ -608,14 +616,11 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
     const unsigned int uiFlags = PIPELINE1_INV_STATE_MAP[pItem->uiShaderState];
 
     RedColor color;
-    color.r = (unsigned char)(int)(m_material.diffuseColor.r * 255.0f);
-    color.g = (unsigned char)(int)(m_material.diffuseColor.g * 255.0f);
     color.b = (unsigned char)(int)(m_material.diffuseColor.b * 255.0f);
+    color.g = (unsigned char)(int)(m_material.diffuseColor.g * 255.0f);
+    color.r = (unsigned char)(int)(m_material.diffuseColor.r * 255.0f);
     color.a = (unsigned char)(int)(m_material.diffuseColor.a * 255.0f);
-    color.r = (unsigned char)(int)(color.r * (pItem->tweakColor.r * (1.0f / 255.0f)) + 0.5f);
-    color.g = (unsigned char)(int)(color.g * (pItem->tweakColor.g * (1.0f / 255.0f)) + 0.5f);
-    color.b = (unsigned char)(int)(color.b * (pItem->tweakColor.b * (1.0f / 255.0f)) + 0.5f);
-    color.a = (unsigned char)(int)(color.a * (pItem->tweakColor.a * (1.0f / 255.0f)) + 0.5f);
+    color = pItem->tweakColor * color;
 
     RedColor refraction = m_colorRefraction;
     if (pItem->pShadingState)
@@ -633,19 +638,11 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
         RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, ucAlpha < 0xff);
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 3);
-        pRegs[39].component[0] = color.r * (1.0f / 255.0f);
-        pRegs[39].component[1] = color.g * (1.0f / 255.0f);
-        pRegs[39].component[2] = color.b * (1.0f / 255.0f);
-        pRegs[39].component[3] = ucAlpha * (1.0f / 255.0f);
+        pRegs[39].SetFloats(color.r * (1.0f / 255.0f), color.g * (1.0f / 255.0f),
+                            color.b * (1.0f / 255.0f), ucAlpha * (1.0f / 255.0f));
         const RedTextureTransform& diffuse = m_material.diffuseTexTransform;
-        pRegs[40].component[0] = diffuse(0, 0);
-        pRegs[40].component[1] = diffuse(1, 0);
-        pRegs[40].component[2] = 0.0f;
-        pRegs[40].component[3] = diffuse(2, 0);
-        pRegs[41].component[0] = diffuse(0, 1);
-        pRegs[41].component[1] = diffuse(1, 1);
-        pRegs[41].component[2] = 0.0f;
-        pRegs[41].component[3] = diffuse(2, 1);
+        pRegs[40].SetFloats(diffuse(0, 0), diffuse(1, 0), 0.0f, diffuse(2, 0));
+        pRegs[41].SetFloats(diffuse(0, 1), diffuse(1, 1), 0.0f, diffuse(2, 1));
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         RedRenderer::pcSetTexture(0, RedTexture::Find(m_material.diffuseMapHash));
@@ -653,10 +650,8 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
     else
     {
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 10);
-        pRegs[39].component[0] = color.r * (1.0f / 255.0f);
-        pRegs[39].component[1] = color.g * (1.0f / 255.0f);
-        pRegs[39].component[2] = color.b * (1.0f / 255.0f);
-        pRegs[39].component[3] = color.a * (1.0f / 255.0f);
+        pRegs[39].SetFloats(color.r * (1.0f / 255.0f), color.g * (1.0f / 255.0f),
+                            color.b * (1.0f / 255.0f), color.a * (1.0f / 255.0f));
         pRegs[40].component[0] = 1.0f;
         pRegs[40].component[1] = 0.0f;
         pRegs[40].component[2] = m_distortionScale * 8.0f;
@@ -666,26 +661,21 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
         pRegs[41].SetMatrix4x4(mTex);
 
         const RedTextureTransform& diffuse = m_material.diffuseTexTransform;
-        pRegs[45].component[0] = diffuse(0, 0);
-        pRegs[45].component[1] = diffuse(1, 0);
-        pRegs[45].component[2] = 0.0f;
-        pRegs[45].component[3] = diffuse(2, 0);
-        pRegs[46].component[0] = diffuse(0, 1);
-        pRegs[46].component[1] = diffuse(1, 1);
-        pRegs[46].component[2] = 0.0f;
-        pRegs[46].component[3] = diffuse(2, 1);
+        pRegs[45].SetFloats(diffuse(0, 0), diffuse(1, 0), 0.0f, diffuse(2, 0));
+        pRegs[46].SetFloats(diffuse(0, 1), diffuse(1, 1), 0.0f, diffuse(2, 1));
         const RedTextureTransform& bump = m_bumpMapTransform;
-        pRegs[47].component[0] = bump(0, 0);
-        pRegs[47].component[1] = bump(1, 0);
-        pRegs[47].component[2] = 0.0f;
-        pRegs[47].component[3] = bump(2, 0);
-        pRegs[48].component[0] = bump(0, 1);
-        pRegs[48].component[1] = bump(1, 1);
-        pRegs[48].component[2] = 0.0f;
-        pRegs[48].component[3] = bump(2, 1);
+        pRegs[47].SetFloats(bump(0, 0), bump(1, 0), 0.0f, bump(2, 0));
+        pRegs[48].SetFloats(bump(0, 1), bump(1, 1), 0.0f, bump(2, 1));
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, color.a < 0xff);
+        if (color.a < 0xff)
+        {
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        }
+        else
+        {
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        }
 
         if (uiFlags & 8)
         {
@@ -718,12 +708,11 @@ void pcRefractionShader::Render_Prog1(const RenderItem* pItem, unsigned int) con
         psConst[0] = RedColorValue(1.0f, 1.0f, 1.0f, fAlpha);
         if (pItem->pLightingState->pProjectedLight)
         {
-            const RedLight* pLight = pItem->pLightingState->pProjectedLight;
-            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, pLight->GetProjectionTextureWrapMode());
-            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, pLight->GetProjectionTextureWrapMode());
-            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSW, pLight->GetProjectionTextureWrapMode());
-            RedRenderer::pcSetTexture(3, RedTexture::Find(pLight->m_uiProjTexHash));
-            psConst[1] = pLight->m_color;
+            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, pItem->pLightingState->pProjectedLight->GetProjectionTextureWrapMode());
+            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, pItem->pLightingState->pProjectedLight->GetProjectionTextureWrapMode());
+            RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSW, pItem->pLightingState->pProjectedLight->GetProjectionTextureWrapMode());
+            RedRenderer::pcSetTexture(3, RedTexture::Find(pItem->pLightingState->pProjectedLight->m_uiProjTexHash));
+            psConst[1] = pItem->pLightingState->pProjectedLight->m_color;
         }
         else
         {

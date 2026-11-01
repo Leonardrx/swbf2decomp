@@ -522,14 +522,14 @@ void EntityDroideka::MoveForward(float fDistance)
 void EntityDroideka::RotateY(const PblAngle& rAngle)
 {
     PblMatrix kRot;
-    kRot.m[0][0] = rAngle.mCos;
-    kRot.m[0][1] = 0.0f;
-    kRot.m[0][2] = -rAngle.mSin;
-    kRot.m[0][3] = 0.0f;
     kRot.m[1][0] = 0.0f;
     kRot.m[1][1] = 1.0f;
     kRot.m[1][2] = 0.0f;
     kRot.m[1][3] = 0.0f;
+    kRot.m[0][0] = rAngle.mCos;
+    kRot.m[0][1] = 0.0f;
+    kRot.m[0][2] = -rAngle.mSin;
+    kRot.m[0][3] = 0.0f;
     kRot.m[2][0] = rAngle.mSin;
     kRot.m[2][1] = 0.0f;
     kRot.m[2][2] = rAngle.mCos;
@@ -1599,23 +1599,19 @@ void EntityDroidekaClass::InitAnimation(int iIndex, const char* pszName)
     {
         mAnimSpeeds[iIndex] = 0.0f;
         mTimeTotals[iIndex] = 0.0f;
+        return;
     }
-    else
+    int iNumFrames = pZAnim->m_u16NumFrames;
+    if (iNumFrames <= 1)
     {
-        int iNumFrames = pZAnim->m_u16NumFrames;
-        if (iNumFrames > 1)
-        {
-            mTimeTotals[iIndex] = (float)(iNumFrames - 1) * (1.0f / 30.0f);
-            PblVector3 vTrans;
-            pZAnim->m_pkJoints[0].GetTranslationUncached(vTrans, (unsigned short)(iNumFrames - 1));
-            mAnimSpeeds[iIndex] = vTrans.z / mTimeTotals[iIndex];
-        }
-        else
-        {
-            mAnimSpeeds[iIndex] = 0.0f;
-            mTimeTotals[iIndex] = 0.0f;
-        }
+        mAnimSpeeds[iIndex] = 0.0f;
+        mTimeTotals[iIndex] = 0.0f;
+        return;
     }
+    mTimeTotals[iIndex] = (float)(iNumFrames - 1) * (1.0f / 30.0f);
+    PblVector3 vTrans;
+    pZAnim->m_pkJoints[0].GetTranslationUncached(vTrans, (unsigned short)(iNumFrames - 1));
+    mAnimSpeeds[iIndex] = vTrans.z / mTimeTotals[iIndex];
 }
 
 // FUNCTION: SWBF2 0x004a9660
@@ -1703,11 +1699,8 @@ EntityDroideka::EntityDroideka(EntityDroidekaClass* pClass, const EntityDesc& de
     mVelocity.z = 0.0f;
     mVelocity.y = 0.0f;
     mVelocity.x = 0.0f;
-    for (int i = 0; i < 4; ++i)
-    {
-        mAimer[i] = 0;
-        mWeapon[i] = 0;
-    }
+    memset(mAimer, 0, sizeof(mAimer));
+    memset(mWeapon, 0, sizeof(mWeapon));
     for (int i = 0; i < mClass->mWeaponCount; ++i)
     {
         if (!mClass->mWeaponClass[i])
@@ -1717,14 +1710,9 @@ EntityDroideka::EntityDroideka(EntityDroidekaClass* pClass, const EntityDesc& de
 
         mAimer[i] = new Aimer(&pClass->mAimerClass[i], this, &mMatrix, &mPose, 0);
 
-        WeaponDesc weaponDesc;
-        weaponDesc.mOwner = this;
-        weaponDesc.mAimer = mAimer[i];
+        WeaponDesc weaponDesc = { this, mAimer[i] };
         weaponDesc.mTrigger = &mControlFire[mClass->mWeaponChannel[i]];
         weaponDesc.mReload = &mControlReload;
-        weaponDesc.mNumClips = 0;
-        weaponDesc.m_pAmmoCounter = 0;
-        weaponDesc.m_pEnergyBar = 0;
 
         const WeaponAmmoDesc& ammo = mClass->mWeaponAmmo[i];
         if (ammo.bFlagShareAmmo)
@@ -2948,11 +2936,10 @@ void EntityDroideka::UpdateStateRolling(float fDeltaTime, float fMove, float fTu
         mBallAngularVelocity = -fMaxSpin;
     }
 
-    float fOrientCos = mBallOrientation.mCos - mBallAngularVelocity * mBallOrientation.mSin * fHalfStep;
-    float fOrientSin = mBallAngularVelocity * mBallOrientation.mCos * fHalfStep + mBallOrientation.mSin;
-    float fInvLength = 1.0f / (float)sqrt((double)(fOrientCos * fOrientCos + fOrientSin * fOrientSin));
-    mBallOrientation.mCos = fOrientCos * fInvLength;
-    mBallOrientation.mSin = fOrientSin * fInvLength;
+    PblAngle kOrient(mBallOrientation.mCos - mBallAngularVelocity * mBallOrientation.mSin * fHalfStep,
+                     mBallAngularVelocity * mBallOrientation.mCos * fHalfStep + mBallOrientation.mSin);
+    kOrient.Normalize();
+    mBallOrientation = kOrient;
 }
 
 // FUNCTION: SWBF2 0x004a3060

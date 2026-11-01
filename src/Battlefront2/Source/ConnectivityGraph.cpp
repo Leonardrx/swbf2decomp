@@ -168,8 +168,8 @@ bool ConnectivityArc::IsPointInside(const PblVector3& v) const
     {
         return false;
     }
-    PblVector3 M = n2->GetCenter() - n1->GetCenter();
     PblVector3 B = n1->GetCenter();
+    PblVector3 M = n2->GetCenter() - n1->GetCenter();
     float t = DotProduct(v - B, M) / DotProduct(M, M);
     if (t < 0.0f || t > 1.0f)
     {

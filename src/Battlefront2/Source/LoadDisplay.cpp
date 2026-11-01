@@ -627,7 +627,7 @@ void LoadDisplay::Begin()
     m_redCamera = new RedCamera(*RedRenderer::GetCamera());
     m_cameraMat = gMatrixIdentity;
 
-    const PblVector3 vBack = -PblVector3(m_cameraMat.m[2][0], m_cameraMat.m[2][1], m_cameraMat.m[2][2]);
+    const PblVector3 vBack(-m_cameraMat.m[2][0], -m_cameraMat.m[2][1], -m_cameraMat.m[2][2]);
     PblMatrix mCamera;
     mCamera.m[0][0] = m_cameraMat.m[0][0];
     mCamera.m[0][1] = m_cameraMat.m[0][1];

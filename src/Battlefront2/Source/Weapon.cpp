@@ -383,8 +383,9 @@ void WeaponClass::Read(PblFileChunk& chunk)
             }
 
             pClass = pClass->Derive(uType);
+            pCharge = pClass;
             StringDB::Store(uType, pcType);
-            strlcpy(pClass->mFilename, acType, sizeof(pClass->mFilename));
+            strlcpy(pCharge->mFilename, acType, sizeof(pCharge->mFilename));
             _snprintf(acBuffer, sizeof(acBuffer), "weapons.%s", acType);
             char* pcUnderscore = strchr(acBuffer, '_');
             if (pcUnderscore)
@@ -396,8 +397,7 @@ void WeaponClass::Read(PblFileChunk& chunk)
             {
                 *pcUnderscore = '.';
             }
-            pClass->mLabel = (unsigned short*)RedLocalizeDB::Find(PblHash(acBuffer), true);
-            pCharge = pClass;
+            pCharge->mLabel = (unsigned short*)RedLocalizeDB::Find(PblHash(acBuffer), true);
             break;
         }
         case 0x45534142:
@@ -416,9 +416,10 @@ void WeaponClass::Read(PblFileChunk& chunk)
         }
     }
 
-    for (WeaponClass* p = pClass; p; p = p->mNextCharge)
+    while (pClass)
     {
-        p->PostReadInit();
+        pClass->PostReadInit();
+        pClass = pClass->mNextCharge;
     }
     pCharge->mNextCharge = pCharge;
 }

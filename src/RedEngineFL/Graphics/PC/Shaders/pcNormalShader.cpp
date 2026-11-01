@@ -894,12 +894,12 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
 {
     const RedMaterial* pMaterial = pItem->pRootShader->m_material;
 
-    RedColor color;
-    color.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
-    color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
-    color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
-    color.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
-    color = pItem->tweakColor * color;
+    RedColor materialColor;
+    materialColor.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
+    materialColor.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
+    materialColor.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
+    materialColor.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
+    const RedColor color = pItem->tweakColor * materialColor;
 
     s_d3dMat.Diffuse.r = color.r * kInv255;
     s_d3dMat.Diffuse.g = color.g * kInv255;

@@ -55,7 +55,6 @@ pcRedPrimitive* sCreateGrapplingHookGeometry(const PblBox& box, const PblVector3
     if (pVertices)
     {
         const float fSegmentLength = fLength / (float)iSegments;
-        const unsigned char ucAlpha = (unsigned char)(int)(fAlpha * 255.0f);
         for (int i = 0; i <= iSegments; ++i)
         {
             float fRatio = (float)i / (float)iSegments;
@@ -77,11 +76,11 @@ pcRedPrimitive* sCreateGrapplingHookGeometry(const PblBox& box, const PblVector3
             CableVertex& back = pVertices[i * 2 + 1];
             const PblVector3 vFront = vCenter + vOffset * 0.02f;
             front.pos = vFront;
-            front.uv = pTexCoords[(i & 1) ? 2 : 0];
-            front.color = RedColor(kCableColor, ucAlpha);
+            front.uv = (i & 1) ? pTexCoords[2] : pTexCoords[0];
+            front.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
             back.pos = vFront - vOffset * 0.04f;
-            back.uv = pTexCoords[(i & 1) ? 3 : 1];
-            back.color = RedColor(kCableColor, ucAlpha);
+            back.uv = (i & 1) ? pTexCoords[3] : pTexCoords[1];
+            back.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
         }
         pPrimitive->EndVertexData();
     }
@@ -129,13 +128,13 @@ pcRedPrimitive* sCreateGrapplingHookCompressedGeometry(const PblBox& box, const 
         CableCompressedVertex& front = pVertices[i * 2];
         CableCompressedVertex& back = pVertices[i * 2 + 1];
         front.pos.SetPos(vFront);
-        front.uv.SetUV((i & 1) ? pTexCoords[2].u : pTexCoords[0].u,
-                       (i & 1) ? pTexCoords[2].v : pTexCoords[0].v);
+        front.uv.SetUV((i & 1) == 0 ? pTexCoords[0].u : pTexCoords[2].u,
+                       (i & 1) == 0 ? pTexCoords[0].v : pTexCoords[2].v);
         front.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
 
         back.pos.SetPos(vFront - vOffset * 0.04f);
-        back.uv.SetUV((i & 1) ? pTexCoords[3].u : pTexCoords[1].u,
-                      (i & 1) ? pTexCoords[3].v : pTexCoords[1].v);
+        back.uv.SetUV((i & 1) == 0 ? pTexCoords[1].u : pTexCoords[3].u,
+                      (i & 1) == 0 ? pTexCoords[1].v : pTexCoords[3].v);
         back.color = RedColor(kCableColor, (unsigned char)(int)(fAlpha * 255.0f));
     }
     pPrimitive->EndVertexData();

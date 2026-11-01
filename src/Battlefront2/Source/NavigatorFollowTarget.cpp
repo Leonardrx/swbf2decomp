@@ -294,9 +294,7 @@ bool NavigatorFollowTarget::LookForCrumbs()
     do
     {
         const PblVector3& vCrumb = mCrumbBuffer[i];
-        const float dz = vCrumb.z - vMyPos.z;
-        const float dx = vCrumb.x - vMyPos.x;
-        const float fDistSq = dx * dx + dz * dz;
+        const float fDistSq = SquaredLengthXZ(vCrumb - vMyPos);
         if (fDistSq < 4.0f ||
             (bCheckLOS && fDistSq < 900.0f &&
              !PathFinder::TestTrivialStraightLineHit(vMyPos, vCrumb, GetMyRadius(), GetMyProhibit(),

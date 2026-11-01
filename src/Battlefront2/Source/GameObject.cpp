@@ -863,7 +863,7 @@ GameObjectClass::GameObjectClass(GameObjectClass* pBase, unsigned int uHash)
     mSoundHurtFall = pBase->mSoundHurtFall;
     mSoundDeath = pBase->mSoundDeath;
 
-    for (PblListSingle::Itor it(pBase->mSoundDamageRegionList); it.GetNode() != pBase->mSoundDamageRegionList.GetTerminator(); ++it)
+    for (PblListSingle::Itor it(pBase->mSoundDamageRegionList); pBase->mSoundDamageRegionList.GetTerminator() != it.GetNode(); ++it)
     {
         const DamageRegionSound* pSound = (const DamageRegionSound*)it.GetNode()->GetObjectA(
             &pBase->mSoundDamageRegionList, offsetof(DamageRegionSound, mNode));

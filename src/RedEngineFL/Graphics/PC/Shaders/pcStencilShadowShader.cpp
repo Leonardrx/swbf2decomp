@@ -364,8 +364,16 @@ void pcStencilShadowShader::Render_Fixed(const RenderItem* pItem, unsigned int u
         static const RedColorValue backColor(0.2f, 0.2f, 1.0f, 0.3f);
         // GLOBAL: SWBF2 0x009c9d50
         static const RedColorValue frontColor(1.0f, 0.0f, 0.0f, 0.3f);
-        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR,
-                                      ColorValueToARGB(uiPass ? backColor : frontColor));
+        const RedColor factor = uiPass
+            ? RedColor((unsigned char)(int)(backColor.r * 255.0f),
+                       (unsigned char)(int)(backColor.g * 255.0f),
+                       (unsigned char)(int)(backColor.b * 255.0f),
+                       (unsigned char)(int)(backColor.a * 255.0f))
+            : RedColor((unsigned char)(int)(frontColor.r * 255.0f),
+                       (unsigned char)(int)(frontColor.g * 255.0f),
+                       (unsigned char)(int)(frontColor.b * 255.0f),
+                       (unsigned char)(int)(frontColor.a * 255.0f));
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, factor.GetARGB());
     }
 
     RedRenderer::pcLoadFormat(m_pVertexFormat);
@@ -380,10 +388,18 @@ void pcStencilShadowShader::Render_Fixed(const RenderItem* pItem, unsigned int u
         RedRenderer::pcSetCullMode(PCREDCULL_NONE);
         RedRenderer::pcSetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
         RedRenderer::pcSetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, ColorValueToARGB(visibleColor));
+        const RedColor visible((unsigned char)(int)(visibleColor.r * 255.0f),
+                               (unsigned char)(int)(visibleColor.g * 255.0f),
+                               (unsigned char)(int)(visibleColor.b * 255.0f),
+                               (unsigned char)(int)(visibleColor.a * 255.0f));
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, visible.GetARGB());
         pItem->pPrim->Draw();
         RedRenderer::pcSetRenderState(D3DRS_ZFUNC, D3DCMP_GREATEREQUAL);
-        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, ColorValueToARGB(hiddenColor));
+        const RedColor hidden((unsigned char)(int)(hiddenColor.r * 255.0f),
+                              (unsigned char)(int)(hiddenColor.g * 255.0f),
+                              (unsigned char)(int)(hiddenColor.b * 255.0f),
+                              (unsigned char)(int)(hiddenColor.a * 255.0f));
+        RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, hidden.GetARGB());
         pItem->pPrim->Draw();
         RedRenderer::pcSetCullMode(uiPass ? PCREDCULL_BACK : PCREDCULL_FRONT);
         RedRenderer::pcSetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);

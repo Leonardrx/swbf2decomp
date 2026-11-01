@@ -724,10 +724,13 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         float x, y, z, a, b, c;
         sscanf(pszValue, "%s %s %s %f %f %f %f %f %f", acName, acType, acParent, &x, &y, &z, &a, &b, &c);
 
-        PblVector3 vPos(x, y, z);
         PblMatrix matrix = gMatrixIdentity;
+        PblVector3 vPos;
+        vPos.x = x;
         matrix.m[3][0] = vPos.x;
+        vPos.y = y;
         matrix.m[3][1] = vPos.y;
+        vPos.z = z;
         matrix.m[3][2] = vPos.z;
         matrix.m[3][3] = 1.0f;
 
@@ -738,18 +741,15 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
         case 0x1ccafdcc:
             primitive.SetBox(a, b, c, -1.0f);
-            fRadius = Length(vCenter - vPos);
-            fRadius = (float)sqrt((double)(a * a + b * b + c * c)) + fRadius;
+            fRadius = (float)sqrt((double)(a * a + b * b + c * c)) + Length(vCenter - vPos);
             break;
         case 0x4a182b8f:
             primitive.SetCylinder(a, b);
-            fRadius = Length(vCenter - vPos);
-            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
+            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + Length(vCenter - vPos);
             break;
         case 0x73f51491:
             primitive.SetAACylinder(a, b);
-            fRadius = Length(vCenter - vPos);
-            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + fRadius;
+            fRadius = (float)sqrt((double)(a * 2.0f * a + b * 0.25f * b)) + Length(vCenter - vPos);
             break;
         default:
             primitive.SetSphere(a);
@@ -821,7 +821,10 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            mChunkDescriptors[sCurrentChunk]->mOmega = PblVector3(x, y, z);
+            ChunkDescriptor* pDescriptor = mChunkDescriptors[sCurrentChunk];
+            pDescriptor->mOmega.x = x;
+            pDescriptor->mOmega.y = y;
+            pDescriptor->mOmega.z = z;
         }
         break;
     case 0xd0259d88:
@@ -829,7 +832,10 @@ void EntityGeometryClass::SetProperty(unsigned int uProperty, const char* pszVal
         {
             float x, y, z;
             sscanf(pszValue, "%f %f %f", &x, &y, &z);
-            mChunkDescriptors[sCurrentChunk]->mGravity = PblVector3(x, y, z);
+            ChunkDescriptor* pDescriptor = mChunkDescriptors[sCurrentChunk];
+            pDescriptor->mGravity.x = x;
+            pDescriptor->mGravity.y = y;
+            pDescriptor->mGravity.z = z;
         }
         break;
     case 0xc2f5ffd5:

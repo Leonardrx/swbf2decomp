@@ -429,8 +429,9 @@ void AILowLevel::ProcessBarrageWpn(const Weapon* pWpn, bool* pFire)
         {
             int iMin = pWpn->mClass->GetBarrageMin();
             int iMax = pWpn->mClass->GetBarrageMax();
+            UnitController* pOwner = mOwner;
             int iTotal = (int)(AIUtil::GetRandomFloat(0.0f, (float)(iMax - iMin))
-                               * AIDifficulty::GetBarrageCountMultiplier(mOwner) + (float)iMin);
+                               * AIDifficulty::GetBarrageCountMultiplier(pOwner) + (float)iMin);
             if (iTotal < 2)
             {
                 iTotal = 2;
@@ -552,7 +553,7 @@ void AILowLevel::ProcessFire(float dt, ControllableHeading* pHeading)
         const GameObject* pTarget = AIUtil::GetAlivePtr(mTarget, false);
         if (pTarget)
         {
-            bFire = CombatUtil::TestWpnConstraintsObj(mOwner->mOwner, pTarget);
+            bFire = CombatUtil::TestWpnConstraintsObj(mOwner->mOwner, pTarget) != false;
         }
     }
 
@@ -951,7 +952,8 @@ void AILowLevel::SetNavigator_Goto(const PblVector3& dest, const Obstacle* pIgno
     PblVector3 vStart = pos;
     PathFinder::GetClosestValidPoint(vStart, vStart, AIUtil::GetCollisionRadius(pObj),
                                      AIUtil::GetAIType(pObj), ignore, 2);
-    PathManager::RequestPath(mOwner, vStart, vDest, AIUtil::GetCollisionRadius(pObj),
+    UnitController* pOwner = mOwner;
+    PathManager::RequestPath(pOwner, vStart, vDest, AIUtil::GetCollisionRadius(pObj),
                              AIUtil::GetAIType(pObj), 0, 0, ignore, 2);
 }
 

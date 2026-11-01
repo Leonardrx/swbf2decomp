@@ -466,10 +466,11 @@ void Sound::Properties::SetupVoiceVirtual(VoiceVirtualBus* pVoice, Source3D* pSo
     {
         pVoice->SetPosition(pSource3D->mPos3D);
         pVoice->SetVelocity(pSource3D->mVel3D);
-        if (pSource3D->mClosestListener)
+        Listener* const pListener = pSource3D->mClosestListener;
+        if (pListener)
         {
-            pVoice->AssignClosestListener(pSource3D->mClosestListener, pSource3D->mDistance,
-                                          pSource3D->mDistanceLength);
+            const float fDistanceLength = pSource3D->mDistanceLength;
+            pVoice->AssignClosestListener(pListener, pSource3D->mDistance, fDistanceLength);
         }
     }
 }

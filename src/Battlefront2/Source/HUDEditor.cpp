@@ -747,9 +747,10 @@ void HUD::Editor::Update(RawControllerInputs* const pInputs, float fDelta)
             fLeft = 0.0f;
             fBottom -= fTop;
             fTop = 0.0f;
-            const float fScale = HUD::Element::GetViewportHeight() /
-                                 RedRenderer::GetScreenAspectRatio() /
-                                 HUD::Element::GetViewportWidth();
+            const float fViewportWidth = HUD::Element::GetViewportWidth();
+            const float fViewportHeight = HUD::Element::GetViewportHeight();
+            const float fScale = fViewportHeight / RedRenderer::GetScreenAspectRatio() /
+                                 fViewportWidth;
             fRight *= fScale;
 
             mSafeZone.Begin();

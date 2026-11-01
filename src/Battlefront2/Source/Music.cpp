@@ -411,11 +411,10 @@ Music* Music::FindByID(const char* pcID)
 // FUNCTION: SWBF2 0x005a9f40
 Music* Music::FindByHashID(PblListDoubleSorted* pList, unsigned int uHashID)
 {
-    for (PblListDouble::Node* pLink = pList->mTerminator.mNext; pLink != &pList->mTerminator;
-         pLink = pLink->mNext)
+    PblListDoubleSorted::Itor itor(pList);
+    for (;;)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+        PblListDoubleSorted::Node* pNode = itor.GetNode(pList);
         if (pNode == pList->GetTerminator())
         {
             break;
@@ -426,6 +425,7 @@ Music* Music::FindByHashID(PblListDoubleSorted* pList, unsigned int uHashID)
         {
             return pMusic;
         }
+        ++itor;
     }
     return 0;
 }

@@ -87,18 +87,21 @@ bool VoiceOverManager::Update(float fDeltaTime)
         if (Team::sTeams[team + 1]->IsBleeding())
         {
             mBleedingTime[team] += fDeltaTime;
-            if (!mTeamBleeding[team])
+            if (mTeamBleeding[team])
             {
-                startBleeding |= mask;
-                mTeamBleeding[team] = true;
-            }
-            else if (mBleedingTime[team] > mBleedingRepeatTime)
-            {
-                repeatBleeding |= mask;
+                if (mBleedingTime[team] > mBleedingRepeatTime)
+                {
+                    repeatBleeding |= mask;
+                }
+                else
+                {
+                    continue;
+                }
             }
             else
             {
-                continue;
+                startBleeding |= mask;
+                mTeamBleeding[team] = true;
             }
         }
         else
@@ -144,10 +147,8 @@ bool VoiceOverManager::Update(float fDeltaTime)
         }
         if (stage > gameStage_beginning)
         {
-            for (int team = 0; team < 2; ++team)
-            {
-                mAmbientMusic[team][stage - 1].mMusic.Stop();
-            }
+            mAmbientMusic[0][stage - 1].mMusic.Stop();
+            mAmbientMusic[1][stage - 1].mMusic.Stop();
         }
         mMusicTeamIndexPrev = musicTeam;
     }

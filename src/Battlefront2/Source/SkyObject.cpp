@@ -207,10 +207,9 @@ bool SkyObjectManager::SkyObjectClass::SkyObject::Update(float fDeltaTime)
 
     mVelocity += mAcceleration * fDeltaTime;
 
-    float fX = fDeltaTime * mVelocity.x;
-    float fY = mVelocity.y * fDeltaTime;
-    float fZ = mVelocity.z * fDeltaTime;
-    *(PblVector3*)&mMatrix.m[3][0] = mMatrix.GetTranslation() + mMatrix.GetXAxis() * fX + mMatrix.GetYAxis() * fY + mMatrix.GetZAxis() * fZ;
+    *(PblVector3*)&mMatrix.m[3][0] = mMatrix.GetTranslation() + mMatrix.GetXAxis() * (fDeltaTime * mVelocity.x) +
+                                     mMatrix.GetYAxis() * (mVelocity.y * fDeltaTime) +
+                                     mMatrix.GetZAxis() * (mVelocity.z * fDeltaTime);
     mMatrix.m[3][3] = 1.0f;
     return true;
 }

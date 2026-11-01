@@ -534,7 +534,7 @@ bool PauseMenu::Update(float fDeltaTime)
     {
         SpawnDisplay::EnableViewport(iViewport, false);
         EnableDisplays(iViewport, false);
-        for (int i = 0; i < 5; ++i)
+        for (unsigned int i = 0; i < 5; ++i)
         {
             HUD::gScreenGroup[i].Enable(false);
         }
@@ -545,8 +545,14 @@ bool PauseMenu::Update(float fDeltaTime)
         if (GameLoop::sPauseMode)
         {
             GameLoop::Resume();
-            EnableDisplays(mViewport, false);
-            for (int i = 0; i < 5; ++i)
+            StatusDisplay::EnableViewport(mViewport, false);
+            ReticuleDisplay::EnableViewport(mViewport, false);
+            CaptureDisplay::EnableViewport(mViewport, false);
+            MessageDisplay::EnableViewport(mViewport, false);
+            BootDisplay::EnableViewport(mViewport, false);
+            HeroMessageDisplay::EnableViewport(mViewport, false);
+            SpectatorDisplay::EnableViewport(mViewport, false);
+            for (unsigned int i = 0; i < 5; ++i)
             {
                 HUD::gScreenGroup[i].Enable(false);
             }

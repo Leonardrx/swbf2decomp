@@ -256,7 +256,8 @@ void EntityPath::DupeHeadAndTail()
         tail.mPosition.z += vTailOffset.z;
 
         const NodeProperties& lastProps = mNodeProps[GetNumPoints() - 2];
-        mNodeProps[GetNumPoints() - 1] = lastProps;
+        NodeProperties& tailProps = mNodeProps[GetNumPoints() - 1];
+        tailProps = lastProps;
     }
 }
 

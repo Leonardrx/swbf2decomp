@@ -480,8 +480,6 @@ static const PblVector3 RotateY(const PblVector3& v, float fAngle)
 // FUNCTION: SWBF2 0x00459b90
 void EntityClothClass::SetProperty(unsigned int uProperty, const char* pszValue)
 {
-    int iValue;
-
     switch (uProperty)
     {
     case 0x13901A72:
@@ -492,8 +490,8 @@ void EntityClothClass::SetProperty(unsigned int uProperty, const char* pszValue)
         float fAngleZ = 0.0f;
         float fAngleY = 0.0f;
         sscanf(pszValue, "%f %f", &fAngleZ, &fAngleY);
-        fAngleZ *= 0.017453292f;
-        const PblVector3 vWind(-sinf(fAngleZ), cosf(fAngleZ), 0.0f);
+        const float fRadiansZ = fAngleZ * 0.017453292f;
+        const PblVector3 vWind(-sinf(fRadiansZ), cosf(fRadiansZ), 0.0f);
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, fAngleY * 0.017453292f);
         mWindDirection = PblVector3(fCos * vWind.x - fSin * vWind.z, vWind.y, fSin * vWind.x + fCos * vWind.z);
@@ -503,27 +501,39 @@ void EntityClothClass::SetProperty(unsigned int uProperty, const char* pszValue)
         sscanf(pszValue, "%f", &mMaxAcceleration);
         break;
     case 0x5CAF15E1:
+    {
+        int iValue;
         sscanf(pszValue, "%d", &iValue);
         m_uiHardEdge = iValue > 1 ? 1 : iValue;
         break;
+    }
     case 0x6EB957F3:
         sscanf(pszValue, "%f", &mParticleMass);
         break;
     case 0x8311CD99:
+    {
+        int iValue;
         sscanf(pszValue, "%d", &iValue);
         m_uiDoStretchConstraints = iValue > 1 ? 1 : iValue;
         break;
+    }
     case 0x94DD79B9:
+    {
+        int iValue;
         sscanf(pszValue, "%d", &iValue);
         m_uiDoBendConstraints = iValue > 1 ? 1 : iValue;
         break;
+    }
     case 0x94E4E309:
         sscanf(pszValue, "%f", &mPriority);
         break;
     case 0xAFE34731:
+    {
+        int iValue;
         sscanf(pszValue, "%d", &iValue);
         m_uiTransparent = iValue > 1 ? 1 : iValue;
         break;
+    }
     case 0xB88C0D43:
         sscanf(pszValue, "%f", &mDrag);
         break;
@@ -531,9 +541,12 @@ void EntityClothClass::SetProperty(unsigned int uProperty, const char* pszValue)
         sscanf(pszValue, "%f", &mDampening);
         break;
     case 0xDE112858:
+    {
+        int iValue;
         sscanf(pszValue, "%d", &iValue);
         m_uiDoCrossConstraints = (iValue > 1 ? 1 : iValue) != 0;
         break;
+    }
     case 0xE90ECACC:
         mModelHash = PblHash(pszValue);
         break;
@@ -1223,36 +1236,24 @@ void EntityCloth::EnforceConstraint(ClothConstraint& constraint, float fRestitut
     const unsigned int i1 = constraint.i1;
     PblVector3& v0 = m_pPos[i0];
     PblVector3& v1 = m_pPos[i1];
-    const float fDeltaX = v1.x - v0.x;
-    const float fDeltaY = v1.y - v0.y;
-    const float fDeltaZ = v1.z - v0.z;
-    const float fLength = PblMath::Sqrt(fDeltaX * fDeltaX + fDeltaY * fDeltaY + fDeltaZ * fDeltaZ);
+    const PblVector3 vDelta = v1 - v0;
+    const float fLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     const float fDiff = (fLength - constraint.restLength) / fLength;
 
     const unsigned int uiNumFixed = mData->m_uiNumFixedPoints;
     if (i0 < uiNumFixed)
     {
-        v1.x -= fDeltaX * fDiff;
-        v1.y -= fDeltaY * fDiff;
-        v1.z -= fDeltaZ * fDiff;
+        v1 -= vDelta * fDiff;
     }
     else if (i1 < uiNumFixed)
     {
-        v0.x += fDeltaX * fDiff;
-        v0.y += fDeltaY * fDiff;
-        v0.z += fDeltaZ * fDiff;
+        v0 += vDelta * fDiff;
     }
     else
     {
-        const float fHalfX = fDeltaX * 0.5f;
-        const float fHalfY = fDeltaY * 0.5f;
-        const float fHalfZ = fDeltaZ * 0.5f;
-        v0.x += fHalfX * fDiff;
-        v0.y += fHalfY * fDiff;
-        v0.z += fHalfZ * fDiff;
-        v1.x -= fHalfX * fDiff;
-        v1.y -= fHalfY * fDiff;
-        v1.z -= fHalfZ * fDiff;
+        const PblVector3 vHalf = vDelta * 0.5f;
+        v0 += vHalf * fDiff;
+        v1 -= vHalf * fDiff;
     }
 }
 

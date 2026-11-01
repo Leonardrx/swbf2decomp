@@ -1021,12 +1021,11 @@ void HUD::ElementMap::UpdatePlayerIcon()
         fX = fScreenX;
     }
 
+    const PblVector3& vViewScale = mPlayerFOV[mMode].HUD::Element::mMatrix.GetScale();
     const D3DXMATRIXA16 mFlat(1.0f, 0.0f, 0.0f, 0.0f,
                               0.0f, 0.0f, -1.0f, 0.0f,
                               0.0f, 1.0f, 0.0f, 0.0f,
                               0.0f, 0.0f, 0.0f, 1.0f);
-
-    const PblVector3& vViewScale = mPlayerFOV[mMode].HUD::Element::mMatrix.GetScale();
     PblMatrix matrix = mFlat;
     matrix.RotateZ(fViewAngle - PblMath::fPi);
     matrix.Scale(vViewScale.x, vViewScale.y, vViewScale.z);

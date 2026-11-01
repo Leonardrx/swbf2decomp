@@ -623,55 +623,58 @@ unsigned short ShadowData::GenerateSilhouette(const PblMatrix* pMatrix, const Pb
         unsigned short e = uiFirst;
         do
         {
-            _edgeList[e].visible = bVisible;
-            _edgeList[e].mark = 0;
-            e = _edgeList[e].next;
+            ShadowEdge& edge = _edgeList[e];
+            edge.visible = bVisible;
+            edge.mark = 0;
+            e = edge.next;
         } while (e != uiFirst);
     }
 
     for (unsigned short j = 0; j < _edgeCount; ++j)
     {
-        if (_edgeList[j].mark)
+        ShadowEdge& edge = _edgeList[j];
+        if (edge.mark)
         {
             continue;
         }
-        unsigned short uiTwin = _edgeList[j].twin;
-        _edgeList[uiTwin].mark = 1;
-        unsigned char bVisible = _edgeList[j].visible;
-        _edgeList[j].mark = 1;
-        if (bVisible == _edgeList[uiTwin].visible)
+        ShadowEdge& twin = _edgeList[edge.twin];
+        twin.mark = 1;
+        const unsigned char bVisible = edge.visible;
+        edge.mark = 1;
+        if (bVisible == twin.visible)
         {
             continue;
         }
 
-        unsigned short e = bVisible ? j : _edgeList[j].twin;
+        unsigned short e = bVisible ? j : edge.twin;
         AddSilhouetteVertex(_edgeList[e].vertex, true);
         for (;;)
         {
-            unsigned short uiEnd = _edgeList[e].twin;
+            const unsigned short uiEnd = _edgeList[e].twin;
             unsigned short k = _edgeList[e].next;
             while (k != uiEnd)
             {
-                unsigned short kt = _edgeList[k].twin;
-                if (!_edgeList[k].mark && _edgeList[k].visible && !_edgeList[kt].visible)
+                ShadowEdge& edgeK = _edgeList[k];
+                ShadowEdge& twinK = _edgeList[edgeK.twin];
+                if (!edgeK.mark && edgeK.visible && !twinK.visible)
                 {
+                    AddSilhouetteVertex(edgeK.vertex, false);
+                    twinK.mark = 1;
+                    edgeK.mark = 1;
                     break;
                 }
-                if (_edgeList[kt].visible == _edgeList[k].visible)
+                if (twinK.visible == edgeK.visible)
                 {
-                    _edgeList[kt].mark = 1;
-                    _edgeList[k].mark = 1;
+                    twinK.mark = 1;
+                    edgeK.mark = 1;
                 }
-                k = _edgeList[kt].next;
+                k = twinK.next;
             }
             if (k == uiEnd)
             {
                 AddSilhouetteVertex(_edgeList[uiEnd].vertex, false);
                 break;
             }
-            AddSilhouetteVertex(_edgeList[k].vertex, false);
-            _edgeList[_edgeList[k].twin].mark = 1;
-            _edgeList[k].mark = 1;
             e = k;
         }
     }

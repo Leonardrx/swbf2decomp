@@ -1155,7 +1155,7 @@ void EntitySoldier::RecalculateAABB()
     else
     {
         float fOffset = sCollisionOffset[mStanceIndex] + 0.1f;
-        SetCollisionCenter(mMatrix.GetTranslation() + mMatrix.GetYAxis() * fOffset);
+        SetCollisionCenter(mMatrix.GetYAxis() * fOffset + mMatrix.GetTranslation());
         SetCollisionRadius(sCollisionRadius2[mStanceIndex]);
         float fRadius = sCollisionRadius[mStanceIndex];
         float fHalfHeight = sCollisionHeight[mStanceIndex] * 0.5f + 0.1f;
@@ -3961,19 +3961,14 @@ void EntitySoldier::ActivatePhysics()
 {
     ActivateThread(0, PER_TURN);
     mPostCollision.ActivateThread(-15, PER_TURN);
-    const char* pIndex = mWeaponIndex;
-    do
+    for (int iChannel = 0; iChannel < 2; ++iChannel)
     {
-        if (*pIndex >= 0)
+        if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]] &&
+            !mWeapon[mWeaponIndex[iChannel]]->IsSelected())
         {
-            Weapon* pWeapon = mWeapon[*pIndex];
-            if (pWeapon && !pWeapon->IsSelected())
-            {
-                pWeapon->Select(pIndex - mWeaponIndex, false);
-            }
+            mWeapon[mWeaponIndex[iChannel]]->Select(iChannel, false);
         }
-        ++pIndex;
-    } while (pIndex - mWeaponIndex < 2);
+    }
 }
 
 // FUNCTION: SWBF2 0x004f34d0
@@ -9069,15 +9064,11 @@ void EntitySoldier::HealthChangeCallback(bool bArg, float fArg)
 void EntitySoldier::Kill()
 {
     mIsAlive = 0;
-    for (const char* pIndex = mWeaponIndex; pIndex - mWeaponIndex < 2; ++pIndex)
+    for (int iChannel = 0; iChannel < 2; ++iChannel)
     {
-        if (*pIndex >= 0)
+        if (mWeaponIndex[iChannel] >= 0 && mWeapon[mWeaponIndex[iChannel]]->IsSelected())
         {
-            Weapon* pWeapon = mWeapon[*pIndex];
-            if (pWeapon->IsSelected())
-            {
-                pWeapon->Deselect(pIndex - mWeaponIndex, false);
-            }
+            mWeapon[mWeaponIndex[iChannel]]->Deselect(iChannel, false);
         }
     }
 
@@ -9853,14 +9844,21 @@ bool EntitySoldier::EnterControllable(Controllable* pControllable)
                 {
                     mWeaponIndex[0] = (char)i;
                 }
+                if (mWeaponIndex[1] >= 0)
+                {
+                    break;
+                }
             }
-            else if (mWeaponIndex[1] < 0)
+            else
             {
-                mWeaponIndex[1] = (char)i;
-            }
-            if (mWeaponIndex[0] >= 0 && mWeaponIndex[1] >= 0)
-            {
-                break;
+                if (mWeaponIndex[1] < 0)
+                {
+                    mWeaponIndex[1] = (char)i;
+                }
+                if (mWeaponIndex[0] >= 0)
+                {
+                    break;
+                }
             }
         }
         mActiveChannel = 0;

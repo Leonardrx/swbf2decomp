@@ -1673,12 +1673,25 @@ bool EntityHover::Update(float fDeltaTime)
             mCurrSuspensionOffset = mClass->mMaxSuspensionOffset;
             mSuspensionVelocity = 0.0f;
         }
-        bool bRising = mClass->mMidSuspensionOffset > mNextSuspensionOffset;
-        if (bRising ? (mNextSuspensionOffset > mCurrSuspensionOffset || mSuspensionVelocity > 0.0f)
-                    : (mCurrSuspensionOffset > mNextSuspensionOffset || 0.0f > mSuspensionVelocity))
+        if (mClass->mMidSuspensionOffset > mNextSuspensionOffset)
         {
-            if (bRising ? mNextSuspensionOffset > mCurrSuspensionOffset
-                        : mCurrSuspensionOffset > mNextSuspensionOffset)
+            if (mNextSuspensionOffset > mCurrSuspensionOffset || mSuspensionVelocity > 0.0f)
+            {
+                if (mNextSuspensionOffset > mCurrSuspensionOffset)
+                {
+                    mCurrSuspensionOffset = mNextSuspensionOffset;
+                }
+                mLastSuspensionOffset = mCurrSuspensionOffset;
+                mNextSuspensionOffset = mClass->mMidSuspensionOffset * 2.0f - mCurrSuspensionOffset;
+                if (0.0f > mSuspensionVelocity)
+                {
+                    mSuspensionVelocity = 0.0f;
+                }
+            }
+        }
+        else if (mCurrSuspensionOffset > mNextSuspensionOffset || 0.0f > mSuspensionVelocity)
+        {
+            if (mCurrSuspensionOffset > mNextSuspensionOffset)
             {
                 mCurrSuspensionOffset = mNextSuspensionOffset;
             }
@@ -1863,8 +1876,8 @@ bool EntityHover::Update(float fDeltaTime)
     PblVector3 vRight = mMatrix.GetXAxis();
     PblVector3 vUp = mMatrix.GetYAxis();
     Move(fDeltaTime, fThrust, fStrafe, fTurn, mBoost);
-    mYawValue -= mMatrix.m[2][0] * vRight.x + mMatrix.m[2][1] * vRight.y + mMatrix.m[2][2] * vRight.z;
-    mPitchValue -= mMatrix.m[2][0] * vUp.x + mMatrix.m[2][1] * vUp.y + mMatrix.m[2][2] * vUp.z;
+    mYawValue -= vRight.x * mMatrix.m[2][0] + vRight.y * mMatrix.m[2][1] + vRight.z * mMatrix.m[2][2];
+    mPitchValue -= vUp.x * mMatrix.m[2][0] + vUp.y * mMatrix.m[2][1] + vUp.z * mMatrix.m[2][2];
     mYawValue = mClass->mYawMin > mYawValue ? mClass->mYawMin
                                             : (mYawValue > mClass->mYawMax ? mClass->mYawMax : mYawValue);
     mPitchValue = mClass->mPitchMin > mPitchValue ? mClass->mPitchMin
@@ -3175,7 +3188,7 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
     if (dest.mHasDest && GetGameObjectClass()->mAIType != ConnectivityGraph::CGT_FLAG_HUGE)
     {
         const PblVector3& vVel = static_cast<GameObject*>(mCtrl->mOwner->GetEntity())->GetVelocity();
-        float fLook = PblMath::Sqrt(vVel.y * vVel.y + vVel.x * vVel.x + vVel.z * vVel.z) * 1.5f;
+        float fLook = PblMath::Sqrt(vVel.x * vVel.x + vVel.y * vVel.y + vVel.z * vVel.z) * 1.5f;
         if (fLook > 5.0f)
         {
             PblVector3 vHitNormal(0.0f, 0.0f, 1.0f);
@@ -3198,8 +3211,9 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
                                                 true))
             {
                 PblVector3 vSide(-vDir.z, 0.0f, vDir.x);
-                PblVector3 vOffset(vSide.x * fLook * 0.25f, vSide.y * fLook * 0.25f, vSide.z * fLook * 0.25f);
-                if (DotProduct(vSide, vHitNormal) > 0.0f)
+                float fSideDot = DotProduct(vSide, vHitNormal);
+                PblVector3 vOffset = vSide * fLook * 0.25f;
+                if (fSideDot > 0.0f)
                 {
                     vDest += vOffset;
                 }
@@ -3252,7 +3266,7 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
     if (mStuckState == 1)
     {
         const PblVector3& vFront = GetMatrix().GetZAxis();
-        if (0.0f > DotProduct(mStuckDir, vFront))
+        if (0.0f > DotProduct(vFront, mStuckDir))
         {
             mStuckState = 2;
             mStuckTimer = GameLoop::GetMissionTime();
@@ -3266,8 +3280,7 @@ bool EntityHover::UpdateIndirect(float fDeltaTime)
         {
             mStuckState = 0;
             mStuckCycle = GameLoop::GetMissionTime();
-            lowLevel.mOwner->ForceCommand(UnitCmdInfo(CMD_WAIT, PblHandle<GameObject>(), PblVector3(0.0f, 0.0f, 0.0f),
-                                                      PblHandle<GameObject>()));
+            lowLevel.mOwner->ForceCommand(UnitCmdInfo(CMD_WAIT, NULL, PblVector3(0.0f, 0.0f, 0.0f), NULL));
         }
         fMove = 1.0f;
         fTurn = 0.5f;

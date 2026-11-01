@@ -111,8 +111,7 @@ int sGetObjectsInRange(const PblVector3& vPos, float fRange, GameObject** const 
         }
         for (int i = 0; i < sMemberCount[iTeam]; ++i)
         {
-            ObjCacheData& rData = sTeamList[iTeam][i];
-            GameObject* pObject = rData.mObj;
+            GameObject* pObject = sTeamList[iTeam][i].mObj;
             if (!pObject || pObject == pIgnore)
             {
                 continue;
@@ -122,10 +121,10 @@ int sGetObjectsInRange(const PblVector3& vPos, float fRange, GameObject** const 
             {
                 continue;
             }
-            const float fRadius = rData.mSphere.GetRadius() + fRange;
-            const float fDX = vPos.x - rData.mSphere.x;
-            const float fDY = vPos.y - rData.mSphere.y;
-            const float fDZ = vPos.z - rData.mSphere.z;
+            const float fRadius = sTeamList[iTeam][i].mSphere.GetRadius() + fRange;
+            const float fDX = vPos.x - sTeamList[iTeam][i].mSphere.x;
+            const float fDY = vPos.y - sTeamList[iTeam][i].mSphere.y;
+            const float fDZ = vPos.z - sTeamList[iTeam][i].mSphere.z;
             if (fRadius * fRadius > fDX * fDX + fDY * fDY + fDZ * fDZ)
             {
                 ppObjects[iCount++] = pObject;

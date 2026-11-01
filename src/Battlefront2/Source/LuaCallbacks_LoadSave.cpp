@@ -220,7 +220,8 @@ int ScriptCB_GetLoginList(lua_State* L)
         lua_newtable(LuaHelper::mState);
         LuaHelper::TableWriteVal("showstr", pusFile);
         LuaHelper::TableWriteVal("memslot", 0);
-        lua_rawseti(LuaHelper::mState, -2, ++iCount);
+        lua_rawseti(LuaHelper::mState, -2, iCount + 1);
+        ++iCount;
     }
 
     lua_setglobal(LuaHelper::mState, pcTableName);
@@ -820,7 +821,14 @@ int ScriptCB_StartSaveMetagame(lua_State* L)
     const unsigned short* pusOld = (unsigned short const*)luaL_optlstring(LuaHelper::mState, 1, 0, 0);
     const unsigned short* pusName = (unsigned short const*)luaL_optlstring(LuaHelper::mState, 2, 0, 0);
     unsigned short ausFilename[128];
-    PblUnicode::ustrlcpy(ausFilename, pusName ? pusName : PlayerProfile::GetProfile(FLInputManager::Instance()->GetPrimaryPort())->mName, 128);
+    if (pusName)
+    {
+        PblUnicode::ustrlcpy(ausFilename, pusName, 128);
+    }
+    else
+    {
+        PblUnicode::ustrlcpy(ausFilename, PlayerProfile::GetProfile(FLInputManager::Instance()->GetPrimaryPort())->mName, 128);
+    }
     SaveFile::MakeMetagameFilename(ausFilename, ausFilename);
     SaveGameManager::StartQueue();
     SaveGameManager::QueueSave(ausFilename, 2, sMetagameBuffer, sizeof(sMetagameBuffer));
@@ -896,7 +904,14 @@ int ScriptCB_StartSaveCampaign(lua_State* L)
     const unsigned short* pusOld = (unsigned short const*)luaL_optlstring(LuaHelper::mState, 1, 0, 0);
     const unsigned short* pusName = (unsigned short const*)luaL_optlstring(LuaHelper::mState, 2, 0, 0);
     unsigned short ausFilename[128];
-    PblUnicode::ustrlcpy(ausFilename, pusName ? pusName : PlayerProfile::GetProfile(FLInputManager::Instance()->GetPrimaryPort())->mName, 128);
+    if (pusName)
+    {
+        PblUnicode::ustrlcpy(ausFilename, pusName, 128);
+    }
+    else
+    {
+        PblUnicode::ustrlcpy(ausFilename, PlayerProfile::GetProfile(FLInputManager::Instance()->GetPrimaryPort())->mName, 128);
+    }
     SaveFile::MakeMetagameFilename(ausFilename, ausFilename);
     SaveGameManager::StartQueue();
     SaveGameManager::QueueSave(ausFilename, 3, sCampaignBuffer, sizeof(sCampaignBuffer));
@@ -1000,7 +1015,8 @@ int ScriptCB_GetUniqueLoginName(lua_State* L)
         }
         if (bUnique)
         {
-            break;
+            LuaHelper::PushString(Lua_Callbacks::sTempReturnString16);
+            return 1;
         }
     } while (uiTry < 2);
     LuaHelper::PushString(Lua_Callbacks::sTempReturnString16);

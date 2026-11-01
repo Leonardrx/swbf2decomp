@@ -487,32 +487,31 @@ void VoiceChatGroup::UpdateLines()
     int iLocal = NetGame::GetLocalIndex(mParent->mJoystickIndex);
     Character* pLocal = Character::FindPlayer(iLocal);
 
-    for (unsigned int i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i)
     {
-        Line& line = mLines[i];
-        if (line.mId < 0)
+        if (mLines[i].mId < 0)
         {
             continue;
         }
 
-        float fAge = VoiceChat::Node::GetTime() - VoiceChat::Node::GetLastReceiveTime((unsigned char)line.mId);
+        float fAge = VoiceChat::Node::GetTime() - VoiceChat::Node::GetLastReceiveTime((unsigned char)mLines[i].mId);
         float fAlpha = 1.0f - fAge * fAge;
         if (fAlpha < 0.0f)
         {
-            line.mId = -1;
-            line.mText.Enable(false);
+            mLines[i].mId = -1;
+            mLines[i].mText.Enable(false);
             continue;
         }
 
-        Character* pCharacter = Character::FindPlayer(line.mId);
-        line.mText.Enable(true);
-        line.mText.m_color.a = (unsigned char)(fAlpha * 255.0f);
+        Character* pCharacter = Character::FindPlayer(mLines[i].mId);
+        mLines[i].mText.Enable(true);
+        mLines[i].mText.m_color.a = (unsigned char)(fAlpha * 255.0f);
         if (pCharacter && pLocal)
         {
-            line.mText.m_color = gVoiceChatTeamColors[pLocal->mTeamNumber != pCharacter->mTeamNumber];
-            if (FriendBuddyList::IsFriendBuddy(0, line.mId))
+            mLines[i].mText.SetColor(gVoiceChatTeamColors[pLocal->mTeamNumber != pCharacter->mTeamNumber]);
+            if (FriendBuddyList::IsFriendBuddy(0, mLines[i].mId))
             {
-                line.mText.m_color = gHudHighlightColor;
+                mLines[i].mText.SetColor(gHudHighlightColor);
             }
         }
     }

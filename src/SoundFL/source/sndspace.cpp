@@ -94,32 +94,26 @@ bool Space::IsPointInside(const ::PblVector3& rPoint, float fRadius) const
     const bool bHasRadius = fRadius > 0.0f;
     float fDistance = 0.0f;
 
-    for (const PblListSingle::Node* pNode = mList.mHead.mNext;
-         pNode != &mList.mHead;
-         pNode = pNode->mNext)
+    for (const PblListSingle::Node* pNode = mList.GetFirst();
+         pNode != mList.GetTerminator();
+         pNode = pNode->GetNext())
     {
+        const PblRegion* const pRegion = static_cast<const Space::Region*>(
+            pNode->GetObjectA(&mList, offsetof(Space::Region, mSpaceNode)));
 
-        const PblRegion* const pRegion = reinterpret_cast<const Space::Region*>(
-            reinterpret_cast<const char*>(pNode) - offsetof(Space::Region, mSpaceNode));
-
-        float fDeltaX = 0.0f;
-        float fDeltaY = 0.0f;
-        float fDeltaZ = 0.0f;
+        ::PblVector3 vDelta;
 
         if (bHasRadius)
         {
+            vDelta = pRegion->mMatrix.GetTranslation() - rPoint;
 
-            fDeltaX = pRegion->mMatrix.m[3][0] - rPoint.x;
-            fDeltaY = pRegion->mMatrix.m[3][1] - rPoint.y;
-            fDeltaZ = pRegion->mMatrix.m[3][2] - rPoint.z;
-
-            float fA = (float)fabs(fDeltaX);
-            float fB = (float)fabs(fDeltaY);
+            float fA = (float)fabs(vDelta.x);
+            float fB = (float)fabs(vDelta.y);
             float fEst = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                                  : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 
             fA = (float)fabs(fEst);
-            fB = (float)fabs(fDeltaZ);
+            fB = (float)fabs(vDelta.z);
             fDistance = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                                 : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 
@@ -137,10 +131,7 @@ bool Space::IsPointInside(const ::PblVector3& rPoint, float fRadius) const
         if (bHasRadius)
         {
             const float fScale = 1.0f / fDistance;
-            ::PblVector3 vProbe;
-            vProbe.x = rPoint.x + fDeltaX * fScale * fRadius;
-            vProbe.y = rPoint.y + fDeltaY * fScale * fRadius;
-            vProbe.z = rPoint.z + fDeltaZ * fScale * fRadius;
+            const ::PblVector3 vProbe = rPoint + vDelta * fScale * fRadius;
             if (pRegion->IsPointInside(vProbe))
             {
                 return true;
@@ -210,16 +201,16 @@ void Space::SetupSource(SourceI3DL2* pSource, bool bInsideSpace) const
     pSource->mOcclusionHFGain = fOcclusionHFGain;
     pSource->mOcclusionLFRatio = fOcclusionLFRatio;
 
-    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_directGain;
     pSource->mDirectGain = mDirectGain;
-    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_directHFGain;
+    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_directGain;
     pSource->mDirectHFGain = mDirectHFGain;
-    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomGain;
+    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_directHFGain;
     pSource->mRoomGain = mRoomGain;
-    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomHFGain;
+    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomGain;
     pSource->mRoomHFGain = mRoomHFGain;
-    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomRollOffFactor;
+    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomHFGain;
     pSource->mRoomRollOffFactor = mRoomRollOffFactor;
+    pSource->mFlags |= (unsigned short)SourceI3DL2::flags_roomRollOffFactor;
 }
 
 // FUNCTION: SWBF2 0x00733d90

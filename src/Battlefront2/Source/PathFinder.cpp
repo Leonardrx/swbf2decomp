@@ -341,13 +341,13 @@ void Obstacle::FindCorners(const PblVector3& rSrc, const PblVector3& rDest, floa
             float fCross = dirN.z * n.x - dirN.x * n.z;
             if (fCross < 0.0f && fDot < fBestLeft)
             {
-                *pLeft = vertex;
                 fBestLeft = fDot;
+                *pLeft = vertex;
             }
             else if (fCross > 0.0f && fDot < fBestRight)
             {
-                *pRight = vertex;
                 fBestRight = fDot;
+                *pRight = vertex;
             }
         }
     }

@@ -1602,7 +1602,7 @@ void FLRenderer::RenderFarScene(unsigned int uiView)
 // FUNCTION: SWBF2 0x006bdc90
 void FLRenderer::RenderReflections()
 {
-    if (!enableReflection || !FLRenderer::m_numPotentialReflections)
+    if (!enableReflection || FLRenderer::m_numPotentialReflections <= 0)
     {
         return;
     }
@@ -1715,13 +1715,13 @@ void FLRenderer::RenderReflections()
         const PblMatrix& mCamera = pCamera->GetMatrix();
         const RedCamera* pSceneCamera = 0;
         bool bClipPlane;
-        if (mCamera.m[3][1] * plane.GetB() + plane.GetA() * mCamera.m[3][0] + mCamera.m[3][2] * plane.GetC() +
+        if (plane.GetA() * mCamera.m[3][0] + mCamera.m[3][1] * plane.GetB() + mCamera.m[3][2] * plane.GetC() +
                 plane.GetD() > 0.0f)
         {
             RedRenderer::pcSetFrontFace(PCREDFRONT_CW);
 
             PblMatrix mReflect = gMatrixIdentity;
-            float fInvLenSq = 1.0f / (plane.GetB() * plane.GetB() + plane.GetA() * plane.GetA() + plane.GetC() * plane.GetC());
+            float fInvLenSq = 1.0f / (plane.GetA() * plane.GetA() + plane.GetB() * plane.GetB() + plane.GetC() * plane.GetC());
             float fScale = fInvLenSq * -2.0f;
             mReflect.m[0][0] = (plane.GetB() * plane.GetB() - plane.GetA() * plane.GetA() + plane.GetC() * plane.GetC()) * fInvLenSq;
             mReflect.m[0][1] = fScale * plane.GetA() * plane.GetB();
@@ -1759,37 +1759,34 @@ void FLRenderer::RenderReflections()
                 mBasis.m[3][2] = 0.0f;
                 mBasis.m[3][3] = 1.0f;
                 PblVector3 vDir;
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vCentre));
-                mBasis.m[2][0] = vDir.x;
-                mBasis.m[2][1] = vDir.y;
-                mBasis.m[2][2] = vDir.z;
+                D3DXVec3Normalize(&vDir, &vCentre);
+                mBasis[2] = vDir;
                 mBasis.m[2][3] = 0.0f;
 
-                PblVector3 vRight, vUp, vCross;
                 if (fHalfX > fHalfY)
                 {
-                    Vec3Cross_(vCross, vDir, gVectorUnitX);
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUp), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-                    Vec3Cross_(vRight, vUp, vDir);
+                    PblVector3 vCross;
+                    D3DXVec3Cross(&vCross, &vDir, &gVectorUnitX);
+                    PblVector3 vUp;
+                    D3DXVec3Normalize(&vUp, &vCross);
+                    mBasis[1] = vUp;
+                    D3DXVec3Cross(&mBasis[0], &vUp, &mBasis[2]);
                 }
                 else
                 {
-                    Vec3Cross_(vCross, gVectorUnitY, vDir);
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRight), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-                    Vec3Cross_(vUp, vDir, vRight);
+                    PblVector3 vCross;
+                    D3DXVec3Cross(&vCross, &gVectorUnitY, &vDir);
+                    PblVector3 vRight;
+                    D3DXVec3Normalize(&vRight, &vCross);
+                    mBasis[0] = vRight;
+                    D3DXVec3Cross(&mBasis[1], &mBasis[2], &vRight);
                 }
-                mBasis.m[0][0] = vRight.x;
-                mBasis.m[0][1] = vRight.y;
-                mBasis.m[0][2] = vRight.z;
                 mBasis.m[0][3] = 0.0f;
-                mBasis.m[1][0] = vUp.x;
-                mBasis.m[1][1] = vUp.y;
-                mBasis.m[1][2] = vUp.z;
                 mBasis.m[1][3] = 0.0f;
 
                 float fEdgeY = fabs(vMax.y) > fabs(vMin.y) ? vMax.y : vMin.y;
                 float fNearPlane = vMin.z;
-                float fCos = (vDir.y * -0.0f - fEdgeY * fTanY * vDir.x) + vDir.z;
+                float fCos = (mBasis.m[2][1] * -0.0f - fEdgeY * fTanY * mBasis.m[2][0]) + mBasis.m[2][2];
 
                 PblMatrix mClip = mBasis * reflectCamera.GetMatrix();
                 clipCamera.SetMatrix(mClip);

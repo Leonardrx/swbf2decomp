@@ -1026,10 +1026,8 @@ void LockOnManager::SetupNearestTargets(Controllable* const playerControllable, 
                         GameObject* targetGameObjectVehicle = Controllable::GetVehicleIfAttached(object);
                         if (targetGameObjectVehicle && targetGameObjectVehicle != object)
                         {
-                            bool vehicleAllowed =
-                                IsTargetObjectTypeAllowed(targetGameObjectVehicle, playerObject, !mForceNewLock && !mAutoLock,
-                                                          mTargetsAllowedFilter, mNewNumNearestTargets, GetDisplayIconsEverything());
-                            if (vehicleAllowed)
+                            if (IsTargetObjectTypeAllowed(targetGameObjectVehicle, playerObject, !mForceNewLock && !mAutoLock,
+                                                          mTargetsAllowedFilter, mNewNumNearestTargets, GetDisplayIconsEverything()))
                             {
                                 object = targetGameObjectVehicle;
                             }

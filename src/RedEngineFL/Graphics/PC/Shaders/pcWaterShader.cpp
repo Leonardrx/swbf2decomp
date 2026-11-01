@@ -336,14 +336,8 @@ void pcWaterShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPass) c
         if (uiPass == 1)
         {
             pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(43, 2);
-            pRegs[43].component[0] = m_bumpMapTransform1(0, 0);
-            pRegs[43].component[1] = m_bumpMapTransform1(1, 0);
-            pRegs[43].component[2] = 0.0f;
-            pRegs[43].component[3] = m_bumpMapTransform1(2, 0);
-            pRegs[44].component[0] = m_bumpMapTransform1(0, 1);
-            pRegs[44].component[1] = m_bumpMapTransform1(1, 1);
-            pRegs[44].component[2] = 0.0f;
-            pRegs[44].component[3] = m_bumpMapTransform1(2, 1);
+            pRegs[43].SetFloats(m_bumpMapTransform1(0, 0), m_bumpMapTransform1(1, 0), 0.0f, m_bumpMapTransform1(2, 0));
+            pRegs[44].SetFloats(m_bumpMapTransform1(0, 1), m_bumpMapTransform1(1, 1), 0.0f, m_bumpMapTransform1(2, 1));
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
             RedRenderer::pcSetTexture(0, m_projectedNormalMap);
@@ -363,22 +357,10 @@ void pcWaterShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPass) c
         if (uiPass == 1)
         {
             pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(43, 4);
-            pRegs[43].component[0] = m_normalMapTransform1(0, 0);
-            pRegs[43].component[1] = m_normalMapTransform1(1, 0);
-            pRegs[43].component[2] = 0.0f;
-            pRegs[43].component[3] = m_normalMapTransform1(2, 0);
-            pRegs[44].component[0] = m_normalMapTransform1(0, 1);
-            pRegs[44].component[1] = m_normalMapTransform1(1, 1);
-            pRegs[44].component[2] = 0.0f;
-            pRegs[44].component[3] = m_normalMapTransform1(2, 1);
-            pRegs[45].component[0] = m_normalMapTransform2(0, 0);
-            pRegs[45].component[1] = m_normalMapTransform2(1, 0);
-            pRegs[45].component[2] = 0.0f;
-            pRegs[45].component[3] = m_normalMapTransform2(2, 0);
-            pRegs[46].component[0] = m_normalMapTransform2(0, 1);
-            pRegs[46].component[1] = m_normalMapTransform2(1, 1);
-            pRegs[46].component[2] = 0.0f;
-            pRegs[46].component[3] = m_normalMapTransform2(2, 1);
+            pRegs[43].SetFloats(m_normalMapTransform1(0, 0), m_normalMapTransform1(1, 0), 0.0f, m_normalMapTransform1(2, 0));
+            pRegs[44].SetFloats(m_normalMapTransform1(0, 1), m_normalMapTransform1(1, 1), 0.0f, m_normalMapTransform1(2, 1));
+            pRegs[45].SetFloats(m_normalMapTransform2(0, 0), m_normalMapTransform2(1, 0), 0.0f, m_normalMapTransform2(2, 0));
+            pRegs[46].SetFloats(m_normalMapTransform2(0, 1), m_normalMapTransform2(1, 1), 0.0f, m_normalMapTransform2(2, 1));
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
             RedRenderer::pcSetTexture(0, m_normalMap1);
@@ -399,38 +381,14 @@ void pcWaterShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPass) c
     case 9:
     {
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(43, 8);
-        pRegs[43].component[0] = m_diffuseMapTransform1(0, 0);
-        pRegs[43].component[1] = m_diffuseMapTransform1(1, 0);
-        pRegs[43].component[2] = 0.0f;
-        pRegs[43].component[3] = m_diffuseMapTransform1(2, 0);
-        pRegs[44].component[0] = m_diffuseMapTransform1(0, 1);
-        pRegs[44].component[1] = m_diffuseMapTransform1(1, 1);
-        pRegs[44].component[2] = 0.0f;
-        pRegs[44].component[3] = m_diffuseMapTransform1(2, 1);
-        pRegs[45].component[0] = m_diffuseMapTransform2(0, 0);
-        pRegs[45].component[1] = m_diffuseMapTransform2(1, 0);
-        pRegs[45].component[2] = 0.0f;
-        pRegs[45].component[3] = m_diffuseMapTransform2(2, 0);
-        pRegs[46].component[0] = m_diffuseMapTransform2(0, 1);
-        pRegs[46].component[1] = m_diffuseMapTransform2(1, 1);
-        pRegs[46].component[2] = 0.0f;
-        pRegs[46].component[3] = m_diffuseMapTransform2(2, 1);
-        pRegs[47].component[0] = m_specularMaskTransform1(0, 0);
-        pRegs[47].component[1] = m_specularMaskTransform1(1, 0);
-        pRegs[47].component[2] = 0.0f;
-        pRegs[47].component[3] = m_specularMaskTransform1(2, 0);
-        pRegs[48].component[0] = m_specularMaskTransform1(0, 1);
-        pRegs[48].component[1] = m_specularMaskTransform1(1, 1);
-        pRegs[48].component[2] = 0.0f;
-        pRegs[48].component[3] = m_specularMaskTransform1(2, 1);
-        pRegs[49].component[0] = m_specularMaskTransform2(0, 0);
-        pRegs[49].component[1] = m_specularMaskTransform2(1, 0);
-        pRegs[49].component[2] = 0.0f;
-        pRegs[49].component[3] = m_specularMaskTransform2(2, 0);
-        pRegs[50].component[0] = m_specularMaskTransform2(0, 1);
-        pRegs[50].component[1] = m_specularMaskTransform2(1, 1);
-        pRegs[50].component[2] = 0.0f;
-        pRegs[50].component[3] = m_specularMaskTransform2(2, 1);
+        pRegs[43].SetFloats(m_diffuseMapTransform1(0, 0), m_diffuseMapTransform1(1, 0), 0.0f, m_diffuseMapTransform1(2, 0));
+        pRegs[44].SetFloats(m_diffuseMapTransform1(0, 1), m_diffuseMapTransform1(1, 1), 0.0f, m_diffuseMapTransform1(2, 1));
+        pRegs[45].SetFloats(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(1, 0), 0.0f, m_diffuseMapTransform2(2, 0));
+        pRegs[46].SetFloats(m_diffuseMapTransform2(0, 1), m_diffuseMapTransform2(1, 1), 0.0f, m_diffuseMapTransform2(2, 1));
+        pRegs[47].SetFloats(m_specularMaskTransform1(0, 0), m_specularMaskTransform1(1, 0), 0.0f, m_specularMaskTransform1(2, 0));
+        pRegs[48].SetFloats(m_specularMaskTransform1(0, 1), m_specularMaskTransform1(1, 1), 0.0f, m_specularMaskTransform1(2, 1));
+        pRegs[49].SetFloats(m_specularMaskTransform2(0, 0), m_specularMaskTransform2(1, 0), 0.0f, m_specularMaskTransform2(2, 0));
+        pRegs[50].SetFloats(m_specularMaskTransform2(0, 1), m_specularMaskTransform2(1, 1), 0.0f, m_specularMaskTransform2(2, 1));
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         RedRenderer::pcSetTexture(0, 0);

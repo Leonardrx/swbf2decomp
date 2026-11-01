@@ -375,8 +375,7 @@ void HUD::Matrix::ApplyScale()
     D3DXMatrixMultiply((D3DXMATRIX*)mMatrix, (D3DXMATRIX*)mMatrix,
                        D3DXMatrixScaling((D3DXMATRIX*)&scaling, mScale.x, mScale.y, mScale.z));
 
-    *(PblVector3*)&mMatrix->m[3][0] = vPosition;
-    mMatrix->m[3][3] = 1.0f;
+    mMatrix->SetTranslation(vPosition);
 }
 
 // FUNCTION: SWBF2 0x00547930

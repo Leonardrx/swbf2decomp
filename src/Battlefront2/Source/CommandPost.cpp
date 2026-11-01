@@ -1725,22 +1725,22 @@ void Event<CommandPost, char>::Callback::Trigger(CommandPost& item, char& param)
         if (pChild)
         {
             pChild->AddRef();
-            while (pChild)
+        }
+        while (pChild)
+        {
+            if (!pChild->IsAlive())
             {
-                if (!pChild->IsAlive())
-                {
-                    pChild->Release();
-                    break;
-                }
-                Callback* pNext = (Callback*)pChild->mSibling;
-                if (pNext)
-                {
-                    pNext->AddRef();
-                }
-                pChild->Trigger(item, param);
                 pChild->Release();
-                pChild = pNext;
+                break;
             }
+            Callback* pNext = (Callback*)pChild->mSibling;
+            if (pNext)
+            {
+                pNext->AddRef();
+            }
+            pChild->Trigger(item, param);
+            pChild->Release();
+            pChild = pNext;
         }
     }
     Release();
@@ -1767,22 +1767,22 @@ void Event<CommandPost, unsigned __int64>::Callback::Trigger(CommandPost& item, 
         if (pChild)
         {
             pChild->AddRef();
-            while (pChild)
+        }
+        while (pChild)
+        {
+            if (!pChild->IsAlive())
             {
-                if (!pChild->IsAlive())
-                {
-                    pChild->Release();
-                    break;
-                }
-                Callback* pNext = (Callback*)pChild->mSibling;
-                if (pNext)
-                {
-                    pNext->AddRef();
-                }
-                pChild->Trigger(item, param);
                 pChild->Release();
-                pChild = pNext;
+                break;
             }
+            Callback* pNext = (Callback*)pChild->mSibling;
+            if (pNext)
+            {
+                pNext->AddRef();
+            }
+            pChild->Trigger(item, param);
+            pChild->Release();
+            pChild = pNext;
         }
     }
     Release();
@@ -1803,22 +1803,22 @@ void Event<CommandPost, DamageOwner>::Callback::Trigger(CommandPost& item, Damag
         if (pChild)
         {
             pChild->AddRef();
-            while (pChild)
+        }
+        while (pChild)
+        {
+            if (!pChild->IsAlive())
             {
-                if (!pChild->IsAlive())
-                {
-                    pChild->Release();
-                    break;
-                }
-                Callback* pNext = (Callback*)pChild->mSibling;
-                if (pNext)
-                {
-                    pNext->AddRef();
-                }
-                pChild->Trigger(item, param);
                 pChild->Release();
-                pChild = pNext;
+                break;
             }
+            Callback* pNext = (Callback*)pChild->mSibling;
+            if (pNext)
+            {
+                pNext->AddRef();
+            }
+            pChild->Trigger(item, param);
+            pChild->Release();
+            pChild = pNext;
         }
     }
     Release();

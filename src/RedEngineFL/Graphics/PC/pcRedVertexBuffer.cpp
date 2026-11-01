@@ -88,8 +88,10 @@ void pcRedVertexBuffer::Cleanup()
         PblList<pcRedVertexBuffer>::Node* pNode = s_nonSharedVertexBufferList.GetFirst();
         pcRedVertexBuffer* pBuffer = pNode->_pObject;
         s_nonSharedVertexBufferList.Remove(pNode);
-        while (pBuffer->Release())
+        unsigned short usRefCount = pBuffer->Release();
+        while (usRefCount)
         {
+            usRefCount = pBuffer->Release();
         }
     }
 
@@ -102,8 +104,10 @@ void pcRedVertexBuffer::Cleanup()
             PblList<pcRedVertexBuffer>::Node* pNode = pList->GetFirst();
             pcRedVertexBuffer* pBuffer = pNode->_pObject;
             pList->Remove(pNode);
-            while (pBuffer->Release())
+            unsigned short usRefCount = pBuffer->Release();
+            while (usRefCount)
             {
+                usRefCount = pBuffer->Release();
             }
         }
         delete pList;
@@ -118,8 +122,10 @@ void pcRedVertexBuffer::Cleanup()
             PblList<pcRedVertexBuffer>::Node* pNode = pList->GetFirst();
             pcRedVertexBuffer* pBuffer = pNode->_pObject;
             pList->Remove(pNode);
-            while (pBuffer->Release())
+            unsigned short usRefCount = pBuffer->Release();
+            while (usRefCount)
             {
+                usRefCount = pBuffer->Release();
             }
         }
         delete pList;

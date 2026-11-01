@@ -1090,11 +1090,11 @@ void RawControllerInputs::ChatInputProcess()
             unsigned short ausLine[128] = { 0 };
             PblUnicode::ustrlcpy(ausLine, m_ChatWords, 128);
             PblUnicode::ustrlcat(ausLine, chatCursor, 128);
-            ChatMessageDisplay::sInstance->AddMessage(ausLine, color);
+            ChatMessageDisplay::Instance()->AddMessage(ausLine, color);
         }
         else
         {
-            ChatMessageDisplay::sInstance->AddMessage(m_ChatWords, color);
+            ChatMessageDisplay::Instance()->AddMessage(m_ChatWords, color);
         }
     }
     else

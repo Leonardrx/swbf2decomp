@@ -255,10 +255,10 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
     {
         const PblVector3 vWander((rand.GetFloat() - rand.GetFloat()) * 0.5f * mVineXSpread, 0.2f,
                                  (rand.GetFloat() - rand.GetFloat()) * 0.5f * mVineZSpread);
-        vDir = vDir + vWander;
+        vDir += vWander;
         vDir = Normalize(vDir);
 
-        vPos = vPos + vDir * fSize * mVineSpread;
+        vPos += vDir * fSize * mVineSpread;
 
         fScale = ((float)iLeft + 1.0f) * 0.25f;
         fSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
@@ -456,8 +456,7 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     rMatrix[1] = matrix[1];
     rMatrix.m[1][3] = 0.0f;
 
-    const PblVector3 vBack = -mMatrix[2];
-    rMatrix[0] = Normalize(CrossProduct(vBack, mMatrix[1]));
+    rMatrix[0] = Normalize(CrossProduct(-mMatrix[2], mMatrix[1]));
     rMatrix.m[0][3] = 0.0f;
 
     rMatrix[2] = Normalize(CrossProduct(rMatrix[0], mMatrix[1]));
@@ -480,10 +479,10 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     const float fBlue = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
     const float fGreen = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
     const float fRed = PblRandom::_Global.GetFloat() * 0.1f + fShade + 0.7f;
-    mColor.a = 1.0f;
     mColor.r = fRed;
     mColor.g = fGreen;
     mColor.b = fBlue;
+    mColor.a = 1.0f;
 
     if (mClass->mType != 3 && mClass->mMaxFallingLeaves > 0)
     {

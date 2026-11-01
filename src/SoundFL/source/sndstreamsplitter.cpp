@@ -44,26 +44,19 @@ void StreamSplitter::Setup(StreamPacket** const ppQueue,
 // FUNCTION: SWBF2 0x0074cf70
 void StreamSplitter::Flush()
 {
-
-    typedef StreamPacket* (__thiscall* GetPacketFn)(StreamSplitter* pThis,
-                                                    unsigned int uiOutput);
-
     mFlushing = 1;
 
     for (unsigned int uiOutput = 0; uiOutput < mNumOutputs; uiOutput++)
     {
-        for (;;)
+        StreamPacket* pPacket;
+        do
         {
-            StreamPacket* const pPacket =
-                GetPacket(uiOutput);
-
-            if (pPacket == 0)
+            pPacket = GetPacket(uiOutput);
+            if (pPacket)
             {
-                break;
+                pPacket->Unlock();
             }
-
-            pPacket->Unlock();
-        }
+        } while (pPacket);
     }
 
     mReadPos = 0;

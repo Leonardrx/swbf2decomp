@@ -321,14 +321,12 @@ void OrdnanceTowCable::RecalculateCenterAndRadius()
         return;
     }
 
-    PblVector3 vOwnerEdge(vDir.x * fOwnerRadius + vOwnerPos.x, vDir.y * fOwnerRadius + vOwnerPos.y,
-                          vDir.z * fOwnerRadius + vOwnerPos.z);
-    PblVector3 vEndEdge(vEndPos.x - vDir.x * fEndRadius, vEndPos.y - vDir.y * fEndRadius,
-                        vEndPos.z - vDir.z * fEndRadius);
+    PblVector3 vOwnerEdge = vDir * fOwnerRadius + vOwnerPos;
+    PblVector3 vEndEdge = vEndPos - vDir * fEndRadius;
     float fX = vOwnerEdge.x - vEndEdge.x;
     float fY = vOwnerEdge.y - vEndEdge.y;
     float fZ = vOwnerEdge.z - vEndEdge.z;
-    SetRenderRadius(PblMath::Sqrt(fY * fY + fX * fX + fZ * fZ) * 0.5f);
+    SetRenderRadius(PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ) * 0.5f);
     SetRenderPos((vEndEdge + vOwnerEdge) * 0.5f);
 }
 
@@ -451,7 +449,7 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
         CollisionModel* pModel = mHitWalker->GetCollisionObject()->mCollisionModel;
         CollisionObject* pWalkerCollision = mHitWalker->GetCollisionObject();
         PblVector3 vStart = pModel->GetWorldMatrix(last.mBodyID, mHitWalker->GetMatrix(), pWalkerCollision->GetPose())
-                                .ApplyTransform(last.mBodyOffset);
+                     .ApplyTransform(last.mBodyOffset);
         PblVector3 vFirePos = mLastOwnerFirePos;
         int iLastBodyId = last.mBodyID;
         int iPrevBodyId = -1;
@@ -505,10 +503,9 @@ bool OrdnanceTowCable::Update(float fDeltaTime)
                             PblMatrix mHitBody = pModel->GetWorldMatrix(iBodyId, mHitWalker->GetMatrix(),
                                                                         mHitWalker->GetCollisionObject()->GetPose());
                             PblVector3 vHit(vDir.x * fHit + vA.x, vDir.y * fHit + vA.y, vDir.z * fHit + vA.z);
-                            PblMatrix mInverse = mHitBody.GetInverseFast();
                             PblVector3 vLocal;
                             D3DXVec3TransformCoord((D3DXVECTOR3*)&vLocal, (const D3DXVECTOR3*)&vHit,
-                                                   (const D3DXMATRIX*)&mInverse);
+                                                   (const D3DXMATRIX*)&mHitBody.GetInverseFast());
                             PblVector3 vSlope = segment.getSlope(fHit * 0.1f + fT);
                             vSlope.x *= 0.5f;
                             vSlope.y *= 0.5f;

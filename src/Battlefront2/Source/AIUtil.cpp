@@ -785,7 +785,7 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
                              fabsf(vToDest.z) < 0.0001f;
 
         const float fStop = AIUtil::StopDist(pMe);
-        const float fDistSq = vToDest.x * vToDest.x + vToDest.z * vToDest.z;
+        const float fDistSq = vToDest.z * vToDest.z + vToDest.x * vToDest.x;
         const bool bInStopDist = fStop * fStop > fDistSq;
         bStopping = bInStopDist &&
                     !GetLowLevel(UnitControllerPtr(static_cast<const Controller*>(pMe->mCtrl)))->HasPath();
@@ -816,7 +816,7 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
                 vFwd.y = 0.0f;
                 vFwdXZ = Normalize(vFwd);
             }
-            const float fForward = vDir.x * vFwdXZ.x + vFwdXZ.y * vDir.y + vFwdXZ.z * vDir.z;
+            const float fForward = vFwdXZ.x * vDir.x + vDir.y * vFwdXZ.y + vDir.z * vFwdXZ.z;
             const float fSide = -(vFwdXZ.z * vDir.x - vDir.z * vFwdXZ.x);
 
             float fSpeed = 1.0f;
@@ -869,11 +869,17 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
         }
     }
 
-    if ((pMe->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover)
-             ? (bStopping && bCanStrafe) ||
-                   GetLowLevel(UnitControllerPtr(static_cast<const Controller*>(pMe->mCtrl)))->mAllowHoverStrafe
-             : bCanStrafe) ||
-        bNoDest)
+    bool bUseHeading;
+    if (pMe->GetEntity()->IsRtti(EntityHover::rttiHashEntityHover))
+    {
+        bUseHeading = (bStopping && bCanStrafe) ||
+                      GetLowLevel(UnitControllerPtr(static_cast<const Controller*>(pMe->mCtrl)))->mAllowHoverStrafe;
+    }
+    else
+    {
+        bUseHeading = bCanStrafe;
+    }
+    if (bUseHeading || bNoDest)
     {
         AIUtil::CalculateHeadingControls(pMe, fScale, rDest, rHeading, fTurnRate, pfTurn, fPitchRate,
                                          pfPitch, false);
@@ -1916,7 +1922,7 @@ bool AIUtil::ResolveCollision(const GameObject* pMe, const GameObject* pOther)
                     const PblVector3 vDelta(vOtherPos.x - vMyPos.x, vOtherPos.y - vMyPos.y,
                                             vOtherPos.z - vMyPos.z);
                     const PblVector3 vToOther = GetSafeNormal(vDelta);
-                    const float fMyDot = vMyDir.y * -vToOther.y + vMyDir.x * -vToOther.x + vMyDir.z * -vToOther.z;
+                    const float fMyDot = DotProduct(vMyDir, -vToOther);
                     const float fOtherDot = vOtherDir.y * vToOther.y + vOtherDir.x * vToOther.x + vOtherDir.z * vToOther.z;
                     return fOtherDot > fMyDot;
                 }

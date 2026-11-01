@@ -481,7 +481,7 @@ bool OrdnanceBullet::Update(float fDeltaTime)
 
     mOldPosition = mPosition;
     const float fStep = mLifeTime > fDeltaTime ? fDeltaTime : mLifeTime;
-    mPosition = mPosition + mVelocity * fStep;
+    mPosition += mVelocity * fStep;
     mOffscreenTime += fDeltaTime;
     if (!Ordnance::Update(fDeltaTime))
     {

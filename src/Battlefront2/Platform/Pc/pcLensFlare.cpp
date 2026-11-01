@@ -204,6 +204,9 @@ void LensFlareEffect::PlatformInit()
             kuiFlareShader, 0x82, 0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
         s_pSampleShader = (pcSampleShader*)pcRedShader::Create(
             kuiSampleShader, 2, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        s_pSampleShader->SetScale(1.0f / 255.0f);
+        s_pSampleShader->SetOutputPosition(0.0f, 0.0f);
+        s_pSampleShader->SetInputTexture(s_sampleTex);
     }
     else
     {
@@ -234,11 +237,11 @@ void LensFlareEffect::PlatformInit()
             kuiFlareShader, 0x1082, 0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
         s_pSampleShader = (pcSampleShader*)pcRedShader::Create(
             kuiSampleShader, 0x1002, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        s_pSampleShader->SetScale(1.0f / 255.0f);
+        s_pSampleShader->SetOutputPosition(0.0f, 0.0f);
+        s_pSampleShader->SetInputTexture(s_sampleTex);
     }
 
-    s_pSampleShader->SetOutputPosition(0.0f, 0.0f);
-    s_pSampleShader->SetScale(1.0f / 255.0f);
-    s_pSampleShader->SetInputTexture(s_sampleTex);
 }
 
 // FUNCTION: SWBF2 0x0041c000

@@ -153,8 +153,6 @@ void StreamDSDMO::Update()
             StreamNodeSource* const pInputNode = StreamNodeSink::mConnection.mInputNode;
             if (pInputNode != 0)
             {
-                typedef StreamPacket* (__thiscall* GetPacketFn)(
-                    StreamNodeSource* pThis, unsigned int uiOutput);
                 pInPacket = pInputNode->GetPacket(StreamNodeSink::mConnection.mInputNodeOutputIndex);
             }
             else
@@ -194,13 +192,7 @@ void StreamDSDMO::Update()
             const bool bLastPacket = (pInPacket->mFlags & 1) != 0;
             const bool bDiscontinuity = ((pInPacket->mFlags >> 1) & 1) != 0;
 
-            if (pBuffer == 0)
-            {
-
-                pDeliver = pInPacket->mBuffer;
-                uiDeliverSize = pInPacket->mBufferUsed;
-            }
-            else
+            if (pBuffer != 0)
             {
                 if (mBuffer.GetDataLeft() != 0)
                 {
@@ -242,6 +234,12 @@ void StreamDSDMO::Update()
                     pDeliver = pBuffer;
                     uiDeliverSize = uiOffset;
                 }
+            }
+            else
+            {
+
+                pDeliver = pInPacket->mBuffer;
+                uiDeliverSize = pInPacket->mBufferUsed;
             }
 
             if (bLastPacket)
@@ -315,8 +313,8 @@ void StreamDSDMO::Update()
 
             const unsigned int uiFrames = uiBytes / mAudioFrameSize;
 
-            bool bFlagBit0 = false;
-            bool bFlagBit1 = false;
+            bool bFlagBit0;
+            bool bFlagBit1;
             if (bMarkerDelivered)
             {
 
@@ -325,11 +323,16 @@ void StreamDSDMO::Update()
                 bFlagBit0 = (ucFlags & 1) != 0;
                 bFlagBit1 = ((ucFlags >> 1) & 1) != 0;
             }
+            else
+            {
+                bFlagBit0 = false;
+                bFlagBit1 = false;
+            }
 
             PacketComplete(pOutPacket, uiBytes, uiFrames, bFlagBit0, bFlagBit1,
                            uiPos);
 
-            StreamNode::mPlaybackPosition = uiPos + uiFrames;
+            StreamNode::mPlaybackPosition = uiFrames + uiPos;
             pOutputIO->Reset();
         }
 

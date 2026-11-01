@@ -1035,7 +1035,7 @@ bool EntityDroid::CollisionCallback(const CollisionResult* pResult, CollisionObj
         Damageable::InstantDeath(owner, true);
     }
     PblVector3 vMove = pRestrictor->GetRestrictedMovement(vDir, fDist);
-    SetPosition(PblVector3(mMatrix.m[3][0] + vMove.x, mMatrix.m[3][1] + vMove.y, mMatrix.m[3][2] + vMove.z));
+    SetPosition(mMatrix.GetTranslation() + vMove);
     pRestrictor->AddRestriction(vSeparation);
     return true;
 }
@@ -1122,7 +1122,7 @@ bool EntityDroid::Update(float fDeltaTime)
                                         mCharacter->mMedalsMgr->IsAwardAvailable(MedalsMgr::ENDURANCE)
                                     ? 1.5f
                                     : 1.0f;
-            GetEnergyBar()->AddEnergy(fRestore * fMultiplier * fDeltaTime);
+            GetEnergyBar()->AddEnergy(fMultiplier * fRestore * fDeltaTime);
         }
         else
         {
@@ -1319,7 +1319,7 @@ bool EntityDroid::Update(float fDeltaTime)
         float fDist =
             CollisionManager::RayHit(mTargetInfo.mAimStart, mEyeDir, 512.0f, pHit, 0, &pIgnore, 1, 0x9a, true) *
             512.0f;
-        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + mEyeDir * fDist;
+        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + fDist * mEyeDir;
     }
     else
     {
@@ -1332,7 +1332,7 @@ bool EntityDroid::Update(float fDeltaTime)
                                   (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                                   (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = mEyePoint + mEyeDir * fDist;
+        mTargetInfo.mAimPoint = mEyePoint + fDist * mEyeDir;
     }
 
     mGroundRatio = 0.0f;
@@ -1399,9 +1399,9 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
         {
             PblVector3 vAhead(vDown.x * fLength + mVelocity.x, mVelocity.y + vDown.y * fLength,
                               mVelocity.z + vDown.z * fLength);
-            float fAheadLength = sqrtf(vAhead.y * vAhead.y + vAhead.x * vAhead.x + vAhead.z * vAhead.z);
-            float fInv = 1.0f / fAheadLength;
-            PblVector3 vAheadDir(vAhead.x * fInv, vAhead.y * fInv, vAhead.z * fInv);
+            float fAheadLength =
+                PblMath::Sqrt(vAhead.y * vAhead.y + vAhead.x * vAhead.x + vAhead.z * vAhead.z);
+            PblVector3 vAheadDir = vAhead * (1.0f / fAheadLength);
             float fAheadHit =
                 CollisionManager::RayHit(vStart, vAheadDir, fAheadLength, pHit, &vNormal, &pIgnore, 1, 0x190, false);
             if (1.0f > fAheadHit)
@@ -1419,9 +1419,7 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
                     PblVector3 vBlend((vNormal.x - mGroundNormal.x) * fBlend + mGroundNormal.x,
                                       (vNormal.y - mGroundNormal.y) * fBlend + mGroundNormal.y,
                                       (vNormal.z - mGroundNormal.z) * fBlend + mGroundNormal.z);
-                    PblVector3 vGround;
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vGround), reinterpret_cast<const D3DXVECTOR3*>(&vBlend));
-                    mGroundNormal = vGround;
+                    mGroundNormal = Normalize(vBlend);
                 }
             }
         }
@@ -1438,7 +1436,7 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
         mGroundRatio = fRatio;
         float fLift = mClass->mSetAltitude > 0.0f ? 0.1f : 0.0f;
         PblVector3 vTilt(mGroundNormal.x * fRatio, mGroundNormal.y + fLift, mGroundNormal.z * fRatio);
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vUp), reinterpret_cast<const D3DXVECTOR3*>(&vTilt));
+        vUp = Normalize(vTilt);
     }
     else if (mGroundRatio == 1.0f)
     {
@@ -1455,7 +1453,7 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
     }
 
     PblMatrix mGround = NormalMatrix(mMatrix.GetZAxis(), mGroundNormal, gVectorZero);
-    mVelocity.y = (-9.8f - (mClass->mGravityScale - 1.0f) * mGroundRatio * 9.8f) * fDeltaTime + mVelocity.y;
+    mVelocity.AddY((-9.8f - (mClass->mGravityScale - 1.0f) * mGroundRatio * 9.8f) * fDeltaTime);
     if (mClass->mSetAltitude > 0.0f)
     {
         float fLift = (mClass->mSetAltitude - fHeight) * mClass->mLiftSpring + mGroundRatio * 9.8f -
@@ -1465,26 +1463,16 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
         if (fLift > 0.0f)
         {
             fLift *= fDeltaTime;
-            mVelocity.x = fLift * mGroundNormal.x + mVelocity.x;
-            mVelocity.y = mVelocity.y + mGroundNormal.y * fLift;
-            mVelocity.z = mVelocity.z + mGroundNormal.z * fLift;
+            mVelocity += mGroundNormal * fLift;
         }
     }
 
     float fDamp = mClass->mLevelDamp * fDeltaTime;
-    if (fDamp > 1.0f)
-    {
-        fDamp = 1.0f;
-    }
     float fSpring = mClass->mLevelSpring * fDeltaTime;
-    if (fSpring > 1.0f)
-    {
-        fSpring = 1.0f;
-    }
-    vOmega.x = (mMatrix.m[2][1] * vUp.y + vUp.x * mMatrix.m[2][0] + mMatrix.m[2][2] * vUp.z) * fSpring +
-               (1.0f - fDamp) * vOmega.x;
-    vOmega.z = (1.0f - fDamp) * vOmega.z -
-               (mMatrix.m[0][1] * vUp.y + vUp.x * mMatrix.m[0][0] + mMatrix.m[0][2] * vUp.z) * fSpring;
+    vOmega.x = (mMatrix.m[2][1] * vUp.y + vUp.x * mMatrix.m[2][0] + mMatrix.m[2][2] * vUp.z) * Min(1.0f, fSpring) +
+               (1.0f - Min(1.0f, fDamp)) * vOmega.x;
+    vOmega.z = (1.0f - Min(1.0f, fDamp)) * vOmega.z -
+               (mMatrix.m[0][1] * vUp.y + vUp.x * mMatrix.m[0][0] + mMatrix.m[0][2] * vUp.z) * Min(1.0f, fSpring);
 
     float fClimb = mGroundNormal.y > 0.0f ? mGroundNormal.y : 0.0f;
     float fAccel = fClimb * mGroundRatio * fDeltaTime * mClass->mAcceleration;
@@ -1494,28 +1482,8 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
     float fForwardDelta =
         mClass->mMaxSpeed * fMove -
         (mVelocity.y * mGround.m[2][1] + mGround.m[2][0] * mVelocity.x + mVelocity.z * mGround.m[2][2]);
-    if (-fAccel > fForwardDelta)
-    {
-        fForwardDelta = -fAccel;
-    }
-    else if (fForwardDelta > fAccel)
-    {
-        fForwardDelta = fAccel;
-    }
-    mVelocity.x = fForwardDelta * mGround.m[2][0] + mVelocity.x;
-    mVelocity.y = mVelocity.y + fForwardDelta * mGround.m[2][1];
-    mVelocity.z = mVelocity.z + fForwardDelta * mGround.m[2][2];
-    if (-fAccel > fStrafeDelta)
-    {
-        fStrafeDelta = -fAccel;
-    }
-    else if (fStrafeDelta > fAccel)
-    {
-        fStrafeDelta = fAccel;
-    }
-    mVelocity.x = fStrafeDelta * mGround.m[0][0] + mVelocity.x;
-    mVelocity.y = mVelocity.y + fStrafeDelta * mGround.m[0][1];
-    mVelocity.z = mVelocity.z + fStrafeDelta * mGround.m[0][2];
+    mVelocity += Clamp(fForwardDelta, -fAccel, fAccel) * mGround.GetZAxis();
+    mVelocity += Clamp(fStrafeDelta, -fAccel, fAccel) * mGround.GetXAxis();
 
     bool bMouse = false;
     if (mPlayerId >= 0)
@@ -1535,7 +1503,7 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
 
     PblQuaternion qOrient(mMatrix);
     PblVector3 vPos = mMatrix.GetTranslation();
-    float fRate = sqrtf(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
+    float fRate = PblMath::Sqrt(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
     if (fRate > 0.0001f)
     {
         float fInv = 1.0f / fRate;
@@ -1543,19 +1511,15 @@ void EntityDroid::Move(float fDeltaTime, float fMove, float fStrafe, float fTurn
         float fSin;
         float fCos;
         PblMath::SinCos(&fSin, &fCos, fRate * fDeltaTime * 0.5f);
-        PblQuaternion qDelta;
-        qDelta._fX = vAxis.x * fSin;
-        qDelta._fY = fSin * vAxis.y;
-        qDelta._fZ = fSin * vAxis.z;
-        qDelta._fS = fCos;
+        PblQuaternion qDelta(fCos, vAxis.x * fSin, fSin * vAxis.y, fSin * vAxis.z);
         qOrient = qOrient * qDelta;
     }
 
-    PblVector3 vNewPos(vPos.x + mVelocity.x * fDeltaTime, vPos.y + mVelocity.y * fDeltaTime,
-                       vPos.z + mVelocity.z * fDeltaTime);
-    PblQuaternion qUnit;
+    PblVector3 vNewPos = vPos + mVelocity * fDeltaTime;
+    D3DXQUATERNION qUnit;
     PblMatrix mNew;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mNew), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&qOrient)));
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mNew),
+                                 D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qOrient)));
     mNew.m[3][0] = vNewPos.x;
     mNew.m[3][1] = vNewPos.y;
     mNew.m[3][2] = vNewPos.z;

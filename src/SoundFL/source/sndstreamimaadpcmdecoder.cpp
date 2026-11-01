@@ -99,6 +99,7 @@ char StreamIMAADPCMDecoder::GetNextStepIndex(unsigned char uNibble, short sStepI
 // FUNCTION: SWBF2 0x0074a570
 void StreamIMAADPCMDecoder::DecodeImaAdpcmFrame(unsigned char const* pSrc, short* pDst)
 {
+    unsigned char cLeft = 63;
     const int iHeader = *(const int*)pSrc;
     short sPredictor = (short)iHeader;
     char cStepIndex = (char)((iHeader >> 16) & ~0x80);
@@ -112,12 +113,11 @@ void StreamIMAADPCMDecoder::DecodeImaAdpcmFrame(unsigned char const* pSrc, short
 
     *pDst++ = sPredictor;
 
-    unsigned char cLeft = 63;
     for (;;)
     {
-        const unsigned char uByte = *pSrc++;
+        unsigned char uByte = *pSrc++;
 
-        unsigned char uNibble = uByte & 0xf;
+        const unsigned char uNibble = uByte & 0xf;
         sPredictor = DecodeImaAdpcmSample(uNibble, sPredictor, smAsStep[cStepIndex]);
         cStepIndex = GetNextStepIndex(uNibble, cStepIndex);
         *pDst++ = sPredictor;
@@ -126,9 +126,9 @@ void StreamIMAADPCMDecoder::DecodeImaAdpcmFrame(unsigned char const* pSrc, short
             break;
         }
 
-        uNibble = uByte >> 4;
-        sPredictor = DecodeImaAdpcmSample(uNibble, sPredictor, smAsStep[cStepIndex]);
-        cStepIndex = GetNextStepIndex(uNibble, cStepIndex);
+        uByte >>= 4;
+        sPredictor = DecodeImaAdpcmSample(uByte, sPredictor, smAsStep[cStepIndex]);
+        cStepIndex = GetNextStepIndex(uByte, cStepIndex);
         *pDst++ = sPredictor;
         if (--cLeft == 0)
         {

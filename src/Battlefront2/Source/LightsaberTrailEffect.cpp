@@ -235,7 +235,7 @@ void LightsaberTrail::_AddSample(float fTime, const PblVector3& vPos, const PblV
         float fDistance = (fVel + fVelPrev) * 0.5f;
         if (fVel > 0.001f && fVelPrev > 0.001f)
         {
-            fDistance *= DotProduct(m_avVel[iSamplePrev], m_avVel[m_uiSampleNext]) * 0.25f /
+            fDistance *= DotProduct(m_avVel[m_uiSampleNext], m_avVel[iSamplePrev]) * 0.25f /
                          (fVel * fVelPrev) + 0.75f;
         }
         fDistance *= fDt;

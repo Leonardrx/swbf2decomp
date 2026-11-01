@@ -142,8 +142,8 @@ void SkyDome::Render(int value)
             const PblMatrix& camMatrix = pCamera->GetMatrix();
             if (rDome.mType == STATIC_HEIGHT)
             {
-                PblVector3 pos = camMatrix.GetTranslation();
                 float fHeight = rDome.mOffset + mDomeHeight;
+                PblVector3 pos = camMatrix.GetTranslation();
                 pos.y = fHeight - (fHeight - pos.y) * rDome.mMovementScale;
                 mat.SetTranslation(pos);
             }
@@ -155,7 +155,7 @@ void SkyDome::Render(int value)
             for (int j = 0; j < rDome.mNumEffectData; ++j)
             {
                 EffectData& rData = rDome.mEffectData[j];
-                if (!rData.effect)
+                if (rData.effect == 0)
                 {
                     continue;
                 }
@@ -169,8 +169,8 @@ void SkyDome::Render(int value)
 
                 const PblVector3& camPos = camMatrix.GetTranslation();
                 const PblVector3& camZ = camMatrix.GetZAxis();
-                if (camZ.y * (vEffectPos.y - camPos.y) + (vEffectPos.x - camPos.x) * camZ.x +
-                        camZ.z * (vEffectPos.z - camPos.z) < 0.0f)
+                const PblVector3 vToEffect = vEffectPos - camPos;
+                if (camZ.y * vToEffect.y + vToEffect.x * camZ.x + camZ.z * vToEffect.z < 0.0f)
                 {
                     rData.effect->Update(0.0f);
                     rData.effect->Render(0, 1.0f, 0);

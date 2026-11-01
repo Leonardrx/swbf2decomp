@@ -441,29 +441,28 @@ bool BirdParticle::UpdateStandingBird(float fDeltaTime)
 // FUNCTION: SWBF2 0x0044b080
 void __fastcall BirdParticleManager::SetPotentialScatterPoint(const PblVector3* pPosition, unsigned char ucNumBirds)
 {
-    BirdParticleManager* pManager = BirdParticleManager::sInstance;
-    if (!pManager)
+    if (!sInstance)
     {
         return;
     }
 
+    int iClosestCameraToNew = -1;
+    int iFarthestPoint = 0;
+    float fFarthestDistance = 0.0f;
+    int iClosestCameraToPoint = -1;
+
     CameraManager* pCameraManager = CameraManager::sInstance;
     const int iNumCameras = pCameraManager->m_iNumCam;
-    PblMatrix cameraMatrix[4];
+    PblMatrix cameraMatrix[1];
     for (int i = 0; i < iNumCameras; ++i)
     {
         cameraMatrix[i] = pCameraManager->mRedCamera[i]->_Matrix;
     }
 
-    int iFarthestPoint = 0;
-    int iClosestCameraToPoint = -1;
-    int iClosestCameraToNew = -1;
-    float fFarthestDistance = 0.0f;
-    float fNewDistance = FLT_MAX;
     for (int i = 0; i < 5; ++i)
     {
-        PblVector3& rPoint = pManager->mPotentialScatterPoints[i];
-        if (pManager->mNumScatterBirds[i])
+        const PblVector3& rPoint = sInstance->mPotentialScatterPoints[i];
+        if (sInstance->mNumScatterBirds[i])
         {
             const float dx = pPosition->x - rPoint.x;
             const float dy = pPosition->y - rPoint.y;
@@ -475,6 +474,7 @@ void __fastcall BirdParticleManager::SetPotentialScatterPoint(const PblVector3* 
         }
 
         float fPointDistance = FLT_MAX;
+        float fNewDistance = FLT_MAX;
         for (int j = 0; j < iNumCameras; ++j)
         {
             const PblMatrix& rCamera = cameraMatrix[j];
@@ -503,26 +503,27 @@ void __fastcall BirdParticleManager::SetPotentialScatterPoint(const PblVector3* 
             iFarthestPoint = i;
         }
     }
+
     const PblMatrix& newCamera = cameraMatrix[iClosestCameraToNew];
-    const PblMatrix& pointCamera = cameraMatrix[iClosestCameraToPoint];
     PblVector3 vNew(pPosition->x - newCamera.m[3][0],
                     pPosition->y - newCamera.m[3][1],
                     pPosition->z - newCamera.m[3][2]);
-    PblVector3& rOld = pManager->mPotentialScatterPoints[iFarthestPoint];
-    PblVector3 vOld(rOld.x - pointCamera.m[3][0],
-                    rOld.y - pointCamera.m[3][1],
-                    rOld.z - pointCamera.m[3][2]);
-    const float fOldDistance = vOld.x*vOld.x + vOld.y*vOld.y + vOld.z*vOld.z;
-    const float fNewDistanceSq = vNew.x*vNew.x + vNew.y*vNew.y + vNew.z*vNew.z;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNew), reinterpret_cast<const D3DXVECTOR3*>(&vNew));
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOld), reinterpret_cast<const D3DXVECTOR3*>(&vOld));
-    const float fOldFacing = pointCamera.m[2][0]*vOld.x + pointCamera.m[2][1]*vOld.y + pointCamera.m[2][2]*vOld.z;
-    const float fNewFacing = newCamera.m[2][0]*vNew.x + newCamera.m[2][1]*vNew.y + newCamera.m[2][2]*vNew.z;
-    if (!pManager->mNumScatterBirds[iFarthestPoint] || fOldFacing > -0.2f ||
-        (fNewFacing <= -0.2f && fOldDistance > fNewDistanceSq))
+    const float fNewDistance = vNew.x * vNew.x + vNew.y * vNew.y + vNew.z * vNew.z;
+    PblVector3 vNewDir;
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNewDir), reinterpret_cast<const D3DXVECTOR3*>(&vNew));
+
+    const PblMatrix& pointCamera = cameraMatrix[iClosestCameraToPoint];
+    PblVector3 vOld = sInstance->mPotentialScatterPoints[iFarthestPoint] - pointCamera.GetTranslation();
+    PblVector3 vOldDir;
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vOldDir), reinterpret_cast<const D3DXVECTOR3*>(&vOld));
+
+    if (!sInstance->mNumScatterBirds[iFarthestPoint] ||
+        pointCamera.m[2][0] * vOldDir.x + pointCamera.m[2][1] * vOldDir.y + pointCamera.m[2][2] * vOldDir.z > -0.2f ||
+        (newCamera.m[2][0] * vNewDir.x + newCamera.m[2][1] * vNewDir.y + newCamera.m[2][2] * vNewDir.z <= -0.2f &&
+         vOld.x * vOld.x + vOld.y * vOld.y + vOld.z * vOld.z > fNewDistance))
     {
-        rOld = *pPosition;
-        pManager->mNumScatterBirds[iFarthestPoint] = ucNumBirds;
+        sInstance->mPotentialScatterPoints[iFarthestPoint] = *pPosition;
+        sInstance->mNumScatterBirds[iFarthestPoint] = ucNumBirds;
     }
 }
 
@@ -603,11 +604,14 @@ void BirdParticleManager::SpawnGroundBirds()
     const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
     const D3DXVECTOR3 vUp(0.0f, 1.0f, 0.0f);
 
-    D3DXVECTOR3 vTemp;
+    PblVector3 vPos;
     PblVector3 vSide;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vSide, D3DXVec3Cross(&vTemp, &vUp, &vDir));
     PblVector3 vForward;
-    D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
+    {
+        D3DXVECTOR3 vTemp;
+        D3DXVec3Normalize((D3DXVECTOR3*)&vSide, D3DXVec3Cross(&vTemp, &vUp, &vDir));
+        D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
+    }
 
     const PblVector3 vCenter = vCamPos + vForward * 45.0f;
 
@@ -626,7 +630,7 @@ void BirdParticleManager::SpawnGroundBirds()
     {
         float fForward = PblRandom::_Global.GetFloat();
         float fSide = PblRandom::_Global.GetFloat();
-        PblVector3 vPos = vCenter + (vSide * fSide + vForward * fForward) * 8.0f;
+        vPos = vCenter + (vSide * fSide + vForward * fForward) * 8.0f;
         vPos.y = RedTerrain::GetHoleHeight(vPos);
 
         CollisionObject* pHit = 0;
@@ -1024,11 +1028,13 @@ bool BirdParticleManager::Update(float fDeltaTime)
             const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
             const D3DXVECTOR3 vUp(0.0f, 1.0f, 0.0f);
 
-            D3DXVECTOR3 vTemp;
             PblVector3 vSide;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vSide, D3DXVec3Cross(&vTemp, &vUp, &vDir));
             PblVector3 vForward;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
+            {
+                D3DXVECTOR3 vTemp;
+                D3DXVec3Normalize((D3DXVECTOR3*)&vSide, D3DXVec3Cross(&vTemp, &vUp, &vDir));
+                D3DXVec3Normalize((D3DXVECTOR3*)&vForward, D3DXVec3Cross(&vTemp, &vUp, (const D3DXVECTOR3*)&vSide));
+            }
 
             if (PblRandom::_Global.GetFloat() <= 0.5f)
             {

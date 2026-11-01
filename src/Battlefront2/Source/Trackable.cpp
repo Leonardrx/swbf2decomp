@@ -430,26 +430,16 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
     PblVector3 vCurrent = rMatrix[3];
 
     PblVector3 vCenter = CalcCenterPoint(rTarget);
-    PblVector3 vToCenter(vCenter.x - vCurrent.x, vCenter.y - vCurrent.y, vCenter.z - vCurrent.z);
+    PblVector3 vToCenter = vCenter - vCurrent;
     bool bSnap = vToCenter.x * vToCenter.x + vToCenter.y * vToCenter.y + vToCenter.z * vToCenter.z > 62500.0f;
 
-    PblVector3 vDir(-vAimDir.x, -vAimDir.y, -vAimDir.z);
+    PblVector3 vDir = -vAimDir;
     PblQuaternion qTarget = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
 
-    float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, 0.5f * -GetCameraTiltValue());
-    PblQuaternion qTilt(fCos, fSin, fSin * 0.0f, fSin * 0.0f);
+    PblQuaternion qTilt(PblVector3(1.0f, 0.0f, 0.0f), -GetCameraTiltValue());
     qTarget = qTarget * qTilt;
 
-    PblQuaternion q;
-    if (bSnap)
-    {
-        q = qTarget;
-    }
-    else
-    {
-        q = Interpolate(qTarget, qCurrent, expf(-(mCameraAimTension * fAimTensionScale * fDeltaTime)));
-    }
+    PblQuaternion q = bSnap ? qTarget : Interpolate(qTarget, qCurrent, expf(-(mCameraAimTension * fAimTensionScale * fDeltaTime)));
 
     D3DXQUATERNION qUnit;
     PblMatrix mCamera;
@@ -461,11 +451,10 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
 
     PblVector3 vCamera = CalcCameraPoint(rTarget, mCamera);
     PblVector3 vSafe = CalcCameraSafePoint(rTarget);
-    PblVector3 vDelta(vCamera.x - vSafe.x, vCamera.y - vSafe.y, vCamera.z - vSafe.z);
-    if (vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z > 0.0001f)
+    PblVector3 vRay = vCamera - vSafe;
+    if (vRay.x * vRay.x + vRay.y * vRay.y + vRay.z * vRay.z > 0.0001f)
     {
-        PblVector3 vRay;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRay), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+        vRay = Normalize(vRay);
 
         float fNear = 0.0f;
         float fFar = 0.0f;
@@ -474,8 +463,9 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
         unsigned int uCamera = CameraManager::sInstance->mUpdatedCameraId;
         CameraManager::sInstance->GetCamera(uCamera)->GetFrustum(fNear, fFar, fWidth, fHeight);
 
-        PblVector3 vNear(vCamera.x - vRay.x * fNear, vCamera.y - vRay.y * fNear, vCamera.z - vRay.z * fNear);
+        PblVector3 vNear = vCamera - vRay * fNear;
         const GameObject* apIgnore[1] = { pIgnore };
+        float fDistance = 1.0f;
 
         const PblVector3& vRight = mCamera[0];
         const PblVector3& vUp = mCamera[1];
@@ -483,35 +473,28 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
         switch (pTrackable->whichCornerToCastForCamera)
         {
         case 0:
-            vCorner.x = 0.0f;
-            vCorner.y = 0.0f;
             vCorner.z = 0.0f;
+            vCorner.y = 0.0f;
+            vCorner.x = 0.0f;
             break;
         case 1:
-            vCorner = PblVector3(vUp.x * 0.4f + vRight.x * 0.4f, vUp.y * 0.4f + vRight.y * 0.4f,
-                                 vUp.z * 0.4f + vRight.z * 0.4f);
+            vCorner = vUp * 0.4f + vRight * 0.4f;
             break;
         case 2:
-            vCorner = PblVector3(vUp.x * 0.4f + vRight.x * -0.4f, vUp.y * 0.4f + vRight.y * -0.4f,
-                                 vUp.z * 0.4f + vRight.z * -0.4f);
+            vCorner = vUp * 0.4f + vRight * -0.4f;
             break;
         case 3:
-            vCorner = PblVector3(vUp.x * -0.4f + vRight.x * 0.4f, vUp.y * -0.4f + vRight.y * 0.4f,
-                                 vUp.z * -0.4f + vRight.z * 0.4f);
+            vCorner = vUp * -0.4f + vRight * 0.4f;
             break;
         case 4:
-            vCorner = PblVector3(vUp.x * -0.4f + vRight.x * -0.4f, vUp.y * -0.4f + vRight.y * -0.4f,
-                                 vUp.z * -0.4f + vRight.z * -0.4f);
+            vCorner = vUp * -0.4f + vRight * -0.4f;
             break;
         }
 
-        PblVector3 vCastStart(vSafe.x + vCorner.x, vSafe.y + vCorner.y, vSafe.z + vCorner.z);
-        PblVector3 vCastEnd(vNear.x + vCorner.x, vNear.y + vCorner.y, vNear.z + vCorner.z);
         CollisionObject* pHitObject;
         pTrackable->minCameraCastDist[pTrackable->whichCornerToCastForCamera] =
-            CollisionManager::RayHit(vCastStart, vCastEnd, pHitObject, 0, apIgnore, pIgnore != 0, 0x98, true);
+            CollisionManager::RayHit(vSafe + vCorner, vNear + vCorner, pHitObject, 0, apIgnore, pIgnore != 0, 0x98, true);
 
-        float fDistance = 1.0f;
         for (int i = 0; i < 5; ++i)
         {
             if (pTrackable->minCameraCastDist[i] < fDistance)
@@ -521,9 +504,7 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
         }
         fDistance = CameraManager::sInstance->UpdateTrackDistance(uCamera, fDistance, fDeltaTime);
 
-        vCamera.x = (vNear.x - vSafe.x) * fDistance + vSafe.x + vRay.x * fNear;
-        vCamera.y = (vNear.y - vSafe.y) * fDistance + vSafe.y + vRay.y * fNear;
-        vCamera.z = (vNear.z - vSafe.z) * fDistance + vSafe.z + vRay.z * fNear;
+        vCamera = (vNear - vSafe) * fDistance + vSafe + vRay * fNear;
 
         if (++pTrackable->whichCornerToCastForCamera > 4)
         {
@@ -533,7 +514,7 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
 
     if (!bSnap)
     {
-        PblVector3 vMove(vCamera.x - vCurrent.x, vCamera.y - vCurrent.y, vCamera.z - vCurrent.z);
+        PblVector3 vMove = vCamera - vCurrent;
         PblMatrix mInverse = mCamera.GetInverse();
         PblVector3 vLocal;
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXVECTOR3*>(&vMove), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
@@ -547,9 +528,7 @@ void CameraTrackSetting::SetupCameraTrackMatrix(Trackable* pTrackable, PblMatrix
 
         PblVector3 vWorld;
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vWorld), reinterpret_cast<const D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXMATRIX*>(&mCamera));
-        vCamera.x = vCurrent.x + vWorld.x;
-        vCamera.y = vCurrent.y + vWorld.y;
-        vCamera.z = vWorld.z + vCurrent.z;
+        vCamera = vCurrent + vWorld;
     }
 
     mCamera.SetTranslation(vCamera);

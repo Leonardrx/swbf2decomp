@@ -157,9 +157,10 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
     box._vMax.y = -FLT_MAX;
     box._vMax.z = -FLT_MAX;
     bool bHaveBody = false;
-    for (int i = 0; i < mCollisionModel->GetNumBodies(); ++i)
+    CollisionModel* pCollisionModel = mCollisionModel;
+    for (int i = 0; i < pCollisionModel->GetNumBodies(); ++i)
     {
-        CollisionBody* pBody = mCollisionModel->GetBody(i);
+        CollisionBody* pBody = pCollisionModel->GetBody(i);
         if (!pBody)
         {
             continue;
@@ -167,8 +168,8 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
         bHaveBody = true;
         if (pBody->bIsMesh)
         {
-            PblBox bodyBox = static_cast<CollisionBodyMesh*>(pBody)->mMesh->GetWorldspaceAABB(
-                pBody->GetWorldMatrix(mMatrix, 0));
+            CollisionMesh* pMesh = static_cast<CollisionBodyMesh*>(pBody)->mMesh;
+            PblBox bodyBox = pMesh->GetWorldspaceAABB(pBody->GetWorldMatrix(mMatrix, 0));
             box._vMin.x = bodyBox._vMin.x > box._vMin.x ? box._vMin.x : bodyBox._vMin.x;
             box._vMin.y = bodyBox._vMin.y > box._vMin.y ? box._vMin.y : bodyBox._vMin.y;
             box._vMin.z = bodyBox._vMin.z > box._vMin.z ? box._vMin.z : bodyBox._vMin.z;
@@ -215,10 +216,10 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
     const RedColor& cMin = pClass->mGeometryColorMin;
     const RedColor& cMax = pClass->mGeometryColorMax;
     PblVector4 vColor;
-    vColor.w = (cMax.a - cMin.a) * PblRandom::GetGlobalFloat() + cMin.a;
-    vColor.z = (cMax.b - cMin.b) * PblRandom::GetGlobalFloat() + cMin.b;
-    vColor.y = (cMax.g - cMin.g) * PblRandom::GetGlobalFloat() + cMin.g;
-    vColor.x = (cMax.r - cMin.r) * PblRandom::GetGlobalFloat() + cMin.r;
+    vColor.w = (cMax.a - cMin.a) * PblRandom::_Global.GetFloat() + cMin.a;
+    vColor.z = (cMax.b - cMin.b) * PblRandom::_Global.GetFloat() + cMin.b;
+    vColor.y = (cMax.g - cMin.g) * PblRandom::_Global.GetFloat() + cMin.g;
+    vColor.x = (cMax.r - cMin.r) * PblRandom::_Global.GetFloat() + cMin.r;
     if (pClass->mUseHSVFlag)
     {
         ConvertHSVtoRGB(&vColor.x, &vColor.y, &vColor.z, vColor.x, vColor.y, vColor.z);

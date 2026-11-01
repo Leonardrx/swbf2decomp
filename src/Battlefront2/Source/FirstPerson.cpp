@@ -643,6 +643,10 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
         {
             switch (mEntitySoldierState)
             {
+            case SoldierState::ROLL:
+                eAnim = JUMP;
+                bLoop = false;
+                break;
             case SoldierState::JUMP:
                 bTransition = false;
                 bLoop = false;
@@ -650,10 +654,6 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
                 fTransitionTimer = 0.0f;
                 fTransitionTimerMax = 0.5f;
                 mTransitionAnim = JUMP_LAND;
-                break;
-            case SoldierState::ROLL:
-                eAnim = JUMP;
-                bLoop = false;
                 break;
             case SoldierState::JET_JUMP:
             case SoldierState::JET_HOVER:

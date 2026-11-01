@@ -276,7 +276,8 @@ void WalkerLegPair::AdjustLeg(eFoot eWhich, const PblQuaternion& kAdjust)
     for (char iParent = mParent->mZephyrSkeleton.m_pShared->m_pJoints[iJoint].m_iParent; iParent;
          iParent = mParent->mZephyrSkeleton.m_pShared->m_pJoints[iParent].m_iParent)
     {
-        kRot = mParent->mZephyrPoseStatic.m_pJoints[(unsigned short)iParent].kQuat * kRot;
+        const PblQuaternion& kParentRot = mParent->mZephyrPoseStatic.m_pJoints[(unsigned short)iParent].kQuat;
+        kRot = kParentRot * kRot;
     }
 
     mLegAdjustments[eWhich] = kRot.Inverse() * kAdjust * kRot;

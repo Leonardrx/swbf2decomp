@@ -1876,8 +1876,7 @@ bool EntityFlyer::UpdateIndirect(float fDeltaTime)
 
     if (mState == TAKEOFF || mState == FLYING)
     {
-        if (!mFollowingPath || mState != FLYING || !IsAlive() || !(0.0f >= mAIEng.ai.mFreeFlyTime) || mInRoll ||
-            mInFlip)
+        if (!GetFollowingPath())
         {
             float fPitch = 0.0f;
             float fTurn = 0.0f;
@@ -2616,87 +2615,88 @@ PblMatrix DirectionMatrix(const PblVector3& vDir, const PblVector3& vUp, const P
 // FUNCTION: SWBF2 0x004b1550
 void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
 {
-    if (mState != FLYING)
+    if (mState == FLYING)
     {
-        FlipStop();
-        return;
-    }
-
-    float fFlipSpeed = mClass->mTrickFlipSpeed;
-    if (mFlip != mFlipTarget)
-    {
-        mInFlip = true;
-        if (mFlipTarget >= mFlip)
+        float fFlipSpeed = mClass->mTrickFlipSpeed;
+        if (mFlip != mFlipTarget)
         {
-            mFlip += fFlipSpeed * fDeltaTime;
-            if (mFlip > 3.1415927f)
-            {
-                mFlip -= PblMath::fTwoPi;
-                mFlipTarget -= PblMath::fTwoPi;
-                mBankPitchAngle -= PblMath::fTwoPi;
-            }
-            if (mFlip >= mFlipTarget)
-            {
-                if (0.001f > (float)fabs((double)mFlipTarget))
-                {
-                    FlipStop();
-                    return;
-                }
-                mFlip = mFlipTarget;
-            }
-        }
-        else
-        {
-            mFlip -= fFlipSpeed * fDeltaTime;
-            if (-3.1415927f > mFlip)
-            {
-                mFlip += PblMath::fTwoPi;
-                mFlipTarget += PblMath::fTwoPi;
-                mBankPitchAngle += PblMath::fTwoPi;
-            }
+            mInFlip = true;
             if (mFlipTarget >= mFlip)
             {
-                if (0.001f > (float)fabs((double)mFlipTarget))
+                mFlip += fFlipSpeed * fDeltaTime;
+                if (mFlip > 3.1415927f)
                 {
-                    FlipStop();
-                    return;
+                    mFlip -= PblMath::fTwoPi;
+                    mFlipTarget -= PblMath::fTwoPi;
+                    mBankPitchAngle -= PblMath::fTwoPi;
                 }
-                mFlip = mFlipTarget;
+                if (mFlip >= mFlipTarget)
+                {
+                    if (0.001f > fabsf(mFlipTarget))
+                    {
+                        FlipStop();
+                        return;
+                    }
+                    mFlip = mFlipTarget;
+                }
+            }
+            else
+            {
+                mFlip -= fFlipSpeed * fDeltaTime;
+                if (-3.1415927f > mFlip)
+                {
+                    mFlip += PblMath::fTwoPi;
+                    mFlipTarget += PblMath::fTwoPi;
+                    mBankPitchAngle += PblMath::fTwoPi;
+                }
+                if (mFlipTarget >= mFlip)
+                {
+                    if (0.001f > fabsf(mFlipTarget))
+                    {
+                        FlipStop();
+                        return;
+                    }
+                    mFlip = mFlipTarget;
+                }
+            }
+            return;
+        }
+
+        if (mFlip == -3.1415927f || mFlip == 3.1415927f)
+        {
+            mInFlip = true;
+            rMatrix[0] = -rMatrix[0];
+            rMatrix.m[0][3] = 0.0f;
+            rMatrix[2] = -rMatrix[2];
+            rMatrix.m[2][3] = 0.0f;
+            mFlip = 0.0f;
+            mFlipTarget = 0.0f;
+            mBankPitchAngle += 3.1415927f;
+            while (mBankPitchAngle > 3.1415927f)
+            {
+                mBankPitchAngle -= PblMath::fTwoPi;
+            }
+            if (0.0f > mRollTarget)
+            {
+                mBankRollAngle = -(mBankRollAngle + 3.1415927f);
+                mRollTarget = -(mRollTarget + 3.1415927f);
+                mRoll = -(mRoll + 3.1415927f);
+            }
+            else
+            {
+                mBankRollAngle = -(mBankRollAngle - 3.1415927f);
+                mRollTarget = -(mRollTarget - 3.1415927f);
+                mRoll = -(mRoll - 3.1415927f);
             }
         }
-        return;
-    }
-
-    if (mFlip == -3.1415927f || mFlip == 3.1415927f)
-    {
-        mInFlip = true;
-        rMatrix[0] = -rMatrix[0];
-        rMatrix.m[0][3] = 0.0f;
-        rMatrix[2] = -rMatrix[2];
-        rMatrix.m[2][3] = 0.0f;
-        mFlip = 0.0f;
-        mFlipTarget = 0.0f;
-        mBankPitchAngle += 3.1415927f;
-        while (mBankPitchAngle > 3.1415927f)
+        else if (mInFlip && 0.01f > fabsf(mBankPitchAngleDelta))
         {
-            mBankPitchAngle -= PblMath::fTwoPi;
-        }
-        if (0.0f > mRollTarget)
-        {
-            mBankRollAngle = -(mBankRollAngle + 3.1415927f);
-            mRollTarget = -(mRollTarget + 3.1415927f);
-            mRoll = -(mRoll + 3.1415927f);
-        }
-        else
-        {
-            mBankRollAngle = -(mBankRollAngle - 3.1415927f);
-            mRollTarget = -(mRollTarget - 3.1415927f);
-            mRoll = -(mRoll - 3.1415927f);
+            mInFlip = false;
         }
     }
-    else if (mInFlip && 0.01f > (float)fabs((double)mBankPitchAngleDelta))
+    else
     {
-        mInFlip = false;
+        FlipStop();
     }
 }
 
@@ -5290,7 +5290,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
     float fHit = CollisionManager::RayHit(vStart, vNose, fLook, pHit, 0, &pIgnore, 1, 0x18, false);
     if (1.0f > fHit)
     {
-        float fTop = pHit->GetCollisionRadius() + pHit->GetCollisionCenter().y;
+        float fTop = pHit->GetCollisionCenter().y + pHit->GetCollisionRadius();
         float fMyY = GetMatrix().GetTranslation().y;
         if (fTop - fMyY > 0.0f)
         {
@@ -5315,7 +5315,7 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
         fGround = fHeight;
     }
 
-    float fHoriz = PblMath::Sqrt((pDest->z - vPos.z) * (pDest->z - vPos.z) + (pDest->x - vPos.x) * (pDest->x - vPos.x));
+    float fHoriz = PblMath::Sqrt((pDest->x - vPos.x) * (pDest->x - vPos.x) + (pDest->z - vPos.z) * (pDest->z - vPos.z));
     float fY = fHoriz * (fGround + 25.0f - vPos.y) / fLook + vPos.y;
     if (bTaper)
     {
@@ -5349,10 +5349,10 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
 // FUNCTION: SWBF2 0x004b3310
 bool EntityFlyer::AtSlideDest() const
 {
-    float fDirX = mSlidePos.x - mSlideBeginPos.x;
-    float fDirZ = mSlidePos.z - mSlideBeginPos.z;
+    PblVector3 vDir(mSlidePos.x - mSlideBeginPos.x, 0.0f, mSlidePos.z - mSlideBeginPos.z);
     const PblVector3& vPos = GetMatrix().GetTranslation();
-    return (vPos.x - mSlidePos.x) * fDirX + 0.0f + (vPos.z - mSlidePos.z) * fDirZ > 0.0f;
+    PblVector3 vOffset(vPos.x - mSlidePos.x, 0.0f, vPos.z - mSlidePos.z);
+    return DotProduct(vOffset, vDir) > 0.0f;
 }
 
 // FUNCTION: SWBF2 0x004b3390
@@ -5455,8 +5455,7 @@ bool EntityFlyer::CalculateDest(float fDeltaTime, ControllableDestination* pDest
     }
     float fNear = (fDist - fMax) / (fFar - fMax) * 0.7f + 0.3f;
 
-    const PblVector3& vNose2 = GetMatrix().GetZAxis();
-    float fAlign = pDest->mDirection.x * vNose2.x + vNose2.y * pDest->mDirection.y + vNose2.z * pDest->mDirection.z;
+    float fAlign = DotProduct(GetMatrix().GetZAxis(), pDest->mDirection);
     if (!(fAlign > 0.5f))
     {
         fAlign = 0.5f;

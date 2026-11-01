@@ -246,12 +246,12 @@ PblVector3 NavigatorSlide::GetBouncePosition() const
     {
         float fSin, fCos;
         PblMath::SinCos(&fSin, &fCos, (AIUtil::GetRandomInt(0, 1) ? -1 : 1) * fAngle);
-        dir = PblVector3((mBarrierNormal.x * fCos - mBarrierNormal.z * fSin) * fDist,
-                         mBarrierNormal.y * fDist,
-                         (mBarrierNormal.z * fCos + mBarrierNormal.x * fSin) * fDist);
+        dir = PblVector3(mBarrierNormal.x * fCos - mBarrierNormal.z * fSin,
+                         mBarrierNormal.y,
+                         mBarrierNormal.z * fCos + mBarrierNormal.x * fSin) * fDist;
     }
 
-    return GetMatrix().GetTranslation() + dir;
+    return dir + GetMatrix().GetTranslation();
 }
 
 // FUNCTION: SWBF2 0x005ae430

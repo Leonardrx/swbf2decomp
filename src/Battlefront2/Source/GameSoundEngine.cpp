@@ -165,7 +165,20 @@ namespace GameSoundEngine
 bool __cdecl UseKmixer()
 {
     PlayerProfile::tProfile* pProfile = PlayerProfile::GetCurProfile();
-    return pProfile && (unsigned char)(pProfile->mSoundOptions.mPlaybackMode - 1) > 3;
+    if (pProfile)
+    {
+        switch (pProfile->mSoundOptions.mPlaybackMode)
+        {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            return false;
+        default:
+            return true;
+        }
+    }
+    return false;
 }
 }
 

@@ -515,13 +515,6 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
                              (vTop.z - vBottom.z) * fClip + vBottom.z);
     }
 
-    PblVector3 corners[4] = {
-        vTop,
-        PblVector3(vTop.x + vRight.x, vTop.y + vRight.y, vTop.z + vRight.z),
-        PblVector3(vBottom.x + vRight.x, vBottom.y + vRight.y, vBottom.z + vRight.z),
-        vBottom,
-    };
-
     if (eMode == GEOMETRYMODE_UNCOMPRESSED)
     {
         const TexCoord* pUV = s_TexCoords[m_iTexCoordType][particle.mTexture];
@@ -532,9 +525,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         }
 
         GrassVertexUncompressed* pv = (GrassVertexUncompressed*)m_pVertices;
-        pv->pos[0] = corners[0].x;
-        pv->pos[1] = corners[0].y;
-        pv->pos[2] = corners[0].z;
+        pv->pos[0] = vTop.x;
+        pv->pos[1] = vTop.y;
+        pv->pos[2] = vTop.z;
         pv->normal[0] = 0.0f;
         pv->normal[1] = 1.0f;
         pv->normal[2] = 0.0f;
@@ -543,9 +536,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexUncompressed*)m_pVertices;
-        pv->pos[0] = corners[1].x;
-        pv->pos[1] = corners[1].y;
-        pv->pos[2] = corners[1].z;
+        pv->pos[0] = vTop.x + vRight.x;
+        pv->pos[1] = vTop.y + vRight.y;
+        pv->pos[2] = vTop.z + vRight.z;
         pv->normal[0] = 0.0f;
         pv->normal[1] = 1.0f;
         pv->normal[2] = 0.0f;
@@ -554,9 +547,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexUncompressed*)m_pVertices;
-        pv->pos[0] = corners[2].x;
-        pv->pos[1] = corners[2].y;
-        pv->pos[2] = corners[2].z;
+        pv->pos[0] = vBottom.x + vRight.x;
+        pv->pos[1] = vBottom.y + vRight.y;
+        pv->pos[2] = vBottom.z + vRight.z;
         pv->normal[0] = 0.0f;
         pv->normal[1] = 1.0f;
         pv->normal[2] = 0.0f;
@@ -566,9 +559,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexUncompressed*)m_pVertices;
-        pv->pos[0] = corners[3].x;
-        pv->pos[1] = corners[3].y;
-        pv->pos[2] = corners[3].z;
+        pv->pos[0] = vBottom.x;
+        pv->pos[1] = vBottom.y;
+        pv->pos[2] = vBottom.z;
         pv->normal[0] = 0.0f;
         pv->normal[1] = 1.0f;
         pv->normal[2] = 0.0f;
@@ -587,9 +580,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         }
 
         GrassVertexCompressed* pv = (GrassVertexCompressed*)m_pVertices;
-        pv->pos[0] = (short)(int)corners[0].x;
-        pv->pos[1] = (short)(int)corners[0].y;
-        pv->pos[2] = (short)(int)corners[0].z;
+        pv->pos[0] = (short)(int)vTop.x;
+        pv->pos[1] = (short)(int)vTop.y;
+        pv->pos[2] = (short)(int)vTop.z;
         pv->normal[0] = 0x7f;
         pv->normal[1] = 0xff;
         pv->normal[2] = 0x7f;
@@ -598,9 +591,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexCompressed*)m_pVertices;
-        pv->pos[0] = (short)(int)corners[1].x;
-        pv->pos[1] = (short)(int)corners[1].y;
-        pv->pos[2] = (short)(int)corners[1].z;
+        pv->pos[0] = (short)(int)(vTop.x + vRight.x);
+        pv->pos[1] = (short)(int)(vTop.y + vRight.y);
+        pv->pos[2] = (short)(int)(vTop.z + vRight.z);
         pv->normal[0] = 0x7f;
         pv->normal[1] = 0xff;
         pv->normal[2] = 0x7f;
@@ -609,9 +602,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexCompressed*)m_pVertices;
-        pv->pos[0] = (short)(int)corners[2].x;
-        pv->pos[1] = (short)(int)corners[2].y;
-        pv->pos[2] = (short)(int)corners[2].z;
+        pv->pos[0] = (short)(int)(vBottom.x + vRight.x);
+        pv->pos[1] = (short)(int)(vBottom.y + vRight.y);
+        pv->pos[2] = (short)(int)(vBottom.z + vRight.z);
         pv->normal[0] = 0x7f;
         pv->normal[1] = 0xff;
         pv->normal[2] = 0x7f;
@@ -621,9 +614,9 @@ void GrassPatchRenderable::AddParticle(const GrassPatchClass::GrassParticle& par
         m_pVertices = pv + 1;
 
         pv = (GrassVertexCompressed*)m_pVertices;
-        pv->pos[0] = (short)(int)corners[3].x;
-        pv->pos[1] = (short)(int)corners[3].y;
-        pv->pos[2] = (short)(int)corners[3].z;
+        pv->pos[0] = (short)(int)vBottom.x;
+        pv->pos[1] = (short)(int)vBottom.y;
+        pv->pos[2] = (short)(int)vBottom.z;
         pv->normal[0] = 0x7f;
         pv->normal[1] = 0xff;
         pv->normal[2] = 0x7f;

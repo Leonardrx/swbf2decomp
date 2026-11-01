@@ -610,9 +610,14 @@ void RedWater::OceanCreatePatch(PblComplex* pFreq)
         }
         for (int z = 0; z < m_pointsPerPatchZ; ++z)
         {
+            int iFreq = ix * m_divisionsPerPatchZ + z;
+            if (z >= m_divisionsPerPatchZ)
+            {
+                iFreq -= m_divisionsPerPatchZ;
+            }
             PblVector3& vPos = pPositions[x * m_pointsPerPatchZ + z];
             vPos.x = (float)x / ((float)m_pointsPerPatchX - 1.0f);
-            vPos.y = (pFreq[ix * m_divisionsPerPatchZ + ((z >= m_divisionsPerPatchZ) ? z - m_divisionsPerPatchZ : z)].real - m_minPatchHeight) / fRange;
+            vPos.y = (pFreq[iFreq].real - m_minPatchHeight) / fRange;
             vPos.z = (float)z / ((float)m_pointsPerPatchZ - 1.0f);
         }
     }
@@ -621,22 +626,22 @@ void RedWater::OceanCreatePatch(PblComplex* pFreq)
     {
         for (int z = 0; z < m_pointsPerPatchZ; ++z)
         {
+            int i = x * m_pointsPerPatchZ + z;
             int iRow = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x) % m_divisionsPerPatchX);
             int iCol = (m_divisionsPerPatchZ + z) % m_divisionsPerPatchZ;
+            D3DXVECTOR3 vCenter(0.0f, pFreq[iRow + iCol].real, 0.0f);
             int iColPrev = (m_divisionsPerPatchZ + z - 1) % m_divisionsPerPatchZ;
-            int iRowNext = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x + 1) % m_divisionsPerPatchX);
-            int iRowPrev = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x - 1) % m_divisionsPerPatchX);
-            int iColNext = (m_divisionsPerPatchZ + z + 1) % m_divisionsPerPatchZ;
             float fDX = m_metersPerPatch / (float)m_divisionsPerPatchX;
             float fDZ = m_metersPerPatch / (float)m_divisionsPerPatchZ;
-
-            D3DXVECTOR3 vCenter(0.0f, pFreq[iRow + iCol].real, 0.0f);
             D3DXVECTOR3 vA = D3DXVECTOR3(0.0f, pFreq[iRow + iColPrev].real, -fDZ) - vCenter;
+            int iRowNext = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x + 1) % m_divisionsPerPatchX);
             D3DXVECTOR3 vB = D3DXVECTOR3(fDX, pFreq[iRowNext + iColPrev].real, -fDZ) - vCenter;
-            D3DXVECTOR3 vC = D3DXVECTOR3(fDX, pFreq[iRowNext + iCol].real, 0.0f) - vCenter;
+            int iRowPrev = m_divisionsPerPatchZ * ((m_divisionsPerPatchX + x - 1) % m_divisionsPerPatchX);
             D3DXVECTOR3 vD = D3DXVECTOR3(-fDX, pFreq[iRowPrev + iCol].real, 0.0f) - vCenter;
-            D3DXVECTOR3 vE = D3DXVECTOR3(0.0f, pFreq[iRow + iColNext].real, fDZ) - vCenter;
+            D3DXVECTOR3 vC = D3DXVECTOR3(fDX, pFreq[iRowNext + iCol].real, 0.0f) - vCenter;
+            int iColNext = (m_divisionsPerPatchZ + z + 1) % m_divisionsPerPatchZ;
             D3DXVECTOR3 vF = D3DXVECTOR3(-fDX, pFreq[iRowPrev + iColNext].real, fDZ) - vCenter;
+            D3DXVECTOR3 vE = D3DXVECTOR3(0.0f, pFreq[iRow + iColNext].real, fDZ) - vCenter;
 
             D3DXVECTOR3 vAD, vDF, vFE, vEC, vCB, vBA;
             D3DXVec3Cross(&vAD, &vA, &vD);
@@ -648,7 +653,7 @@ void RedWater::OceanCreatePatch(PblComplex* pFreq)
             D3DXVECTOR3 vNormal = vAD + vDF + vFE + vEC + vCB + vBA;
             D3DXVECTOR3 vUnit;
             D3DXVec3Normalize(&vUnit, &vNormal);
-            pNormals[x * m_pointsPerPatchZ + z] = *(PblVector3*)&vUnit;
+            pNormals[i] = *(PblVector3*)&vUnit;
         }
     }
 
@@ -759,11 +764,11 @@ void RedWater::OceanUpdate(float fTime)
         for (int z = 0; z < m_divisionsPerPatchZ; ++z)
         {
             int mx = m_divisionsPerPatchX - x;
+            int mz = m_divisionsPerPatchZ - z;
             if (mx >= m_divisionsPerPatchX)
             {
                 mx -= m_divisionsPerPatchX;
             }
-            int mz = m_divisionsPerPatchZ - z;
             if (mz >= m_divisionsPerPatchZ)
             {
                 mz -= m_divisionsPerPatchZ;
@@ -800,8 +805,8 @@ float RedWater::RayHit(const PblVector3& vStart, const PblVector3& vDir, float f
             {
                 float fX = vDir.x * t + vStart.x;
                 float fZ = vDir.z * t + vStart.z;
-                float fMax = (float)m_waterMapSize - 1.0f;
                 float fPatchX = (fX + m_worldCenterX) * m_patchesPerMeter;
+                float fMax = (float)m_waterMapSize - 1.0f;
                 if (fPatchX < 0.0f)
                 {
                     fPatchX = 0.0f;
@@ -1121,8 +1126,8 @@ void RedWater::RenderUnderWaterView(unsigned int uiView)
         if ((fCur > 0.0f) != (fPrev > 0.0f))
         {
             float fInv = 1.0f / (fCur - fPrev);
-            float fA = fInv * fCur;
             float fB = fInv * fPrev;
+            float fA = fInv * fCur;
             vVerts[iNumVerts++] = s_screenCorners[iPrev] * fA - s_screenCorners[i] * fB;
         }
         if (fCur <= 0.0f)

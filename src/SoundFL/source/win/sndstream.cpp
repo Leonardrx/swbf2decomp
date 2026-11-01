@@ -41,7 +41,8 @@ void Stream::Flush(bool bThreadPaused, bool bFlushRenderers)
     mSource.Update();
 
     const Info* pInfo = !mInfoList.IsEmpty()
-        ? (const Info*)((ObjectList::Node*)mInfoList.GetFirst()->GetObjectA(
+        ? (const Info*)((ObjectList::Node*)((ObjectList::Node*)mInfoList.GetFirst()->GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->mNode.GetObjectA(
               &mInfoList, offsetof(ObjectList::Node, mNode)))->GetObjectA()
         : 0;
     const unsigned int uiNumSubstreams = pInfo->mNumSubstreams;
@@ -143,9 +144,11 @@ void Stream::Update(float fDeltaTime)
     mSource.SetLooping(GetLooping());
     StreamBase::Update(fDeltaTime);
 
-    const Info* pInfo = mInfoList.IsEmpty()
-        ? 0
-        : (const Info*)ObjectList::Itor(&mInfoList).GetObjectA(&mInfoList);
+    const Info* pInfo = !mInfoList.IsEmpty()
+        ? (const Info*)((ObjectList::Node*)((ObjectList::Node*)mInfoList.GetFirst()->GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->mNode.GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->GetObjectA()
+        : 0;
     const unsigned int uiNumSubstreams = pInfo->mNumSubstreams;
 
     if (GetGainChanged())
@@ -170,11 +173,12 @@ void Stream::Update(float fDeltaTime)
         }
     }
 
+    const Segment* pCurrentSegment = mCurrentSegment;
     for (unsigned int i = 0; i < uiNumSubstreams; ++i)
     {
-        if (mCurrentSegment)
+        if (pCurrentSegment)
         {
-            mRenderer[i].mFrequency = mCurrentSegment->mFrequency;
+            mRenderer[i].mFrequency = pCurrentSegment->mFrequency;
         }
         mRenderer[i].SetPitch(mPitch);
     }
@@ -206,10 +210,11 @@ void Stream::Update(float fDeltaTime)
             uiNumSubstreams > 1 ? pSegment->mPadding : 0);
         if (pInfo->mNumSubstreams == 1)
         {
-            const unsigned int uiFrameSize =
-                SampleInfo::GetFrameSize(pInfo->mFormat) * pInfo->mNumChannels;
+            const unsigned int uiPlaybackPosition = mPlaybackPosition;
+            const unsigned int uiNumChannels = pInfo->mNumChannels;
+            const unsigned int uiFrameSize = SampleInfo::GetFrameSize(pInfo->mFormat) * uiNumChannels;
             mSource.SourceTransport::mPlaybackPosition =
-                (mPlaybackPosition / uiFrameSize) * uiFrameSize;
+                (uiPlaybackPosition / uiFrameSize) * uiFrameSize;
         }
         else
         {
@@ -342,9 +347,11 @@ namespace Snd
 // FUNCTION: SWBF2 0x00734c80
 void Stream::Open(File& rFile)
 {
-    const Info* pInfo = mInfoList.IsEmpty()
-        ? 0
-        : (const Info*)ObjectList::Itor(&mInfoList).GetObjectA(&mInfoList);
+    const Info* pInfo = !mInfoList.IsEmpty()
+        ? (const Info*)((ObjectList::Node*)((ObjectList::Node*)mInfoList.GetFirst()->GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->mNode.GetObjectA(
+              &mInfoList, offsetof(ObjectList::Node, mNode)))->GetObjectA()
+        : 0;
     const Segment* pSegment = mCurrentSegment;
     const unsigned int uiNumSubstreams = pInfo->mNumSubstreams;
     SampleInfo::Format eFormat = pInfo->mFormat;
@@ -356,41 +363,43 @@ void Stream::Open(File& rFile)
                                    uiNumSubstreams > 1 ? pSegment->mPadding : 0);
 
     StreamNodeSink* apSinks[3];
-    if (eFormat >= SampleInfo::format_PCM16)
+    switch (eFormat)
     {
-        if (eFormat <= SampleInfo::format_PCM8)
+    case SampleInfo::format_PCM16:
+    case SampleInfo::format_PCM8:
+        for (unsigned int i = 0; i < uiNumSubstreams; ++i)
         {
-            for (unsigned int i = 0; i < uiNumSubstreams; ++i)
-            {
-                mADPCMDecoder[i].StreamNodeSink::Connect(0, 0);
-                mRenderer[i].StreamConsumer::Connect(0, 0);
-                apSinks[i] = &mRenderer[i];
-            }
+            mADPCMDecoder[i].StreamNodeSink::Connect(0, 0);
+            mRenderer[i].StreamConsumer::Connect(0, 0);
+            apSinks[i] = &mRenderer[i];
         }
-        else if (eFormat == SampleInfo::format_IMAADPCM)
+        break;
+    case SampleInfo::format_IMAADPCM:
+        for (unsigned int i = 0; i < uiNumSubstreams; ++i)
         {
-            for (unsigned int i = 0; i < uiNumSubstreams; ++i)
-            {
-                mADPCMDecoder[i].StreamNodeSink::Connect(0, 0);
-                mRenderer[i].StreamConsumer::Connect(&mADPCMDecoder[i], 0);
-                apSinks[i] = &mADPCMDecoder[i];
-            }
-            eFormat = SampleInfo::format_PCM16;
+            mADPCMDecoder[i].StreamNodeSink::Connect(0, 0);
+            mRenderer[i].StreamConsumer::Connect(&mADPCMDecoder[i], 0);
+            apSinks[i] = &mADPCMDecoder[i];
         }
+        eFormat = SampleInfo::format_PCM16;
+        break;
+    default:
+        break;
     }
     Connect(apSinks);
 
+    const unsigned int uiNumSplitterPackets = (24 / uiNumSubstreams) * uiNumSubstreams;
     for (unsigned int i = 0; i < 24; ++i)
     {
         StreamPacket& rPacket = mSplitterPackets[i];
-        if (rPacket.mRefCount != 0)
+        if (rPacket.IsLocked())
         {
             rPacket.Unlock();
         }
         rPacket.mBuffer = 0;
     }
     mSplitter.Setup(uiNumSubstreams, pInfo->mSubstreamInterleave, mSplitterPackets,
-                    mSplitterReadPos, mSplitterLockPos, (24 / uiNumSubstreams) * uiNumSubstreams);
+                    mSplitterReadPos, mSplitterLockPos, uiNumSplitterPackets);
 
     const unsigned int uiNumChannels = pInfo->mNumChannels;
     unsigned long aulChannelMask[3] = { 0x3, 0x30, 0xC };

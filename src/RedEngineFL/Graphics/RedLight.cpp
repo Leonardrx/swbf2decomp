@@ -660,7 +660,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
         iMaxSpotLights = 0;
     }
 
-    float afDirectionalPriority[2] = { 0.0f, 0.0f };
+    float afDirectionalPriority[2] = { 0 };
     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
     bool bDefault = true;
 
@@ -728,8 +728,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
          it != s_VisibleDirectionalLightList.End(); ++it)
     {
         RedDirectionalLight* pLight = static_cast<RedDirectionalLight*>((RedLight*)it);
-        if (bStatic && pLight->IsStatic() &&
-            !(pLight->m_uiFlags & LIGHT_FLAG_SPECULARCASTER))
+        if (bStatic && pLight->IsStatic() && !pLight->IsSpecularCaster())
         {
             break;
         }
@@ -748,17 +747,15 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
             {
                 continue;
             }
-            float fDX = pRegion->mMatrix.m[3][0] - mCamera.m[3][0];
-            float fDY = pRegion->mMatrix.m[3][1] - mCamera.m[3][1];
-            float fDZ = pRegion->mMatrix.m[3][2] - mCamera.m[3][2];
-            float fCamera = (fDX * fDX + fDY * fDY + fDZ * fDZ) *
+            float fIntensity = pLight->GetIntensity();
+            float fCamera = SquaredLength(pRegion->mMatrix.GetTranslation() - mCamera.GetTranslation()) *
                             LIGHT_MAX_PREFERED_CAMERA_DISTANCE_INVSQR;
             float fDivisor = 1.0f;
             if (fCamera > 1.0f)
             {
                 fDivisor = fCamera;
             }
-            fPriority = pLight->GetIntensity() / fDivisor;
+            fPriority = fIntensity / fDivisor;
         }
 
         int i = 0;
@@ -814,7 +811,7 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
 
     if (iMaxOmniLights > 0)
     {
-        float afOmniPriority[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        float afOmniPriority[4] = { 0 };
         if (iMaxOmniLights > 4)
         {
             iMaxOmniLights = 4;
@@ -832,30 +829,23 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
                 continue;
             }
 
-            float fRadius = pLight->m_radius;
-            float fDX = pLight->m_pos.x - sphere.x;
-            float fDY = pLight->m_pos.y - sphere.y;
-            float fDZ = pLight->m_pos.z - sphere.z;
-            float fDistSq = fDX * fDX + fDY * fDY + fDZ * fDZ;
-            float fReach = sphere.GetRadius() + fRadius;
+            float fDistSq = SquaredLength(pLight->m_pos - sphere.GetCenter());
+            float fReach = sphere.GetRadius() + pLight->m_radius;
             if (fDistSq >= fReach * fReach)
             {
                 continue;
             }
 
-            float fRadiusSq = fRadius * fRadius;
+            float fIntensity = pLight->GetIntensity();
+            float fRadiusSq = pLight->m_radius * pLight->m_radius;
             float fDivisor = 1.0f;
             float fDist4 = fDistSq * 4.0f;
-            float fIntensity = pLight->GetIntensity();
             if (fDist4 > fRadiusSq)
             {
                 fIntensity *= fRadiusSq;
                 fDivisor = fDist4;
             }
-            fDX = pLight->m_pos.x - mCamera.m[3][0];
-            fDY = pLight->m_pos.y - mCamera.m[3][1];
-            fDZ = pLight->m_pos.z - mCamera.m[3][2];
-            float fCamera = (fDX * fDX + fDY * fDY + fDZ * fDZ) *
+            float fCamera = SquaredLength(pLight->m_pos - mCamera.GetTranslation()) *
                             LIGHT_MAX_PREFERED_CAMERA_DISTANCE_INVSQR;
             if (fCamera > 1.0f)
             {
@@ -930,11 +920,11 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
                 continue;
             }
 
-            float fRadius = sphere.GetRadius();
-            float fReach = fRadius + pLight->m_fRadius;
             float fDX = pLight->m_vPos.x - sphere.x;
             float fDY = pLight->m_vPos.y - sphere.y;
             float fDZ = pLight->m_vPos.z - sphere.z;
+            float fRadius = sphere.GetRadius();
+            float fReach = fRadius + pLight->m_fRadius;
             float fDistSq = fDX * fDX + fDY * fDY + fDZ * fDZ;
             if (fDistSq >= fReach * fReach)
             {
@@ -945,10 +935,10 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
                 continue;
             }
 
+            float fIntensity = pLight->GetIntensity();
             float fRadiusSq = pLight->m_fRadius * pLight->m_fRadius;
             float fDivisor = 1.0f;
             float fDist4 = fDistSq * 4.0f;
-            float fIntensity = pLight->GetIntensity();
             if (fDist4 > fRadiusSq)
             {
                 fIntensity *= fRadiusSq;
@@ -1466,8 +1456,8 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
     state.pDirectionalLights[0] = m_sGlobalDirectionals[0];
     state.pDirectionalFactor[0] = m_sGlobalDirectionalFactor[0];
     state.pDirectionalLights[1] = m_sGlobalDirectionals[1];
-    state.pDirectionalFactor[1] = m_sGlobalDirectionalFactor[1];
     state.numDirectionalLights = 2;
+    state.pDirectionalFactor[1] = m_sGlobalDirectionalFactor[1];
     state.ambientLight = *m_sGlobalAmbient;
     state.pEnvMap = RedTexture::Find(m_sGlobalEnvMapHash);
     state.envMapFactor = 1.0f;

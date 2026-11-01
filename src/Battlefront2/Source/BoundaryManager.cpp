@@ -173,8 +173,7 @@ bool Boundary::IsInBounds(const PblVector3& vPos) const
 {
     for (int i = 0; i < mCount; ++i)
     {
-        const Edge& edge = mEdges[i];
-        if ((vPos.z - edge.z) * edge.nz + (vPos.x - edge.x) * edge.nx > 0.0f)
+        if ((vPos.z - mEdges[i].z) * mEdges[i].nz + (vPos.x - mEdges[i].x) * mEdges[i].nx > 0.0f)
         {
             return false;
         }

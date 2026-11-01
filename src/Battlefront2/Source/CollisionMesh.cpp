@@ -615,7 +615,7 @@ void CollisionMesh::__GetTriHits(const PblVector3& vPos, float fRadius2, const P
         float fDist2 = 0.0f;
         for (i = 0; i < 3; ++i)
         {
-            if (pBoxMin[i] > pPos[i])
+            if (pPos[i] < pBoxMin[i])
             {
                 fDist2 += (pPos[i] - pBoxMin[i]) * (pPos[i] - pBoxMin[i]);
             }
@@ -647,9 +647,15 @@ void CollisionMesh::__GetTriHits(const PblVector3& vPos, float fRadius2, const P
     if (!pNode->isleaf)
     {
         CollisionAABB lAABB;
-        lAABB = CollisionAABB(aabb, (pNode + 1)->aabb);
+        {
+            CollisionAABB childAABB(aabb, (pNode + 1)->aabb);
+            lAABB = childAABB;
+        }
         CollisionAABB gAABB;
-        gAABB = CollisionAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
+        {
+            CollisionAABB childAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
+            gAABB = childAABB;
+        }
         ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, pNode + 1, lAABB, list, pCache);
         ((CollisionMesh*)pMesh)->__GetTriHits(vPos, fRadius2, vMin, vMax, (CollisionTreeNode*)pNode->data, gAABB, list, pCache);
         return;

@@ -1455,7 +1455,7 @@ bool SoldierAnimator::UpdateActionAnimation(SoldierAnimType::ActionAnimation eAc
         PblVector3 vAxis;
         if (vTravel.x * vTravel.x + vTravel.y * vTravel.y + vTravel.z * vTravel.z > 0.0001f)
         {
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(&vTravel));
+            vAxis = Normalize(vTravel);
         }
         else
         {

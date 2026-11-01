@@ -1037,7 +1037,7 @@ void RedWater::pcRenderSplash<CompressedWaterSplashVertex, 37506>(
     {
         float fInv = 1.0f / fSpeed;
         vDir.x = fInv * vVelocity.x;
-        vDir.z = vVelocity.z * fInv;
+        vDir.z = vDir.z * fInv;
         fSpeed -= 2.0f;
     }
     else
@@ -1067,10 +1067,18 @@ void RedWater::pcRenderSplash<CompressedWaterSplashVertex, 37506>(
         return;
     }
 
+    PblBox box(vWorldMin, vWorldMax);
     pcRedPrimitive* pPrim = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 37506,
                                                    sizeof(CompressedWaterSplashVertex),
                                                    2 * iNumSegments + 2, 0, false);
-    pcSetRingBoundingBox(pPrim, vWorldMin, vWorldMax);
+    pPrim->m_bbox = box;
+    CompressedPos::s_vMin = box._vMin;
+    CompressedPos::s_vScale = PblVector3((box._vMax.x - box._vMin.x) * (1.0f / 65535.0f),
+                                         (box._vMax.y - box._vMin.y) * (1.0f / 65535.0f),
+                                         (box._vMax.z - box._vMin.z) * (1.0f / 65535.0f));
+    CompressedPos::s_vScaleInv = PblVector3(1.0f / CompressedPos::s_vScale.x,
+                                            1.0f / CompressedPos::s_vScale.y,
+                                            1.0f / CompressedPos::s_vScale.z);
     CompressedWaterSplashVertex* pVert =
         (CompressedWaterSplashVertex*)pPrim->BeginVertexData();
     if (!pVert)
@@ -1099,21 +1107,18 @@ void RedWater::pcRenderSplash<CompressedWaterSplashVertex, 37506>(
 
     float fU = fTexStart;
     float fDrop = m_fWaterHeightOffset - fAge * 5.0f * fAge;
-    float fDirScale = fSpeedScale * 2.0f;
-    float fDirBias = 1.0f - fSpeedScale;
-    float fBaseOut = fRise * 0.4f;
-    short iBaseV = (short)((0.98f - fRise * 0.3f / fReach) * 2048.0f);
     for (int i = 0; i <= iNumSegments; ++i)
     {
         float fSegSin, fSegCos;
         PblMath::SinCos(&fSegSin, &fSegCos, (float)i * PblMath::fTwoPi / (float)iNumSegments);
-        float fLength = ((vDir.z * fSegSin + vDir.x * fSegCos) * fDirScale + fDirBias) *
+        float fLength = ((vDir.z * fSegSin + vDir.x * fSegCos) * (fSpeedScale * 2.0f) +
+                         (1.0f - fSpeedScale)) *
                         (rand.GetFloat() * fRise);
         if (fLength < 0.0f)
         {
             fLength = 0.0f;
         }
-        float fBase = fBaseOut * fCos + fRadius;
+        float fBase = fRise * 0.4f * fCos + fRadius;
         float fTop = fLength * fCos + fRadius;
         float fTopY = fLength * fSin + fDrop;
         if (fTopY < 0.0f)
@@ -1124,7 +1129,7 @@ void RedWater::pcRenderSplash<CompressedWaterSplashVertex, 37506>(
         pcSetPos(pVert[0].pos, PblVector3(vPos.x + fSegCos * fBase, vPos.y + 0.0f,
                                           vPos.z + fSegSin * fBase));
         pVert[0].uv.u = (short)(fU * 2048.0f);
-        pVert[0].uv.v = iBaseV;
+        pVert[0].uv.v = (short)((0.98f - fRise * 0.3f / fReach) * 2048.0f);
         pVert[0].color = baseColor;
         pcSetPos(pVert[1].pos, PblVector3(vPos.x + fSegCos * fTop, vPos.y + fTopY,
                                           vPos.z + fSegSin * fTop));
@@ -1160,7 +1165,7 @@ void RedWater::pcRenderSplash<WaterSplashVertex, 642>(
     {
         float fInv = 1.0f / fSpeed;
         vDir.x = fInv * vVelocity.x;
-        vDir.z = vVelocity.z * fInv;
+        vDir.z = vDir.z * fInv;
         fSpeed -= 2.0f;
     }
     else
@@ -1190,10 +1195,18 @@ void RedWater::pcRenderSplash<WaterSplashVertex, 642>(
         return;
     }
 
+    PblBox box(vWorldMin, vWorldMax);
     pcRedPrimitive* pPrim = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 642,
                                                    sizeof(WaterSplashVertex),
                                                    2 * iNumSegments + 2, 0, false);
-    pcSetRingBoundingBox(pPrim, vWorldMin, vWorldMax);
+    pPrim->m_bbox = box;
+    CompressedPos::s_vMin = box._vMin;
+    CompressedPos::s_vScale = PblVector3((box._vMax.x - box._vMin.x) * (1.0f / 65535.0f),
+                                         (box._vMax.y - box._vMin.y) * (1.0f / 65535.0f),
+                                         (box._vMax.z - box._vMin.z) * (1.0f / 65535.0f));
+    CompressedPos::s_vScaleInv = PblVector3(1.0f / CompressedPos::s_vScale.x,
+                                            1.0f / CompressedPos::s_vScale.y,
+                                            1.0f / CompressedPos::s_vScale.z);
     WaterSplashVertex* pVert = (WaterSplashVertex*)pPrim->BeginVertexData();
     if (!pVert)
     {
@@ -1221,21 +1234,18 @@ void RedWater::pcRenderSplash<WaterSplashVertex, 642>(
 
     float fU = fTexStart;
     float fDrop = m_fWaterHeightOffset - fAge * 5.0f * fAge;
-    float fDirScale = fSpeedScale * 2.0f;
-    float fDirBias = 1.0f - fSpeedScale;
-    float fBaseOut = fRise * 0.4f;
-    float fBaseV = 0.98f - fRise * 0.3f / fReach;
     for (int i = 0; i <= iNumSegments; ++i)
     {
         float fSegSin, fSegCos;
         PblMath::SinCos(&fSegSin, &fSegCos, (float)i * PblMath::fTwoPi / (float)iNumSegments);
-        float fLength = ((vDir.z * fSegSin + vDir.x * fSegCos) * fDirScale + fDirBias) *
+        float fLength = ((vDir.z * fSegSin + vDir.x * fSegCos) * (fSpeedScale * 2.0f) +
+                         (1.0f - fSpeedScale)) *
                         (rand.GetFloat() * fRise);
         if (fLength < 0.0f)
         {
             fLength = 0.0f;
         }
-        float fBase = fBaseOut * fCos + fRadius;
+        float fBase = fRise * 0.4f * fCos + fRadius;
         float fTop = fLength * fCos + fRadius;
         float fTopY = fLength * fSin + fDrop;
         if (fTopY < 0.0f)
@@ -1243,16 +1253,18 @@ void RedWater::pcRenderSplash<WaterSplashVertex, 642>(
             fTopY = 0.0f;
         }
 
-        pVert[0].pos = PblVector3(vPos.x + fSegCos * fBase, vPos.y + 0.0f,
-                                  vPos.z + fSegSin * fBase);
-        pVert[0].color = baseColor;
+        pVert[0].pos.x = vPos.x + fSegCos * fBase;
+        pVert[0].pos.y = vPos.y + 0.0f;
+        pVert[0].pos.z = vPos.z + fSegSin * fBase;
+        pVert[0].uv.v = 0.98f - fRise * 0.3f / fReach;
         pVert[0].uv.u = fU;
-        pVert[0].uv.v = fBaseV;
-        pVert[1].pos = PblVector3(vPos.x + fSegCos * fTop, vPos.y + fTopY,
-                                  vPos.z + fSegSin * fTop);
-        pVert[1].color = topColor;
-        pVert[1].uv.u = fU;
+        pVert[0].color = baseColor;
+        pVert[1].pos.x = vPos.x + fSegCos * fTop;
+        pVert[1].pos.y = vPos.y + fTopY;
+        pVert[1].pos.z = vPos.z + fSegSin * fTop;
         pVert[1].uv.v = 0.01f;
+        pVert[1].uv.u = fU;
+        pVert[1].color = topColor;
         pVert += 2;
         if (fLength == 0.0f)
         {
@@ -1705,7 +1717,6 @@ void* RedWater::PlatformReadCustomPatch(PblFileChunk* pChunk)
     }
 
     PblFileChunk patch = pChunk->ReadNextChild();
-    pcRedPrimitive* pPrimitive = 0;
     if (patch._iId == 0x4354504C)
     {
         PblBox bbox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -1774,15 +1785,16 @@ void* RedWater::PlatformReadCustomPatch(PblFileChunk* pChunk)
 
         if (pVertexBuffer && pIndexBuffer && (uiVertexFormat & 0xFFFF0FFF) == 0x222)
         {
-            pPrimitive = pcRedPrimitive::Create(
+            pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(
                 D3DPT_TRIANGLESTRIP, uiNumIndices - 2, uiVertexFormat, uiNumVertices,
                 uiStartVertex, pVertexBuffer, uiStartIndex, pIndexBuffer);
             pPrimitive->m_bbox = bbox;
             pIndexBuffer->Release();
             pVertexBuffer->Release();
+            return pPrimitive;
         }
     }
-    return pPrimitive;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00720020
@@ -2063,9 +2075,9 @@ void RedWater::pcAccumulateNormalMap()
 
         float fAge = m_waterTimeStamp.GetElapsed() - event.startTime;
         float fRadius = fAge * 1.5f + event.radius;
-        float fDX = pCamera->_Matrix.m[3][0] - event.worldPos.x;
         float fDZ = pCamera->_Matrix.m[3][2] - event.worldPos.z;
         float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
+        float fDX = pCamera->_Matrix.m[3][0] - event.worldPos.x;
         if (fDY * fDY + fDX * fDX + fDZ * fDZ < WATEREVENT_MAX_VISIBLE_DISTANCESQR)
         {
             ++event.in_range;

@@ -447,10 +447,7 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
     unsigned int auiTextures[4] = { 0, 0, 0, 0 };
     unsigned int uiMaterialFlags = 0;
     unsigned int uiMaterialName = 0;
-    RedShaderData shaderData;
-    shaderData.uiData0 = 0;
-    shaderData.uiData1 = 0;
-    shaderData.attachedLightName = 0;
+    RedShaderData shaderData = {};
     char acRenderType[256];
     char acName[256];
 
@@ -469,11 +466,15 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
                 uiMaterialFlags |= 0xC000;
             }
             unsigned int uiColor = child._pFile->Read32();
-            diffuse = RedColor((unsigned char)uiColor, (unsigned char)(uiColor >> 8),
-                               (unsigned char)(uiColor >> 16), (unsigned char)(uiColor >> 24));
+            diffuse.r = (unsigned char)uiColor;
+            diffuse.g = (unsigned char)(uiColor >> 8);
+            diffuse.b = (unsigned char)(uiColor >> 16);
+            diffuse.a = (unsigned char)(uiColor >> 24);
             uiColor = child._pFile->Read32();
-            specular = RedColor((unsigned char)uiColor, (unsigned char)(uiColor >> 8),
-                                (unsigned char)(uiColor >> 16), (unsigned char)(uiColor >> 24));
+            specular.r = (unsigned char)uiColor;
+            specular.g = (unsigned char)(uiColor >> 8);
+            specular.b = (unsigned char)(uiColor >> 16);
+            specular.a = (unsigned char)(uiColor >> 24);
             fSpecularPower = (float)child._pFile->Read32();
             shaderData.uiData0 = (unsigned char)child._pFile->Read32();
             shaderData.uiData1 = (unsigned char)child._pFile->Read32();

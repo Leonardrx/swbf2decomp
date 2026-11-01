@@ -126,25 +126,15 @@ void Chunk::ClearAll()
 
     for (int i = 0; i < 3; i++)
     {
-        if (mTrailEmitters[i].mObject)
+        if (mTrailEmitters[i])
         {
-            FLEffectObject* pEffect = mTrailEmitters[i];
-            if (pEffect)
-            {
-                pEffect->StopAndFinish();
-            }
-            mTrailEmitters[i].mSavedHandleId = 0;
-            mTrailEmitters[i].mObject = NULL;
+            mTrailEmitters[i]->StopAndFinish();
+            mTrailEmitters[i] = NULL;
         }
-        if (mSmokeEmitters[i].mObject)
+        if (mSmokeEmitters[i])
         {
-            FLEffectObject* pEffect = mSmokeEmitters[i];
-            if (pEffect)
-            {
-                pEffect->StopAndFinish();
-            }
-            mSmokeEmitters[i].mSavedHandleId = 0;
-            mSmokeEmitters[i].mObject = NULL;
+            mSmokeEmitters[i]->StopAndFinish();
+            mSmokeEmitters[i] = NULL;
         }
     }
     mTotalUpdateDt = 0.0f;
@@ -277,9 +267,9 @@ void Chunk::SetData(ChunkDescriptor& desc)
     if (mPhysicsType == PHYSICS_COCKPIT)
     {
         const PblMatrix& m = mCollisionMatrix;
-        float fX = DotProduct(mVelocity, m.GetXAxis());
-        float fY = DotProduct(mVelocity, m.GetYAxis());
-        float fZ = DotProduct(mVelocity, m.GetZAxis());
+        float fX = DotProduct(m.GetXAxis(), mVelocity);
+        float fY = DotProduct(m.GetYAxis(), mVelocity);
+        float fZ = DotProduct(m.GetZAxis(), mVelocity);
         if (fX > fY)
         {
             mForwardAxis = (fX > fZ) ? 0 : 2;
@@ -438,41 +428,51 @@ void Chunk::Update(float fDeltaTime)
 
     bCollisionOnUpdate = false;
     PblVector3 vPos = mCollisionMatrix.GetTranslation();
-    PblVector3 vForce(mGravity.x * mMass + 0.0f - mVelocity.x * mLinearDamping,
-                      mGravity.y * mMass + 0.0f - mVelocity.y * mLinearDamping,
-                      mGravity.z * mMass + 0.0f - mVelocity.z * mLinearDamping);
+    PblVector3 vForce(0.0f, 0.0f, 0.0f);
+    vForce += mGravity * mMass;
+    vForce -= mVelocity * mLinearDamping;
 
     if (mPhysicsType == PHYSICS_COCKPIT)
     {
-
-        PblVector3 vForward = Normalize(mVelocity);
         switch (mForwardAxis)
         {
         case 0:
         {
+            PblVector3 vForward = Normalize(mVelocity);
             PblVector3 vZ = Normalize(CrossProduct(vForward, mCollisionMatrix.GetYAxis()));
             PblVector3 vY = CrossProduct(vZ, vForward);
-            SetAxis(mCollisionMatrix, 0, vForward);
-            SetAxis(mCollisionMatrix, 1, vY);
-            SetAxis(mCollisionMatrix, 2, vZ);
+            mCollisionMatrix[0] = vForward;
+            mCollisionMatrix.m[0][3] = 0.0f;
+            mCollisionMatrix[1] = vY;
+            mCollisionMatrix.m[1][3] = 0.0f;
+            mCollisionMatrix[2] = vZ;
+            mCollisionMatrix.m[2][3] = 0.0f;
             break;
         }
         case 1:
         {
+            PblVector3 vForward = Normalize(mVelocity);
             PblVector3 vX = Normalize(CrossProduct(vForward, mCollisionMatrix.GetZAxis()));
             PblVector3 vZ = CrossProduct(vX, vForward);
-            SetAxis(mCollisionMatrix, 0, vX);
-            SetAxis(mCollisionMatrix, 1, vForward);
-            SetAxis(mCollisionMatrix, 2, vZ);
+            mCollisionMatrix[0] = vX;
+            mCollisionMatrix.m[0][3] = 0.0f;
+            mCollisionMatrix[1] = vForward;
+            mCollisionMatrix.m[1][3] = 0.0f;
+            mCollisionMatrix[2] = vZ;
+            mCollisionMatrix.m[2][3] = 0.0f;
             break;
         }
         case 2:
         {
+            PblVector3 vForward = Normalize(mVelocity);
             PblVector3 vY = Normalize(CrossProduct(vForward, mCollisionMatrix.GetXAxis()));
             PblVector3 vX = CrossProduct(vY, vForward);
-            SetAxis(mCollisionMatrix, 0, vX);
-            SetAxis(mCollisionMatrix, 1, vY);
-            SetAxis(mCollisionMatrix, 2, vForward);
+            mCollisionMatrix[0] = vX;
+            mCollisionMatrix.m[0][3] = 0.0f;
+            mCollisionMatrix[1] = vY;
+            mCollisionMatrix.m[1][3] = 0.0f;
+            mCollisionMatrix[2] = vForward;
+            mCollisionMatrix.m[2][3] = 0.0f;
             break;
         }
         }
@@ -480,16 +480,14 @@ void Chunk::Update(float fDeltaTime)
     else if (mPhysicsType != PHYSICS_SIMPLE_RIGID)
     {
         float fDamping = -mAngularDamping;
-        mAngularMomentum.x += fDamping * mAngularMomentum.x * fDeltaTime;
-        mAngularMomentum.y += mAngularMomentum.y * fDamping * fDeltaTime;
-        mAngularMomentum.z += mAngularMomentum.z * fDamping * fDeltaTime;
+        mAngularMomentum += mAngularMomentum * fDamping * fDeltaTime;
         mOmega = TransformCoord(mAngularMomentum, mInverseWorldInertiaTensor);
     }
 
     PblQuaternion q = PblQuaternion(mCollisionMatrix);
-    PblMatrix mInverse = mCollisionMatrix.GetInverseFast();
     PblVector3 vSpin;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vSpin, (const D3DXVECTOR3*)&mOmega, (const D3DXMATRIX*)&mInverse);
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vSpin, (const D3DXVECTOR3*)&mOmega,
+                            (const D3DXMATRIX*)&mCollisionMatrix.GetInverseFast());
     vSpin.x *= fDeltaTime;
     vSpin.y *= fDeltaTime;
     vSpin.z *= fDeltaTime;
@@ -497,23 +495,17 @@ void Chunk::Update(float fDeltaTime)
     if (fAngle > EPSILON)
     {
         float fInv = 1.0f / fAngle;
-        q = q * PblQuaternion(PblVector3(vSpin.x * fInv, vSpin.y * fInv, vSpin.z * fInv), fAngle);
+        q = q * PblQuaternion(vSpin * fInv, fAngle);
     }
 
-    mVelocity.x += mOneOverMass * vForce.x * fDeltaTime;
-    mVelocity.y += mOneOverMass * vForce.y * fDeltaTime;
-    mVelocity.z += mOneOverMass * vForce.z * fDeltaTime;
+    mVelocity += mOneOverMass * vForce * fDeltaTime;
     if (mForceZeroYAxisVelocity)
     {
         const PblVector3& vUp = mMatrix.GetYAxis();
         float fDot = mVelocity.y * vUp.y + vUp.x * mVelocity.x + mVelocity.z * vUp.z;
-        mVelocity.x -= fDot * vUp.x;
-        mVelocity.y -= vUp.y * fDot;
-        mVelocity.z -= vUp.z * fDot;
+        mVelocity -= fDot * vUp;
     }
-    vPos.x += mVelocity.x * fDeltaTime;
-    vPos.y += mVelocity.y * fDeltaTime;
-    vPos.z += mVelocity.z * fDeltaTime;
+    vPos += mVelocity * fDeltaTime;
 
     mCollisionMatrix = PblMatrix(q, vPos);
     mMatrix = mPrimitiveMatrix * mCollisionMatrix;
@@ -525,7 +517,8 @@ void Chunk::Update(float fDeltaTime)
     rotation.m[3][1] = 0.0f;
     rotation.m[3][2] = 0.0f;
     rotation.m[3][3] = 1.0f;
-    mInverseWorldInertiaTensor = rotation.GetInverseFast() * mInverseBodyInertiaTensor * rotation;
+    const PblMatrix rotationInverse = rotation.GetInverseFast();
+    mInverseWorldInertiaTensor = rotationInverse * mInverseBodyInertiaTensor * rotation;
 
     CollisionObject* pHit = NULL;
     PblVector3 vNormal;
