@@ -279,9 +279,9 @@ void RedStencilShadow::Render(const PblMatrix* pMatrix,
     }
 
     const PblVector3& direction = RedLight::GetGlobalDirectionalLight(0)->m_vDirection;
-    const PblVector3 vLit = direction * s_fShadowVolumeOffset;
+    const PblVector3 vLit = s_fShadowVolumeOffset * direction;
     const float fLength = RedRenderer::GetStencilShadowLength() + s_fShadowVolumeOffset;
-    ShadowRenderable::s_vProjectionUnlit = direction * fLength;
+    ShadowRenderable::s_vProjectionUnlit = fLength * direction;
     ShadowRenderable::s_vProjectionLit = vLit;
 
     PblMatrix aSkinMatrices[128];
@@ -289,10 +289,11 @@ void RedStencilShadow::Render(const PblMatrix* pMatrix,
     {
         const PblMatrix* pWorld = pMatrix;
         PblMatrix* pSkin = 0;
-        const unsigned int uNumBones = it->m_uiNumBones;
-        if (uNumBones)
+        unsigned int uNumBones = 0;
+        if (it->m_uiNumBones)
         {
-            pSkin = it->m_puiBoneIndexMap ?
+            uNumBones = it->m_uiNumBones;
+            pSkin = it->m_pPrimitive ?
                 RedRenderer::AllocBoneMatricesInCache(uNumBones) : aSkinMatrices;
             if (pPose)
             {
@@ -311,30 +312,27 @@ void RedStencilShadow::Render(const PblMatrix* pMatrix,
                                                          uNumBones);
             }
         }
-        else
+        else if (pPose)
         {
             const unsigned int uBone = it->m_uiBoneIndex;
-            if (pPose)
+            if (ppBoneMatrices)
             {
-                if (ppBoneMatrices)
-                {
-                    if (!ppBoneMatrices[uBone])
-                    {
-                        PblMatrix bone = pPose->_GetBoneMatrix(uBone) * *pMatrix;
-                        ppBoneMatrices[uBone] = RedRenderer::AllocMatrixInCache(bone);
-                    }
-                    pWorld = ppBoneMatrices[uBone];
-                }
-                else
+                if (!ppBoneMatrices[uBone])
                 {
                     PblMatrix bone = pPose->_GetBoneMatrix(uBone) * *pMatrix;
-                    pWorld = RedRenderer::AllocMatrixInCache(bone);
+                    ppBoneMatrices[uBone] = RedRenderer::AllocMatrixInCache(bone);
                 }
-            }
-            else if (ppBoneMatrices)
-            {
                 pWorld = ppBoneMatrices[uBone];
             }
+            else
+            {
+                PblMatrix bone = pPose->_GetBoneMatrix(uBone) * *pMatrix;
+                pWorld = RedRenderer::AllocMatrixInCache(bone);
+            }
+        }
+        else if (ppBoneMatrices)
+        {
+            pWorld = ppBoneMatrices[it->m_uiBoneIndex];
         }
         it->Render(pWorld, pSkin, uNumBones, 4);
     }

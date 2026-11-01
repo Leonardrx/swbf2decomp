@@ -488,29 +488,25 @@ int RequestLandHints(const UnitController* pController, const PblVector3& vPos,
     if (iCount > 0)
     {
         const BaseHint** ppLast = &ppHints[iCount - 1];
-        do
+        while (i < iCount)
         {
             const BaseHint* pHint = ppHints[i];
             const CommandPost* const pPost = pHint->GetCommandPost();
-            bool bKeep = false;
             if (pPost)
             {
                 const bool bOwned = pPost->CanTeamSpawnHere(iTeam);
-                if ((bGotoNonOwnedCP ? !bOwned : bOwned) && pHint->GetCollisionCenter().y <= vPos.y)
+                if ((bGotoNonOwnedCP && !bOwned) || (!bGotoNonOwnedCP && bOwned))
                 {
-                    bKeep = true;
+                    if (!(pHint->GetCollisionCenter().y > vPos.y))
+                    {
+                        ++i;
+                        continue;
+                    }
                 }
             }
-            if (bKeep)
-            {
-                ++i;
-            }
-            else
-            {
-                --iCount;
-                ppHints[i] = *ppLast--;
-            }
-        } while (i < iCount);
+            --iCount;
+            ppHints[i] = *ppLast--;
+        }
     }
     return iCount;
 }
