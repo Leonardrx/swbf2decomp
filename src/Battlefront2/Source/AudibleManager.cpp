@@ -63,7 +63,7 @@ void AudibleManager::UpdateAudience(Controller* pController)
         fRadius = 100.0f;
     }
     pController->mForceAudible = false;
-    if (fRadius > 30.0f)
+    if (!(fRadius < 30.0f))
     {
         fRadius = 30.0f;
     }
@@ -71,12 +71,12 @@ void AudibleManager::UpdateAudience(Controller* pController)
     if (!pObject->IsRtti(EntitySoldier::rttiHashEntitySoldier) ||
         static_cast<const EntitySoldier*>(pObject)->GetInvisibilityFactor() < 0.1f)
     {
-        if (fRadius < 8.0f)
+        if (!(fRadius > 8.0f))
         {
             fRadius = 8.0f;
         }
     }
-    if (fRadius <= 0.0f)
+    if (!(fRadius > 0.0f))
     {
         return;
     }
@@ -99,8 +99,8 @@ void AudibleManager::UpdateAudience(Controller* pController)
             vDelta.x = vPos.x - vListener.x;
             vDelta.y = vPos.y - vListener.y;
             vDelta.z = vPos.z - vListener.z;
-            const PblVector3 vDir = AIUtil::GetSafeNormal(vDelta);
-            if (!(0.87f > (float)fabs((double)(vDir.y * gVectorUnitY.y + vDir.x * gVectorUnitY.x + vDir.z * gVectorUnitY.z))) &&
+            const PblVector3& vDir = AIUtil::GetSafeNormal(vDelta);
+            if (!(0.87f > (float)fabs((double)(vDir.x * gVectorUnitY.x + vDir.y * gVectorUnitY.y + vDir.z * gVectorUnitY.z))) &&
                 !(12.25f > vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z))
             {
                 continue;

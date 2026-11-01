@@ -941,7 +941,7 @@ void PlayerController::CheckForVisibleCriticalPts()
         return;
     }
     mNextCritHitTime = fTime + 5.0f;
-    if (!pOwner)
+    if (!mOwner)
     {
         return;
     }
@@ -970,7 +970,7 @@ void PlayerController::CheckForVisibleCriticalPts()
     {
         return;
     }
-    PblMatrix mFire = pOwner->GetAimer(0)->GetFireMatrix();
+    const PblMatrix& mFire = pOwner->GetAimer(0)->GetFireMatrix();
     const PblVector3& vForward = mFire.GetZAxis();
     const PblVector3& vFirePos = pOwner->GetAimer(0)->mFirePos;
     CollisionModel* pModel = pTarget->mCollisionModel;
@@ -987,10 +987,10 @@ void PlayerController::CheckForVisibleCriticalPts()
         {
             continue;
         }
-        PblMatrix mBody = pModel->GetWorldMatrix(iBody, pTarget->GetMatrix(), pTarget->GetPose());
-        float fX = mBody.m[3][0] - vFirePos.x;
-        float fY = mBody.m[3][1] - vFirePos.y;
-        float fZ = mBody.m[3][2] - vFirePos.z;
+        const PblVector3 vBody = pModel->GetWorldMatrix(iBody, pTarget->GetMatrix(), pTarget->GetPose()).GetTranslation();
+        float fX = vBody.x - vFirePos.x;
+        float fY = vBody.y - vFirePos.y;
+        float fZ = vBody.z - vFirePos.z;
         float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
         if (fDist > 50.0f)
         {
@@ -1003,10 +1003,14 @@ void PlayerController::CheckForVisibleCriticalPts()
             continue;
         }
         PblVector3 vHit;
+        CollisionObject* pCollision = ((GameObject*)pTarget)->GetCollisionObject();
         int iHitBody = -1;
-        float fHit = ((GameObject*)pTarget)->GetCollisionObject()->RayHit(vFirePos, vDir, fDist, &vHit,
-                                                                         &iHitBody, true, 0.0f);
-        if (fHit < 1.0f && iHitBody == iBody)
+        float fHit = pCollision->RayHit(vFirePos, vDir, fDist, &vHit, &iHitBody, true, 0.0f);
+        if (fHit >= 1.0f)
+        {
+            continue;
+        }
+        if (iHitBody == iBody)
         {
             return;
         }

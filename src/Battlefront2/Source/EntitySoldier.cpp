@@ -3293,33 +3293,30 @@ GameObject* EntitySoldier::TryBoard(bool bArg, bool& rIsVehicle)
     float fBestPrio = 3.402823466e+38F;
     for (int i = 0; i < iCount; ++i)
     {
-        GameObject* pObject = apObjects[i];
-        if (pObject->GetModel())
+        if (apObjects[i]->GetModel())
         {
-            const PblBox& box = pObject->GetModel()->_mModel->_TotalBoundingBox;
+            const PblBox box = apObjects[i]->GetModel()->_mModel->_TotalBoundingBox;
             const PblVector3 vMin(box._vMin.x - (GetCollisionRadius() + 0.5f),
                                   box._vMin.y - (GetCollisionRadius() + 0.5f),
                                   box._vMin.z - (GetCollisionRadius() + 0.5f));
             const PblVector3 vMax(box._vMax.x + (GetCollisionRadius() + 0.5f),
                                   box._vMax.y + (GetCollisionRadius() + 0.5f),
                                   box._vMax.z + (GetCollisionRadius() + 0.5f));
-            PblMatrix mInverse = pObject->GetMatrix().GetInverseFast();
-            PblVector3 vLocal;
-            D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vLocal), reinterpret_cast<const D3DXVECTOR3*>(&GetCollisionCenter()), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
-            if (vLocal.x < vMin.x || vMax.x < vLocal.x || vLocal.y < vMin.y || vMax.y < vLocal.y ||
-                vLocal.z < vMin.z || vMax.z < vLocal.z)
+            const PblVector3 vLocal = apObjects[i]->GetMatrix().GetInverseFast().ApplyTransform(GetCollisionCenter());
+            if (!(vLocal.x >= vMin.x && vMax.x >= vLocal.x && vLocal.y >= vMin.y && vMax.y >= vLocal.y &&
+                  vLocal.z >= vMin.z && vMax.z >= vLocal.z))
             {
                 continue;
             }
         }
 
         GameObject* pTerminal = 0;
-        if (pObject->IsRtti(EntityRemoteTerminal::rttiHashEntityRemoteTerminal))
+        if (apObjects[i]->IsRtti(EntityRemoteTerminal::rttiHashEntityRemoteTerminal))
         {
-            if (!CanEnterVehicle(pObject))
+            if (!CanEnterVehicle(apObjects[i]))
             {
 
-                EntityRemoteTerminal* pRemote = (EntityRemoteTerminal*)pObject;
+                EntityRemoteTerminal* pRemote = (EntityRemoteTerminal*)apObjects[i];
                 pTerminal = (GameObject*)pRemote->GetNextAvailableTerminal(this);
                 if (!pTerminal)
                 {
@@ -3331,12 +3328,12 @@ GameObject* EntitySoldier::TryBoard(bool bArg, bool& rIsVehicle)
                 }
             }
         }
-        else if (!CanEnterVehicle(pObject))
+        else if (!CanEnterVehicle(apObjects[i]))
         {
             continue;
         }
 
-        const CollisionObject* pCollision = pObject->GetCollisionObject();
+        const CollisionObject* pCollision = apObjects[i]->GetCollisionObject();
         float fPrio = TargetInfo::GetTargetPrio(mEyePoint, mEyeDir, pCollision->GetCollisionCenter(),
                                                 pCollision->GetCollisionRadius(), 1.0f, 5.0f, false);
         if (fPrio < 0.0f || fBestPrio <= fPrio)
@@ -3344,7 +3341,7 @@ GameObject* EntitySoldier::TryBoard(bool bArg, bool& rIsVehicle)
             continue;
         }
         fBestPrio = fPrio;
-        pBest = pTerminal ? pTerminal : pObject;
+        pBest = pTerminal ? pTerminal : apObjects[i];
     }
     if (!pBest)
     {
@@ -3516,19 +3513,19 @@ bool EntitySoldier::UpdateIndirect(float fDeltaTime)
             {
                 switch (lowLevel.mHeight)
                 {
-                case HEIGHT_STAND:
-                case HEIGHT_WALK:
-                    Stand();
-                    break;
                 case HEIGHT_CROUCH:
                 case HEIGHT_PRONE:
                     Crouch();
                     break;
                 case HEIGHT_SPRINT:
-                    if (!Sprint())
+                    if (Sprint())
                     {
-                        Stand();
+                        break;
                     }
+                    // could not sprint: stand instead
+                case HEIGHT_STAND:
+                case HEIGHT_WALK:
+                    Stand();
                     break;
                 }
             }
@@ -3543,21 +3540,11 @@ bool EntitySoldier::UpdateIndirect(float fDeltaTime)
             float fDiff = fHoverHeight - GetPosition().y;
             if (fDiff > 0.0f)
             {
-                float fRise = fDiff * 0.35f;
-                if (fRise >= fDeltaTime * 30.0f)
-                {
-                    fRise = fDeltaTime * 30.0f;
-                }
-                mMatrix.m[3][1] += fRise;
+                mMatrix[3] += PblVector3(0.0f, Min(fDiff * 0.35f, fDeltaTime * 30.0f), 0.0f);
             }
             else if (fDiff < 0.0f)
             {
-                float fRise = fDiff * 0.35f;
-                if (fRise <= fDeltaTime * -30.0f)
-                {
-                    fRise = fDeltaTime * -30.0f;
-                }
-                mMatrix.m[3][1] += fRise;
+                mMatrix[3] += PblVector3(0.0f, Max(fDiff * 0.35f, fDeltaTime * -30.0f), 0.0f);
             }
         }
     }
@@ -3583,15 +3570,15 @@ bool EntitySoldier::UpdateIndirect(float fDeltaTime)
                GetClassMaxTurnSpeed(), mClass->mMaxPitchSpeed, &fThrust, &fStrafe, &fTurn, &fPitch);
 
     const PblVector3& vPos = GetPosition();
-    float fStep = mClass->mMaxSpeed * fDeltaTime;
     float fDx = vPos.x - lowLevel.mDest.mPos.x;
     float fDz = vPos.z - lowLevel.mDest.mPos.z;
+    float fStep = mClass->mMaxSpeed * fDeltaTime;
     float fDistSq = fDz * fDz + fDx * fDx;
     if (fStep * fStep > fDistSq)
     {
         float fScale = (float)sqrt((double)fDistSq) / fStep;
-        fStrafe = fScale * fStrafe;
         fThrust = fScale * fThrust;
+        fStrafe = fScale * fStrafe;
     }
     mControlStrafe = fStrafe;
     mControlTurn = fTurn;

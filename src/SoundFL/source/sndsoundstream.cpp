@@ -480,7 +480,8 @@ void __cdecl SoundStream::Play(const Properties* pProps, Source3D* pSource3D, bo
         return;
     }
 
-    const unsigned int uiIndex = (unsigned int)(pStream - EngineBase::smStreams);
+    const unsigned int uiIndex =
+        ((unsigned int)pStream - (unsigned int)EngineBase::smStreams) / sizeof(Stream);
 
     if (bQueue)
     {
@@ -499,16 +500,15 @@ void __cdecl SoundStream::Play(const Properties* pProps, Source3D* pSource3D, bo
     }
 
     Stream* const pPlaying = &EngineBase::smStreams[uiIndex];
-    if (pPlaying->GetPlayState() != SourceTransport::playState_stopped && smPlayingProps[uiIndex])
+    // A playing stream is replaced only by a sound of at least its priority (a NaN loses).
+    if (pPlaying->GetPlayState() != SourceTransport::playState_stopped && smPlayingProps[uiIndex]
+        && !(fPriority >= smPlayingProps[uiIndex]->CalculatePriority(&smPlayingPos[uiIndex],
+                                                                     &smPlayingVel[uiIndex])))
     {
-        if (fPriority < smPlayingProps[uiIndex]->CalculatePriority(&smPlayingPos[uiIndex],
-                                                                   &smPlayingVel[uiIndex]))
-        {
-            return;
-        }
+        return;
     }
 
-    if (!pProps->SetupStream(pPlaying, uiSegmentID))
+    if (!pProps->SetupStream(&EngineBase::smStreams[uiIndex], uiSegmentID))
     {
         return;
     }

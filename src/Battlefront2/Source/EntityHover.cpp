@@ -1533,18 +1533,23 @@ bool EntityHover::Update(float fDeltaTime)
                 mClass->mExplosion->CreateExplosion(mMatrix.GetTranslation(), owner, false, COLL_UNKNOWN);
             }
         }
-        if (!NetGame::IsEnabled() || !mIsDead)
+        if (!NetGame::IsEnabled())
+        {
+            CreateChunkCluster(1.0f);
+            Kill();
+            return false;
+        }
+        if (!mIsDead)
         {
             CreateChunkCluster(1.0f);
             Kill();
         }
-        if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+        if (!NetGame::IsClient())
         {
             return false;
         }
     }
-
-    if (!(NetGame::IsEnabled() && NetGame::IsClient()))
+    else if (!(NetGame::IsEnabled() && NetGame::IsClient()))
     {
         PblVector3 vPos = mMatrix.GetTranslation();
         if (-500.0f > vPos.y)
@@ -1566,9 +1571,10 @@ bool EntityHover::Update(float fDeltaTime)
         float fLoseDist = 2500.0f;
         for (int i = 0; i < 2; ++i)
         {
-            if (mWeaponIndex[i] != -1)
+            int iWeapon = mWeaponIndex[i];
+            if (iWeapon != -1)
             {
-                const WeaponClass* pClass = mWeapon[mWeaponIndex[i]]->mClass;
+                const WeaponClass* pClass = mWeapon[iWeapon]->mClass;
                 iTypes = pClass->mTargetTypes;
                 fLockDist = pClass->mTargetLockMaxDistance;
                 fLoseDist = pClass->mTargetLockMaxDistanceLose;
@@ -1603,9 +1609,10 @@ bool EntityHover::Update(float fDeltaTime)
         int iTypes = 0;
         for (int i = 0; i < 2; ++i)
         {
-            if (mWeaponIndex[i] != -1)
+            int iWeapon = mWeaponIndex[i];
+            if (iWeapon != -1)
             {
-                iTypes = mWeapon[mWeaponIndex[i]]->mClass->mTargetTypes;
+                iTypes = mWeapon[iWeapon]->mClass->mTargetTypes;
                 break;
             }
         }
@@ -1664,31 +1671,15 @@ bool EntityHover::Update(float fDeltaTime)
             mCurrSuspensionOffset = mClass->mMaxSuspensionOffset;
             mSuspensionVelocity = 0.0f;
         }
-        bool bTurn = true;
-        if (mClass->mMidSuspensionOffset > mNextSuspensionOffset)
+        bool bRising = mClass->mMidSuspensionOffset > mNextSuspensionOffset;
+        if (bRising ? (mNextSuspensionOffset > mCurrSuspensionOffset || mSuspensionVelocity > 0.0f)
+                    : (mCurrSuspensionOffset > mNextSuspensionOffset || 0.0f > mSuspensionVelocity))
         {
-            if (mNextSuspensionOffset > mCurrSuspensionOffset)
+            if (bRising ? mNextSuspensionOffset > mCurrSuspensionOffset
+                        : mCurrSuspensionOffset > mNextSuspensionOffset)
             {
                 mCurrSuspensionOffset = mNextSuspensionOffset;
             }
-            else if (!(mSuspensionVelocity > 0.0f))
-            {
-                bTurn = false;
-            }
-        }
-        else
-        {
-            if (mCurrSuspensionOffset > mNextSuspensionOffset)
-            {
-                mCurrSuspensionOffset = mNextSuspensionOffset;
-            }
-            else if (!(0.0f > mSuspensionVelocity))
-            {
-                bTurn = false;
-            }
-        }
-        if (bTurn)
-        {
             mLastSuspensionOffset = mCurrSuspensionOffset;
             mNextSuspensionOffset = mClass->mMidSuspensionOffset * 2.0f - mCurrSuspensionOffset;
             if (0.0f > mSuspensionVelocity)
@@ -1698,7 +1689,8 @@ bool EntityHover::Update(float fDeltaTime)
         }
     }
 
-    if (mPilotType == PILOT_SELF || (mPilotType == PILOT_VEHICLESELF && mPilot == this) || !mPilot)
+    Controllable* pPilot = GetPilot();
+    if (!pPilot)
     {
         if (IsOn())
         {
@@ -1707,7 +1699,6 @@ bool EntityHover::Update(float fDeltaTime)
     }
     else
     {
-        Controllable* pPilot = mPilot;
         if (!IsOn() || IsTurningOff())
         {
             TurnOn(mClass, mMatrix.GetTranslation(), mVelocity, mMaxHealth != 0.0f ? mCurHealth / mMaxHealth : 0.0f);
@@ -1810,7 +1801,7 @@ bool EntityHover::Update(float fDeltaTime)
                 FirstPerson::Update(iFirstPerson, TYPE_HOVER, mClass->mFirstPersonModelHandle, this, 0);
             }
         }
-        if (list.GetFirst()->_pObject->mPlayerId >= 0)
+        if (mControllableList.GetFirst()->_pObject->mPlayerId >= 0)
         {
             ToolTipsDisplay::sInstance->ShowTip(TTT_HoverSprint, 0);
         }
@@ -1830,18 +1821,20 @@ bool EntityHover::Update(float fDeltaTime)
     float fTurn = mControlTurn;
     float fPitch = mControlPitch;
 
+    bool bBoost;
     if (mPlayerId >= 0 &&
-        (mBoost ? (!mControlSprint.Tapped() && !mControlSprint.HeldAndReleased() && fThrust >= 0.9f)
-                : (mControlThrustFwd.TappedAndPressed() ||
-                   ((mControlSprint.Tapped() || mControlSprint.Held()) && fThrust >= 0.9f))))
+        ((!mBoost && (mControlThrustFwd.TappedAndPressed() ||
+                      ((mControlSprint.Tapped() || mControlSprint.Held()) && fThrust >= 0.9f))) ||
+         (mBoost && !mControlSprint.Tapped() && !mControlSprint.HeldAndReleased() && !(0.9f > fThrust))))
     {
         ToolTipsDisplay::sInstance->CancelTimeoutTip(TTT_HoverSprint, 0);
-        mBoost = true;
+        bBoost = true;
     }
     else
     {
-        mBoost = mCtrl && mPlayerId < 0 && UnitControllerPtr(mCtrl)->GetLowLevel().GetHeight() == HEIGHT_SPRINT;
+        bBoost = mCtrl && mPlayerId < 0 && UnitControllerPtr(mCtrl)->GetLowLevel().GetHeight() == HEIGHT_SPRINT;
     }
+    mBoost = bBoost;
 
     float fScale = fDeltaTime;
     if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]])
@@ -1870,22 +1863,10 @@ bool EntityHover::Update(float fDeltaTime)
     Move(fDeltaTime, fThrust, fStrafe, fTurn, mBoost);
     mYawValue -= mMatrix.m[2][0] * vRight.x + mMatrix.m[2][1] * vRight.y + mMatrix.m[2][2] * vRight.z;
     mPitchValue -= mMatrix.m[2][0] * vUp.x + mMatrix.m[2][1] * vUp.y + mMatrix.m[2][2] * vUp.z;
-    if (mClass->mYawMin > mYawValue)
-    {
-        mYawValue = mClass->mYawMin;
-    }
-    else if (mYawValue > mClass->mYawMax)
-    {
-        mYawValue = mClass->mYawMax;
-    }
-    if (mClass->mPitchMin > mPitchValue)
-    {
-        mPitchValue = mClass->mPitchMin;
-    }
-    else if (mPitchValue > mClass->mPitchMax)
-    {
-        mPitchValue = mClass->mPitchMax;
-    }
+    mYawValue = mClass->mYawMin > mYawValue ? mClass->mYawMin
+                                            : (mYawValue > mClass->mYawMax ? mClass->mYawMax : mYawValue);
+    mPitchValue = mClass->mPitchMin > mPitchValue ? mClass->mPitchMin
+                                                  : (mPitchValue > mClass->mPitchMax ? mClass->mPitchMax : mPitchValue);
 
     if (mObstacle)
     {

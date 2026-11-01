@@ -407,7 +407,7 @@ void VoiceChatGroup::Init()
 // FUNCTION: SWBF2 0x006514f0
 void VoiceChatGroup::Bind(unsigned int hView)
 {
-    RedFont* pFont = RedFont::Find("systemfont");
+    RedFont* pFont = RedFont::Find(0x46f060d5); // "gamefont_tiny"
     RedInterfaceScreen* pScreen = FLRenderer::GetInterfaceView(hView);
     float fWidth, fHeight, fOffsetX, fOffsetY;
     pScreen->GetSafeZone(fWidth, fHeight, fOffsetX, fOffsetY);

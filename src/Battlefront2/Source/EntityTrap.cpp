@@ -622,7 +622,7 @@ bool EntityTrap::Update(float fDeltaTime)
             PblBox kBox = GetModel()->_mModel->_TotalBoundingBox;
             float fHalfWidth = (kBox._vMax.x - kBox._vMin.x) * 0.5f;
             PblVector3 vFrom = vPos - vRight * fHalfWidth;
-            PblVector3 vTo = vPos + vRight * fHalfWidth;
+            PblVector3 vTo = vRight * fHalfWidth + vPos;
             iCount = CollisionManager::GetObjectsInFatRay(vTo, vFrom, mTrapClass->mRayTriggerWidth, apObjects,
                                                          5, 0, 10);
         }
@@ -635,29 +635,26 @@ bool EntityTrap::Update(float fDeltaTime)
         for (int i = 0; i < iCount; ++i)
         {
             CollisionObject* pCollision = apObjects[i]->GetCollisionObject();
-            if (!pCollision || pCollision->GetCollisionRadius() <= mTrapClass->mMinEnemyRadius)
+            if (!pCollision || !(pCollision->GetCollisionRadius() > mTrapClass->mMinEnemyRadius))
             {
                 continue;
             }
             if (mTrapClass->mRayTriggerWidth > 0.0f)
             {
                 const PblVector3& vCenter = pCollision->GetCollisionCenter();
-                float fDist = (float)fabs((double)((vPos.x - vCenter.x) * vForward.x + vForward.y * (vPos.y - vCenter.y) +
-                                                   vForward.z * (vPos.z - vCenter.z)));
+                float fDist = (float)fabs((double)DotProduct(vPos - vCenter, vForward));
                 if (fDist > pCollision->GetCollisionRadius() + mTrapClass->mRayTriggerWidth)
                 {
                     continue;
                 }
                 PblVector3 vVelocity = pCollision->GetGameObject()->GetVelocity();
-                if (mTrapClass->mRayTriggerMinSpeed >
-                    (float)fabs((double)(vVelocity.x * vForward.x + vVelocity.y * vForward.y + vVelocity.z * vForward.z)))
+                if (mTrapClass->mRayTriggerMinSpeed > (float)fabs((double)DotProduct(vVelocity, vForward)))
                 {
                     continue;
                 }
                 const PblVector3& vTheirs = pCollision->GetCollisionCenter();
                 const PblVector3& vMine = GetCollisionCenter();
-                if ((vMine.x - vTheirs.x) * vVelocity.x + (vMine.y - vTheirs.y) * vVelocity.y +
-                        (vMine.z - vTheirs.z) * vVelocity.z < 0.0f)
+                if (DotProduct(vMine - vTheirs, vVelocity) < 0.0f)
                 {
                     continue;
                 }
@@ -728,7 +725,7 @@ bool EntityTrap::Update(float fDeltaTime)
             CollisionObject* pCollision = apObjects[i]->GetCollisionObject();
             if (pCollision && pCollision->GetCollisionRadius() > mTrapClass->mMinEnemyRadius)
             {
-                static_cast<Damageable*>(apObjects[i])->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
+                apObjects[i]->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
                 bKilled = true;
             }
         }

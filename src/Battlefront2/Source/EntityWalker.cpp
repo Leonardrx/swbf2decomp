@@ -3703,9 +3703,10 @@ bool EntityWalker::Update(float fDeltaTime)
         float fLoseDist = 2500.0f;
         for (int i = 0; i < 2; ++i)
         {
-            if (mWeaponIndex[i] != -1)
+            int iIndex = mWeaponIndex[i];
+            if (iIndex != -1)
             {
-                const WeaponClass* pClass = mWeapon[mWeaponIndex[i]]->mClass;
+                const WeaponClass* pClass = mWeapon[iIndex]->mClass;
                 iTypes = pClass->mTargetTypes;
                 fLockDist = pClass->mTargetLockMaxDistance;
                 fLoseDist = pClass->mTargetLockMaxDistanceLose;
@@ -3740,9 +3741,10 @@ bool EntityWalker::Update(float fDeltaTime)
         int iTypes = 0;
         for (int i = 0; i < 2; ++i)
         {
-            if (mWeaponIndex[i] != -1)
+            int iIndex = mWeaponIndex[i];
+            if (iIndex != -1)
             {
-                iTypes = mWeapon[mWeaponIndex[i]]->mClass->mTargetTypes;
+                iTypes = mWeapon[iIndex]->mClass->mTargetTypes;
                 break;
             }
         }
@@ -3768,21 +3770,17 @@ bool EntityWalker::Update(float fDeltaTime)
         }
     }
 
-    if (mIsDead)
-    {
-        mTargetInfo.mIsAiming = false;
-    }
-    else
+    if (!mIsDead)
     {
         float fWaterHeight;
         if (RedWater::GetWaterHeight(GetPosition(), fWaterHeight) &&
-            fWaterHeight >= GetPosition().y + GetCollisionRadius())
+            fWaterHeight >= GetCollisionRadius() + GetPosition().y)
         {
             mWaterDamageTimer -= fDeltaTime;
             if (0.0f > mWaterDamageTimer)
             {
-                Damageable::ApplyDamage(DamageDesc(DamageOwner(0, 0, 0, 0, 0, 1.0f), mClass->mWaterDamageAmount),
-                                        0xffffffff);
+                const DamageDesc desc(DamageOwner(0, 0, 0, 0, 0, 1.0f), mClass->mWaterDamageAmount);
+                Damageable::ApplyDamage(desc, 0xffffffff);
             }
         }
         else
@@ -3809,6 +3807,10 @@ bool EntityWalker::Update(float fDeltaTime)
             }
             UpdateStatus(fDeltaTime);
         }
+    }
+    else
+    {
+        mTargetInfo.mIsAiming = false;
     }
     TriggerDisabledEffect();
 
@@ -3967,7 +3969,7 @@ bool EntityWalker::Update(float fDeltaTime)
     {
         fMove = -1.0f;
     }
-    else if (-0.18f > mBodyPitch && fMove > 0.0f)
+    else if (-0.18f > mBodyPitch && !(fMove < 0.0f))
     {
         fMove = 0.0f;
     }
@@ -3975,21 +3977,19 @@ bool EntityWalker::Update(float fDeltaTime)
     {
         fMove = 1.0f;
     }
-    else if (mBodyPitch > 0.18f && fMove < 0.0f)
+    else if (mBodyPitch > 0.18f && !(fMove > 0.0f))
     {
         fMove = 0.0f;
     }
     float fTurnSpeed = mClass->mForwardTurnSpeed;
     UpdateState(fDeltaTime, fMove, mControlStrafe, fTurnSpeed, fTurn);
 
-    if (VehicleEngine::IsOn())
+    const bool bEngineOn = VehicleEngine::IsOn();
+    if (bEngineOn && !mPilot)
     {
-        if (!mPilot)
-        {
-            TurnOff(mClass, mMatrix.GetTranslation(), mVelocity);
-        }
+        TurnOff(mClass, mMatrix.GetTranslation(), mVelocity);
     }
-    else if (mPilot)
+    else if (!bEngineOn && mPilot)
     {
         TurnOn(mClass, mMatrix.GetTranslation(), mVelocity, mMaxHealth != 0.0f ? mCurHealth / mMaxHealth : 0.0f);
     }
@@ -4060,9 +4060,9 @@ bool EntityWalker::Update(float fDeltaTime)
         fRate = (1.0f - fRoom) * fTurnSpeed + fRoom * fYawRate;
     }
     mYawValue = mYawValue - fRate * fTurn * fScale;
-    mPitchValue = mClass->mMinPitch > mPitchValue
-                      ? mClass->mMinPitch
-                      : (mPitchValue > mClass->mMaxPitch ? mClass->mMaxPitch : mPitchValue);
+    const float fMinPitch = mClass->mMinPitch;
+    const float fMaxPitch = mClass->mMaxPitch;
+    mPitchValue = fMinPitch > mPitchValue ? fMinPitch : (mPitchValue > fMaxPitch ? fMaxPitch : mPitchValue);
 
     if (!mIsDead && !m_bIsJumping && 0.0f > mVelocity.y)
     {

@@ -254,21 +254,17 @@ void GrassPatchClass::Init()
     {
         float fFade;
 
-        if (mBoxX > 0.0f || mBoxZ > 0.0f)
-        {
-            const float fZ = (PblRandom::_Global.GetFloat() - 0.5f) * mBoxZ;
-            const float fX = (PblRandom::_Global.GetFloat() - 0.5f) * mBoxX;
-            mParticle[i].mPos = PblVector3(fX, 0.0f, fZ);
-            fFade = 1.0f;
-        }
-        else
+        if (mBoxX <= 0.0f && mBoxZ <= 0.0f)
         {
             fFade = 0.0f;
             while (fFade == 0.0f)
             {
                 const float fZ = (PblRandom::_Global.GetFloat() * 2.0f - 1.0f) * mRadiusFadeMax;
                 const float fX = (PblRandom::_Global.GetFloat() * 2.0f - 1.0f) * mRadiusFadeMax;
-                mParticle[i].mPos = PblVector3(fX, 0.0f, fZ);
+                PblVector3& vPos = mParticle[i].mPos;
+                vPos.x = fX;
+                vPos.y = 0.0f;
+                vPos.z = fZ;
 
                 const float fDist = PblMath::Sqrt(mParticle[i].mPos.x * mParticle[i].mPos.x
                                           + mParticle[i].mPos.y * mParticle[i].mPos.y
@@ -283,21 +279,33 @@ void GrassPatchClass::Init()
                 }
             }
         }
+        else
+        {
+            const float fZ = (PblRandom::_Global.GetFloat() - 0.5f) * mBoxZ;
+            const float fX = (PblRandom::_Global.GetFloat() - 0.5f) * mBoxX;
+            PblVector3& vPos = mParticle[i].mPos;
+            vPos.x = fX;
+            vPos.y = 0.0f;
+            vPos.z = fZ;
+            fFade = 1.0f;
+        }
 
         mParticle[i].mSize = (mSizeMax - mSizeMin) * PblRandom::_Global.GetFloat() + mSizeMin;
 
         const float fDarkness = (mDarknessMax - mDarknessMin) * PblRandom::_Global.GetFloat() + mDarknessMin;
-        mParticle[i].mColor.a = mAlpha;
-        mParticle[i].mColor.r = fDarkness;
-        mParticle[i].mColor.g = fDarkness;
-        mParticle[i].mColor.b = fDarkness;
+        RedColorValue& color = mParticle[i].mColor;
+        color.a = mAlpha;
+        color.r = fDarkness;
+        color.g = fDarkness;
+        color.b = fDarkness;
 
-        float fA, fB;
-        do
+        float fA = PblRandom::_Global.GetFloat() - 0.5f;
+        float fB = PblRandom::_Global.GetFloat() - 0.5f;
+        while (fA * fA + fB * fB == 0.0f)
         {
             fA = PblRandom::_Global.GetFloat() - 0.5f;
             fB = PblRandom::_Global.GetFloat() - 0.5f;
-        } while (fA * fA + fB * fB == 0.0f);
+        }
 
         mParticle[i].mTime = PblRandom::_Global.GetFloat() * 10.0f;
         mParticle[i].mOffset = 0.0f;
@@ -342,10 +350,11 @@ void GrassPatchClass::Init()
                     const float fZ = PblRandom::_Global.GetFloat() - 0.5f;
                     const float fX = PblRandom::_Global.GetFloat() - 0.5f;
                     mParticle[i].mUp = PblVector3(fX, 0.0f, fZ);
-                } while (fabsf(mParticle[i].mUp.x) < 0.01f && fabsf(mParticle[i].mUp.z) < 0.01f);
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&mParticle[i].mUp), reinterpret_cast<const D3DXVECTOR3*>(&mParticle[i].mUp));
+                } while ((mParticle[i].mUp.x < 0.0f ? -mParticle[i].mUp.x : mParticle[i].mUp.x) < 0.01f
+                         && (mParticle[i].mUp.z < 0.0f ? -mParticle[i].mUp.z : mParticle[i].mUp.z) < 0.01f);
+                mParticle[i].mUp = Normalize(mParticle[i].mUp);
                 mParticle[i].mUp.y = (PblRandom::_Global.GetFloat() - 0.5f) * 0.3f;
-                D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&mParticle[i].mUp), reinterpret_cast<const D3DXVECTOR3*>(&mParticle[i].mUp));
+                mParticle[i].mUp = Normalize(mParticle[i].mUp);
             }
             else
             {
@@ -374,21 +383,14 @@ void GrassPatchClass::Init()
         vMax.z = Max(vMax.z, mParticle[i].mPos.z + fHalfSize);
     }
 
-    mBoundingOffset.x = (vMax.x + vMin.x) * 0.5f;
-    mBoundingOffset.y = (vMax.y + vMin.y) * 0.5f;
-    mBoundingOffset.z = (vMax.z + vMin.z) * 0.5f;
+    mBoundingOffset = (vMax + vMin) * 0.5f;
     mBoundingRadius = 0.0f;
-    mBoundingBoxRadius.x = vMax.x - mBoundingOffset.x;
-    mBoundingBoxRadius.y = vMax.y - mBoundingOffset.y;
-    mBoundingBoxRadius.z = vMax.z - mBoundingOffset.z;
+    mBoundingBoxRadius = vMax - mBoundingOffset;
 
     for (int i = 0; i < mNumParticles; ++i)
     {
-        const PblVector3& vPos = mParticle[i].mPos;
-        const float fX = vPos.x - mBoundingOffset.x;
-        const float fY = vPos.y - mBoundingOffset.y;
-        const float fZ = vPos.z - mBoundingOffset.z;
-        const float fRadius = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ) + mParticle[i].mSize;
+        const PblVector3 vDelta = mParticle[i].mPos - mBoundingOffset;
+        const float fRadius = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) + mParticle[i].mSize;
         mBoundingRadius = Max(fRadius, mBoundingRadius);
     }
 
