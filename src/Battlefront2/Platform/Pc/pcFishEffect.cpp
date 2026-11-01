@@ -148,11 +148,9 @@ pcRedPrimitive* FishParticle::CreateCompressedGeometry(PblVector3* pVertices, Te
     float fishBodySize = mType.mSize * 0.5f;
     float fExtent = mType.mSize * 2.0f * 0.5f;
 
+    PblBox boundingBox(-fExtent, -fExtent, -fExtent, fExtent, fExtent, fExtent);
     pcRedPrimitive* pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x9282,
                                                         sizeof(FishCompressedVertex), 40, 0, false);
-    PblBox boundingBox;
-    boundingBox._vMin = PblVector3(-fExtent, -fExtent, -fExtent);
-    boundingBox._vMax = PblVector3(fExtent, fExtent, fExtent);
     pPrimitive->m_bbox = boundingBox;
     CompressedPos::SetBoundingBox(boundingBox);
 

@@ -38,47 +38,28 @@ void DroidekaElement::BuildWorldMatrices()
     if (mState == EntityDroideka::Rolling)
     {
         ZephyrTransform& kSpine = kPose.m_pJoints[(unsigned short)mClass->mSpineIdx];
-
-        PblQuaternion qRoll;
-        qRoll._fX = mBallOrientation.GetSin();
-        qRoll._fY = 0.0f;
-        qRoll._fZ = 0.0f;
-        qRoll._fS = mBallOrientation.GetCos();
+        PblQuaternion qRoll(mBallOrientation.GetCos(), mBallOrientation.GetSin(), 0.0f, 0.0f);
         kSpine.kQuat *= qRoll;
 
         PblVector3 vCentre(0.0f - kSpine.kTrans.x, mClass->mBallRadius - kSpine.kTrans.y,
                            0.0f - kSpine.kTrans.z);
-        PblVector3 vRotated = kSpine.kQuat.RotateVector(vCentre);
-        mTranslationOffset = PblVector3(vCentre.x - vRotated.x, vCentre.y - vRotated.y,
-                                        vCentre.z - vRotated.z);
-        kSpine.kTrans.x = mTranslationOffset.x + kSpine.kTrans.x;
-        kSpine.kTrans.y = mTranslationOffset.y + kSpine.kTrans.y;
-        kSpine.kTrans.z = mTranslationOffset.z + kSpine.kTrans.z;
+        mTranslationOffset = vCentre - kSpine.kQuat.RotateVector(vCentre);
+        kSpine.kTrans.x += mTranslationOffset.x;
+        kSpine.kTrans.y += mTranslationOffset.y;
+        kSpine.kTrans.z += mTranslationOffset.z;
     }
     else
     {
         ZephyrTransform& kRoot = kPose.m_pJoints[0];
+        kRoot.kQuat *= PblQuaternion(mTurnOffset.GetCos(), 0.0f, mTurnOffset.GetSin(), 0.0f);
 
-        PblQuaternion qTurn;
-        qTurn._fX = 0.0f;
-        qTurn._fY = mTurnOffset.GetSin();
-        qTurn._fZ = 0.0f;
-        qTurn._fS = mTurnOffset.GetCos();
-        kRoot.kQuat *= qTurn;
-
-        PblQuaternion qPitch;
-        qPitch._fX = mPitchOffset.GetSin();
-        qPitch._fY = 0.0f;
-        qPitch._fZ = 0.0f;
-        qPitch._fS = mPitchOffset.GetCos();
+        PblQuaternion qPitch(mPitchOffset.GetCos(), mPitchOffset.GetSin(), 0.0f, 0.0f);
         kRoot.kQuat *= qPitch;
 
-        PblVector3 vRotated = qPitch.RotateVector(mPivotOffset);
-        mTranslationOffset = PblVector3(mPivotOffset.x - vRotated.x, mPivotOffset.y - vRotated.y,
-                                        mPivotOffset.z - vRotated.z);
-        kRoot.kTrans.x = mTranslationOffset.x + kRoot.kTrans.x;
-        kRoot.kTrans.y = mTranslationOffset.y + kRoot.kTrans.y;
-        kRoot.kTrans.z = mTranslationOffset.z + kRoot.kTrans.z;
+        mTranslationOffset = mPivotOffset - qPitch.RotateVector(mPivotOffset);
+        kRoot.kTrans.x += mTranslationOffset.x;
+        kRoot.kTrans.y += mTranslationOffset.y;
+        kRoot.kTrans.z += mTranslationOffset.z;
     }
 
     mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);

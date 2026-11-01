@@ -71,10 +71,15 @@ float SourceVirtual::CalculatePriority(const SourceTransport* pTransport,
     {
         fGain = pSourceI3DL2->CalculateGainEstimate() * fGain;
     }
+    float fPriority;
     if (!bArg && (unsigned char)pTransport->GetPlayState() != SourceTransport::playState_playing)
     {
-        return 0.0f;
+        fPriority = 0.0f;
     }
-    return (1.0f - mBias) * (fGain * fScale) + mBias * mPriority;
+    else
+    {
+        fPriority = (1.0f - mBias) * (fGain * fScale) + mBias * mPriority;
+    }
+    return fPriority;
 }
 }

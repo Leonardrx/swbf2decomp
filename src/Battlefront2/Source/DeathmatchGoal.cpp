@@ -40,8 +40,7 @@ void AI::DeathmatchGoal::Assign(Character* pChr)
     UnitController* pCtrl = UnitControllerPtr(pChr->GetControllable()->mCtrl);
     if (pCtrl)
     {
-        CmdInfo cmd = UnitCmdInfo(CMD_DEATHMATCH, PblHandle<GameObject>(),
-                                  PblVector3(0.0f, 0.0f, 0.0f), PblHandle<GameObject>());
+        CmdInfo cmd = UnitCmdInfo(CMD_DEATHMATCH, NULL, PblVector3(0.0f, 0.0f, 0.0f), NULL);
         pCtrl->ForceCommand(cmd);
     }
 }

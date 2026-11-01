@@ -1129,7 +1129,7 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
         PblMatrix mHead;
         D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mHead), reinterpret_cast<const D3DXMATRIX*>(pHead), reinterpret_cast<const D3DXMATRIX*>(&GetMatrix()));
         PblVector3 vFwd;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFwd), reinterpret_cast<const D3DXVECTOR3*>((const PblVector3*)&mHead.m[1][0]));
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFwd), reinterpret_cast<const D3DXVECTOR3*>(&mHead.GetYAxis()));
         const PblVector3& vEye = pObj->GetControllable()->mEyePoint;
         const PblVector3 vTo = vEye - mHead.GetTranslation();
         PblVector3 vDir;
@@ -1146,20 +1146,13 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
             fTurn = (float)acos((double)fDot) * fBlend;
         }
 
-        const PblVector3 vCross = CrossProduct(vFwd, vDir);
-        PblVector3 vAxis;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vAxis), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
-        const PblQuaternion q(vAxis, fTurn);
+        const PblQuaternion q(Normalize(CrossProduct(vFwd, vDir)), fTurn);
 
-        PblVector3 vRotated = q.RotateVector(vFwd);
-        PblVector3 vY;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vY), reinterpret_cast<const D3DXVECTOR3*>(&vRotated));
-        const PblVector3 vSide = CrossProduct(gVectorUnitY, vY);
-        PblVector3 vZ;
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vZ), reinterpret_cast<const D3DXVECTOR3*>(&vSide));
-        const PblVector3 vX = CrossProduct(vY, vZ);
+        // The look direction becomes the head's forward turned towards the target.
+        vDir = Normalize(q.RotateVector(vFwd));
+        const PblVector3 vSide = Normalize(CrossProduct(gVectorUnitY, vDir));
 
-        *pOut = PblMatrix(vX, vY, vZ, mHead.GetTranslation());
+        *pOut = PblMatrix(CrossProduct(vDir, vSide), vDir, vSide, mHead.GetTranslation());
         *pOut *= GetMatrix().GetInverseFast();
         return true;
     }
@@ -1174,8 +1167,7 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
     }
     const PblQuaternion q(PblVector3(1.0f, 0.0f, 0.0f), fBlend);
     *pOut = PblMatrix(q, PblVector3(0.0f, 0.0f, 0.0f));
-    const PblMatrix mHeadCopy = *pHead;
-    *pOut *= mHeadCopy;
+    *pOut *= PblMatrix(*pHead);
     return true;
 }
 

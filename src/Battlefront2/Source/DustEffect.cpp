@@ -207,27 +207,32 @@ bool DustEffectClass::UpdateParticle(DustParticle& particle, float fDeltaTime,
 void DustEffectClass::SpawnParticle(DustParticle& particle)
 {
     {
-        const float fZ = (mPosMax.z - mPosMin.z) * PblRandom::_Global.GetFloat() + mPosMin.z;
-        const float fY = (mPosMax.y - mPosMin.y) * PblRandom::_Global.GetFloat() + mPosMin.y;
-        const float fX = (mPosMax.x - mPosMin.x) * PblRandom::_Global.GetFloat() + mPosMin.x;
-        particle.mPos = PblVector3(fX, fY, fZ);
+        const float fRandomZ = PblRandom::_Global.GetFloat();
+        const float fRandomY = PblRandom::_Global.GetFloat();
+        const float fRandomX = PblRandom::_Global.GetFloat();
+        particle.mPos.x = (mPosMax.x - mPosMin.x) * fRandomX + mPosMin.x;
+        particle.mPos.y = (mPosMax.y - mPosMin.y) * fRandomY + mPosMin.y;
+        particle.mPos.z = (mPosMax.z - mPosMin.z) * fRandomZ + mPosMin.z;
     }
 
     if (mCameraDistance > 0.0f)
     {
         const PblMatrix& camMatrix = CameraManager::sInstance->mRedCamera[0]->GetMatrix();
-        float fForward = mCameraDistance + particle.mPos.z;
-        float fSide = particle.mPos.x;
-        particle.mPos.x = camMatrix.m[0][0] * fSide + -camMatrix.m[2][0] * fForward;
-        particle.mPos.z = camMatrix.m[0][2] * fSide + -camMatrix.m[2][2] * fForward;
+        const PblVector3 vForward(-camMatrix.m[2][0], 0.0f, -camMatrix.m[2][2]);
+        const PblVector3 vRight = camMatrix[0];
+        const float fHeight = particle.mPos.y;
+        particle.mPos = vRight * particle.mPos.x + vForward * (mCameraDistance + particle.mPos.z);
+        particle.mPos.y = fHeight;
     }
 
     particle.mColor.a = 0.0f;
     {
-        const float fZ = (mVelMax.z - mVelMin.z) * PblRandom::_Global.GetFloat() + mVelMin.z;
-        const float fY = (mVelMax.y - mVelMin.y) * PblRandom::_Global.GetFloat() + mVelMin.y;
-        const float fX = (mVelMax.x - mVelMin.x) * PblRandom::_Global.GetFloat() + mVelMin.x;
-        particle.mVel = PblVector3(fX, fY, fZ);
+        const float fRandomZ = PblRandom::_Global.GetFloat();
+        const float fRandomY = PblRandom::_Global.GetFloat();
+        const float fRandomX = PblRandom::_Global.GetFloat();
+        particle.mVel.x = (mVelMax.x - mVelMin.x) * fRandomX + mVelMin.x;
+        particle.mVel.y = (mVelMax.y - mVelMin.y) * fRandomY + mVelMin.y;
+        particle.mVel.z = (mVelMax.z - mVelMin.z) * fRandomZ + mVelMin.z;
     }
     particle.mSize = (mSizeMax - mSizeMin) * PblRandom::_Global.GetFloat() + mSizeMin;
     particle.mLifeTime = (mLifeTimeMax - mLifeTimeMin) * PblRandom::_Global.GetFloat() + mLifeTimeMin;

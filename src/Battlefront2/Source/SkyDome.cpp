@@ -334,7 +334,7 @@ bool SkyDome::Update(float fDeltaTime)
         for (int i = 0; i < rDome.mNumEffectData; ++i)
         {
             EffectData& rData = rDome.mEffectData[i];
-            rData.timer += fDeltaTime;
+            rData.timer = fDeltaTime + rData.timer;
             if (rData.effect)
             {
                 continue;
@@ -356,7 +356,7 @@ bool SkyDome::Update(float fDeltaTime)
                 {
                     continue;
                 }
-                rData.effect = static_cast<ParticleEmitterObject*>(pClass->BuildEffect());
+                rData.effect = PblHandle<ParticleEmitterObject>(static_cast<ParticleEmitterObject*>(pClass->BuildEffect()));
                 if (!rData.effect)
                 {
                     continue;

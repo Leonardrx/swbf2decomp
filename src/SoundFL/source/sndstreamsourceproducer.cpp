@@ -83,18 +83,15 @@ void StreamSourceNProducer::SetProducers(StreamSourceProducer* pProducers,
 // FUNCTION: SWBF2 0x0073c8e0
 void StreamSourceProducer::Flush()
 {
-    for (;;)
+    StreamPacket* pPacket;
+    do
     {
-
-        StreamPacket* const pPacket = GetPacket(0);
-
-        if (pPacket == 0)
+        pPacket = GetPacket(0);
+        if (pPacket != 0)
         {
-            break;
+            pPacket->Unlock();
         }
-
-        pPacket->Unlock();
-    }
+    } while (pPacket != 0);
 }
 
 // FUNCTION: SWBF2 0x0073c9a0

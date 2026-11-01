@@ -90,6 +90,7 @@ bool ObjectWeightList::ReadObjectWeights(PblFileChunk& chunk, unsigned int uiObj
         pWeight->mPlayIntervalDev = fIntervalDev;
     }
 
+    const float fWeightSum = fTotal;
     unsigned int uiCount = 0;
     for (PblListSingle::Node* pNode = mHead.mNext; pNode != &mHead; pNode = pNode->mNext)
     {
@@ -100,7 +101,6 @@ bool ObjectWeightList::ReadObjectWeights(PblFileChunk& chunk, unsigned int uiObj
         return false;
     }
 
-    const float fWeightSum = fTotal;
     PblListSingle::Node* pNode = mHead.mNext;
     while (pNode != &mHead)
     {

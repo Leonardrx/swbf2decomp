@@ -233,21 +233,19 @@ void CombatHelper::EnterState()
         case STATE_Engage:
         {
             GetLowLevel().SetNavigator_Stationary();
-            if (!GetAttackHelper().HasTarget())
+            if (GetAttackHelper().HasTarget())
             {
-                SetNextState(100);
-                return;
+                GetLowLevel().HeadLook_Object(GetAttackHelper().GetTarget(), 0.05f, 1.0f, 0.3f);
+                float fTime = 0.0f;
+                bool bFlag;
+                if (CombatUtil::SelectCombatResponse(GetMe(), GetAttackHelper().GetTarget(),
+                                                     &mAttackPattern, &fTime, &bFlag, true, false))
+                {
+                    mAttackPatternHelper.HELPERSetNextState(mAttackPattern, fTime);
+                    break;
+                }
             }
-            GetLowLevel().HeadLook_Object(GetAttackHelper().GetTarget(), 0.05f, 1.0f, 0.3f);
-            float fTime = 0.0f;
-            bool bFlag;
-            if (!CombatUtil::SelectCombatResponse(GetMe(), GetAttackHelper().GetTarget(),
-                                                  &mAttackPattern, &fTime, &bFlag, true, false))
-            {
-                SetNextState(100);
-                return;
-            }
-            mAttackPatternHelper.HELPERSetNextState(mAttackPattern, fTime);
+            SetNextState(100);
             break;
         }
 
@@ -262,9 +260,7 @@ void CombatHelper::EnterState()
                 GetMe()->GetEntity()->IsRtti(EntityWalker::rttiHashEntityWalker))
             {
                 const PblMatrix& mNow = GetMe()->GetMatrix();
-                PblVector3 vForwardDest(mNow.m[2][0] * 20.0f + mMe.m[3][0],
-                                        mMe.m[3][1] + mNow.m[2][1] * 20.0f,
-                                        mNow.m[2][2] * 20.0f + mMe.m[3][2]);
+                PblVector3 vForwardDest = mNow.GetZAxis() * 20.0f + mMe.GetTranslation();
                 GetLowLevel().SetNavigator_Goto(vForwardDest, 0, false, false);
                 mFleeTime = GameLoop::GetMissionTime() + 5.0f;
                 break;
@@ -602,48 +598,46 @@ bool CombatHelper::DeadBodyCheck()
     }
 
     GameObject* pMe = GetMe()->GetGameObject();
-    if (!pMe->IsRtti(EntitySoldier::rttiHashEntitySoldier))
+    if (pMe->IsRtti(EntitySoldier::rttiHashEntitySoldier))
     {
-        return false;
-    }
-
-    const PblVector3& vPos = GetPosition(pMe);
-    GameObject* pObjects[5];
-    int iCount = CollisionManager::GetObjectsInRange(vPos, 5.0f, pObjects, 5, pMe, 2);
-    for (int i = 0; i < iCount; ++i)
-    {
-        GameObject* pObject = pObjects[i];
-        if (pObject->mCurHealth > 0.0f)
+        const PblVector3& vPos = GetPosition(pMe);
+        GameObject* pObjects[5];
+        int iCount = CollisionManager::GetObjectsInRange(vPos, 5.0f, pObjects, 5, pMe, 2);
+        for (int i = 0; i < iCount; ++i)
         {
-            continue;
-        }
-        if (pTeam->GetAffiliation(pObject->GetTeam()) >= 0)
-        {
-            continue;
-        }
-        if (!pObject->IsRtti(EntitySoldier::rttiHashEntitySoldier))
-        {
-            continue;
-        }
-        if (PathFinder::TestTrivialStraightLineHit(vPos, GetPosition(pObject), pMe) == true)
-        {
-            continue;
-        }
-
-        mTargetHandle = pObject;
-        GetLowLevel().SetNavigator_Goto(GetPosition(pObject), 0, false, false);
-        SetNextState(STATE_ShootDeadBody);
-        mDeadBodyWeaponIdx = 0;
-        for (unsigned char uWpn = 0; uWpn < GetMe()->GetWeaponCount(); ++uWpn)
-        {
-            if (CombatUtil::GetWeaponLabel(GetMe()->GetWeaponPtr(uWpn)) == WeaponClass::BLASTER)
+            GameObject* pObject = pObjects[i];
+            if (pObject->mCurHealth > 0.0f)
             {
-                mDeadBodyWeaponIdx = uWpn;
-                break;
+                continue;
             }
+            if (pTeam->GetAffiliation(pObject->GetTeam()) >= 0)
+            {
+                continue;
+            }
+            if (!pObject->IsRtti(EntitySoldier::rttiHashEntitySoldier))
+            {
+                continue;
+            }
+            if (PathFinder::TestTrivialStraightLineHit(vPos, GetPosition(pObject), pMe) == true)
+            {
+                continue;
+            }
+
+            mTargetHandle = pObject;
+            GetLowLevel().SetNavigator_Goto(GetPosition(pObject), 0, false, false);
+            SetNextState(STATE_ShootDeadBody);
+            mDeadBodyWeaponIdx = 0;
+            for (unsigned char uWpn = 0; uWpn < GetMe()->GetWeaponCount(); ++uWpn)
+            {
+                if (CombatUtil::GetWeaponLabel(GetMe()->GetWeaponPtr(uWpn)) == WeaponClass::BLASTER)
+                {
+                    mDeadBodyWeaponIdx = uWpn;
+                    break;
+                }
+            }
+            AI::VOHelper::Play(AI::VOT_RebelsShootDeadBody, pMe, 0, pObject, 0.0f);
+            return true;
         }
-        AI::VOHelper::Play(AI::VOT_RebelsShootDeadBody, pMe, 0, pObject, 0.0f);
-        return true;
     }
     return false;
 }

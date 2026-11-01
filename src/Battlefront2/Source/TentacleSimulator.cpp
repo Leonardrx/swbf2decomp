@@ -297,7 +297,7 @@ void TentacleSimulator::UpdatePose(RedPose* pPose, const PblMatrix& mParent,
                 D3DXVECTOR3 vAxis;
                 D3DXVec3Cross(&vAxis, pZ, &vNormal);
                 float fAngle = acos(fDot);
-                if (sqrtf(D3DXVec3Dot(&vAxis, &vAxis)) * fAngle < 0.0f)
+                if (PblMath::Sqrt(D3DXVec3Dot(&vAxis, &vAxis)) * fAngle < 0.0f)
                 {
                     fAngle = -fAngle;
                 }
@@ -318,10 +318,11 @@ void TentacleSimulator::UpdatePose(RedPose* pPose, const PblMatrix& mParent,
                 {
                     D3DXMATRIX mRotation;
                     D3DXMatrixRotationAxis(&mRotation, &vAxis, fAngle);
-                    D3DXVECTOR3 vSegment = vEnd - vStart;
+                    vEnd -= vStart;
                     D3DXVECTOR3 vRotated;
-                    D3DXVec3TransformNormal(&vRotated, &vSegment, &mRotation);
-                    vEnd = vRotated + vStart;
+                    D3DXVec3TransformNormal(&vRotated, &vEnd, &mRotation);
+                    vEnd = vRotated;
+                    vEnd += vStart;
                     *(D3DXVECTOR3*)&tPos[t][b + 1] = vEnd;
                 }
             }
@@ -332,22 +333,22 @@ void TentacleSimulator::UpdatePose(RedPose* pPose, const PblMatrix& mParent,
             *(D3DXVECTOR3*)m.m[2] = vZ;
             m.m[2][3] = 0.0f;
 
-            D3DXVECTOR3 vCross;
+            D3DXVECTOR3 vCrossX;
             D3DXVECTOR3 vX;
-            D3DXVec3Cross(&vCross, (const D3DXVECTOR3*)m.m[1], (const D3DXVECTOR3*)m.m[2]);
-            D3DXVec3Normalize(&vX, &vCross);
+            D3DXVec3Cross(&vCrossX, (const D3DXVECTOR3*)m.m[1], (const D3DXVECTOR3*)m.m[2]);
+            D3DXVec3Normalize(&vX, &vCrossX);
             *(D3DXVECTOR3*)m.m[0] = vX;
             m.m[0][3] = 0.0f;
 
+            D3DXVECTOR3 vCrossY;
             D3DXVECTOR3 vY;
-            D3DXVec3Cross(&vCross, (const D3DXVECTOR3*)m.m[2], (const D3DXVECTOR3*)m.m[0]);
-            D3DXVec3Normalize(&vY, &vCross);
+            D3DXVec3Cross(&vCrossY, (const D3DXVECTOR3*)m.m[2], (const D3DXVECTOR3*)m.m[0]);
+            D3DXVec3Normalize(&vY, &vCrossY);
             *(D3DXVECTOR3*)m.m[1] = vY;
             m.m[1][3] = 0.0f;
 
-            unsigned int uiName = TENTACLE_NAMES[mBonesPerTentacle * t + b];
-            pPose->Remove(uiName);
-            pPose->Store(uiName, &m);
+            pPose->Remove(TENTACLE_NAMES[mBonesPerTentacle * t + b]);
+            pPose->Store(TENTACLE_NAMES[mBonesPerTentacle * t + b], &m);
         }
     }
 }
@@ -465,20 +466,16 @@ void TentacleSimulator::EnforceCollisions(const RedPose* pPose, const PblMatrix&
         return;
     }
 
-    PblMatrix mCollision = *pBone;
+    PblMatrix mBone = *pBone;
     float fOffset = 0.0f;
     if (mCollType == 1)
     {
         fOffset = 0.98f;
     }
-    mCollision.m[3][3] = 1.0f;
-    float fX = mCollision.m[3][0] + mCollision.m[0][0] * 0.0f + mCollision.m[1][0] * fOffset + mCollision.m[2][0] * 0.0f;
-    float fY = mCollision.m[3][1] + mCollision.m[0][1] * 0.0f + mCollision.m[1][1] * fOffset + mCollision.m[2][1] * 0.0f;
-    float fZ = mCollision.m[3][2] + mCollision.m[0][2] * 0.0f + mCollision.m[1][2] * fOffset + mCollision.m[2][2] * 0.0f;
-    mCollision.m[3][0] = fX;
-    mCollision.m[3][1] = fY;
-    mCollision.m[3][2] = fZ;
+    mBone.m[3][3] = 1.0f;
+    mBone[3] = mBone.GetTranslation() + mBone.GetXAxis() * 0.0f + mBone.GetYAxis() * fOffset + mBone.GetZAxis() * 0.0f;
 
+    const PblMatrix mCollision = mBone;
     switch (mCollType)
     {
     case 0:
@@ -494,20 +491,17 @@ void TentacleSimulator::EnforceCollisions(const RedPose* pPose, const PblMatrix&
 
     if (sDrawCollisionShapes)
     {
-        const PblMatrix mWorld = mCollision * mParent;
+        const PblMatrix mWorld = mBone * mParent;
         switch (mCollType)
         {
         case 0:
         {
-            PblBox box;
-            box._vMin = PblVector3(-0.35f, -0.18f, -0.5f);
-            box._vMax = PblVector3(0.35f, 0.18f, 0.5f);
+            const PblBox box(PblVector3(-0.35f, -0.18f, -0.5f), PblVector3(0.35f, 0.18f, 0.5f));
             RedDebug::DrawOBB(box, mWorld, RedColor::WHITE);
             break;
         }
         case 1:
-            RedDebug::DrawSphere(PblVector3(mWorld.m[3][0], mWorld.m[3][1], mWorld.m[3][2]),
-                                 1.234f, RedColor::WHITE);
+            RedDebug::DrawSphere(mWorld.GetTranslation(), 1.234f, RedColor::WHITE);
             break;
         case 2:
             RedDebug::DrawCone(mWorld, 0.18f, 1.234f, 1.234f, RedColor::WHITE);

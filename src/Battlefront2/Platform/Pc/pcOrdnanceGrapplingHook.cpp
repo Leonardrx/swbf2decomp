@@ -193,12 +193,39 @@ void OrdnanceGrapplingHook::Render(unsigned char ucViewport, float fDist, unsign
         return;
     }
 
-    const float fMinX = vEnd.x > vStart.x ? vStart.x : vEnd.x;
-    const float fMaxX = vEnd.x > vStart.x ? vEnd.x : vStart.x;
-    const float fMinY = vEnd.y > vStart.y ? vStart.y : vEnd.y;
-    const float fMaxY = vEnd.y > vStart.y ? vEnd.y : vStart.y;
-    const float fMinZ = vEnd.z > vStart.z ? vStart.z : vEnd.z;
-    const float fMaxZ = vEnd.z > vStart.z ? vEnd.z : vStart.z;
+    float fMinX, fMaxX;
+    if (vEnd.x > vStart.x)
+    {
+        fMinX = vStart.x;
+        fMaxX = vEnd.x;
+    }
+    else
+    {
+        fMinX = vEnd.x;
+        fMaxX = vStart.x;
+    }
+    float fMinY, fMaxY;
+    if (vEnd.y > vStart.y)
+    {
+        fMinY = vStart.y;
+        fMaxY = vEnd.y;
+    }
+    else
+    {
+        fMinY = vEnd.y;
+        fMaxY = vStart.y;
+    }
+    float fMinZ, fMaxZ;
+    if (vEnd.z > vStart.z)
+    {
+        fMinZ = vStart.z;
+        fMaxZ = vEnd.z;
+    }
+    else
+    {
+        fMinZ = vEnd.z;
+        fMaxZ = vStart.z;
+    }
     PblBox box;
     box._vMin = PblVector3(fMinX - 1.0f, fMinY - 1.0f, fMinZ - 1.0f);
     box._vMax = PblVector3(fMaxX + 1.0f, fMaxY + 1.0f, fMaxZ + 1.0f);

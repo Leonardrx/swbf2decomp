@@ -146,13 +146,21 @@ bool SaveFsm::CheckMemoryCardMark()
 // FUNCTION: SWBF2 0x006317e0
 bool SaveFsm::IsMemoryCardUnformatted()
 {
-    return mSaveDevice.GetStatus() == -4;
+    if (mSaveDevice.GetStatus() == -4)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x006317f0
 bool SaveFsm::IsDeviceInsertted()
 {
-    return mSaveDevice.GetStatus() != -2;
+    if (mSaveDevice.GetStatus() == -2)
+    {
+        return false;
+    }
+    return true;
 }
 
 // FUNCTION: SWBF2 0x00631800

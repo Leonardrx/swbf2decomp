@@ -159,7 +159,7 @@ void SquadCommands::VehicleGetIn(GameObject* pObject, Character* pCharacter)
             --i;
         }
     }
-    if (!iCount)
+    if (iCount <= 0)
     {
         return;
     }
@@ -176,13 +176,10 @@ void SquadCommands::VehicleGetIn(GameObject* pObject, Character* pCharacter)
         aCandidates[i].pObject = pCandidate;
         if (pObject->GetControllable()->mReticuleTarget[0] == pCandidate)
         {
-            const PblVector3& vTarget = pCandidate->GetPosition();
             const GameObject* pReticule = pObject->GetControllable()->mReticuleTarget[0];
+            const PblVector3& vTarget = pCandidate->GetPosition();
             const PblVector3& vReticule = pReticule->GetPosition();
-            const float dx = vReticule.x - vTarget.x;
-            const float dy = vReticule.y - vTarget.y;
-            const float dz = vReticule.z - vTarget.z;
-            if (dx * dx + dy * dy + dz * dz < 3600.0f)
+            if (SquaredLength(vReticule - vTarget) < 3600.0f)
             {
                 aCandidates[i].fScore = 0.0f;
                 continue;
@@ -190,23 +187,17 @@ void SquadCommands::VehicleGetIn(GameObject* pObject, Character* pCharacter)
         }
 
         const PblVector3& vVehicle = pObject->GetPosition();
-        const PblVector3& vCandidate = pCandidate->GetPosition();
-        const float dx = vCandidate.x - vVehicle.x;
-        const float dy = vCandidate.y - vVehicle.y;
-        const float dz = vCandidate.z - vVehicle.z;
-        const float fDistance = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
-        const float fInverseDistance = 1.0f / fDistance;
-        const float fDirX = dx * fInverseDistance;
-        const float fDirY = dy * fInverseDistance;
-        const float fDirZ = dz * fInverseDistance;
+        PblVector3 vDirection = pCandidate->GetPosition() - vVehicle;
+        const float fDistance = Length(vDirection);
+        vDirection *= 1.0f / fDistance;
         const PblMatrix& matrix = pObject->GetMatrix();
-        const float fForward = matrix.m[2][0] * fDirX + matrix.m[2][1] * fDirY + matrix.m[2][2] * fDirZ;
+        const float fForward = matrix.m[2][0] * vDirection.x + matrix.m[2][1] * vDirection.y + matrix.m[2][2] * vDirection.z;
         aCandidates[i].fScore = (1.5f - fForward) * fDistance;
     }
     qsort(aCandidates, iCount, sizeof(aCandidates[0]), SquadCommands::VehicleDistCallback);
 
     int iAccepted = 0;
-    for (int i = 0; i < iCount && iAccepted < iOpenSlots; ++i)
+    for (int i = 0; i < iCount; ++i)
     {
         UnitController* pUnit = UnitControllerPtr(aCandidates[i].pObject->GetControllable());
         AI::EventInfo info(AI::EVT_SC_GetIntoVehicle, pObject);
@@ -214,14 +205,18 @@ void SquadCommands::VehicleGetIn(GameObject* pObject, Character* pCharacter)
         {
             ++iAccepted;
         }
+        if (iAccepted >= iOpenSlots)
+        {
+            break;
+        }
     }
-    if (!iAccepted)
+    if (iAccepted <= 0)
     {
         return;
     }
 
-    AI::VOHelper::Play(AI::VOT_SC_GetIn, AIUtil::FindFirstPlayerInVehicle(pObject), 0,
-                       pObject, 0.0f);
+    GameObject* pPlayer = AIUtil::FindFirstPlayerInVehicle(pObject);
+    AI::VOHelper::Play(AI::VOT_SC_GetIn, pPlayer, 0, pObject, 0.0f);
     AI::EventType eType = AI::EVT_SC_GetIntoVehicle;
     Controllable* pVehicle = pObject->GetControllable();
     EventManager::CharacterEvent::mIssueAICommand.Trigger(*pVehicle->GetCharacter(), eType);

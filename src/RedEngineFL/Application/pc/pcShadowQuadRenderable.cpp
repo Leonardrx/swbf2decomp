@@ -265,7 +265,10 @@ void pcShadowQuadRenderable::Render(int value)
     RedRenderer::pcFlush(0);
     RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
 
-    colour = RedColor(0, 0, 0, 0xff);
+    colour.b = 0;
+    colour.g = 0;
+    colour.r = 0;
+    colour.a = 0xff;
     RedRenderer::pcRenderPrimitive(mesh, m_pScreenShader,
                                    gMatrixIdentity,
                                    colour, 0x200, 0,
@@ -296,7 +299,10 @@ void pcShadowQuadRenderable::Render(int value)
         backBuffer->Release();
         surface->Release();
 
-        colour = RedColor(0, 0, 0, 0);
+        colour.b = 0;
+        colour.g = 0;
+        colour.r = 0;
+        colour.a = 0;
         RedRenderer::pcRenderPrimitive(mesh,
                                        m_pScreenShader,
                                        gMatrixIdentity,

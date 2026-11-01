@@ -1663,13 +1663,11 @@ void FirstPersonCameraManager::ViewBob(float fScale)
         return;
     }
 
-    const float fBob = fScale * 0.1f;
-    PblVector3 vPos[4] = {
-        PblVector3(-0.0f, fBob, 0.0f),
-        PblVector3(0.0f, -0.0f, 0.0f),
-        PblVector3(0.0f, fBob, 0.0f),
-        PblVector3(0.0f, 0.0f, 0.0f)
-    };
+    PblVector3 vPos[4];
+    vPos[0] = PblVector3(-0.0f, fScale * 0.1f, 0.0f);
+    vPos[1] = PblVector3(0.0f, -0.0f, 0.0f);
+    vPos[2] = PblVector3(0.0f, fScale * 0.1f, 0.0f);
+    vPos[3] = PblVector3(0.0f, 0.0f, 0.0f);
     PblVector3 vPosSlope[4];
     vPosSlope[0] = PblVector3(0.1f, 0.1f, 0.0f);
     vPosSlope[1] = PblVector3(0.2f, 0.2f, 0.0f);

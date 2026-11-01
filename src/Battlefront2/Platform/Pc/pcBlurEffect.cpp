@@ -96,7 +96,7 @@ void BlurEffect::Render(int value)
 
     RedViewport viewport;
     RedRenderer::pcGetViewport(viewport);
-    float left, top, right, bottom;
+    float left, top, bottom, right;
     RedRenderer::pcGetViewportExtents(left, top, right, bottom);
 
     const float fSkyWidth = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_SKY))->m_uiWidth;
@@ -108,15 +108,13 @@ void BlurEffect::Render(int value)
     const float fTempHeight = (float)(RedRenderer::pcGetBuffer(PC_BUFFER_TEMP))->m_uiHeight;
     float fV0 = (bottom - top) * m_downSizeFactor / fTempHeight;
 
-    float fX = fU1 * 2.0f - 1.0f;
-    float fY = 1.0f - fV1 * 2.0f;
     pVerts[0] = -1.0f;  pVerts[1] = 1.0f;   pVerts[2] = 0.0f;
     pVerts[3] = 0.0f;   pVerts[4] = 0.0f;
-    pVerts[5] = -1.0f;  pVerts[6] = fY;     pVerts[7] = 0.0f;
+    pVerts[5] = -1.0f;  pVerts[6] = 1.0f - fV1 * 2.0f;     pVerts[7] = 0.0f;
     pVerts[8] = 0.0f;   pVerts[9] = fV0;
-    pVerts[10] = fX;    pVerts[11] = 1.0f;  pVerts[12] = 0.0f;
+    pVerts[10] = fU1 * 2.0f - 1.0f;    pVerts[11] = 1.0f;  pVerts[12] = 0.0f;
     pVerts[13] = fU0;   pVerts[14] = 0.0f;
-    pVerts[15] = fX;    pVerts[16] = fY;    pVerts[17] = 0.0f;
+    pVerts[15] = fU1 * 2.0f - 1.0f;    pVerts[16] = 1.0f - fV1 * 2.0f;    pVerts[17] = 0.0f;
     pVerts[18] = fU0;   pVerts[19] = fV0;
     pPrimitive->EndVertexData();
 

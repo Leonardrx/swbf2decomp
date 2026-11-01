@@ -3659,7 +3659,6 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
     float fLength = 0.0f;
     pKeys[0].length = 0.0f;
     pKeys[0].segmentIndex = 0;
-    int iKey = 1;
     for (int i = 1; i < iNumPoints; ++i)
     {
         PblMatrix mStart(pPath->GetPointRotation(i - 1), pPath->GetPointPosition(i - 1));
@@ -3673,9 +3672,8 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
             float fDY = vTo.y - vFrom.y;
             float fDZ = vTo.z - vFrom.z;
             fLength += PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
-            pKeys[iKey].length = fLength;
-            pKeys[iKey].segmentIndex = i - 1;
-            ++iKey;
+            pKeys[(i - 1) * 10 + j + 1].length = fLength;
+            pKeys[(i - 1) * 10 + j + 1].segmentIndex = i - 1;
         }
     }
 

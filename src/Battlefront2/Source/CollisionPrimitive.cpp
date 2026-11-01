@@ -507,8 +507,8 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
 
     if (!CollisionObject::sCollidingWithMesh)
     {
-        const PblVector3& vBoxMin = pObject->mAABB._vMin;
-        const PblVector3& vBoxMax = pObject->mAABB._vMax;
+        PblVector3 vBoxMin = pObject->mAABB._vMin;
+        PblVector3 vBoxMax = pObject->mAABB._vMax;
         PblVector3 aCorners[8];
         int i;
         aCorners[0].x = vBoxMin.x;

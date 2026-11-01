@@ -397,55 +397,126 @@ void pcStencilShadowShader::Render_Prog1(const RenderItem* pItem, unsigned int u
     RedRenderer::pcLoadFormat(m_pVertexFormat);
     const float fLength = pItem->fStencilShadowLength;
 
-    if ((pItem->uiShaderState >= 11 && uiPass == 0) ||
-        (pItem->uiShaderState < 11 && pItem->uiShaderState <= 5))
+    if (pItem->uiShaderState >= 11)
     {
-        for (int i = 0; pItem->pLightingState->pDirectionalLights[i] && i < 2; i++)
+        if (uiPass == 0)
         {
-            const RedDirectionalLight* pLight = pItem->pLightingState->pDirectionalLights[i];
+            for (int i = 0; pItem->pLightingState->pDirectionalLights[i] && i < 2;)
+            {
+                const RedDirectionalLight* pLight = pItem->pLightingState->pDirectionalLights[i++];
+                if (!pLight->IsShadowCaster())
+                {
+                    continue;
+                }
+                pcRedVertexShaderConstantRegister* pRegs =
+                    RedRenderer::pcLockVertexShaderConstants(40, 2);
+                pRegs[40].component[0] = pLight->m_vDirection.x;
+                pRegs[40].component[1] = pLight->m_vDirection.y;
+                pRegs[40].component[2] = pLight->m_vDirection.z;
+                pRegs[41].SetFloats(fLength, 0.0f, 0.0f);
+                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+                RenderVolume(pItem, uiPass);
+            }
+        }
+        else
+        {
+            for (int i = 0; pItem->pLightingState->pOmniLights[i] && i < 4;)
+            {
+                const RedOmniLight* pLight = pItem->pLightingState->pOmniLights[i++];
+                if (!pLight->IsShadowCaster())
+                {
+                    continue;
+                }
+                pcRedVertexShaderConstantRegister* pRegs =
+                    RedRenderer::pcLockVertexShaderConstants(40, 2);
+                const float fRadius = pLight->m_radius;
+                pRegs[40].component[0] = pLight->m_pos.x;
+                pRegs[40].component[1] = pLight->m_pos.y;
+                pRegs[40].component[2] = pLight->m_pos.z;
+                pRegs[40].component[3] = fRadius;
+                pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
+                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+                RenderVolume(pItem, uiPass);
+            }
+
+            for (int i = 0; pItem->pLightingState->pSpotLights[i] && i < 1;)
+            {
+                const RedSpotLight* pLight = pItem->pLightingState->pSpotLights[i++];
+                if (!pLight->IsShadowCaster())
+                {
+                    continue;
+                }
+                pcRedVertexShaderConstantRegister* pRegs =
+                    RedRenderer::pcLockVertexShaderConstants(40, 2);
+                const float fRadius = pLight->GetShadowRadius();
+                pRegs[40].component[0] = pLight->m_vPos.x;
+                pRegs[40].component[1] = pLight->m_vPos.y;
+                pRegs[40].component[2] = pLight->m_vPos.z;
+                pRegs[40].component[3] = fRadius;
+                pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
+                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+                RenderVolume(pItem, uiPass);
+            }
+        }
+    }
+    else if (pItem->uiShaderState > 5)
+    {
+        for (int i = 0; pItem->pLightingState->pOmniLights[i] && i < 4;)
+        {
+            const RedOmniLight* pLight = pItem->pLightingState->pOmniLights[i++];
             if (!pLight->IsShadowCaster())
             {
                 continue;
             }
             pcRedVertexShaderConstantRegister* pRegs =
                 RedRenderer::pcLockVertexShaderConstants(40, 2);
-            pRegs[40].SetFloats(pLight->m_vDirection.x, pLight->m_vDirection.y,
-                                pLight->m_vDirection.z);
+            const float fRadius = pLight->m_radius;
+            pRegs[40].component[0] = pLight->m_pos.x;
+            pRegs[40].component[1] = pLight->m_pos.y;
+            pRegs[40].component[2] = pLight->m_pos.z;
+            pRegs[40].component[3] = fRadius;
+            pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
+            RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+            RenderVolume(pItem, uiPass);
+        }
+
+        for (int i = 0; pItem->pLightingState->pSpotLights[i] && i < 1;)
+        {
+            const RedSpotLight* pLight = pItem->pLightingState->pSpotLights[i++];
+            if (!pLight->IsShadowCaster())
+            {
+                continue;
+            }
+            pcRedVertexShaderConstantRegister* pRegs =
+                RedRenderer::pcLockVertexShaderConstants(40, 2);
+            const float fRadius = pLight->GetShadowRadius();
+            pRegs[40].component[0] = pLight->m_vPos.x;
+            pRegs[40].component[1] = pLight->m_vPos.y;
+            pRegs[40].component[2] = pLight->m_vPos.z;
+            pRegs[40].component[3] = fRadius;
+            pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
+            RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+            RenderVolume(pItem, uiPass);
+        }
+    }
+    else
+    {
+        for (int i = 0; pItem->pLightingState->pDirectionalLights[i] && i < 2;)
+        {
+            const RedDirectionalLight* pLight = pItem->pLightingState->pDirectionalLights[i++];
+            if (!pLight->IsShadowCaster())
+            {
+                continue;
+            }
+            pcRedVertexShaderConstantRegister* pRegs =
+                RedRenderer::pcLockVertexShaderConstants(40, 2);
+            pRegs[40].component[0] = pLight->m_vDirection.x;
+            pRegs[40].component[1] = pLight->m_vDirection.y;
+            pRegs[40].component[2] = pLight->m_vDirection.z;
             pRegs[41].SetFloats(fLength, 0.0f, 0.0f);
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
             RenderVolume(pItem, uiPass);
         }
-        return;
-    }
-
-    for (int i = 0; pItem->pLightingState->pOmniLights[i] && i < 4; i++)
-    {
-        const RedOmniLight* pLight = pItem->pLightingState->pOmniLights[i];
-        if (!pLight->IsShadowCaster())
-        {
-            continue;
-        }
-        pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 2);
-        pRegs[40].SetFloats(pLight->m_pos.x, pLight->m_pos.y, pLight->m_pos.z);
-        pRegs[40].component[3] = pLight->m_radius;
-        pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
-        RedRenderer::pcUnlockVertexShaderConstants(pRegs);
-        RenderVolume(pItem, uiPass);
-    }
-
-    for (int i = 0; pItem->pLightingState->pSpotLights[i] && i < 1; i++)
-    {
-        const RedSpotLight* pLight = pItem->pLightingState->pSpotLights[i];
-        if (!pLight->IsShadowCaster())
-        {
-            continue;
-        }
-        pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 2);
-        pRegs[40].SetFloats(pLight->m_vPos.x, pLight->m_vPos.y, pLight->m_vPos.z);
-        pRegs[40].component[3] = pLight->GetShadowRadius();
-        pRegs[41].SetFloats(0.0f, 0.0f, 0.0f);
-        RedRenderer::pcUnlockVertexShaderConstants(pRegs);
-        RenderVolume(pItem, uiPass);
     }
 }
 

@@ -60,10 +60,11 @@ inline RedColor ToRedColor(const RedColorValue& c)
 
 // FUNCTION: SWBF2 0x00417280
 GrassPatchRenderable::GrassPatchRenderable(const GrassPatchClass* pClass)
-    : Renderable(2), m_fDistanceFarShader(-3.402823466e38f),
-      m_pPrimitive(0), m_pPrimitiveFar(0), m_pClass(const_cast<GrassPatchClass*>(pClass)),
-      m_pVertices(0)
+    : Renderable(2), m_fDistanceFarShader(-3.402823466e38f), m_pClass(const_cast<GrassPatchClass*>(pClass))
 {
+    m_pPrimitive = 0;
+    m_pPrimitiveFar = 0;
+    m_pVertices = 0;
     if (RedRenderer::pcGetGeometryMode() == GEOMETRYMODE_UNCOMPRESSED)
     {
         m_pShader = pcRedShader::Create(0xe68b9c52, 0x2a2, &m_pClass->mTextureHash,
@@ -90,13 +91,12 @@ GrassPatchRenderable::GrassPatchRenderable(const GrassPatchClass* pClass)
     for (short i = (short)(count - 1); i >= 0; --i)
     {
         const unsigned short base = (unsigned short)(i * 4);
-        indices[0] = base;
-        indices[1] = (unsigned short)(base + 1);
-        indices[2] = (unsigned short)(base + 2);
-        indices[3] = base;
-        indices[4] = (unsigned short)(base + 2);
-        indices[5] = (unsigned short)(base + 3);
-        indices += 6;
+        *indices++ = base;
+        *indices++ = (unsigned short)(base + 1);
+        *indices++ = (unsigned short)(base + 2);
+        *indices++ = base;
+        *indices++ = (unsigned short)(base + 2);
+        *indices++ = (unsigned short)(base + 3);
     }
     m_pIBReverse->Unlock();
     m_pIBForward = pcRedIndexBuffer::Create(6 * count, true, true);
@@ -104,17 +104,24 @@ GrassPatchRenderable::GrassPatchRenderable(const GrassPatchClass* pClass)
     for (short i = 0; i < count; ++i)
     {
         const unsigned short base = (unsigned short)(i * 4);
-        indices[0] = base;
-        indices[1] = (unsigned short)(base + 1);
-        indices[2] = (unsigned short)(base + 2);
-        indices[3] = base;
-        indices[4] = (unsigned short)(base + 2);
-        indices[5] = (unsigned short)(base + 3);
-        indices += 6;
+        *indices++ = base;
+        *indices++ = (unsigned short)(base + 1);
+        *indices++ = (unsigned short)(base + 2);
+        *indices++ = base;
+        *indices++ = (unsigned short)(base + 2);
+        *indices++ = (unsigned short)(base + 3);
     }
     m_pIBForward->Unlock();
-    mHeap = new PblHeap<int, float>(count, 1000000.0f, 0);
-    m_iTexCoordType = pClass->mNumParts == 4 ? 1 : pClass->mNumParts == 6 ? 2 : 0;
+    mHeap = new PblHeap<int, float>(m_pClass->mNumParticles, 1000000.0f, 0);
+    m_iTexCoordType = 0;
+    if (m_pClass->mNumParts == 4)
+    {
+        m_iTexCoordType = 1;
+    }
+    else if (m_pClass->mNumParts == 6)
+    {
+        m_iTexCoordType = 2;
+    }
     Activate(0);
 }
 
@@ -410,25 +417,18 @@ void GrassPatchRenderable::Begin()
     const PblMatrix& mat = RedRenderer::GetCamera()->_Matrix;
 
     m_vUp = PblVector3(0.0f, 1.0f, 0.0f);
-    float fDot = (mat.m[2][0] * m_vUp.x + mat.m[2][1] * m_vUp.y + mat.m[2][2] * m_vUp.z) * 0.7f;
-    m_vUp.x -= mat.m[2][0] * fDot;
-    m_vUp.y -= mat.m[2][1] * fDot;
-    m_vUp.z -= mat.m[2][2] * fDot;
-    PblVector3 vNorm;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&m_vUp));
-    m_vUp = PblVector3(vNorm.x * fScale, vNorm.y * fScale, vNorm.z * fScale);
+    m_vUp -= mat.GetZAxis() * (DotProduct(mat.GetZAxis(), m_vUp) * 0.7f);
+    m_vUp = Normalize(m_vUp) * fScale;
 
-    PblVector3 vFront(mat.m[2][0] * fScale, mat.m[2][1] * fScale, mat.m[2][2] * fScale);
-    PblVector3 vRight(mat.m[0][0] * fScale, mat.m[0][1] * fScale, mat.m[0][2] * fScale);
+    PblVector3 vFront = mat.GetZAxis() * fScale;
+    PblVector3 vRight = mat.GetXAxis() * fScale;
     for (int i = 0; i < 10; ++i)
     {
-
         float f = (float)(i % 5) * (1.0f - (float)(i & 1) * 2.0f) * 0.05f;
         float fAbs = f < 0.0f ? -f : f;
         float fRight = (1.0f - fAbs) * 1.1f;
         float fFront = f * 1.1f;
-        m_avRight[i] = PblVector3(vFront.x * fFront + vRight.x * fRight, vFront.y * fFront + vRight.y * fRight,
-                                  vFront.z * fFront + vRight.z * fRight);
+        m_avRight[i] = vFront * fFront + vRight * fRight;
     }
 
     m_vFlatFront = PblVector3(-mat.m[2][0], -mat.m[2][1], -mat.m[2][2]);
@@ -439,8 +439,7 @@ void GrassPatchRenderable::Begin()
     }
     else
     {
-        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNorm), reinterpret_cast<const D3DXVECTOR3*>(&m_vFlatFront));
-        m_vFlatFront = vNorm;
+        m_vFlatFront = Normalize(m_vFlatFront);
     }
 }
 

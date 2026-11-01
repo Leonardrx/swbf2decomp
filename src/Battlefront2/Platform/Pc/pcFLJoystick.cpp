@@ -741,13 +741,14 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
             iLastDY = iDY;
         }
 
+        double dX = iDX;
         double dY = -iDY;
         if (gInvertMouse)
         {
             dY = -dY;
         }
         const double dSensitivity = *(double*)mMouseSensitivity[mMode] * (1.0 / 2048.0);
-        double dX = iDX / (double)fDeltaTime;
+        dX = dX / (double)fDeltaTime;
         dY = dY / (double)fDeltaTime;
 
         if (mMouseAssist[mMode] && (mMode == 1 || mMode == 2 || mMode == 4) &&
@@ -823,7 +824,14 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
             }
             if (fabs(dY) * dSensitivity > 1.1)
             {
-                mMouseOldY = (dY > 0.0 ? 1.1 : -1.1) / dSensitivity;
+                if (dY > 0.0)
+                {
+                    mMouseOldY = 1.1 / dSensitivity;
+                }
+                else
+                {
+                    mMouseOldY = -1.1 / dSensitivity;
+                }
             }
         }
         else
@@ -895,8 +903,10 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
 
     if (_redMouse)
     {
-        m_pGuiInputs->mMouseCoords.mPosX = _redMouse->m_X;
-        m_pGuiInputs->mMouseCoords.mPosY = _redMouse->m_Y;
+        const int iMouseY = _redMouse->m_Y;
+        const int iMouseX = _redMouse->m_X;
+        m_pGuiInputs->mMouseCoords.mPosX = iMouseX;
+        m_pGuiInputs->mMouseCoords.mPosY = iMouseY;
     }
 
     if (bAnyInput)
@@ -911,7 +921,7 @@ void RawControllerInputs::StandardInputProcess()
 
     bool bLocked = false;
 
-    for (int i = 0; i < 144; i++)
+    for (unsigned char i = 0; i < 144; i++)
     {
         if (_redKeyboard->IsKeyDown((unsigned char)RedKeyTo_BindID[i]))
         {
@@ -923,11 +933,10 @@ void RawControllerInputs::StandardInputProcess()
     bool bScreenshot = true;
     for (int iAction = 0; iAction < 43; iAction++)
     {
-        const ActionKey& key = mCurKeyboardBindings[mMode][iAction];
-        const unsigned char* pucPort = (const unsigned char*)&key.mKey[2];
         for (int j = 0; j < 2; j++)
         {
-            if (key.mKey[j] == DIK_SYSRQ && pucPort[j] == 0)
+            if (mCurKeyboardBindings[mMode][iAction].mKey[j] == DIK_SYSRQ &&
+                ((const unsigned char*)&mCurKeyboardBindings[mMode][iAction].mKey[2])[j] == 0)
             {
                 bScreenshot = false;
                 break;
@@ -946,8 +955,7 @@ void RawControllerInputs::StandardInputProcess()
     {
         for (int j = 0; j < 2; j++)
         {
-            const ActionKey& key = mCurKeyboardBindings[mMode][iAction];
-            const unsigned short usKey = key.mKey[j];
+            const unsigned short usKey = mCurKeyboardBindings[mMode][iAction].mKey[j];
             if (usKey > 0xff)
             {
                 const unsigned char ucRaw = ActionKeyToRawInput(usKey);
@@ -955,7 +963,7 @@ void RawControllerInputs::StandardInputProcess()
                 unsigned char ucPort;
                 if (iRaw > -1 && ucRaw < 64)
                 {
-                    ucPort = ((const unsigned char*)&key.mKey[2])[j];
+                    ucPort = ((const unsigned char*)&mCurKeyboardBindings[mMode][iAction].mKey[2])[j];
                 }
                 else
                 {
@@ -976,9 +984,14 @@ void RawControllerInputs::StandardInputProcess()
                         bCancelAssist = true;
                     }
                 }
-                else if (ucRaw < 64 && (iAction == ePROCESSEDINPUT_PITCH_AXIS ||
-                                        iAction == ePROCESSEDINPUT_PITCH_POS ||
-                                        iAction == ePROCESSEDINPUT_PITCH_NEG))
+                else if (ucRaw >= 64 || (iAction != ePROCESSEDINPUT_PITCH_AXIS &&
+                                         iAction != ePROCESSEDINPUT_PITCH_POS &&
+                                         iAction != ePROCESSEDINPUT_PITCH_NEG))
+                {
+                    fValue = mRawInputFloat[ucPort][iRaw];
+                    fLastValue = mLastRawInputFloat[ucPort][iRaw];
+                }
+                else
                 {
                     fValue = AdjustValueForSensitivity(mRawInputFloat[ucPort][iRaw], mJoystickSensitivityY[mMode]);
                     fLastValue = AdjustValueForSensitivity(mLastRawInputFloat[ucPort][iRaw], mJoystickSensitivityY[mMode]);
@@ -986,11 +999,6 @@ void RawControllerInputs::StandardInputProcess()
                     {
                         bCancelAssist = true;
                     }
-                }
-                else
-                {
-                    fValue = mRawInputFloat[ucPort][iRaw];
-                    fLastValue = mLastRawInputFloat[ucPort][iRaw];
                 }
 
                 if (mFlip[mMode] && iAction == ePROCESSEDINPUT_PITCH_AXIS)

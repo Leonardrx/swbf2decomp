@@ -439,8 +439,8 @@ void EntityBuildingAnimated::Render(unsigned char uFlags, float fDist, unsigned 
             {
                 if (FLEffectObject* pEffect = pEffectClass->BuildEffect())
                 {
+                    int iBody = PblRandom::GetGlobalInt() % mCollisionModel->GetNumBodies();
                     CollisionModel* pModel = mCollisionModel;
-                    int iBody = PblRandom::GetGlobalInt() % pModel->GetNumBodies();
                     PblMatrix mBody = pModel->GetWorldMatrix(iBody, mMatrix, GetPose());
                     pEffect->AttachEffectToMatrix(&mBody, false);
                 }

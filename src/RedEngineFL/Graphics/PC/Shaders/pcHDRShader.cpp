@@ -167,36 +167,26 @@ void pcHDRShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
     RedRenderer::pcLoadFormat(m_pVertexFormat);
 
-    unsigned int uiDestWidth;
-    unsigned int uiDestHeight;
+    float fDestTexelX;
+    float fDestTexelY;
     if (m_destTex)
     {
-        uiDestWidth = m_destTex->m_uiWidth;
-        uiDestHeight = m_destTex->m_uiHeight;
+        fDestTexelX = 1.0f / (float)m_destTex->m_uiWidth;
+        fDestTexelY = 1.0f / (float)m_destTex->m_uiHeight;
     }
     else
     {
         const D3DPRESENT_PARAMETERS& pp = RedRenderer::pcGetPresentParameters();
-        uiDestWidth = pp.BackBufferWidth;
-        uiDestHeight = pp.BackBufferHeight;
+        fDestTexelX = 1.0f / (float)pp.BackBufferWidth;
+        fDestTexelY = 1.0f / (float)pp.BackBufferHeight;
     }
-    const float fDestTexelX = 1.0f / (float)uiDestWidth;
-    const float fDestTexelY = 1.0f / (float)uiDestHeight;
 
     pcRedVertexShaderConstantRegister* pRegs =
         RedRenderer::pcLockVertexShaderConstants(40, 3);
-    pRegs[40].component[2] = 0.0f;
-    pRegs[40].component[3] = 0.0f;
-    pRegs[40].component[0] = 1.0f / (float)m_sourceTex->m_uiWidth;
-    pRegs[40].component[1] = 1.0f / (float)m_sourceTex->m_uiHeight;
-    pRegs[41].component[0] = fDestTexelX;
-    pRegs[41].component[1] = fDestTexelY;
-    pRegs[41].component[2] = fDestTexelX * 0.5f;
-    pRegs[41].component[3] = fDestTexelY * 0.5f;
-    pRegs[42].component[0] = 1.0f;
-    pRegs[42].component[1] = 1.0f;
-    pRegs[42].component[2] = 1.0f / (float)m_sourceTex->m_uiWidth * m_bloomOffset;
-    pRegs[42].component[3] = 1.0f / (float)m_sourceTex->m_uiHeight * m_bloomOffset;
+    pRegs[40].SetFloats(1.0f / (float)m_sourceTex->m_uiWidth, 1.0f / (float)m_sourceTex->m_uiHeight, 0.0f, 0.0f);
+    pRegs[41].SetFloats(fDestTexelX, fDestTexelY, fDestTexelX * 0.5f, fDestTexelY * 0.5f);
+    pRegs[42].SetFloats(1.0f, 1.0f, 1.0f / (float)m_sourceTex->m_uiWidth * m_bloomOffset,
+                        1.0f / (float)m_sourceTex->m_uiHeight * m_bloomOffset);
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
     const float afPSConstants[12] =

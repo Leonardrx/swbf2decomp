@@ -268,9 +268,10 @@ void RedDebug::DrawCone(const PblMatrix& matrix, float fHeight, float fRadius0, 
     for (int i = 0; i < 8; i++)
     {
         const PblVector3& c0 = aCircle[i];
+        const int iNext = (i + 1) % 8;
         DrawLine3D(vBase + c0 * fRadius0, vTop + c0 * fRadius1, color);
-        DrawLine3D(vBase + c0 * fRadius0, vBase + aCircle[(i + 1) % 8] * fRadius0, color);
-        DrawLine3D(vTop + c0 * fRadius1, vTop + aCircle[(i + 1) % 8] * fRadius1, color);
+        DrawLine3D(vBase + c0 * fRadius0, vBase + aCircle[iNext] * fRadius0, color);
+        DrawLine3D(vTop + c0 * fRadius1, vTop + aCircle[iNext] * fRadius1, color);
     }
 }
 
@@ -326,47 +327,48 @@ static inline PblVector3 VecSub(const PblVector3& a, const PblVector3& b)
 void RedDebug::DrawSphere(PblVector3 vCenter, float fRadius, RedColor color)
 {
     const float fDiag = fRadius * 0.7071f;
+    const float fNegDiag = -fDiag;
 
     const PblVector3 vX(fRadius, 0.0f, 0.0f);
     const PblVector3 vY(0.0f, fRadius, 0.0f);
     const PblVector3 vZ(0.0f, 0.0f, fRadius);
     const PblVector3 vXY(fDiag, fDiag, 0.0f);
-    const PblVector3 vXnY(fDiag, -fDiag, 0.0f);
+    const PblVector3 vXnY(fDiag, fNegDiag, 0.0f);
     const PblVector3 vYZ(0.0f, fDiag, fDiag);
-    const PblVector3 vYnZ(0.0f, fDiag, -fDiag);
+    const PblVector3 vYnZ(0.0f, fDiag, fNegDiag);
     const PblVector3 vXZ(fDiag, 0.0f, fDiag);
-    const PblVector3 vnXZ(-fDiag, 0.0f, fDiag);
+    const PblVector3 vnXZ(fNegDiag, 0.0f, fDiag);
 
-    DrawLine3D(VecSub(vCenter, vX), VecAdd(vCenter, vX), color);
-    DrawLine3D(VecSub(vCenter, vY), VecAdd(vCenter, vY), color);
-    DrawLine3D(VecSub(vCenter, vZ), VecAdd(vCenter, vZ), color);
+    DrawLine3D(vCenter - vX, vCenter + vX, color);
+    DrawLine3D(vCenter - vY, vCenter + vY, color);
+    DrawLine3D(vCenter - vZ, vCenter + vZ, color);
 
-    DrawLine3D(VecAdd(vCenter, vY), VecAdd(vCenter, vXY), color);
-    DrawLine3D(VecAdd(vCenter, vXY), VecAdd(vCenter, vX), color);
-    DrawLine3D(VecAdd(vCenter, vX), VecAdd(vCenter, vXnY), color);
-    DrawLine3D(VecAdd(vCenter, vXnY), VecSub(vCenter, vY), color);
-    DrawLine3D(VecSub(vCenter, vY), VecSub(vCenter, vXY), color);
-    DrawLine3D(VecSub(vCenter, vXY), VecSub(vCenter, vX), color);
-    DrawLine3D(VecSub(vCenter, vX), VecSub(vCenter, vXnY), color);
-    DrawLine3D(VecSub(vCenter, vXnY), VecAdd(vCenter, vY), color);
+    DrawLine3D(vCenter + vY, vCenter + vXY, color);
+    DrawLine3D(vCenter + vXY, vCenter + vX, color);
+    DrawLine3D(vCenter + vX, vCenter + vXnY, color);
+    DrawLine3D(vCenter + vXnY, vCenter - vY, color);
+    DrawLine3D(vCenter - vY, vCenter - vXY, color);
+    DrawLine3D(vCenter - vXY, vCenter - vX, color);
+    DrawLine3D(vCenter - vX, vCenter - vXnY, color);
+    DrawLine3D(vCenter - vXnY, vCenter + vY, color);
 
-    DrawLine3D(VecAdd(vCenter, vZ), VecAdd(vCenter, vYZ), color);
-    DrawLine3D(VecAdd(vCenter, vYZ), VecAdd(vCenter, vY), color);
-    DrawLine3D(VecAdd(vCenter, vY), VecAdd(vCenter, vYnZ), color);
-    DrawLine3D(VecAdd(vCenter, vYnZ), VecSub(vCenter, vZ), color);
-    DrawLine3D(VecSub(vCenter, vZ), VecSub(vCenter, vYZ), color);
-    DrawLine3D(VecSub(vCenter, vYZ), VecSub(vCenter, vY), color);
-    DrawLine3D(VecSub(vCenter, vY), VecSub(vCenter, vYnZ), color);
-    DrawLine3D(VecSub(vCenter, vYnZ), VecAdd(vCenter, vZ), color);
+    DrawLine3D(vCenter + vZ, vCenter + vYZ, color);
+    DrawLine3D(vCenter + vYZ, vCenter + vY, color);
+    DrawLine3D(vCenter + vY, vCenter + vYnZ, color);
+    DrawLine3D(vCenter + vYnZ, vCenter - vZ, color);
+    DrawLine3D(vCenter - vZ, vCenter - vYZ, color);
+    DrawLine3D(vCenter - vYZ, vCenter - vY, color);
+    DrawLine3D(vCenter - vY, vCenter - vYnZ, color);
+    DrawLine3D(vCenter - vYnZ, vCenter + vZ, color);
 
-    DrawLine3D(VecAdd(vCenter, vX), VecAdd(vCenter, vXZ), color);
-    DrawLine3D(VecAdd(vCenter, vXZ), VecAdd(vCenter, vZ), color);
-    DrawLine3D(VecAdd(vCenter, vZ), VecAdd(vCenter, vnXZ), color);
-    DrawLine3D(VecAdd(vCenter, vnXZ), VecSub(vCenter, vX), color);
-    DrawLine3D(VecSub(vCenter, vX), VecSub(vCenter, vXZ), color);
-    DrawLine3D(VecSub(vCenter, vXZ), VecSub(vCenter, vZ), color);
-    DrawLine3D(VecSub(vCenter, vZ), VecSub(vCenter, vnXZ), color);
-    DrawLine3D(VecSub(vCenter, vnXZ), VecAdd(vCenter, vX), color);
+    DrawLine3D(vCenter + vX, vCenter + vXZ, color);
+    DrawLine3D(vCenter + vXZ, vCenter + vZ, color);
+    DrawLine3D(vCenter + vZ, vCenter + vnXZ, color);
+    DrawLine3D(vCenter + vnXZ, vCenter - vX, color);
+    DrawLine3D(vCenter - vX, vCenter - vXZ, color);
+    DrawLine3D(vCenter - vXZ, vCenter - vZ, color);
+    DrawLine3D(vCenter - vZ, vCenter - vnXZ, color);
+    DrawLine3D(vCenter - vnXZ, vCenter + vX, color);
 }
 
 // FUNCTION: SWBF2 0x006f2510
@@ -521,17 +523,13 @@ void RedDebug::RedDebugRenderable::Render(int)
         }
 
         unsigned int uiNumLines = _n3DLines / 2;
-        box._vMax.x += 1.0f;
-        box._vMax.y += 1.0f;
-        box._vMax.z += 1.0f;
-        box._vMin.x -= 1.0f;
-        box._vMin.y -= 1.0f;
-        box._vMin.z -= 1.0f;
+        const PblVector3 vOne(1.0f, 1.0f, 1.0f);
+        const PblBox bounds(box._vMin - vOne, box._vMax + vOne);
 
         pcRedPrimitive* pPrimitive =
             pcRedPrimitive::Create(D3DPT_LINELIST, 0x1082, 12, uiNumLines * 2, 0, false);
-        pPrimitive->m_bbox = box;
-        CompressedPos::SetBoundingBox(box);
+        pPrimitive->m_bbox = bounds;
+        CompressedPos::SetBoundingBox(bounds);
 
         DebugVertex* pVertex = (DebugVertex*)pPrimitive->BeginVertexData();
         if (!pVertex)

@@ -69,29 +69,31 @@ void HeatShimmerEffect::PlatformPostReadInit()
 
     const RedCamera* pCamera = RedRenderer::GetCamera();
     const float fHalfWidth = (float)tan((double)(pCamera->GetFOV() * 0.5f)) * 200.0f;
-    const float fXStep = (fHalfWidth * 2.0f) / (float)s_tessellationX;
     float fY = s_posY + s_height;
+    const float fStartX = -fHalfWidth;
+    const float fXStep = (fHalfWidth * 2.0f) / (float)s_tessellationX;
     const float fYStep = -((fY - s_height) / (float)s_tessellationY);
     struct Vertex { float x, y, z; RedColor color; float u, v; };
-    Vertex* pVertices = (Vertex*)s_pPrimitive->BeginVertexData();
-    if (pVertices)
+    Vertex* pVertex = (Vertex*)s_pPrimitive->BeginVertexData();
+    if (pVertex)
     {
         for (unsigned int y = 0; y <= s_tessellationY; ++y)
         {
-            float fFade = 1.0f - (float)fabs((double)(((float)y / (float)s_tessellationY) * 2.0f - 1.0f));
+            float fX = fStartX;
+            const float fV = (float)y / (float)s_tessellationY;
+            float fFade = 1.0f - (float)fabs((double)(fV * 2.0f - 1.0f));
             unsigned char ucAlpha = (unsigned char)(int)(fFade * 255.0f);
-            RedColor color = RedColor::WHITE;
-            color.a = ucAlpha;
-            float fX = -fHalfWidth;
             for (unsigned int x = 0; x <= s_tessellationX; ++x)
             {
-                Vertex& v = pVertices[y * (s_tessellationX + 1) + x];
-                v.x = fX;
-                v.y = fY;
-                v.z = 0.0f;
-                v.color = color;
-                v.u = (float)x / (float)s_tessellationX;
-                v.v = (float)y / (float)s_tessellationY;
+                pVertex->x = fX;
+                pVertex->y = fY;
+                pVertex->z = 0.0f;
+                RedColor color = RedColor::WHITE;
+                color.a = ucAlpha;
+                pVertex->color = color;
+                pVertex->u = (float)x / (float)s_tessellationX;
+                pVertex->v = fV;
+                ++pVertex;
                 fX += fXStep;
             }
             fY += fYStep;
@@ -101,16 +103,16 @@ void HeatShimmerEffect::PlatformPostReadInit()
         unsigned int n = 0;
         for (unsigned int y = 0; y < s_tessellationY; ++y)
         {
-            for (unsigned int x = 0; x <= s_tessellationX; ++x)
+            unsigned int x;
+            for (x = 0; x <= s_tessellationX; ++x)
             {
                 pIndices[n++] = (unsigned short)y * (s_tessellationX + 1) + (unsigned short)x;
                 pIndices[n++] = ((unsigned short)y + 1) * (s_tessellationX + 1) + (unsigned short)x;
             }
-            if (y < s_tessellationY - 1)
+            if (y != s_tessellationY - 1)
             {
-                pIndices[n] = pIndices[n - 1];
-                ++n;
-                pIndices[n++] = (unsigned short)((y + 1) * (s_tessellationX + 1));
+                pIndices[n++] = ((unsigned short)y + 1) * (s_tessellationX + 1) + x - 1;
+                pIndices[n++] = ((unsigned short)y + 1) * (s_tessellationX + 1);
             }
         }
         s_pPrimitive->EndIndexData();

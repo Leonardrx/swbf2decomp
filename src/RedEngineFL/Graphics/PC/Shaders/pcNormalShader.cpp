@@ -598,9 +598,9 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
             pRegs[40].component[1] = fYx;
             pRegs[40].component[2] = 0.0f;
             pRegs[40].component[3] = fTx;
-            const float fXy = (*pTransform)(0, 1);
-            const float fYy = (*pTransform)(1, 1);
             const float fTy = (*pTransform)(2, 1);
+            const float fYy = (*pTransform)(1, 1);
+            const float fXy = (*pTransform)(0, 1);
             pRegs[41].component[0] = fXy;
             pRegs[41].component[1] = fYy;
             pRegs[41].component[3] = fTy;

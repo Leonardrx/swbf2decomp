@@ -448,25 +448,25 @@ void pcSpecularLightingShader::PerPixelLighting(const RenderItem* pItem, unsigne
 // FUNCTION: SWBF2 0x00712f60
 void pcSpecularLightingShader::PerVertexLighting(const RenderItem* pItem, unsigned int) const
 {
+    int iLight = 0;
+    int iNumPasses = 0;
     const RedMaterial* pMaterial = pItem->pRootShader->m_material;
     const RedLightingState* pLighting = pItem->pLightingState;
-    int iNumPasses = 0;
     const int iMaxLights = MAX_LIGHTS_PER_STATE[pItem->uiShaderState];
 
     RedColorValue colors[6];
+    RedColorValue scaled;
     const float fScale = RedRenderer::GetLightingScale() * (pItem->tweakColor.a * kInv255);
-    colors[0].r = pMaterial->specularColor.r * fScale;
-    colors[0].g = pMaterial->specularColor.g * fScale;
-    colors[0].b = pMaterial->specularColor.b * fScale;
+    for (int iChannel = 0; iChannel < 4; iChannel++)
+    {
+        (&scaled.r)[iChannel] = (&pMaterial->specularColor.r)[iChannel] * fScale;
+    }
+    colors[0] = scaled;
     colors[0].a = (pMaterial->materialFlags & 8) ? 1.0f : 0.0f;
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(42, 4);
-    pRegs[42].component[0] = 0.0f;
-    pRegs[42].component[1] = 0.0f;
-    pRegs[42].component[2] = 0.0f;
-    pRegs[42].component[3] = sqrtf(pMaterial->specularPower) * kfSpecularSizeInv;
+    pRegs[42].SetFloats(0.0f, 0.0f, 0.0f, sqrtf(pMaterial->specularPower) * kfSpecularSizeInv);
 
-    int iLight = 0;
     if (pMaterial->materialFlags & 0x80)
     {
         for (int i = 0; i < pLighting->numDirectionalLights; i++)
@@ -478,15 +478,14 @@ void pcSpecularLightingShader::PerVertexLighting(const RenderItem* pItem, unsign
             }
 
             const float fFactor = pLighting->pDirectionalFactor[i];
-            colors[2 + iLight].r = pLight->m_color.r * fFactor;
-            colors[2 + iLight].g = pLight->m_color.g * fFactor;
-            colors[2 + iLight].b = pLight->m_color.b * fFactor;
-            colors[2 + iLight].a = pLight->m_color.a * fFactor;
+            for (int iChannel = 0; iChannel < 4; iChannel++)
+            {
+                (&scaled.r)[iChannel] = (&pLight->m_color.r)[iChannel] * fFactor;
+            }
+            colors[2 + iLight] = scaled;
             pRegs[42].component[iLight] = 0.0f;
-            pRegs[43 + iLight].component[0] = -pLight->m_vDirection.x;
-            pRegs[43 + iLight].component[1] = -pLight->m_vDirection.y;
-            pRegs[43 + iLight].component[2] = -pLight->m_vDirection.z;
-            pRegs[43 + iLight].component[3] = 0.0f;
+            pRegs[43 + iLight].SetFloats(-pLight->m_vDirection.x, -pLight->m_vDirection.y,
+                                         -pLight->m_vDirection.z, 0.0f);
             iLight++;
 
             if (iLight >= iMaxLights)
@@ -510,10 +509,8 @@ void pcSpecularLightingShader::PerVertexLighting(const RenderItem* pItem, unsign
 
             colors[2 + iLight] = pLight->m_color;
             pRegs[42].component[iLight] = 0.0f;
-            pRegs[43 + iLight].component[0] = pLight->m_pos.x;
-            pRegs[43 + iLight].component[1] = pLight->m_pos.y;
-            pRegs[43 + iLight].component[2] = pLight->m_pos.z;
-            pRegs[43 + iLight].component[3] = pLight->m_fRadiusInvSq;
+            pRegs[43 + iLight].SetFloats(pLight->m_pos.x, pLight->m_pos.y, pLight->m_pos.z,
+                                         pLight->m_fRadiusInvSq);
             iLight++;
 
             if (iLight >= iMaxLights)
@@ -537,10 +534,8 @@ void pcSpecularLightingShader::PerVertexLighting(const RenderItem* pItem, unsign
 
             colors[2 + iLight] = pLight->m_color;
             pRegs[42].component[iLight] = 0.0f;
-            pRegs[43 + iLight].component[0] = pLight->m_vPos.x;
-            pRegs[43 + iLight].component[1] = pLight->m_vPos.y;
-            pRegs[43 + iLight].component[2] = pLight->m_vPos.z;
-            pRegs[43 + iLight].component[3] = pLight->m_fRadiusInvSq;
+            pRegs[43 + iLight].SetFloats(pLight->m_vPos.x, pLight->m_vPos.y, pLight->m_vPos.z,
+                                         pLight->m_fRadiusInvSq);
             iLight++;
 
             if (iLight >= iMaxLights)

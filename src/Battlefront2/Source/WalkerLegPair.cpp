@@ -191,8 +191,7 @@ void WalkerLegPair::SetupGroundCollision(const PblMatrix& mMatrix, float fPitch,
     }
 
     mFootHeightDifference = mFootHeight[Left] - mFootHeight[Right];
-    float fBlend = mFootHeightDifference * -0.6f;
-    fBlend = fBlend < -1.0f ? -1.0f : (fBlend > 1.0f ? 1.0f : fBlend);
+    float fBlend = Clamp(mFootHeightDifference * -0.6f, -1.0f, 1.0f);
     mBlendFactor += (fBlend - mBlendFactor) * 0.4f;
 
     if (mParent->mClass->mOrientRoll)

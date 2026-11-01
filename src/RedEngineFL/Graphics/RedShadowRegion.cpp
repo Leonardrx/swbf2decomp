@@ -148,8 +148,9 @@ void RedShadowRegionFactory::ReadParameter(const char* pcRegionName, const char*
 {
     RedShadowRegion::Info* pInfo = (RedShadowRegion::Info*)pDesc;
     const float kToFloat = 1.0f / 255.0f;
+    const unsigned int uiParameter = PblHash(pcParameter);
 
-    switch (PblHash(pcParameter))
+    switch (uiParameter)
     {
     case 0x10f7c207:
     {

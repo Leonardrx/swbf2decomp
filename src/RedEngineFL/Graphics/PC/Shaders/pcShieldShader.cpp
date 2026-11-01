@@ -340,16 +340,13 @@ void pcShieldShader::InitFixedFunctionShaderDef() const
 // FUNCTION: SWBF2 0x006cd8e0
 void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
 {
-    const RedColor tweak = pItem->tweakColor;
-    const unsigned char r = (unsigned char)(int)(m_colorDiffuse.r * (tweak.r * kInv255) + 0.5f);
-    const unsigned char g = (unsigned char)(int)(m_colorDiffuse.g * (tweak.g * kInv255) + 0.5f);
-    const unsigned char b = (unsigned char)(int)(m_colorDiffuse.b * (tweak.b * kInv255) + 0.5f);
-    const unsigned char a = (unsigned char)(int)(m_colorDiffuse.a * (tweak.a * kInv255) + 0.5f);
+    const RedColor color = pItem->tweakColor * m_colorDiffuse;
 
     RedRenderer::pcSetTexture(0, m_uiTextureHash ? RedTexture::Find(m_uiTextureHash) : 0);
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 6);
-    pRegs[39].SetFloats(r * kInv255, g * kInv255, b * kInv255, a * kInv255);
+    const RedColorValue diffuse(color);
+    pRegs[39].SetFloats(diffuse.r, diffuse.g, diffuse.b, diffuse.a);
 
     if (m_specPower < 4.0f)
     {
@@ -362,8 +359,8 @@ void pcShieldShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     }
     else
     {
-        pRegs[40].SetFloats(m_colorSpecular.r * kInv255, m_colorSpecular.g * kInv255,
-                            m_colorSpecular.b * kInv255, m_colorSpecular.a * kInv255);
+        const RedColorValue specular(m_colorSpecular);
+        pRegs[40].SetFloats(specular.r, specular.g, specular.b, specular.a);
     }
 
     const PblVector3 vSpecX = s_vLightX * m_specSizeInv;

@@ -410,7 +410,7 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
                     fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
                 }
                 const float fInv = 1.0f / (float)sqrt((double)fLength2);
-                vFront *= fInv;
+                vFront = vFront * fInv;
                 matrix[0] = CrossProduct(vDir, vFront);
                 matrix.m[0][3] = 0.0f;
                 matrix[2] = vFront;

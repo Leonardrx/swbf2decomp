@@ -244,7 +244,7 @@ bool OrdnanceGrenade::CheckCollision()
     PblVector3 vStart = GetOldPosition();
     const PblVector3& vEnd = GetPosition();
     const PblVector3 vDelta = vEnd - vStart;
-    const float fDist = PblMath::Sqrt(vDelta.y * vDelta.y + vDelta.x * vDelta.x + vDelta.z * vDelta.z);
+    const float fDist = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;

@@ -141,11 +141,11 @@ extern RedColor m_colorReflectionFog;
 // FUNCTION: SWBF2 0x006beac0
 void FLRenderer::RenderableList::RenderReflections(unsigned int uiFlags) const
 {
-    for (const Node* pNode = _head._pNext; pNode->_pObject; pNode = pNode->_pNext)
+    for (Itor it(this); it; ++it)
     {
-        if (pNode->_pObject->IsReflected())
+        if (it->IsReflected())
         {
-            pNode->_pObject->Render(uiFlags | 0x200000);
+            it->Render(uiFlags | 0x200000);
         }
     }
 }
@@ -752,13 +752,10 @@ ReflectionRegion::ReflectionRegion(RedRegionDesc& desc) : RedRegion(desc)
     case type_cylinder_yaligned:
     case type_cylinder_zaligned:
     {
-        const float fHalfHeight = mSize.y;
-        const float fX = mMatrix.m[3][0] - mMatrix.m[1][0] * fHalfHeight;
-        const float fY = mMatrix.m[3][1] - mMatrix.m[1][1] * fHalfHeight;
-        const float fZ = mMatrix.m[3][2] - mMatrix.m[1][2] * fHalfHeight;
-        m_reflectionPlane = PblPlane(mMatrix.m[1][0], mMatrix.m[1][1], mMatrix.m[1][2],
-                                    -(mMatrix.m[1][0] * fX + mMatrix.m[1][1] * fY +
-                                      mMatrix.m[1][2] * fZ));
+        const PblVector3 vPoint = mMatrix[3] - mMatrix[1] * mSize.y;
+        const PblVector3 vNormal = mMatrix[1];
+        m_reflectionPlane =
+            PblPlane(vNormal.x, vNormal.y, vNormal.z, -DotProduct(vNormal, vPoint));
         break;
     }
     default:

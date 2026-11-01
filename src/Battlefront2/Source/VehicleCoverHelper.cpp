@@ -308,7 +308,8 @@ bool VehicleCoverHelper::HELPERFaceTarget() const
         PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
         PblVector3 vHint = mHint->GetCollisionCenter();
         float fRadius = GetCollisionObject(GetMe()->GetGameObject())->GetCollisionRadius() + 1.0f;
-        return !(SquaredLengthXZ(vHint - vMe) > fRadius * fRadius);
+        bool bFacing = !(SquaredLengthXZ(vHint - vMe) > fRadius * fRadius);
+        return bFacing;
     }
     return true;
 }

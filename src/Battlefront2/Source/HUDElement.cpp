@@ -21,10 +21,7 @@ PblMatrix HUD::Element::CalculateGroupMatrix(HUD::ElementGroupBase* const pGroup
     if (pElement->mGroup)
     {
         result = CalculateGroupMatrix(pElement->mGroup);
-        PblMatrix combined;
-        D3DXMatrixMultiply((D3DXMATRIX*)&combined, (const D3DXMATRIX*)&local,
-                           (const D3DXMATRIX*)&result);
-        result = combined;
+        *(D3DXMATRIX*)&result = *(const D3DXMATRIX*)&local * *(const D3DXMATRIX*)&result;
     }
     else
     {

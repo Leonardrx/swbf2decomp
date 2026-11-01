@@ -492,32 +492,18 @@ void pcRefractionShader::RenderZPrepass(const RenderItem* pItem) const
         RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
         RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, color.a >> 1);
 
-
-
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 3);
         pRegs[39].SetFloats(color.r * (1.0f / 255.0f), color.g * (1.0f / 255.0f), color.b * (1.0f / 255.0f),
                             color.a * (1.0f / 255.0f));
         if (pTransform)
         {
-            pRegs[40].component[0] = (*pTransform)(0, 0);
-            pRegs[40].component[1] = (*pTransform)(1, 0);
-            pRegs[40].component[2] = 0.0f;
-            pRegs[40].component[3] = (*pTransform)(2, 0);
-            pRegs[41].component[0] = (*pTransform)(0, 1);
-            pRegs[41].component[1] = (*pTransform)(1, 1);
-            pRegs[41].component[2] = 0.0f;
-            pRegs[41].component[3] = (*pTransform)(2, 1);
+            pRegs[40].SetFloats((*pTransform)(0, 0), (*pTransform)(1, 0), 0.0f, (*pTransform)(2, 0));
+            pRegs[41].SetFloats((*pTransform)(0, 1), (*pTransform)(1, 1), 0.0f, (*pTransform)(2, 1));
         }
         else
         {
-            pRegs[40].component[0] = 1.0f;
-            pRegs[40].component[1] = 0.0f;
-            pRegs[40].component[2] = 0.0f;
-            pRegs[40].component[3] = 0.0f;
-            pRegs[41].component[0] = 0.0f;
-            pRegs[41].component[1] = 1.0f;
-            pRegs[41].component[2] = 0.0f;
-            pRegs[41].component[3] = 0.0f;
+            pRegs[40].SetFloats(1.0f, 0.0f, 0.0f, 0.0f);
+            pRegs[41].SetFloats(0.0f, 1.0f, 0.0f, 0.0f);
         }
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
     }

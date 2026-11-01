@@ -1296,7 +1296,9 @@ void RedWater::pcRegisterReflection()
         PblMatrix mMesh = gMatrixIdentity;
         mMesh.m[3][1] = m_fWaterHeightOffset;
 
-        PblPlane plane(0.0f, 1.0f, 0.0f, -(m_waterHeight + m_fWaterHeightOffset));
+        PblVector3 vNormal(0.0f, 1.0f, 0.0f);
+        PblVector3 vPoint(0.0f, m_waterHeight + m_fWaterHeightOffset, 0.0f);
+        PblPlane plane(vNormal.x, vNormal.y, vNormal.z, -DotProduct(vPoint, vNormal));
 
         m_reflectionID = FLRenderer::RegisterReflection(
             reinterpret_cast<Renderable*>(&_WaterRenderable), plane,
@@ -1307,8 +1309,11 @@ void RedWater::pcRegisterReflection()
         {
             if (m_bEnableVisibilityTest)
             {
-                bool bVisible = m_patchCache[i].uiVisibilityFarID &&
-                                RedWater::pcGetVisibilityTestResult(m_patchCache[i].uiVisibilityFarID) != 0;
+                bool bVisible = false;
+                if (m_patchCache[i].uiVisibilityFarID)
+                {
+                    bVisible = RedWater::pcGetVisibilityTestResult(m_patchCache[i].uiVisibilityFarID) != 0;
+                }
                 if (!bVisible && m_patchCache[i].uiVisibilityID)
                 {
                     RedWater::pcGetVisibilityTestResult(m_patchCache[i].uiVisibilityID);
@@ -2233,10 +2238,7 @@ void RedWater::pcRenderWaterSplashes()
 
         float fAge = m_waterTimeStamp.GetElapsed() - event.startTime;
         float fRadius = event.radius * 4.0f + 1.0f;
-        float fDX = pCamera->_Matrix.m[3][0] - event.worldPos.x;
-        float fDY = pCamera->_Matrix.m[3][1] - event.worldPos.y;
-        float fDZ = pCamera->_Matrix.m[3][2] - event.worldPos.z;
-        if (fDX * fDX + fDY * fDY + fDZ * fDZ < WATEREVENT_MAX_VISIBLE_DISTANCESQR)
+        if (SquaredLength(pCamera->GetMatrix().GetTranslation() - event.worldPos) < WATEREVENT_MAX_VISIBLE_DISTANCESQR)
         {
             ++event.in_range;
         }
@@ -2303,26 +2305,26 @@ void RedWater::pcReset(ResetFlagsT eFlags)
 // FUNCTION: SWBF2 0x00721f60
 void RedWater::pcSetupShaders()
 {
+    RedTextureTransform transform1;
+    RedTextureTransform transform2;
     pcWaterShader::SetSpecularDirection(m_vSpecularDirection);
     float fTime = m_waterTimeStamp.GetElapsed();
-    s_bWaterShaderSetupPending = false;
 
     float fScrollU = m_velocityU * fTime;
     float fScrollV = m_velocityV * fTime;
-    RedTextureTransform transform1;
-    transform1.m_bTransform = 1;
-    transform1.m_Transform[0][0] = m_tilesU;
-    transform1.m_Transform[0][1] = 0.0f;
     transform1.m_Transform[1][0] = 0.0f;
+    transform1.m_Transform[0][1] = 0.0f;
+    transform1.m_bTransform = 1;
+    transform2.m_Transform[1][0] = 0.0f;
+    transform2.m_Transform[0][1] = 0.0f;
+    transform2.m_bTransform = 1;
+    s_bWaterShaderSetupPending = false;
+    transform1.m_Transform[0][0] = m_tilesU;
+    transform2.m_Transform[0][0] = m_tilesU;
     transform1.m_Transform[1][1] = m_tilesV;
+    transform2.m_Transform[1][1] = m_tilesV;
     transform1.m_Transform[2][0] = m_tilesU * (fScrollU - (float)(int)fScrollU);
     transform1.m_Transform[2][1] = (fScrollV - (float)(int)fScrollV) * m_tilesV;
-    RedTextureTransform transform2;
-    transform2.m_bTransform = 1;
-    transform2.m_Transform[0][0] = m_tilesU;
-    transform2.m_Transform[0][1] = 0.0f;
-    transform2.m_Transform[1][0] = 0.0f;
-    transform2.m_Transform[1][1] = m_tilesV;
     transform2.m_Transform[2][0] = m_tilesU * (-fScrollU - (float)(int)-fScrollU);
     transform2.m_Transform[2][1] = (-fScrollV - (float)(int)-fScrollV) * m_tilesV;
 

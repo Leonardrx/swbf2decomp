@@ -472,6 +472,7 @@ void SpaceDustEffect::Render(int value)
                 const ParticleData& particle = emitter.mParticle[i];
                 if (particle.mLifeLeft >= 0.0f)
                 {
+                    RedColor color(RedColor::WHITE);
                     float fFade = (DotProduct(particle.mCoord - vPos, -vFwd) - 50.0f) / 30.0f;
                     if (fFade < 0.0f)
                     {
@@ -490,7 +491,7 @@ void SpaceDustEffect::Render(int value)
                     {
                         fAlpha = 255.0f;
                     }
-                    RedColor color(RedColor::WHITE, (unsigned char)(int)fAlpha);
+                    color.a = (unsigned char)(int)fAlpha;
                     RedParticleRenderer::SubmitParticle(PIT_LASER_START, particle.mCoord, color, particle.mScale * 0.5f,
                                                         0.0f, texCoords, gVectorUnitX, gVectorUnitY);
                     const PblVector3 vTail = particle.mCoord - vFwd * fLength;

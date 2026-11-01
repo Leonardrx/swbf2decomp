@@ -1197,16 +1197,15 @@ void WeaponClass::RenderFlash(const PblVector3& vPos, const PblVector3& vDir, fl
     color.r = mFlashColor.r;
     color.a = (unsigned char)(int)fFade;
 
-    const float r = mFlashRadius;
-    PblVector3 vSide(vDir.y * 0.0f - vDir.z, vDir.z * 0.0f - vDir.x * 0.0f, vDir.x - vDir.y * 0.0f);
     PblMatrix mFlash;
-    mFlash[0] = vSide * r;
+    mFlash[2] = vDir * mFlashRadius;
+    mFlash.m[2][3] = 0.0f;
+    PblVector3 vSide(vDir.y * 0.0f - vDir.z, vDir.z * 0.0f - vDir.x * 0.0f, vDir.x - vDir.y * 0.0f);
+    mFlash[0] = vSide * mFlashRadius;
     mFlash.m[0][3] = 0.0f;
     mFlash[1] = PblVector3(vDir.y * vSide.z - vDir.z * vSide.y, vDir.z * vSide.x - vDir.x * vSide.z,
-                           vDir.x * vSide.y - vDir.y * vSide.x) * r;
+                           vDir.x * vSide.y - vDir.y * vSide.x) * mFlashRadius;
     mFlash.m[1][3] = 0.0f;
-    mFlash[2] = vDir * r;
-    mFlash.m[2][3] = 0.0f;
     mFlash.SetTranslation(vPos);
     mMuzzleFlashModel->Render(&mFlash, 0, color, 0, 0);
 }

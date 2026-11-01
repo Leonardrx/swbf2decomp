@@ -120,6 +120,10 @@ void EntityItemClass::SetProperty(unsigned int uProperty, const char* pszValue)
             break;
     }
     case 0xC28F0C96:
+    {
+        mCollisionSound.SetID(pszValue, false, false);
+            break;
+    }
     case 0xEDC6251A:
     {
         mCollisionSound.SetID(pszValue, false, false);
@@ -505,9 +509,9 @@ bool EntityItem::CollisionCallback(const CollisionResult* pResult, CollisionObje
             else
             {
                 float fRebound = mClass->mRebound;
-                float fFriction = mClass->mFriction * fDot * (fRebound + 1.0f);
+                float fFriction = mClass->mFriction * fDot;
                 mVelocity -= vNormal * fDot;
-                float fScale = -(fFriction / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                float fScale = -(fFriction * (fRebound + 1.0f) / PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                                            mVelocity.z * mVelocity.z));
                 if (!(1.0f > fScale))
                 {

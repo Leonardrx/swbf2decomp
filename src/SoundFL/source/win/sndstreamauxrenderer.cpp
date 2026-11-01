@@ -60,12 +60,10 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
                              StreamFormat const& cFormat, float fBufferMs)
 {
 
-    const unsigned int uiIndex = ucDeviceIndex;
-
     GUID cGuidDevice;
     bool bCreateDevice = true;
 
-    switch (uiIndex)
+    switch (ucDeviceIndex)
     {
     case 0xFEu:
 
@@ -87,7 +85,7 @@ bool StreamAuxRenderer::Open(unsigned char ucDeviceIndex,
                 return false;
             }
 
-            cGuidDevice = cContext.GetDeviceIDByIndex(uiIndex);
+            cGuidDevice = cContext.GetDeviceIDByIndex(ucDeviceIndex);
 
             GUID cNull;
             memset(&cNull, 0, sizeof(cNull));

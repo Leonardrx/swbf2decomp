@@ -175,7 +175,6 @@ bool StreamBase::LoadSegments(PblFileChunk& chunk, Segment* pSegments,
     unsigned int uiCount = 0;
     unsigned int uiOffset = 0;
     unsigned int uiRemaining = uiNumSegments;
-    Segment* pNext = pSegments;
 
     while (chunk.HasMoreChildren())
     {
@@ -189,12 +188,12 @@ bool StreamBase::LoadSegments(PblFileChunk& chunk, Segment* pSegments,
             unsigned int uiHashID = 0;
             unsigned int uiFrequency = 0;
             unsigned int uiLength = 0;
+            unsigned int uiSize = 0;
             unsigned int uiLengthSamples = 0;
             unsigned int uiPadding = 0;
-            unsigned int uiAliasOffset = 0;
-            unsigned int uiSize = 0;
             bool bContinue = true;
             bool bAlias = false;
+            unsigned int uiAliasOffset = 0;
 
             while (chunk.HasMoreChildren() && bContinue)
             {
@@ -218,13 +217,14 @@ bool StreamBase::LoadSegments(PblFileChunk& chunk, Segment* pSegments,
                 case 0x7D268157u:
                 {
                     const unsigned int uiAliasID = chunk._pFile->Read32();
-                    for (unsigned int i = 0; i < uiCount; ++i)
+                    const Segment* pSegment = pSegments;
+                    for (unsigned int i = 0; i < uiCount; ++i, ++pSegment)
                     {
-                        if (pSegments[i].mHashID == uiAliasID)
+                        if (pSegment->mHashID == uiAliasID)
                         {
-                            uiLengthSamples = pSegments[i].mLengthSamples;
-                            uiLength = pSegments[i].mLength;
-                            uiAliasOffset = (unsigned int)pSegments[i].mAddress;
+                            uiLengthSamples = pSegment->mLengthSamples;
+                            uiLength = pSegment->mLength;
+                            uiAliasOffset = (unsigned int)pSegment->mAddress;
                             break;
                         }
                     }
@@ -241,10 +241,10 @@ bool StreamBase::LoadSegments(PblFileChunk& chunk, Segment* pSegments,
             {
                 uiSize = bNoPadding ? uiLength : uiPadding + uiLength;
             }
-            ++uiCount;
             uiOffset += uiSize;
-            new (pNext++, false) Segment(uiHashID, bAlias ? uiAliasOffset : uiOffset - uiSize,
+            new (&pSegments[uiCount], false) Segment(uiHashID, bAlias ? uiAliasOffset : uiOffset - uiSize,
                                          uiLength, uiLengthSamples, uiFrequency, uiPadding);
+            ++uiCount;
         }
         --uiRemaining;
     }

@@ -363,13 +363,14 @@ void EntityProp::UpdateSound()
         const float fLength2EstAlpha = 0.94805944f;
         const float fLength2EstBeta = 0.39269909f;
 
-        float fA = (float)fabs((double)(vPos.x - mPrevPos.x));
-        float fB = (float)fabs((double)(vPos.y - mPrevPos.y));
+        const PblVector3 vDelta = vPos - mPrevPos;
+        float fA = (float)fabs((double)vDelta.x);
+        float fB = (float)fabs((double)vDelta.y);
         float fEst = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                              : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 
         fA = (float)fabs((double)fEst);
-        fB = (float)fabs((double)(vPos.z - mPrevPos.z));
+        fB = (float)fabs((double)vDelta.z);
         fMove = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                         : fA * fLength2EstBeta + fB * fLength2EstAlpha;
     }
@@ -378,9 +379,7 @@ void EntityProp::UpdateSound()
         fMove = 0.0f;
     }
 
-    mPrevPos.x = (vPos.x - mPrevPos.x) * 0.5f + mPrevPos.x;
-    mPrevPos.y = (vPos.y - mPrevPos.y) * 0.5f + mPrevPos.y;
-    mPrevPos.z = (vPos.z - mPrevPos.z) * 0.5f + mPrevPos.z;
+    mPrevPos = Interpolate(mPrevPos, vPos, 0.5f);
 
     if (mAttachedSound.mFlags & GameSoundControllable::flags_playing)
     {
@@ -503,7 +502,7 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
     switch (uProperty)
     {
     case 0x0df468ca:
-        mLowResModel = RedModel::_HashTable.Find(PblHash(pszValue));
+        mLowResModel = const_cast<RedModel*>(RedModel::Find(PblHash(pszValue)));
         mModel->_mLod[3] = mLowResModel;
         break;
 
@@ -553,7 +552,8 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
             mAttachedOdfs[mNumAttachedOdfs].mDistance = -1.0f;
             char acBone[260];
             sscanf(pszValue, "%s %f", acBone, &mAttachedOdfs[mNumAttachedOdfs].mDistance);
-            if (mModel->_mLod[0]->GetBoneMatrix(PblTEMPHash(acBone), mAttachedOdfs[mNumAttachedOdfs].mMatrix))
+            const RedModel* pRedModel = mModel->GetRedModel(0);
+            if (pRedModel->GetBoneMatrix(PblTEMPHash(acBone), mAttachedOdfs[mNumAttachedOdfs].mMatrix))
             {
                 ++mNumAttachedOdfs;
             }
@@ -599,7 +599,7 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
     }
 
     case 0x5dc6e917:
-        mDestroyedModel = RedModel::_HashTable.Find(PblHash(pszValue));
+        mDestroyedModel = const_cast<RedModel*>(RedModel::Find(PblHash(pszValue)));
         if (mModel && mModel->_mModel->_BoundingSphere.w > 10.0f)
         {
             mLODClass = 1;
@@ -612,7 +612,7 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (uName == 0xada7afdb || uName == 0x5c6e1222)
         {
             sSoftCollisionMask = 0;
-            mCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(sSoftCollisionMask));
+            mCollisionModel.SetCollisionMask(COLL_SOFT, CollisionMask(0));
         }
         else
         {
@@ -753,7 +753,7 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (uName == 0xada7afdb || uName == 0x5c6e1222)
         {
             sRigidCollisionMask = 0;
-            mCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(sRigidCollisionMask));
+            mCollisionModel.SetCollisionMask(COLL_RIGID, CollisionMask(0));
         }
         else
         {
@@ -787,7 +787,7 @@ void EntityPropClass::SetProperty(unsigned int uProperty, const char* pszValue)
         if (uName == 0xada7afdb || uName == 0x5c6e1222)
         {
             sOrdnanceCollisionMask = 0;
-            mCollisionModel.SetCollisionMask(COLL_ORDNANCE, CollisionMask(sOrdnanceCollisionMask));
+            mCollisionModel.SetCollisionMask(COLL_ORDNANCE, CollisionMask(0));
         }
         else
         {

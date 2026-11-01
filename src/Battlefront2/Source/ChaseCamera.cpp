@@ -374,13 +374,11 @@ void ChaseCamera::SetupCamera(RedCamera* pCamera, float fDeltaTime)
     if (mShake > 0.0f && GameLoop::GetMissionTime() > mShakeSuppressUntil)
     {
         PblMatrix mShakeRot = gMatrixIdentity;
-        PblMatrix mAxis;
         mShakeRot.RotateX(BiasedRandom() * mShake * 0.1f);
         mShakeRot.RotateY(BiasedRandom() * mShake * 0.1f);
         mShakeRot.RotateZ(BiasedRandom() * mShake * 0.1f);
         mPreShakeMatrix = mMatrix;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mAxis), reinterpret_cast<const D3DXMATRIX*>(&mShakeRot), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-        mMatrix = mAxis;
+        mMatrix = mShakeRot * mMatrix;
     }
     else if (mDoSwingFlag)
     {

@@ -375,12 +375,12 @@ bool OrdnanceSticky::CheckCollision()
 {
     PblVector3 vStart = GetOldPosition();
     const PblVector3& vEnd = GetPosition();
-    PblVector3 vDir(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
-    const float fDist = PblMath::Sqrt(vDir.y * vDir.y + vDir.x * vDir.x + vDir.z * vDir.z);
+    const PblVector3 vDelta = vEnd - vStart;
+    const float fDist = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;
-        vDir *= fInv;
+        const PblVector3 vDir = vDelta * fInv;
 
         CollisionObject* pHitObject = 0;
         const GameObject* pIgnore = GetOwner();
@@ -435,7 +435,8 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
                       (1 << pVictim->mHealthType)) != 0;
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mVelocity));
-            static_cast<Damageable*>(pVictim)->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
+            Damageable* pDamageable = static_cast<Damageable*>(pVictim);
+            pDamageable->ApplyDamage(GetDamage(), vDir, vPos, iBodyId, 0xFFFFFFFF);
         }
     }
 
@@ -452,9 +453,7 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
                              : DirectionMatrix(vNormal, gVectorUnitY, vPos));
 
         mStickInfo = new StickInfo;
-        GameObject* pStuckTo = pObject->GetGameObject();
-        mStickInfo->mCollHandle.mObject = pStuckTo;
-        mStickInfo->mCollHandle.mSavedHandleId = pStuckTo ? GameObjectHandleId(pStuckTo) : 0;
+        mStickInfo->mCollHandle = pObject->GetGameObject();
         mStickInfo->mCollObject = pObject;
         if (pModel)
         {

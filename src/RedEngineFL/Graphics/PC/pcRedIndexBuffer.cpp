@@ -126,8 +126,10 @@ void pcRedIndexBuffer::Cleanup()
         PblList<pcRedIndexBuffer>::Node* pNode = s_dynamicIndexBufferList.GetFirst();
         pcRedIndexBuffer* pBuffer = pNode->_pObject;
         s_dynamicIndexBufferList.Remove(pNode);
-        while (pBuffer->Release() > 0)
+        unsigned short usRefCount = pBuffer->Release();
+        while (usRefCount > 0)
         {
+            usRefCount = pBuffer->Release();
         }
     }
 
@@ -136,8 +138,10 @@ void pcRedIndexBuffer::Cleanup()
         PblList<pcRedIndexBuffer>::Node* pNode = s_staticIndexBufferList.GetFirst();
         pcRedIndexBuffer* pBuffer = pNode->_pObject;
         s_staticIndexBufferList.Remove(pNode);
-        while (pBuffer->Release() > 0)
+        unsigned short usRefCount = pBuffer->Release();
+        while (usRefCount > 0)
         {
+            usRefCount = pBuffer->Release();
         }
     }
 

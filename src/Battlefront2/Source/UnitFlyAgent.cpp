@@ -78,8 +78,9 @@ void UnitFlyAgent::EnterState()
 
     case 2:
     {
-        const PblVector3 vFwd = mCtrl->mOwner->GetMatrix().GetZAxis();
-        PblVector3 vDest(vPos.x + vFwd.x * 200.0f, vPos.y + 0.0f, vPos.z + vFwd.z * 200.0f);
+        PblVector3 vFwd = mCtrl->mOwner->GetMatrix().GetZAxis();
+        vFwd.y = 0.0f;
+        PblVector3 vDest = vPos + vFwd * 200.0f;
         vDest.y += 1.0f;
 
         AIPath* pPath = new AIPath();
@@ -142,8 +143,9 @@ void UnitFlyAgent::EnterState()
             ++iTries;
         } while (!bGood && SquaredLength(vDest - vPos) < 10000.0f && iTries < 10);
 
-        vDest.y += 20.0f;
-        GetLowLevel().SetNavigator_Goto(vDest, 0, false, false);
+        PblVector3 vGoto = vDest;
+        vGoto.y += 20.0f;
+        GetLowLevel().SetNavigator_Goto(vGoto, 0, false, false);
         if (GetFlyer()->GetState() != EntityFlyer::FLYING)
         {
             GetFlyer()->TakeOff();

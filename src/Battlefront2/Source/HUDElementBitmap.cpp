@@ -323,7 +323,7 @@ bool HUD::ElementBitmapBase::ReadData(PblConfig& config, PblConfig::Data& data)
     switch (data.GetId())
     {
     case kBitmapHash:
-        pBitmap->SetTexture((unsigned int)PblHash(data.GetStringArg(0)));
+        pBitmap->SetTexture(data.GetStringArg(0));
         FreeName(&mBitmapName);
         CopyName(&mBitmapName, data.GetStringArg(0), 0);
         break;

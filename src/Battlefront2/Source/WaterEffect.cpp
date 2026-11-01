@@ -151,8 +151,8 @@ void WaterEffect::_AddWaterEffect(unsigned int uiEffect, const PblVector3& vPos,
     {
         return;
     }
-    FLEffectObject* pEffect = pClass->BuildEffect();
-    PblHandle<ParticleEmitterObject> hEmitter(reinterpret_cast<ParticleEmitterObject*>(pEffect));
+    PblHandle<ParticleEmitterObject> hEmitter;
+    hEmitter = PblHandle<ParticleEmitterObject>(reinterpret_cast<ParticleEmitterObject*>(pClass->BuildEffect()));
     if (!hEmitter)
     {
         return;

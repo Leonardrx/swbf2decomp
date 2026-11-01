@@ -642,13 +642,7 @@ float EntityPath::BuildMatrix(const PblVector3& vDirection, PblMatrix& matrix, P
     float fYaw = PblMath::Atan2(vDirection.x, vDirection.z);
     matrix.Reset();
 
-    float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, fYaw * 0.5f);
-    PblQuaternion qYaw;
-    qYaw._fS = fCos;
-    qYaw._fX = fSin * matrix.m[1][0];
-    qYaw._fY = matrix.m[1][1] * fSin;
-    qYaw._fZ = matrix.m[1][2] * fSin;
+    PblQuaternion qYaw(matrix.GetYAxis(), fYaw);
     PblVector3 vRight = qYaw.RotateVector(PblVector3(1.0f, 0.0f, 0.0f));
 
     *(PblVector3*)&matrix.m[2][0] = vDirection;
@@ -671,10 +665,9 @@ float EntityPath::BuildMatrix(const PblVector3& vDirection, PblMatrix& matrix, P
         pFlatMatrix->m[1][1] = 1.0f;
         pFlatMatrix->m[1][2] = 0.0f;
         pFlatMatrix->m[1][3] = 0.0f;
-        *(PblVector3*)&pFlatMatrix->m[0][0] =
-            PblVector3(pFlatMatrix->m[1][1] * pFlatMatrix->m[2][2] - pFlatMatrix->m[1][2] * pFlatMatrix->m[2][1],
-                       pFlatMatrix->m[1][2] * pFlatMatrix->m[2][0] - pFlatMatrix->m[1][0] * pFlatMatrix->m[2][2],
-                       pFlatMatrix->m[1][0] * pFlatMatrix->m[2][1] - pFlatMatrix->m[1][1] * pFlatMatrix->m[2][0]);
+        D3DXVec3Cross((D3DXVECTOR3*)&pFlatMatrix->m[0][0],
+                      (const D3DXVECTOR3*)&pFlatMatrix->m[1][0],
+                      (const D3DXVECTOR3*)&pFlatMatrix->m[2][0]);
         pFlatMatrix->m[0][3] = 0.0f;
     }
     return fYaw;

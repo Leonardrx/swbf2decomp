@@ -116,20 +116,14 @@ bool OrdnanceBeacon::Update(float fDeltaTime)
         OrdnanceDesc desc;
         desc.mPosition = mPosition;
         const float fDist = static_cast<OrdnanceBeaconClass*>(mClass)->mAimDistance;
-        desc.mPosition.x += aim.m[2][0] * fDist;
-        desc.mPosition.y += aim.m[2][1] * fDist;
-        desc.mPosition.z += aim.m[2][2] * fDist;
+        desc.mPosition += aim[2] * fDist;
 
         const float fRight = (PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) *
                              static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
-        desc.mPosition.x += aim.m[0][0] * fRight;
-        desc.mPosition.y += aim.m[0][1] * fRight;
-        desc.mPosition.z += aim.m[0][2] * fRight;
+        desc.mPosition += aim[0] * fRight;
         const float fUp = (PblRandom::GetSim().GetFloat() - PblRandom::GetSim().GetFloat()) *
                           static_cast<OrdnanceBeaconClass*>(mClass)->mScatterDistance;
-        desc.mPosition.x += aim.m[1][0] * fUp;
-        desc.mPosition.y += aim.m[1][1] * fUp;
-        desc.mPosition.z += aim.m[1][2] * fUp;
+        desc.mPosition += aim[1] * fUp;
 
         desc.mDirection = PblVector3(-aim.m[2][0], -aim.m[2][1], -aim.m[2][2]);
         desc.mStrength = 1.0f;
@@ -138,12 +132,19 @@ bool OrdnanceBeacon::Update(float fDeltaTime)
         desc.mTarget = mStickInfo ? ResolveHandle(mStickInfo->mCollHandle) : 0;
         desc.mBodyID = mStickInfo ? mStickInfo->mCollBodyID : -1;
 
-        if (NetGame::IsEnabled() && !NetGame::IsClient())
+        if (NetGame::IsEnabled() && NetGame::IsClient())
         {
-            NetGame::CreateEvent_CreateOrdnance(static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass, desc);
+            if (netIsLocalTurn)
+            {
+                static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass->Build(desc);
+            }
         }
-        if (!NetGame::IsEnabled() || !NetGame::IsClient() || netIsLocalTurn)
+        else
         {
+            if (NetGame::IsEnabled())
+            {
+                NetGame::CreateEvent_CreateOrdnance(static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass, desc);
+            }
             static_cast<OrdnanceBeaconClass*>(mClass)->mOrdnanceClass->Build(desc);
         }
 

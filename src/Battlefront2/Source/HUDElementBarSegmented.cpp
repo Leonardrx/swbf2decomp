@@ -205,7 +205,8 @@ float HUD::ElementBarSegmented::SetValue(const float fValue)
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, fAngle);
             const float fX = fSin * fHalfWidth + fHalfWidth;
-            const float fY = -(0.75f / RedRenderer::GetScreenAspectRatio() * (fCos * fHalfHeight)) + fHalfHeight;
+            const float fCosHeight = fCos * fHalfHeight;
+            const float fY = -(0.75f / RedRenderer::GetScreenAspectRatio() * fCosHeight) + fHalfHeight;
 
             matrix.SetRotateZ(fAngle);
             matrix.m[3][0] = fX;

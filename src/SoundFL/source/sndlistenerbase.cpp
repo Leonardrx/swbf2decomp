@@ -71,18 +71,14 @@ ListenerBase* ListenerBase::GetClosestListener(const ::PblVector3* pPos,
                 continue;
             }
 
-            ::PblVector3 v;
-            v.x = pPos->x - rListener.mPos->x;
-            v.y = pPos->y - rListener.mPos->y;
-            v.z = pPos->z - rListener.mPos->z;
-
-            float fLength2 = v.x * v.x + v.y * v.y + v.z * v.z;
+            ::PblVector3 v = *pPos - *rListener.mPos;
+            float fLength2 = SquaredLength(v);
 
             if (fDistanceLength > fLength2)
             {
+                vDistance = v;
                 fDistanceLength = fLength2;
                 pClosest = &rListener;
-                vDistance = v;
             }
         }
     }
@@ -95,12 +91,8 @@ ListenerBase* ListenerBase::GetClosestListener(const ::PblVector3* pPos,
             if (rListener.mFlags & flags_enabled)
             {
                 pClosest = &rListener;
-                vDistance.x = pPos->x - rListener.mPos->x;
-                vDistance.y = pPos->y - rListener.mPos->y;
-                vDistance.z = pPos->z - rListener.mPos->z;
-                fDistanceLength = vDistance.x * vDistance.x
-                                + vDistance.y * vDistance.y
-                                + vDistance.z * vDistance.z;
+                vDistance = *pPos - *rListener.mPos;
+                fDistanceLength = SquaredLength(vDistance);
                 break;
             }
         }

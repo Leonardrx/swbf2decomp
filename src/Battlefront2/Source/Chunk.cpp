@@ -612,64 +612,44 @@ bool Chunk::DoSimpleRigidCollision(const CollisionResult* pResult, CollisionObje
                                      vVelocity.z * vNormal.z);
         if (fImpactSpeed > 0.0f)
         {
-            FoleyFXCollider::CollisionCallback(eType, static_cast<FoleyFXCollidee*>(pOther), &GetPosition());
+            FoleyFXCollider::CollisionCallback(pOther->GetCollisionType(),
+                                               static_cast<FoleyFXCollidee*>(pOther), &GetPosition());
             PlayImpactEffects(&mMatrix.GetTranslation(), &vVelocity);
 
-            if ((eType & (COLL_SOFT | COLL_RIGID)) && mMinDeathCollisionSpeed > 0.0f &&
+            if ((pOther->GetCollisionType() & (COLL_SOFT | COLL_RIGID)) && mMinDeathCollisionSpeed > 0.0f &&
                 vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z >
                     mMinDeathCollisionSpeed * mMinDeathCollisionSpeed)
             {
                 GameObject* pObject = pOther->GetGameObject();
                 if (pObject)
                 {
-                    DamageOwner owner(0, 0, 0, 0, 0, 1.0f);
-                    pObject->InstantDeath(owner, true);
+                    pObject->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
                     return true;
                 }
             }
 
             const float fImpulse = (mCoefficientOfRestitution + 1.0f) * fImpactSpeed;
-            vVelocity.x += vNormal.x * fImpulse;
-            vVelocity.y += vNormal.y * fImpulse;
-            vVelocity.z += vNormal.z * fImpulse;
+            vVelocity += vNormal * fImpulse;
 
             if (mSimpleFrictionConstant > 0.0f)
             {
-                PblVector3 vTangent(
-                    vNormal.y * (vVelocity.x * vNormal.y - vVelocity.y * vNormal.x) -
-                        vNormal.z * (vVelocity.z * vNormal.x - vVelocity.x * vNormal.z),
-                    vNormal.z * (vVelocity.y * vNormal.z - vVelocity.z * vNormal.y) -
-                        vNormal.x * (vVelocity.x * vNormal.y - vVelocity.y * vNormal.x),
-                    vNormal.x * (vVelocity.z * vNormal.x - vVelocity.x * vNormal.z) -
-                        vNormal.y * (vVelocity.y * vNormal.z - vVelocity.z * vNormal.y));
-                D3DXVec3Normalize((D3DXVECTOR3*)&vTangent, (const D3DXVECTOR3*)&vTangent);
-                const float fSlip = (vVelocity.x * vTangent.x + vVelocity.y * vTangent.y +
-                                     vVelocity.z * vTangent.z) * mSimpleFrictionConstant * mOneOverMass;
-                vVelocity.x -= vTangent.x * fSlip;
-                vVelocity.y -= vTangent.y * fSlip;
-                vVelocity.z -= vTangent.z * fSlip;
+                const PblVector3 vTangent = Normalize(CrossProduct(CrossProduct(vNormal, vVelocity), vNormal));
+                const float fSlip = DotProduct(vVelocity, vTangent) * mSimpleFrictionConstant * mOneOverMass;
+                vVelocity -= vTangent * fSlip;
 
-                const PblVector3& vAxis = mCollisionMatrix.GetYAxis();
-                const PblVector3& vCenter = mCollisionMatrix.GetTranslation();
-                PblVector3 vRadius(pResult->mCollisionPosition.x - vCenter.x,
-                                   pResult->mCollisionPosition.y - vCenter.y,
-                                   pResult->mCollisionPosition.z - vCenter.z);
-                const float fAlongAxis = vRadius.x * vAxis.x + vRadius.y * vAxis.y + vRadius.z * vAxis.z;
-                vRadius.x -= vAxis.x * fAlongAxis;
-                vRadius.y -= vAxis.y * fAlongAxis;
-                vRadius.z -= vAxis.z * fAlongAxis;
+                const PblVector3 vAxis = mCollisionMatrix.GetYAxis();
+                PblVector3 vRadius = pResult->mCollisionPosition - mCollisionMatrix.GetTranslation();
+                vRadius -= vAxis * DotProduct(vRadius, vAxis);
                 const float fRadius = PblMath::Sqrt(vRadius.x * vRadius.x + vRadius.y * vRadius.y + vRadius.z * vRadius.z);
                 if (fRadius > 0.0f)
                 {
-                    float fOmega = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
-                                          vVelocity.z * vVelocity.z) / fRadius;
-                    if (vAxis.z * vVelocity.x - vAxis.x * vVelocity.z > 0.0f)
+                    const float fOmega = PblMath::Sqrt(vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y +
+                                                       vVelocity.z * vVelocity.z) / fRadius;
+                    mOmega = vAxis * fOmega;
+                    if (DotProduct(vAxis, CrossProduct(vVelocity, PblVector3(0.0f, 1.0f, 0.0f))) > 0.0f)
                     {
-                        fOmega = -fOmega;
+                        mOmega = -mOmega;
                     }
-                    mOmega.x = vAxis.x * fOmega;
-                    mOmega.y = vAxis.y * fOmega;
-                    mOmega.z = vAxis.z * fOmega;
                 }
             }
         }
@@ -706,12 +686,10 @@ bool Chunk::DoFullRigidCollision(const CollisionResult* pResult, CollisionObject
                       pResult->mCollisionPosition.z - vCenter.z);
         PblVector3 vNormal = pResult->mSeparationNormal;
 
-        PblVector3 vSpinVel = CrossProduct(mOmega, vR);
-        PblVector3 vVel(mVelocity.x + vSpinVel.x, mVelocity.y + vSpinVel.y, mVelocity.z + vSpinVel.z);
+        const PblVector3 vVel = mVelocity + CrossProduct(mOmega, vR);
         float fDot = vNormal.y * vVel.y + vVel.x * vNormal.x + vNormal.z * vVel.z;
-        PblVector3 vSlip = Normalize(PblVector3(vVel.x - vNormal.x * fDot, vVel.y - vNormal.y * fDot,
-                                                vVel.z - vNormal.z * fDot));
-        PblVector3 vFriction(-vSlip.x, -vSlip.y, -vSlip.z);
+        const PblVector3 vFriction = -Normalize(PblVector3(vVel.x - vNormal.x * fDot, vVel.y - vNormal.y * fDot,
+                                                           vVel.z - vNormal.z * fDot));
 
         if (fDot < 0.0f && (eType == COLL_TERRAIN || eType == COLL_STATIC || eType == COLL_RIGID))
         {
@@ -742,9 +720,7 @@ bool Chunk::DoFullRigidCollision(const CollisionResult* pResult, CollisionObject
             mAngularMomentum.z += vL.z;
             mOmega = TransformCoord(mAngularMomentum, mInverseWorldInertiaTensor);
 
-            const PblVector3 vW = CrossProduct(mOmega, vR);
-            float fSlip = (mVelocity.y + vW.y) * vFriction.y + (mVelocity.x + vW.x) * vFriction.x +
-                          (mVelocity.z + vW.z) * vFriction.z;
+            float fSlip = DotProduct(mVelocity + CrossProduct(mOmega, vR), vFriction);
             if (fSlip < 0.0f && (eType == COLL_TERRAIN || eType == COLL_STATIC || eType == COLL_RIGID))
             {
                 if (mNumTerrainCollisions >= mMaxTerrainCollisions && eType != COLL_STATIC && eType != COLL_RIGID)
@@ -831,22 +807,18 @@ void Chunk::Render(unsigned char ucAlpha, float fDist, unsigned int uiFlags)
 
         PblQuaternion q = PblQuaternion(mCollisionMatrix);
         PblVector3 vBack(-mOmega.x, -mOmega.y, -mOmega.z);
-        PblMatrix mInverse = mCollisionMatrix.GetInverseFast();
         PblVector3 vSpin;
-        D3DXVec3TransformNormal((D3DXVECTOR3*)&vSpin, (const D3DXVECTOR3*)&vBack, (const D3DXMATRIX*)&mInverse);
-        vSpin.x *= fDt;
-        vSpin.y *= fDt;
-        vSpin.z *= fDt;
+        D3DXVec3TransformNormal((D3DXVECTOR3*)&vSpin, (const D3DXVECTOR3*)&vBack,
+                                (const D3DXMATRIX*)&mCollisionMatrix.GetInverseFast());
+        const PblVector3 vRotation = vSpin * fDt;
         PblVector3 vPos = mCollisionMatrix.GetTranslation();
-        float fAngle = PblMath::Sqrt(vSpin.x * vSpin.x + vSpin.y * vSpin.y + vSpin.z * vSpin.z);
+        float fAngle = PblMath::Sqrt(vRotation.x * vRotation.x + vRotation.y * vRotation.y + vRotation.z * vRotation.z);
         if (fAngle > EPSILON)
         {
             float fInv = 1.0f / fAngle;
-            q = q * PblQuaternion(PblVector3(vSpin.x * fInv, vSpin.y * fInv, vSpin.z * fInv), fAngle);
+            q = q * PblQuaternion(vRotation * fInv, fAngle);
         }
-        vPos.x -= mVelocity.x * fDt;
-        vPos.y -= mVelocity.y * fDt;
-        vPos.z -= mVelocity.z * fDt;
+        vPos -= mVelocity * fDt;
         mRender = mPrimitiveMatrix * PblMatrix(q, vPos);
     }
 

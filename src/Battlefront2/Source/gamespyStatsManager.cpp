@@ -261,20 +261,12 @@ void FillStatsBucketCount(void** ppDest, unsigned int uiCount, void* const* ppVa
 // FUNCTION: SWBF2 0x00530d70
 void** CopyStatsBucketRange(void** ppFirst, void** ppLast, void** ppDest)
 {
-    unsigned int uiCount = (unsigned int)(ppLast - ppFirst);
-    if (ppFirst > ppLast)
-    {
-        uiCount = 0;
-    }
-
-    for (unsigned int i = 0; i != uiCount; i++)
+    for (; ppFirst != ppLast; ++ppFirst, ++ppDest)
     {
         if (ppDest)
         {
             *ppDest = *ppFirst;
         }
-        ppFirst++;
-        ppDest++;
     }
 
     return ppDest;

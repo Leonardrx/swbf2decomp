@@ -365,21 +365,12 @@ void CameraTrackSetting::SetupCameraTrackMatrixHUDTargeting(PblMatrix& rMatrix, 
                                                             const PblVector3& vAimDir)
 {
     PblVector3 vDir(-vAimDir.x, -vAimDir.y, -vAimDir.z);
-    PblQuaternion qLook = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
+    PblQuaternion qCamera = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
+    qCamera *= PblQuaternion(PblVector3(1.0f, 0.0f, 0.0f), -GetCameraTiltValue());
 
-    float fSin, fCos;
-    float fNegTilt = -GetCameraTiltValue();
-    PblMath::SinCos(&fSin, &fCos, fNegTilt * 0.5f);
-    PblQuaternion qTilt;
-    qTilt._fX = fSin;
-    qTilt._fY = fSin * 0.0f;
-    qTilt._fZ = fSin * 0.0f;
-    qTilt._fS = fCos;
-
-    PblQuaternion q = qLook * qTilt;
     D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qCamera)));
     mCamera.m[3][0] = gVectorZero.x;
     mCamera.m[3][1] = gVectorZero.y;
     mCamera.m[3][2] = gVectorZero.z;
@@ -406,34 +397,26 @@ void CameraTrackSetting::SetupCameraTrackMatrixHUDTargeting(const CameraTrackSet
     PblVector3 vCenter;
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&vTrackCenter), reinterpret_cast<const D3DXMATRIX*>(&rTarget));
 
-    PblVector3 vDir(-vAimDir.x, -vAimDir.y, -vAimDir.z);
-    PblQuaternion qLook = PblQuaternion(DirectionMatrix(vDir, rTarget[1], gVectorZero));
+    PblQuaternion qCamera(DirectionMatrix(-vAimDir, rTarget[1], gVectorZero));
+    qCamera *= PblQuaternion(PblVector3(1.0f, 0.0f, 0.0f), -fTilt);
 
-    float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, fTilt * -0.5f);
-    PblQuaternion qTilt;
-    qTilt._fX = fSin;
-    qTilt._fY = fSin * 0.0f;
-    qTilt._fZ = fSin * 0.0f;
-    qTilt._fS = fCos;
-
-    PblQuaternion q = qLook * qTilt;
-    D3DXQUATERNION qUnit;
     PblMatrix mCamera;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&q)));
+    {
+        D3DXQUATERNION qUnit;
+        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qCamera)));
+    }
     mCamera.m[3][0] = gVectorZero.x;
     mCamera.m[3][1] = gVectorZero.y;
     mCamera.m[3][2] = gVectorZero.z;
     mCamera.m[3][3] = 1.0f;
 
-    PblVector3 vOffset;
-    D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vTrackOffset), reinterpret_cast<const D3DXMATRIX*>(&mCamera));
-    PblVector3 vPoint;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vTrackCenter), reinterpret_cast<const D3DXMATRIX*>(&rTarget));
-    mCamera.m[3][0] = vOffset.x + vPoint.x;
-    mCamera.m[3][1] = vOffset.y + vPoint.y;
-    mCamera.m[3][2] = vOffset.z + vPoint.z;
-    mCamera.m[3][3] = 1.0f;
+    {
+        PblVector3 vOffset;
+        D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXVECTOR3*>(&vTrackOffset), reinterpret_cast<const D3DXMATRIX*>(&mCamera));
+        PblVector3 vPoint;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPoint), reinterpret_cast<const D3DXVECTOR3*>(&vTrackCenter), reinterpret_cast<const D3DXMATRIX*>(&rTarget));
+        mCamera.SetTranslation(vOffset + vPoint);
+    }
     rMatrix = mCamera;
 }
 

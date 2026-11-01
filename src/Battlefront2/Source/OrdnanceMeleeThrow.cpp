@@ -324,7 +324,7 @@ OrdnanceMeleeThrow::OrdnanceMeleeThrow(OrdnanceMeleeThrowClass* pClass, const Or
                 float fLength2 = SquaredLength(vFront);
                 if (fLength2 <= 0.0001f)
                 {
-                    vFront = gVectorUnitZ - vDir * vDir.z;
+                    vFront = gVectorUnitZ - vDir.z * vDir;
                     fLength2 = SquaredLength(vFront);
                 }
                 vFront *= 1.0f / sqrtf(fLength2);

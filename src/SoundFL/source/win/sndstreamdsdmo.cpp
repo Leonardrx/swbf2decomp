@@ -395,14 +395,7 @@ void StreamDSDMO::SetInputBuffer(void* pBuffer, unsigned int uiSize)
         mAlignment = mAlignment ? mAlignment : 1;
     }
 
-    if (mInputFrameSize != 0)
-    {
-        mBuffer.SetBuffer(pBuffer, (uiSize / mInputFrameSize) * mInputFrameSize);
-    }
-    else
-    {
-        mBuffer.SetBuffer(pBuffer, 0);
-    }
+    mBuffer.SetBuffer(pBuffer, mInputFrameSize ? (uiSize / mInputFrameSize) * mInputFrameSize : 0);
 }
 
 }

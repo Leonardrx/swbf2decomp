@@ -343,7 +343,7 @@ int WeaponAreaEffect::SetTargets()
     {
     case WeaponAreaEffectClass::AREA_CYLINDER:
     {
-        vCenter = mAimer->mDirection * pClass->m_fAreaRange + mAimer->mFirePos;
+        vCenter = pClass->m_fAreaRange * mAimer->mDirection + mAimer->mFirePos;
         fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f +
                               pClass->m_fAreaRadius * pClass->m_fAreaRadius);
         break;
@@ -352,15 +352,16 @@ int WeaponAreaEffect::SetTargets()
     case WeaponAreaEffectClass::AREA_RAY:
     {
         const float fHalfAngle = pClass->m_fAreaRadius * 0.017453292f;
-        float fDist;
         if (fHalfAngle >= 1.5707964f)
         {
             vCenter = mAimer->mFirePos;
-            fDist = pClass->m_fAreaRange;
+            fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f +
+                                  pClass->m_fAreaRange * pClass->m_fAreaRange);
         }
         else
         {
             const float fCos = (float)cos(fHalfAngle);
+            float fDist;
             if (fHalfAngle >= 0.78539819f)
             {
                 fDist = pClass->m_fAreaRange * fCos;
@@ -369,9 +370,9 @@ int WeaponAreaEffect::SetTargets()
             {
                 fDist = pClass->m_fAreaRange * 0.5f / fCos;
             }
-            vCenter = mAimer->mDirection * fDist + mAimer->mFirePos;
+            vCenter = mAimer->mFirePos + fDist * mAimer->mDirection;
+            fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f + fDist * fDist);
         }
-        fRadius = (float)sqrt(pClass->m_fAreaHeight * pClass->m_fAreaHeight * 0.25f + fDist * fDist);
         break;
     }
     default:

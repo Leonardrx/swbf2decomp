@@ -781,12 +781,9 @@ void AttackPatterns::DoMelee()
     if (GetMe()->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier) &&
         static_cast<const EntitySoldier*>(GetMe()->GetEntity())->mAcklayData)
     {
-        const CollisionObject& rTarget = *GetAttackHelper()->GetTarget();
-        const PblMatrix& mTarget = rTarget.GetMatrix();
-        const PblMatrix& mMe = GetMe()->GetMatrix();
-        PblVector3 vDiff(mMe.m[3][0] - mTarget.m[3][0], mMe.m[3][1] - mTarget.m[3][1], mMe.m[3][2] - mTarget.m[3][2]);
-        const CollisionObject& rMe = *GetMe()->GetGameObject();
-        float fRadius = rMe.GetCollisionRadius();
+        const PblVector3 vDiff = GetMe()->GetMatrix().GetTranslation() -
+                                 GetAttackHelper()->GetTarget()->GetMatrix().GetTranslation();
+        float fRadius = GetMe()->GetGameObject()->GetCollisionRadius();
         if (fRadius * 2.25f * fRadius >= vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z)
         {
             return;
@@ -816,18 +813,14 @@ void AttackPatterns::DoMelee()
             {
                 float fSin, fCos;
                 PblMath::SinCos(&fSin, &fCos, PblMath::fPi / 2.0f);
-                float fX = fCos * vJump.x - vJump.z * fSin;
-                vJump.z = vJump.z * fCos + fSin * vJump.x;
-                vJump.x = fX;
+                vJump = PblVector3(fCos * vJump.x - vJump.z * fSin, vJump.y, vJump.z * fCos + fSin * vJump.x);
                 break;
             }
             case 2:
             {
                 float fSin, fCos;
                 PblMath::SinCos(&fSin, &fCos, -PblMath::fPi / 2.0f);
-                float fX = fCos * vJump.x - vJump.z * fSin;
-                vJump.z = vJump.z * fCos + fSin * vJump.x;
-                vJump.x = fX;
+                vJump = PblVector3(fCos * vJump.x - vJump.z * fSin, vJump.y, vJump.z * fCos + fSin * vJump.x);
                 break;
             }
             }
@@ -835,7 +828,8 @@ void AttackPatterns::DoMelee()
 
         PblVector3 vLand(vJump.x, 0.0f, vJump.z);
         vLand = Normalize(vLand);
-        PblVector3 vDest = vLand * 25.0f + GetMe()->GetMatrix().GetTranslation();
+        PblVector3 vDest = vLand * 25.0f;
+        vDest += GetMe()->GetMatrix().GetTranslation();
 
         if (AIUtil::DirectLineToTarget(GetMe()->GetGameObject(), vDest))
         {
@@ -1150,16 +1144,14 @@ void AttackPatterns::InitJetJump()
 {
     for (int iTries = 10; --iTries >= 0;)
     {
-        const PblVector3 vRand = PblRandom::GetGlobalVector3();
-        PblVector3 vOffset(vRand.x * 40.0f, vRand.y * 40.0f, vRand.z * 40.0f);
+        PblVector3 vOffset = PblRandom::GetGlobalVector3() * 40.0f;
         vOffset.y = 0.0f;
         if (vOffset.x * vOffset.x + vOffset.y * vOffset.y + vOffset.z * vOffset.z < 400.0f)
         {
             continue;
         }
 
-        const PblVector3& vMe = GetMe()->GetMatrix().GetTranslation();
-        const PblVector3 vTarget(vMe.x + vOffset.x, vMe.y + vOffset.y, vMe.z + vOffset.z);
+        const PblVector3 vTarget = GetMe()->GetMatrix().GetTranslation() + vOffset;
         const GameObject* pMeObj = GetMe()->GetGameObject();
         if (!PathFinder::IsPointValid(vTarget, AIUtil::GetCollisionRadius(pMeObj), AIUtil::GetAIType(pMeObj),
                                       0, 0, 0))
@@ -1167,7 +1159,7 @@ void AttackPatterns::InitJetJump()
             continue;
         }
 
-        const PblVector3 vAbove(vTarget.x + 0.0f, vTarget.y + 40.0f, vTarget.z + 0.0f);
+        const PblVector3 vAbove = vTarget + PblVector3(0.0f, 40.0f, 0.0f);
         const GameObject* pIgnore = GetMe()->GetGameObject();
         if (CollisionManager::RayTest(vTarget, vAbove, &pIgnore, 1, 0x9a))
         {
@@ -1177,7 +1169,7 @@ void AttackPatterns::InitJetJump()
         if (!AIUtil::gAIAllowBlindJetJumps &&
             PathFinder::TestTrivialStraightLineHit(GetMe()->GetMatrix().GetTranslation(), vTarget,
                                                    AIUtil::GetCollisionRadius(pMeObj),
-                                                   AIUtil::GetAIType(pMeObj), 0, 0, false))
+                                                   AIUtil::GetAIType(pMeObj), 0, 0, false) == true)
         {
             continue;
         }

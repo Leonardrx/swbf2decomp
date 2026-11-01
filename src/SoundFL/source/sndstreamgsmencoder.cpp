@@ -104,8 +104,13 @@ void StreamGSMEncoder::Update()
             mInputPacketOffset = 0;
         }
 
-        while (pOutput != 0)
+        do
         {
+            if (pOutput == 0)
+            {
+                break;
+            }
+
             bool bFlag1 = false;
             bool bFlag0 = false;
             bool bLast = false;
@@ -212,12 +217,7 @@ void StreamGSMEncoder::Update()
                 mPlaybackPosition = uiPos + uiDecoded;
                 pOutput = 0;
             }
-
-            if (mInputPacket == 0)
-            {
-                break;
-            }
-        }
+        } while (mInputPacket != 0);
 
         pOutput = GetReadPacket();
     }

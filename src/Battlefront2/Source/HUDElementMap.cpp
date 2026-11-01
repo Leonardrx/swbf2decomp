@@ -704,10 +704,10 @@ bool HUD::ElementMap::ReadData(PblConfig& config, PblConfig::Data& data)
 // FUNCTION: SWBF2 0x00555840
 HUD::ElementMap* HUD::ElementMap::FindByPlayerIndex(int iPlayerIndex)
 {
-    for (PblListSingle::Itor itor(sMapList); itor.GetNode() != &sMapList.mHead; ++itor)
+    for (PblListSingle::Itor itor(sMapList); itor.GetNode() != sMapList.GetTerminator(); ++itor)
     {
-        ElementMap* pMap = (ElementMap*)((char*)itor.GetNode() - offsetof(ElementMap, mMapNode));
-        if (pMap->mPlayerIndex == iPlayerIndex)
+        ElementMap* pMap = (ElementMap*)itor.GetNode()->GetObjectA(&sMapList, offsetof(ElementMap, mMapNode));
+        if (iPlayerIndex == pMap->mPlayerIndex)
         {
             return pMap;
         }
@@ -1075,7 +1075,7 @@ void HUD::ElementMap::UpdateTargetIcons(const Controllable* pPlayer)
     const bool bEasy = mPlayerIndex >= 0 && GameLoop::mbHistoricalRules &&
                        PlayerProfile::GetProfile(mPlayerIndex)->mGameOptions.mCurDiffLevel <= eDIFFICULTY_MEDIUM;
 
-    for (unsigned int i = 0; i < TargetManager::MAX_TARGETS; ++i)
+    for (int i = 0; i < TargetManager::MAX_TARGETS; ++i)
     {
         TargetManager::Target& target = TargetManager::_gTarget[i];
         RedBitmapElement& bitmap = mTarget[i];
@@ -1325,17 +1325,18 @@ void HUD::ElementMap::UpdatePostIcons(float fElapsed, float fRotation)
                 const int iHoldTeam = post.actor->mHoldTeam;
                 if (iHoldTeam != 0 && iHoldTeam != iTeam)
                 {
-                    const float fTime = (float)fmod((double)GameLoop::GetMissionTime(), 1.0);
+                    const float fTime = fmodf(GameLoop::GetMissionTime(), 1.0f);
                     if (fTime < 0.25f)
                     {
                         const RedColor holdColor = pTeam->GetColor(iHoldTeam < 0 ? 0 : iHoldTeam);
+                        const RedColor teamColor = bitmap.m_color;
                         if (fTime < 0.125f)
                         {
-                            bitmap.m_color = Interpolate(bitmap.m_color, holdColor, fTime * 8.0f);
+                            bitmap.m_color = Interpolate(teamColor, holdColor, fTime * 8.0f);
                         }
                         else
                         {
-                            bitmap.m_color = Interpolate(bitmap.m_color, holdColor, (0.25f - fTime) * 8.0f);
+                            bitmap.m_color = Interpolate(teamColor, holdColor, (0.25f - fTime) * 8.0f);
                         }
                     }
                 }
@@ -1352,8 +1353,8 @@ void HUD::ElementMap::UpdatePostIcons(float fElapsed, float fRotation)
                     {
                         const PblVector3& vAxis = post.actor->GetMatrix().GetZAxis();
                         const PblVector3 vForward(-vAxis.x, -vAxis.y, -vAxis.z);
-                        bitmap.SetMatrixPosRotScale(fX, fY, PblMath::Atan2(-vForward.x, vForward.z),
-                                                    post.mapParams.mScale, post.mapParams.mScale);
+                        const float fAngle = PblMath::Atan2(-vForward.x, vForward.z);
+                        bitmap.SetMatrixPosRotScale(fX, fY, fAngle, post.mapParams.mScale, post.mapParams.mScale);
                     }
                     bitmap.Enable(true);
 
@@ -1442,8 +1443,7 @@ void HUD::ElementMap::UpdateMarkerIcons()
         float fTime;
         if (marker.flashAlpha || marker.pulseSize)
         {
-            const double dMissionTime = GameLoop::GetMissionTime();
-            fTime = (float)fmod(dMissionTime, 1.0);
+            fTime = fmodf(GameLoop::GetMissionTime(), 1.0f);
         }
         else
         {
@@ -1461,13 +1461,9 @@ void HUD::ElementMap::UpdateMarkerIcons()
         }
         else
         {
-            const PblMatrix& mMatrix = ((GameObject*)marker.actor)->GetMatrix();
-            const PblMatrix& mSmoothed = ((GameObject*)marker.actor)->GetSmoothedMatrix();
-            const float fOffsetX = mSmoothed.m[3][0] - mMatrix.m[3][0];
-            const float fOffsetY = mSmoothed.m[3][1] - mMatrix.m[3][1];
-            const float fOffsetZ = mSmoothed.m[3][2] - mMatrix.m[3][2];
-            const PblVector3& vCenter = ((GameObject*)marker.actor)->GetCollisionCenter();
-            vPosition = PblVector3(vCenter.x + fOffsetX, vCenter.y + fOffsetY, vCenter.z + fOffsetZ);
+            const PblVector3 vOffset = ((GameObject*)marker.actor)->GetSmoothedMatrix().GetTranslation() -
+                                       ((GameObject*)marker.actor)->GetMatrix().GetTranslation();
+            vPosition = ((GameObject*)marker.actor)->GetCollisionCenter() + vOffset;
             if (marker.color.a == 0)
             {
                 color = pTeam->GetColor(((GameObject*)marker.actor)->GetTeam());
@@ -2118,9 +2114,8 @@ void HUD::ElementMap::EventRefreshTarget(const HUD::Event& event, void* const pD
         return;
     }
 
-    ElementMap* pMap = (ElementMap*)pData;
-    RedBitmapElement& target = pMap->mTarget[uIndex];
     GameObject* pObject = TargetManager::_gTarget[uIndex].actor;
+    RedBitmapElement& target = ((ElementMap*)pData)->mTarget[uIndex];
     if (pObject)
     {
         const unsigned int uTexture = pObject->GetEntityClass()->mMapParams.mTexture;

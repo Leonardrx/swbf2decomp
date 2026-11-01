@@ -55,16 +55,9 @@ void SkyFogRenderable::Init()
 
     m_pPrimitive = pcRedPrimitive::Create(D3DPT_TRIANGLESTRIP, 0x202, 0x14, 4,
                                           0, true);
-    m_pPrimitive->m_bbox._vMin = PblVector3(-1.0f, -1.0f, -1.0f);
-    m_pPrimitive->m_bbox._vMax = PblVector3(1.0f, 1.0f, 1.0f);
-
-    PblVector3 vMin = { -1.0f, -1.0f, -1.0f };
-    PblVector3 vExtent = { 2.0f, 2.0f, 2.0f };
-    CompressedPos::s_vMin = vMin;
-    CompressedPos::s_vScale = vExtent * (1.0f / 65535.0f);
-    CompressedPos::s_vScaleInv.x = 1.0f / CompressedPos::s_vScale.x;
-    CompressedPos::s_vScaleInv.y = 1.0f / CompressedPos::s_vScale.y;
-    CompressedPos::s_vScaleInv.z = 1.0f / CompressedPos::s_vScale.z;
+    PblBox box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f);
+    m_pPrimitive->m_bbox = box;
+    CompressedPos::SetBoundingBox(box);
 
     struct FogVertex
     {

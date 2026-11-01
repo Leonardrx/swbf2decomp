@@ -87,24 +87,23 @@ void ScreenFilterEffect::ReadConfig(PblConfig& config)
 void ScreenFilterEffect::TimedFilter(int iViewport, float fDuration, float fFadeInTime,
                                      float fFadeOutTime, RedColor color, unsigned int uiTextureHash)
 {
-    FilterData& data = m_data[iViewport];
     if (fFadeInTime >= 0.0f)
     {
-        data.uiState = 2;
-        data.fIntensity = 0.0f;
+        m_data[iViewport].uiState = 2;
+        m_data[iViewport].fIntensity = 0.0f;
     }
     else
     {
-        data.uiState = 1;
-        data.fIntensity = 1.0f;
+        m_data[iViewport].uiState = 1;
+        m_data[iViewport].fIntensity = 1.0f;
     }
     float fNow = m_filterTimeStamp.GetElapsed();
-    data.fStartFadeInTime = fNow;
-    data.filterColor = color;
-    data.fStopFadeOutTime = fNow + fDuration;
-    data.fStopFadeInTime = fNow + fFadeInTime;
-    data.uiTextureHash = uiTextureHash;
-    data.fStartFadeOutTime = data.fStopFadeOutTime - fFadeOutTime;
+    m_data[iViewport].fStartFadeInTime = fNow;
+    m_data[iViewport].uiTextureHash = uiTextureHash;
+    m_data[iViewport].fStopFadeInTime = fNow + fFadeInTime;
+    m_data[iViewport].fStopFadeOutTime = fNow + fDuration;
+    m_data[iViewport].filterColor = color;
+    m_data[iViewport].fStartFadeOutTime = m_data[iViewport].fStopFadeOutTime - fFadeOutTime;
 }
 
 // FUNCTION: SWBF2 0x00634160

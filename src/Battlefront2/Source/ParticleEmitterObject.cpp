@@ -268,8 +268,9 @@ void ParticleEmitterObject::RegisterStep(float fDeltaTime)
         return;
     }
 
+    const PblMatrix mWorld = m_mWorldMatrix;
     ParticleEmitterInfoData* pPrev = mEmitterInfoData->mPrev;
-    const PblVector3& vPos = m_mWorldMatrix.GetTranslation();
+    const PblVector3& vPos = mWorld.GetTranslation();
     const PblVector3& vLast = mEmitterInfoData->mMatrix.GetTranslation();
     const float fTime = mLifeTime - mEmitterInfoData->mStartTime;
     const float fDX = vPos.x - vLast.x;
@@ -287,6 +288,7 @@ void ParticleEmitterObject::RegisterStep(float fDeltaTime)
     }
 
     ParticleEmitterInfoData* pNew = 0;
+    bool bRegister = false;
     mRegisterTime -= fDeltaTime;
     if (!pPrev || mRegisterTime < 0.0f)
     {
@@ -296,7 +298,7 @@ void ParticleEmitterObject::RegisterStep(float fDeltaTime)
         {
             pNew->mStartTime = mLifeTime;
             pNew->mVelocity = gVectorZero;
-            bool bRegister = sForceRegisterStep || !pPrev;
+            bRegister = sForceRegisterStep || !pPrev;
             if (!bRegister)
             {
                 const float fVX = vVelocity.x - pPrev->mInitialVelocity.x;
@@ -305,33 +307,31 @@ void ParticleEmitterObject::RegisterStep(float fDeltaTime)
                 bRegister = fVY * fVY + fVX * fVX + fVZ * fVZ > 0.5f ||
                             (fTime == 0.0f && (fDX != 0.0f || fDY != 0.0f || fDZ != 0.0f));
             }
-            if (bRegister)
-            {
-                pNew->mMatrix = m_mWorldMatrix;
-                pNew->mLifeTime = 0.0f;
-                ParticleEmitterInfoData* pCur = mEmitterInfoData;
-                if (pCur->mNext)
-                {
-                    pCur->mNext->mPrev = pNew;
-                }
-                pNew->mNext = pCur->mNext;
-                pNew->mPrev = pCur;
-                pCur->mNext = pNew;
-                mEmitterInfoData->mInitialVelocity = vVelocity;
-                mEmitterInfoData->mVelocity = mEmitterInfoData->mInitialVelocity;
-                mEmitterInfoData->mLifeTime = fTime;
-                mEmitterInfoData = pNew;
-                mEmitter->Register(pNew);
-                pNew->Release();
-                return;
-            }
         }
     }
 
-    if (pPrev)
+    if (bRegister)
+    {
+        pNew->mMatrix = mWorld;
+        pNew->mLifeTime = 0.0f;
+        ParticleEmitterInfoData* pCur = mEmitterInfoData;
+        if (pCur->mNext)
+        {
+            pCur->mNext->mPrev = pNew;
+        }
+        pNew->mNext = pCur->mNext;
+        pNew->mPrev = pCur;
+        pCur->mNext = pNew;
+        mEmitterInfoData->mInitialVelocity = vVelocity;
+        mEmitterInfoData->mVelocity = mEmitterInfoData->mInitialVelocity;
+        mEmitterInfoData->mLifeTime = fTime;
+        mEmitterInfoData = pNew;
+        mEmitter->Register(pNew);
+    }
+    else if (pPrev)
     {
         pPrev->mLifeTime += fTime;
-        mEmitterInfoData->mMatrix = m_mWorldMatrix;
+        mEmitterInfoData->mMatrix = mWorld;
         mEmitterInfoData->mStartTime = mLifeTime;
         const PblVector3& vNow = mEmitterInfoData->mMatrix.GetTranslation();
         const PblVector3& vThen = pPrev->mMatrix.GetTranslation();

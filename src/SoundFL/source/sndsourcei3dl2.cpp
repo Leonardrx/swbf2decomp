@@ -125,18 +125,9 @@ bool SourceI3DL2::Update(const ListenerBase* const pListener,
         pSpace = Space::GetSpace(*pPos);
         if (pListenerSpace != pSpace && fRadius > 0.0f)
         {
-
-            const ::PblVector3* const pListenerPos = pListener->mSpacePos;
-            ::PblVector3 vDelta;
-            vDelta.x = pListenerPos->x - pPos->x;
-            vDelta.y = pListenerPos->y - pPos->y;
-            vDelta.z = pListenerPos->z - pPos->z;
-
+            const ::PblVector3 vDelta = *pListener->mSpacePos - *pPos;
             const ::PblVector3 vDir = ::NormalizeEst(vDelta);
-            ::PblVector3 vProbe;
-            vProbe.x = pPos->x + vDir.x * fRadius;
-            vProbe.y = pPos->y + vDir.y * fRadius;
-            vProbe.z = pPos->z + vDir.z * fRadius;
+            const ::PblVector3 vProbe = *pPos + vDir * fRadius;
 
             pSpace = pSpace->IsPointInside(vProbe, 0.0f) ? pSpace : pListenerSpace;
         }

@@ -302,13 +302,13 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
 
     RedRenderer::pcSetRenderTarget(m_destTex, 0);
     RedRenderer::pcLoadFormat(m_pVertexFormat);
-    if (uiPass)
+    if (uiPass == 0)
     {
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     }
     else
     {
-        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     }
 
     while (m_curSample < m_numSamples)
@@ -320,8 +320,8 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
             if (m_curSample >= m_numSamples)
             {
                 RedRenderer::pcSetTexture(i, 0);
-                const float afZero[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, afZero, 1);
+                const PblVector4 vZero(0.0f, 0.0f, 0.0f, 0.0f);
+                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, vZero, 1);
                 pRegs[40 + i].component[0] = 0.0f;
                 pRegs[40 + i].component[1] = 0.0f;
             }
@@ -329,13 +329,13 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
             {
                 RedRenderer::pcSetTexture(i, m_srcTex);
                 const float fValue = m_samples[m_curSample].fValue;
-                const float afWeight[4] = { fValue, fValue, fValue, fValue };
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, afWeight, 1);
+                const PblVector4 vWeight(fValue, fValue, fValue, fValue);
+                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, vWeight, 1);
                 const RedTexture* pSrc = m_srcTex;
-                pRegs[40 + i].component[1] =
-                    m_samples[m_curSample].fOffsetY / (float)pSrc->m_uiHeight;
-                pRegs[40 + i].component[0] =
-                    m_samples[m_curSample].fOffsetX / (float)pSrc->m_uiWidth;
+                const float fOffsetV = m_samples[m_curSample].fOffsetY / (float)pSrc->m_uiHeight;
+                const float fOffsetU = m_samples[m_curSample].fOffsetX / (float)pSrc->m_uiWidth;
+                pRegs[40 + i].component[1] = fOffsetV;
+                pRegs[40 + i].component[0] = fOffsetU;
             }
             pRegs[40 + i].component[3] = 0.0f;
             pRegs[40 + i].component[2] = 0.0f;

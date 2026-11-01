@@ -168,13 +168,11 @@ void ParticleTransformer::PositionTransformer::Update(PblVector3& position, PblV
     case SCALE:
         if (fScale >= 1.0f)
         {
-            velocity = velocity * mData.mScale.mScale;
+            velocity *= mData.mScale.mScale;
         }
         else
         {
-            velocity.x = velocity.x * (1.0f - fScale) + velocity.x * mData.mScale.mScale * fScale;
-            velocity.y = velocity.y * (1.0f - fScale) + velocity.y * mData.mScale.mScale * fScale;
-            velocity.z = velocity.z * (1.0f - fScale) + velocity.z * mData.mScale.mScale * fScale;
+            velocity = velocity * (1.0f - fScale) + velocity * mData.mScale.mScale * fScale;
         }
         break;
     }

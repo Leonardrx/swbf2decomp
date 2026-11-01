@@ -294,14 +294,18 @@ void RedSpotLight::_RecalculateProjectionMatrix() const
     mProj.m[2][2] = 0.0f;
     mProj.m[2][3] = 1.0f;
 
-    const float fDot = m_vDirection.y * gVectorUnitY.y + m_vDirection.x * gVectorUnitY.x
-                     + m_vDirection.z * gVectorUnitY.z;
-    const PblVector3& vUp = ((float)fabs((double)fDot) > 0.99f) ? gVectorUnitX : gVectorUnitY;
+    const float fDot = DotProduct(m_vDirection, gVectorUnitY);
 
-    const PblMatrix mView = DirectionMatrix(m_vDirection, vUp, m_vPos);
-    const PblMatrix mInvView = mView.GetInverseFast();
-    PblMatrix mResult = mInvView * mProj;
-    m_mProjection = mResult;
+    PblMatrix mView;
+    if ((float)fabs((double)fDot) > 0.99f)
+    {
+        mView = DirectionMatrix(m_vDirection, gVectorUnitX, m_vPos);
+    }
+    else
+    {
+        mView = DirectionMatrix(m_vDirection, gVectorUnitY, m_vPos);
+    }
+    m_mProjection = mView.GetInverseFast() * mProj;
     m_bProjectionDirty = false;
 }
 

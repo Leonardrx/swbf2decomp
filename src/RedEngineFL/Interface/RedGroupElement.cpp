@@ -91,10 +91,14 @@ bool RedGroupElement::AddElement(RedInterfaceElement* pElement)
     }
 
     PblList<RedInterfaceElement>::Node* pAt = m_children.GetFirst();
-    const unsigned char uiOrder = pElement->m_zorder;
-    while (pAt->_pObject != m_children._head._pObject &&
-           uiOrder <= pAt->_pObject->m_zorder)
+    while (pAt->_pObject != m_children._head._pObject)
     {
+        const unsigned char uiOrder = pElement->m_zorder;
+        const unsigned char uiOther = pAt->_pObject->m_zorder;
+        if (uiOrder > uiOther)
+        {
+            break;
+        }
         pAt = pAt->_pNext;
     }
 

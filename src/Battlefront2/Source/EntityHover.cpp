@@ -2687,25 +2687,11 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
             PblMatrix mLook =
                 DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z), mMatrix.GetYAxis(), gVectorZero);
             PblQuaternion qLook = PblQuaternion(mLook);
-            float fSin;
-            float fCos;
-            PblMath::SinCos(&fSin, &fCos, -mClass->mCameraSettings.GetCameraTiltValue() * 0.5f);
-            PblQuaternion qTilt;
-            qTilt._fX = fSin * gVectorUnitX.x;
-            qTilt._fY = gVectorUnitX.y * fSin;
-            qTilt._fZ = gVectorUnitX.z * fSin;
-            qTilt._fS = fCos;
-            PblQuaternion qCamera = qLook * qTilt;
-
-            PblQuaternion qUnit;
-            PblMatrix mCamera;
-            D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mCamera), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&qCamera)));
-            mCamera.SetTranslation(gVectorZero);
+            PblQuaternion qTilt(gVectorUnitX, -mClass->mCameraSettings.GetCameraTiltValue());
+            PblMatrix mCamera(qLook * qTilt, gVectorZero);
 
             mTargetInfo.mAimStart = mClass->mCameraSettings.CalcCameraPoint(mMatrix, mCamera);
-            float fAlong = mEyeDir.y * (mEyePoint.y - mTargetInfo.mAimStart.y) +
-                           mEyeDir.x * (mEyePoint.x - mTargetInfo.mAimStart.x) +
-                           mEyeDir.z * (mEyePoint.z - mTargetInfo.mAimStart.z);
+            float fAlong = DotProduct(mEyeDir, mEyePoint - mTargetInfo.mAimStart);
             mTargetInfo.mAimStart += mEyeDir * fAlong;
         }
         const GameObject* pIgnore = this;
@@ -2713,9 +2699,7 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         float fDist =
             CollisionManager::RayHit(mTargetInfo.mAimStart, mEyeDir, 512.0f, pHit, 0, &pIgnore, 1, 0x9a, true) *
             512.0f;
-        mTargetInfo.mAimPoint = PblVector3(mTargetInfo.mAimStart.x + mEyeDir.x * fDist,
-                                           mTargetInfo.mAimStart.y + mEyeDir.y * fDist,
-                                           mTargetInfo.mAimStart.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + mEyeDir * fDist;
     }
     else
     {
@@ -2725,12 +2709,11 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         if (iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mTarget)
         {
             PblVector3 vTarget = mWeapon[iIndex]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
-            fDist = sqrtf((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
-                          (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
-                          (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
+            fDist = PblMath::Sqrt((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
+                                  (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
+                                  (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = PblVector3(mEyeDir.x * fDist + mEyePoint.x, mEyePoint.y + mEyeDir.y * fDist,
-                                           mEyePoint.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mEyePoint + mEyeDir * fDist;
     }
 
     PblVector3 vLowest = GetModel()->_mModel->_TotalBoundingBox._vMin;
@@ -2741,7 +2724,9 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         {
             pEffectClass = FLEffect::s_EffectClasses.Find(mClass->mWakeEffect);
         }
-        if (pEffectClass && fabsf(mControlMove) + fabsf(mControlStrafe) > 0.01f)
+        if (pEffectClass && (mControlMove < 0.0f ? -mControlMove : mControlMove) +
+                                    (mControlStrafe < 0.0f ? -mControlStrafe : mControlStrafe) >
+                                0.01f)
         {
             PblMatrix mPrimitive = mCollisionModel->GetLocalMatrix(mClass->mWakeEmitterPrimitives[i], GetPose());
             PblMatrix mWake = mMatrix;
@@ -2781,8 +2766,7 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         const PblVector3& vCenter = GetCollisionCenter();
         const PblVector3& vPos = GetPosition();
         const PblVector3& vSmoothed = GetSmoothedMatrix().GetTranslation();
-        SetRenderPos(PblVector3(vSmoothed.x + vCenter.x - vPos.x, vSmoothed.y + vCenter.y - vPos.y,
-                                vSmoothed.z + vCenter.z - vPos.z));
+        SetRenderPos(vSmoothed + vCenter - vPos);
     }
 
     if (!netFrameLock && NetGame::IsEnabled())
@@ -3024,7 +3008,7 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
         if (pOther->GetGameObject())
         {
             const PblVector3& vOtherVel = pOther->GetGameObject()->GetVelocity();
-            vRelVel = vRelVel - vOtherVel;
+            vRelVel -= vOtherVel;
         }
         const PblVector3& vNormal = pResult->mSeparationNormal;
         float fApproach = vNormal.y * vRelVel.y + vRelVel.x * vNormal.x + vNormal.z * vRelVel.z;
@@ -3044,12 +3028,8 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
                     ApplyCollisionImpact(fApproach, vNormal, pOther);
                     if (0.0f > fApproach && IsAlive())
                     {
-                        mVelocity.x -= vNormal.x * fApproach;
-                        mVelocity.y -= vNormal.y * fApproach;
-                        mVelocity.z -= vNormal.z * fApproach;
-                        mVelocity.x -= vNormal.x * fApproach * 0.1f;
-                        mVelocity.y -= 0.0f;
-                        mVelocity.z -= vNormal.z * fApproach * 0.1f;
+                        mVelocity -= vNormal * fApproach;
+                        mVelocity -= PblVector3(vNormal.x * fApproach * 0.1f, 0.0f, vNormal.z * fApproach * 0.1f);
                     }
                     RestrictObject(vNormal, pResult->mOverlap - fSpring, pRestrictor);
                     if (pRestrictor)
@@ -3087,7 +3067,7 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
                     {
                         fClosing = 0.0f;
                     }
-                    float fOtherClosing = 0.0f;
+                    float fOtherClosing;
                     if (pOther->GetGameObject())
                     {
                         const PblVector3& vOtherVel = pOther->GetGameObject()->GetVelocity();
@@ -3097,14 +3077,16 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
                             fOtherClosing = 0.0f;
                         }
                     }
+                    else
+                    {
+                        fOtherClosing = 0.0f;
+                    }
                     float fMine = (fClosing * 0.5f + 1.0f) * fOtherMass;
                     fBounce = fMine / ((fOtherClosing * 0.5f + 1.0f) * fMass + fMine) * fBounce;
                 }
 
                 mVelocity = vRelVel;
-                mVelocity.x -= vNormal.x * fApproach;
-                mVelocity.y -= vNormal.y * fApproach;
-                mVelocity.z -= vNormal.z * fApproach;
+                mVelocity -= vNormal * fApproach;
                 float fSlide = fBounce * fFriction /
                                PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
                                      mVelocity.z * mVelocity.z);
@@ -3112,23 +3094,15 @@ bool EntityHover::CollisionCallback(const CollisionResult* pResult, CollisionObj
                 {
                     fSlide = 1.0f;
                 }
-                mVelocity.x -= fSlide * mVelocity.x;
-                mVelocity.y -= mVelocity.y * fSlide;
-                mVelocity.z -= mVelocity.z * fSlide;
-                float fPush = fBounce + fApproach;
-                mVelocity.x = vNormal.x * fPush + mVelocity.x;
-                mVelocity.y = vNormal.y * fPush + mVelocity.y;
-                mVelocity.z = vNormal.z * fPush + mVelocity.z;
+                mVelocity -= mVelocity * fSlide;
+                mVelocity += vNormal * (fBounce + fApproach);
                 if (pOther->GetGameObject())
                 {
                     const PblVector3& vOtherVel = pOther->GetGameObject()->GetVelocity();
-                    mVelocity.x = vOtherVel.x + mVelocity.x;
-                    mVelocity.y = vOtherVel.y + mVelocity.y;
-                    mVelocity.z = vOtherVel.z + mVelocity.z;
+                    mVelocity += vOtherVel;
                 }
 
-                if (mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z >
-                        mClass->mForwardSpeed * 0.0001f * mClass->mForwardSpeed &&
+                if (SquaredLength(mVelocity) > mClass->mForwardSpeed * 0.0001f * mClass->mForwardSpeed &&
                     mClass->mSuspensionCenterHash)
                 {
                     float fUp = mMatrix.m[1][1] * vNormal.y + mMatrix.m[1][0] * vNormal.x +
@@ -3504,26 +3478,27 @@ void EntityHover::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
     }
     else
     {
+        PblMatrix mBase = mTarget;
         PblVector3 vOrigin = mTarget.GetTranslation();
         if (mClass->mSuspensionCenterHash)
         {
             const float fRise = (mCurrSuspensionOffset - mClass->mMidSuspensionOffset) * 1.75f;
-            vOrigin = vOrigin + mTarget.GetYAxis() * fRise;
+            vOrigin += mTarget.GetYAxis() * fRise;
         }
-        mTarget.SetTranslation(vOrigin);
+        mBase.SetTranslation(vOrigin);
         PblMatrix mUnbank;
         mUnbank.SetRotateZ(-mBankRollAngle);
         mUnbank.RotateX(-mBankPitchAngle);
         PblMatrix mBody;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mBody), reinterpret_cast<const D3DXMATRIX*>(&mUnbank), reinterpret_cast<const D3DXMATRIX*>(&mTarget));
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mBody), reinterpret_cast<const D3DXMATRIX*>(&mUnbank), reinterpret_cast<const D3DXMATRIX*>(&mBase));
         mClass->mCameraSettings.SetupCameraTrackMatrix(static_cast<Trackable*>(this), rMatrix, fDeltaTime,
                                                         mBody, mEyeDir, 1.0f, 1.0f, this);
     }
 
     if (!NetGame::IsEnabled() && mPlayerId >= 0 && mClass->mBlurEffect > 0.0f)
     {
-        const float fSpeed = sqrtf(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
-                                   mVelocity.z * mVelocity.z);
+        const float fSpeed = PblMath::Sqrt(mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y +
+                                           mVelocity.z * mVelocity.z);
         if (fSpeed > mClass->mBlurStartV * mClass->mForwardSpeed)
         {
             MotionBlurEffect::Start(0, mClass->mBlurEffect, CameraManager::Instance()->mUpdatedCameraId);

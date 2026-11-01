@@ -111,8 +111,7 @@ void RedShadowProxy::BuildData(const RedModel* pModel, const PblMatrix* pMatrix,
     }
     m_fShadowLength = fMaxLength;
 
-    PblVector3 vCenter = (box._vMax + box._vMin) * 0.5f;
-    D3DXVec3TransformCoord((D3DXVECTOR3*)&m_vCasterCenter, (const D3DXVECTOR3*)&vCenter, pMat);
+    m_vCasterCenter = pMatrix->ApplyTransform((box._vMax + box._vMin) * 0.5f);
 
     float hx = (box._vMax.x - box._vMin.x) * 0.5f;
     float hy = (box._vMax.y - box._vMin.y) * 0.5f;

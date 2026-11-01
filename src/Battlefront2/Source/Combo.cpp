@@ -57,11 +57,12 @@ const Combo* Combo::ResolveForWeapon(const WeaponMelee* pWeapon,
                 pResolved->GetState(i)->IsVelocityZFromAnim() ||
                 pResolved->GetState(i)->IsVelocityXFromAnim())
             {
-                if (pResolved->GetState(i)->GetAnimIndex() < 0xa4)
+                const unsigned char uiAnimIndex = pResolved->GetState(i)->GetAnimIndex();
+                if (uiAnimIndex < 0xa4)
                 {
                     SoldierAnimatorClass* pAnimator = SoldierAnimatorClass::Instance();
                     const SoldierAnimation* pAnim = pAnimator->GetUpperBodyAnimation(
-                        (SoldierAnimationBank::MAP)eMap, (unsigned char)pResolved->GetState(i)->GetAnimIndex());
+                        (SoldierAnimationBank::MAP)pResolved->m_eMap, uiAnimIndex);
                     if (pAnim)
                     {
                         fDuration = pAnim->GetAnimationLength();
@@ -89,21 +90,19 @@ const Combo* Combo::ResolveForWeapon(const WeaponMelee* pWeapon,
             for (unsigned int j = 0; j < pResolved->GetState(i)->GetNumAttacks(); ++j)
             {
                 State* pState = pResolved->GetState(i);
-                Attack* pAttack = pState->GetAttack(j);
-                if (pAttack->GetDamageEdge() >=
+                if (pState->GetAttack(j)->GetDamageEdge() >=
                     static_cast<const WeaponMeleeClass*>(pWeapon->mClass)->m_uiNumDamageEdges)
                 {
                     continue;
                 }
                 unsigned int uiAttach;
                 PblVector3 vBegin, vEnd;
-                static_cast<const WeaponMeleeClass*>(pWeapon->mClass)->GetDamageEdgeRay(
-                    pAttack->GetDamageEdge(), uiAttach, vBegin, vEnd);
-                pAttack->_ResolveDamageData(pResolved, pState, uiAttach, vBegin, vEnd);
+                static_cast<const WeaponMeleeClass*>(pWeapon->mClass)->GetDamageEdgeRay(pState->GetAttack(j)->GetDamageEdge(), uiAttach, vBegin, vEnd);
+                pState->GetAttack(j)->_ResolveDamageData(pResolved, pState, uiAttach, vBegin, vEnd);
             }
         }
     }
-    s_ComboTable.Store(uiNameHash, pResolved);
+    s_ComboTable.Store(pResolved->m_uiNameHash, pResolved);
     return pResolved;
 }
 
@@ -1272,12 +1271,15 @@ void Combo::Condition::_ReadConfig(PblConfig& config, const char* pszComboName, 
 // FUNCTION: SWBF2 0x00472000
 void Combo::Transition::_ReadConfig(PblConfig& config, const char* pszComboName, const char* pszStateName)
 {
-    while (!config.IsDone())
+    for (;;)
     {
-        if (config.IsScopeNext())
+        while (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
         {
             PblConfig scope(config.ReadNextScope(), true);
-            continue;
+        }
+        if (config.IsDone())
+        {
+            break;
         }
 
         PblConfig::Data data = config.ReadNextData();
@@ -1285,7 +1287,7 @@ void Combo::Transition::_ReadConfig(PblConfig& config, const char* pszComboName,
         {
         case 0x39386e06:
         case 0x5d342984:
-            if (config.IsScopeNext())
+            if (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
             {
                 PblConfig scope(config.ReadNextScope(), true);
                 Condition* pCondition = AddCondition();
@@ -2393,19 +2395,22 @@ void Combo::ReadConfig(PblConfig& config)
     }
     pIdle->SetEnergyRestoreRate();
 
-    while (!config.IsDone())
+    for (;;)
     {
-        if (config.IsScopeNext())
+        while (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
         {
             PblConfig scope(config.ReadNextScope(), true);
-            continue;
+        }
+        if (config.IsDone())
+        {
+            break;
         }
 
         PblConfig::Data data = config.ReadNextData();
         switch (data.GetId())
         {
         case 0x783132f6:
-            if (config.IsScopeNext())
+            if (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
             {
                 if (data.GetNumArgs() && data.IsStringArg(0))
                 {
@@ -2513,7 +2518,7 @@ void Combo::ReadConfig(PblConfig& config)
                     }
                 }
 
-                if (config.IsScopeNext())
+                if (!config.IsDone() && config.m_pChunk->PeekNextChildId() == SCOPE_ID)
                 {
                     PblConfig scope(config.ReadNextScope(), true);
                     if (pAnimData && eAnimation != SoldierAnimationBank::INVALID_COMBO_ANIMATION)
@@ -2547,19 +2552,18 @@ void Combo::ReadConfig(PblConfig& config)
     {
         for (unsigned int j = 0; j < m_aState[i].m_uiNumTransitions; ++j)
         {
-            Transition& transition = m_aState[i].m_aTransition[j];
             unsigned int k;
             for (k = 0; k < m_uiNumStates; ++k)
             {
-                if (m_aState[k].m_uiNameHash == transition.m_uiTargetState && k != i)
+                if (m_aState[k].m_uiNameHash == m_aState[i].m_aTransition[j].m_uiTargetState && k != i)
                 {
-                    transition.m_uiTargetState = k;
+                    m_aState[i].m_aTransition[j].m_uiTargetState = k;
                     break;
                 }
             }
             if (k >= m_uiNumStates)
             {
-                transition.m_uiTargetState = 0;
+                m_aState[i].m_aTransition[j].m_uiTargetState = 0;
             }
         }
     }

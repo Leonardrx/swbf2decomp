@@ -973,16 +973,14 @@ void PlayerController::CheckForVisibleCriticalPts()
             continue;
         }
         const PblVector3 vBody = pModel->GetWorldMatrix(iBody, pTarget->GetMatrix(), pTarget->GetPose()).GetTranslation();
-        float fX = vBody.x - vFirePos.x;
-        float fY = vBody.y - vFirePos.y;
-        float fZ = vBody.z - vFirePos.z;
-        float fDist = PblMath::Sqrt(fX * fX + fY * fY + fZ * fZ);
+        const PblVector3 vDelta = vBody - vFirePos;
+        float fDist = Length(vDelta);
         if (fDist > 50.0f)
         {
             return;
         }
         float fInv = 1.0f / fDist;
-        PblVector3 vDir(fX * fInv, fY * fInv, fZ * fInv);
+        PblVector3 vDir(vDelta.x * fInv, vDelta.y * fInv, vDelta.z * fInv);
         if (vForward.y * vDir.y + vDir.x * vForward.x + vForward.z * vDir.z < 0.99026805f)
         {
             continue;

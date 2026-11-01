@@ -161,8 +161,8 @@ void WalkerBlend::Update(float fDt)
         }
         else
         {
-            mBlendFactor = fNew;
             mFrameBlendFactor = (fNew - fOld) / (1.0f - fOld);
+            mBlendFactor = fNew;
         }
     }
 }

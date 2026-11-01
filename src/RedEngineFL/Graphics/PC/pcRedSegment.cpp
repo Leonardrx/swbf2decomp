@@ -361,7 +361,7 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
     s_mSkin[2] = (*pBone)[2] * fWeight;
     s_mSkin[3] = (*pBone)[3] * fWeight;
 
-    for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i - 1])
+    for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i++])
     {
         pBone = &pMatrices[puiIndices[i]];
         fWeight = puiWeights[i] * kInv255;
@@ -374,7 +374,6 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
             s_mSkin[3] = s_mSkin[3] * fScale + (*pBone)[3] * fWeight;
             break;
         }
-        ++i;
         s_mSkin[0] += (*pBone)[0] * fWeight;
         s_mSkin[1] += (*pBone)[1] * fWeight;
         s_mSkin[2] += (*pBone)[2] * fWeight;

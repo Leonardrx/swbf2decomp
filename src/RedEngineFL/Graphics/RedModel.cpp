@@ -305,20 +305,19 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
     {
         abCulled[i] = false;
         const RedSegment* pSegment = _apSegments[i];
-        if (!pPose && !pSegment->m_uiNumBones && !(uiFlags & 0x4000000))
+        if (!pPose && pSegment->m_uiNumBones <= 0 && !(uiFlags & 0x4000000))
         {
             const PblBox& box = pSegment->mBox;
             PblVector3 vHalf;
             vHalf.x = (box._vMax.x - box._vMin.x) * 0.5f;
             vHalf.y = (box._vMax.y - box._vMin.y) * 0.5f;
             vHalf.z = (box._vMax.z - box._vMin.z) * 0.5f;
-            float fRadius = sqrtf(vHalf.x * vHalf.x + vHalf.y * vHalf.y + vHalf.z * vHalf.z);
+            float fRadius = (float)sqrt((double)(vHalf.x * vHalf.x + vHalf.y * vHalf.y + vHalf.z * vHalf.z));
             PblVector3 vCenter;
             vCenter.x = box._vMin.x + vHalf.x;
             vCenter.y = box._vMin.y + vHalf.y;
             vCenter.z = box._vMin.z + vHalf.z;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter, (const D3DXVECTOR3*)&vCenter,
-                                   (const D3DXMATRIX*)pMatrix);
+            vCenter = pMatrix->ApplyTransform(vCenter);
             float fFar = -1.0f;
             if (fFarSceneRange != 0.0f && (uiFlags & 0x20000))
             {
@@ -350,10 +349,10 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
         }
         else
         {
+            float fSphereRadius = _BoundingSphere.w;
             PblSphere sphere;
-            D3DXVec3TransformCoord((D3DXVECTOR3*)&sphere, (const D3DXVECTOR3*)&_BoundingSphere,
-                                   (const D3DXMATRIX*)pMatrix);
-            sphere.w = _BoundingSphere.w;
+            sphere.SetCenter(pMatrix->ApplyTransform(_BoundingSphere.GetCenter()));
+            sphere.SetRadius(fSphereRadius);
             RedRenderer::SetLightingState(*RedLight::GetLightingState(
                 sphere, 4, (uiFlags & 0x80) != 0, (_uiFlags & 1) != 0, _bNoProjTexture));
         }
@@ -362,9 +361,9 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
     RedColor colorCopy = color;
 
     const PblMatrix& camMatrix = RedRenderer::GetCamera()->GetMatrix();
-    float fDistance = -((pMatrix->m[3][1] - camMatrix.m[3][1]) * camMatrix.m[2][1] +
-                        (pMatrix->m[3][0] - camMatrix.m[3][0]) * camMatrix.m[2][0] +
-                        (pMatrix->m[3][2] - camMatrix.m[3][2]) * camMatrix.m[2][2]);
+    float fDistance = -(camMatrix.m[2][1] * (pMatrix->m[3][1] - camMatrix.m[3][1]) +
+                        camMatrix.m[2][0] * (pMatrix->m[3][0] - camMatrix.m[3][0]) +
+                        camMatrix.m[2][2] * (pMatrix->m[3][2] - camMatrix.m[3][2]));
     fDistance = Max(fDistance, 0.0f);
     fDistance -= RedRenderer::GetCamera()->GetNearPlane();
     float fRadius = _BoundingSphere.w;
@@ -385,7 +384,7 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
         memset(apBoneMatrices, 0, _pSkeleton->m_uiNumBones * sizeof(apBoneMatrices[0]));
     }
 
-    if (color.a)
+    if (color.a > 0)
     {
         for (int i = 0; i < _iNumSegments; ++i)
         {
@@ -397,14 +396,13 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
             RedShadingState* pState = 0;
             if (pShadingPose)
             {
-                RedSegment* pSegment = _apSegments[i];
-                if (pSegment->m_uiMaterialNameHash)
+                if (_apSegments[i]->m_uiMaterialNameHash)
                 {
-                    pState = pShadingPose->Find(pSegment->m_uiMaterialNameHash);
+                    pState = pShadingPose->Find(_apSegments[i]->m_uiMaterialNameHash);
                 }
                 if (!pState)
                 {
-                    pState = pShadingPose->FindDefault(pSegment->GetRenderTypeHash());
+                    pState = pShadingPose->FindDefault(_apSegments[i]->GetRenderTypeHash());
                 }
             }
 
@@ -413,27 +411,26 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
             if (uiNumBones)
             {
                 PblMatrix* pBoneMatrices = RedRenderer::AllocBoneMatricesInCache(uiNumBones);
-                const unsigned char* pIndices = _apSegments[i]->m_puiBoneIndexMap;
                 if (pPose)
                 {
                     if (_bHardSkin)
                     {
-                        pPose->GetHardSkinMatrices(pBoneMatrices, pIndices, uiNumBones);
+                        pPose->GetHardSkinMatrices(pBoneMatrices, _apSegments[i]->m_puiBoneIndexMap,
+                                                   uiNumBones);
                     }
                     else
                     {
-                        pPose->GetSkinMatrices(pBoneMatrices, pIndices, uiNumBones);
+                        pPose->GetSkinMatrices(pBoneMatrices, _apSegments[i]->m_puiBoneIndexMap,
+                                               uiNumBones);
                     }
                 }
                 else
                 {
-                    _pSkeleton->GetSkinMatrices(pBoneMatrices, pIndices, uiNumBones);
+                    _pSkeleton->GetSkinMatrices(pBoneMatrices, _apSegments[i]->m_puiBoneIndexMap,
+                                                uiNumBones);
                 }
-                const RedColor* pColor = &color;
-                if (_apSegments[i]->IsTransparent() || color.a < 0xff)
-                {
-                    pColor = &colorCopy;
-                }
+                const RedColor* pColor =
+                    (_apSegments[i]->IsTransparent() || color.a < 0xff) ? &colorCopy : &color;
                 _apSegments[i]->Render(pWorld, pBoneMatrices, uiNumBones, uiFlags, *pColor, pState);
             }
             else if (pPose)
@@ -444,21 +441,15 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
                     PblMatrix mBone = pPose->_GetBoneMatrix(uiBone) * *pMatrix;
                     apBoneMatrices[uiBone] = RedRenderer::AllocMatrixInCache(mBone);
                 }
-                const RedColor* pColor = &color;
-                if (_apSegments[i]->IsTransparent() || color.a < 0xff)
-                {
-                    pColor = &colorCopy;
-                }
+                const RedColor* pColor =
+                    (_apSegments[i]->IsTransparent() || color.a < 0xff) ? &colorCopy : &color;
                 _apSegments[i]->Render(apBoneMatrices[uiBone], 0, 0, uiFlags & ~0x1000000, *pColor,
                                        pState);
             }
             else
             {
-                const RedColor* pColor = &color;
-                if (pSegment->IsTransparent() || color.a < 0xff)
-                {
-                    pColor = &colorCopy;
-                }
+                const RedColor* pColor =
+                    (_apSegments[i]->IsTransparent() || color.a < 0xff) ? &colorCopy : &color;
                 _apSegments[i]->Render(pWorld, 0, 0, uiFlags, *pColor, pState);
             }
         }

@@ -882,60 +882,8 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
     RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
     RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
-    bool bReflectionStages = false;
     switch (uiState)
     {
-    case 0: case 1: case 4: case 5:
-        if (uiPass == 0)
-        {
-            RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
-            RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-            RedRenderer::pcSetRenderState(D3DRS_FOGENABLE, FALSE);
-            break;
-        }
-        RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-        RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-        RedRenderer::pcSetTextureStageState(3, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-        RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        if (uiState == 1)
-        {
-            const PblVector3 vFacing = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
-            PblMatrix mFacing(gMatrixIdentity);
-            PblMatrix mScaled(gMatrixIdentity);
-            const float fAngle = (float)atan2((double)vFacing.z, (double)vFacing.x) - PblMath::fHalfPi;
-            D3DXMATRIXA16 mRotation, mScale;
-            D3DXMatrixMultiply((D3DXMATRIX*)&mFacing, (D3DXMATRIX*)&mFacing, D3DXMatrixRotationZ(&mRotation, fAngle));
-            D3DXMatrixMultiply((D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mScaled,
-                               D3DXMatrixScaling(&mScale, 0.03f, 0.03f, 0.03f));
-            PblMatrix mResult;
-            D3DXMatrixMultiply((D3DXMATRIX*)&mResult, (D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mFacing);
-            _IdentityMatrix = reinterpret_cast<const D3DXMATRIX&>(mResult);
-
-            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
-            RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
-
-            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-            float fBump = _IdentityMatrix._11;
-            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT00, *(DWORD*)&fBump);
-            fBump = _IdentityMatrix._21;
-            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT10, *(DWORD*)&fBump);
-            fBump = _IdentityMatrix._12;
-            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT01, *(DWORD*)&fBump);
-            fBump = _IdentityMatrix._22;
-            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT11, *(DWORD*)&fBump);
-            break;
-        }
-        bReflectionStages = true;
-        break;
-
     case 2: case 3: case 6: case 7:
         if (uiPass == 0)
         {
@@ -958,9 +906,72 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
             RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
             RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
             RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        }
+        else
+        {
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+        }
+        break;
+
+    case 0: case 1: case 4: case 5:
+        if (uiPass == 0)
+        {
+            RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+            RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+            RedRenderer::pcSetRenderState(D3DRS_FOGENABLE, FALSE);
             break;
         }
-        bReflectionStages = true;
+        RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+        RedRenderer::pcSetTextureStageState(3, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+        RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        if (uiState == 1)
+        {
+            const PblVector3 vFacing = RedRenderer::GetCamera()->GetMatrix().GetZAxis();
+            PblMatrix mFacing(gMatrixIdentity);
+            PblMatrix mScaled(gMatrixIdentity);
+            const float fAngle = (float)atan2((double)vFacing.z, (double)vFacing.x) - PblMath::fHalfPi;
+            D3DXMATRIXA16 mStep;
+            D3DXMatrixMultiply((D3DXMATRIX*)&mFacing, (D3DXMATRIX*)&mFacing, D3DXMatrixRotationZ(&mStep, fAngle));
+            D3DXMatrixMultiply((D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mScaled,
+                               D3DXMatrixScaling(&mStep, 0.03f, 0.03f, 0.03f));
+            PblMatrix mResult;
+            D3DXMatrixMultiply((D3DXMATRIX*)&mResult, (D3DXMATRIX*)&mScaled, (D3DXMATRIX*)&mFacing);
+            _IdentityMatrix = reinterpret_cast<const D3DXMATRIX&>(mResult);
+
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            float fBump = _IdentityMatrix._11;
+            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT00, *(DWORD*)&fBump);
+            fBump = _IdentityMatrix._21;
+            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT10, *(DWORD*)&fBump);
+            fBump = _IdentityMatrix._12;
+            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT01, *(DWORD*)&fBump);
+            fBump = _IdentityMatrix._22;
+            RedRenderer::pcSetTextureStageState(3, D3DTSS_BUMPENVMAT11, *(DWORD*)&fBump);
+        }
+        else
+        {
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
+        }
         break;
 
     case 8: case 9:
@@ -976,22 +987,14 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
         RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
         break;
     }
-    if (bReflectionStages)
-    {
-        RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-        RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
-        RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-        RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
-    }
 
     pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(40, 3);
     pRegs[40].component[0] = 0.0f;
     pRegs[40].component[1] = 0.5f;
     pRegs[40].component[2] = -0.5f;
     pRegs[40].component[3] = 0.0f;
-    const float fStart = RedRenderer::GetCamera()->_fZoom * FLRenderer::GetNearSceneFadeStart();
-    const float fEnd = RedRenderer::GetCamera()->_fZoom * FLRenderer::GetNearSceneFadeEnd();
+    const float fStart = RedRenderer::GetCamera()->GetZoom() * FLRenderer::GetNearSceneFadeStart();
+    const float fEnd = RedRenderer::GetCamera()->GetZoom() * FLRenderer::GetNearSceneFadeEnd();
     bool bFade = false;
     if (fStart > 0.0f && fEnd > fStart)
     {
@@ -1008,9 +1011,10 @@ void pcWaterShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) const
         pRegs[41].component[3] = 1.0f;
         pRegs[41].component[2] = 0.0f;
     }
-    pRegs[42].component[0] = -s_vSpecularDirection.x;
-    pRegs[42].component[1] = -s_vSpecularDirection.y;
-    pRegs[42].component[2] = -s_vSpecularDirection.z;
+    const PblVector3 vLightDirection = -s_vSpecularDirection;
+    pRegs[42].component[0] = vLightDirection.x;
+    pRegs[42].component[1] = vLightDirection.y;
+    pRegs[42].component[2] = vLightDirection.z;
     pRegs[42].component[3] = 32.0f;
     RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 }
@@ -1044,16 +1048,17 @@ void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
 
     if (uiPass == 0)
     {
-        const PblMatrix m(PblVector4(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f),
-                          PblVector4(m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f),
-                          PblVector4(m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f),
-                          PblVector4(0.0f, 0.0f, 0.0f, 1.0f));
+        const PblMatrix m(D3DXMATRIXA16(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f,
+                                        m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f,
+                                        m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f,
+                                        0.0f, 0.0f, 0.0f, 1.0f));
         RedRenderer::pcSetTexture(0, m_diffuseMap2);
         RedRenderer::pcFFSetTextureTransform(0, m);
-        const RedColor blend((unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f),
-                             (unsigned char)(int)(m_diffuseMapBlend * 255.0f));
+        const RedColorValue blendValue(m_diffuseMapBlend, m_diffuseMapBlend, m_diffuseMapBlend, m_diffuseMapBlend);
+        const RedColor blend((unsigned char)(int)(blendValue.r * 255.0f),
+                             (unsigned char)(int)(blendValue.g * 255.0f),
+                             (unsigned char)(int)(blendValue.b * 255.0f),
+                             (unsigned char)(int)(blendValue.a * 255.0f));
         RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, blend.GetARGB());
     }
 

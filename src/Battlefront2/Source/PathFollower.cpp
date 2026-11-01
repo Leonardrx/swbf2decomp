@@ -369,10 +369,11 @@ bool PathFollower::CloseToDest() const
         float fDistSq = dz * dz + dx * dx;
         if ((mItor->mFlags & AIPathNode::AIPN_ROLLIN) && fDistSq > 81.0f && fDistSq < 121.0f)
         {
-            PblVector3 vDelta = mGotoPoint - mCtrl->mOwner->GetMatrix().GetTranslation();
-            vDelta.y = 0.0f;
-            PblVector3 vRoll;
-            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRoll), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
+            PblVector3 vRoll = mGotoPoint - mCtrl->mOwner->GetMatrix().GetTranslation();
+            vRoll.y = 0.0f;
+            PblVector3 vDir;
+            D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vRoll));
+            vRoll = vDir;
             LowLevel(mCtrl).SetRoll(vRoll);
             mItor->mFlags &= ~AIPathNode::AIPN_ROLLIN;
         }
@@ -541,8 +542,9 @@ void PathFollower::Update(float dt)
                 }
 
                 mWaitState = WS_CROUCH;
-                AI::VOHelper::Play(AI::VOT_PathFollowWait, mCtrl->mOwner->GetGameObject(), 0,
-                                   mCtrl->mOwner->GetGameObject(), 0.0f);
+                Controllable* pOwner = mCtrl->mOwner;
+                AI::VOHelper::Play(AI::VOT_PathFollowWait, pOwner->GetGameObject(), 0,
+                                   pOwner->GetGameObject(), 0.0f);
                 UpdateControllable();
                 return;
             }
@@ -568,21 +570,22 @@ void PathFollower::Update(float dt)
                     const PblMatrix& mMe = mCtrl->mOwner->GetMatrix();
                     vJump = itNext->mPos - mMe.GetTranslation();
                     vJump.y = 0.0f;
-                    PblVector3 vDir;
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vJump));
-                    vJump = vDir;
+                    {
+                        PblVector3 vDir;
+                        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vJump));
+                        vJump = vDir;
+                    }
                     vJump.y = 1.0f;
                     vJump *= 0.70710677f;
                 }
 
-                LowLevel(mCtrl).mAIJetJumpDir = vJump;
                 if (mItor->mFlags & AIPathNode::AIPN_JUMP)
                 {
-                    LowLevel(mCtrl).mDoJump = true;
+                    LowLevel(mCtrl).SetJump(vJump);
                 }
                 else
                 {
-                    LowLevel(mCtrl).mDoJetJump = true;
+                    LowLevel(mCtrl).SetJetJump(vJump);
                 }
                 GotoNextNode();
                 UpdateControllable();
@@ -599,9 +602,11 @@ void PathFollower::Update(float dt)
                     const PblMatrix& mMe = mCtrl->mOwner->GetMatrix();
                     vRoll = itNext->mPos - mMe.GetTranslation();
                     vRoll.y = 0.0f;
-                    PblVector3 vDir;
-                    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vRoll));
-                    vRoll = vDir;
+                    {
+                        PblVector3 vDir;
+                        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vRoll));
+                        vRoll = vDir;
+                    }
                 }
                 LowLevel(mCtrl).SetRoll(vRoll);
             }
@@ -712,8 +717,7 @@ void PathFollower::UpdateControllableMoving()
             }
 
             float fStep = (float)cDir * 5.0f;
-            vSteer = PblVector3(vAlong.x * fStep + vPos.x, fStep * vAlong.y + vPos.y,
-                                vPos.z + vAlong.z * fStep);
+            vSteer = vPos + vAlong * fStep;
 
             if (bSoldier)
             {

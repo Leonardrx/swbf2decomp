@@ -11,8 +11,8 @@ void RedInterfaceElement::Rotate(float fAngle)
     PblVector3 vY = m_mLocal[1];
     PblVector3 vX = m_mLocal[0];
     m_mLocal[0] = vX * fCos + vY * fSin;
-    m_mLocal[1] = vX * -fSin + vY * fCos;
     m_mLocal.m[0][3] = 0.0f;
+    m_mLocal[1] = vX * -fSin + vY * fCos;
     m_mLocal.m[1][3] = 0.0f;
 }
 
@@ -21,8 +21,8 @@ void RedInterfaceElement::Rotate(float fX, float fY, float fAngle)
 {
     float fSin, fCos;
     PblMath::SinCos(&fSin, &fCos, fAngle);
-    PblVector3 vX = m_mLocal[0];
     PblVector3 vY = m_mLocal[1];
+    PblVector3 vX = m_mLocal[0];
     m_mLocal[0] = vX * fCos + vY * fSin;
     m_mLocal.m[0][3] = 0.0f;
     m_mLocal[1] = vX * -fSin + vY * fCos;

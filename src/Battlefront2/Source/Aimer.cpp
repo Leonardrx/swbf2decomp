@@ -379,9 +379,11 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
         const PblMatrix* pParentBone = pose.Find(mClass->mParentHash);
         if (pParentBone)
         {
-            PblMatrix mOffset = PblMatrix(mClass->mOffsetRot, mOffsetPos);
             PblMatrix mMount;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(pParentBone));
+            {
+                PblMatrix mOffset = PblMatrix(mClass->mOffsetRot, mOffsetPos);
+                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(pParentBone));
+            }
             PblVector3 vDir;
             D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mDirection), reinterpret_cast<const D3DXMATRIX*>(&mParent));
             mMountPoseMatrix = DirectionMatrix(vDir, mMount[1], mMount[3]);
@@ -400,33 +402,30 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
 
     for (int i = 0; i < mClass->mNumBarrels; ++i)
     {
-        const AimerClass::BarrelInfo& barrel = mClass->mBarrelInfo[i];
-        if (barrel.mHash && barrel.mParentHash)
+        if (mClass->mBarrelInfo[i].mHash && mClass->mBarrelInfo[i].mParentHash)
         {
-            const PblMatrix* pParentBone = pose.Find(barrel.mParentHash);
+            const PblMatrix* pParentBone = pose.Find(mClass->mBarrelInfo[i].mParentHash);
             if (pParentBone)
             {
                 mBarrelPoseMatrix[i] = *pParentBone;
-                PblVector3 vOffset = barrel.mOffset;
+                PblVector3 vOffset = mClass->mBarrelInfo[i].mOffset;
                 if (mRecoil[i] > 0.0f)
                 {
-                    vOffset.z += -(barrel.mRecoil * mRecoil[i]);
+                    vOffset.z += -mClass->mBarrelInfo[i].mRecoil * mRecoil[i];
                 }
                 PblVector3 vPos;
                 D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPos), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&mBarrelPoseMatrix[i]));
-                mBarrelPoseMatrix[i].m[3][0] = vPos.x;
-                mBarrelPoseMatrix[i].m[3][1] = vPos.y;
-                mBarrelPoseMatrix[i].m[3][2] = vPos.z;
+                mBarrelPoseMatrix[i][3] = vPos;
                 mBarrelPoseMatrix[i].m[3][3] = 1.0f;
 
-                const PblMatrix* pOld = pose.Find(barrel.mHash);
+                const PblMatrix* pOld = pose.Find(mClass->mBarrelInfo[i].mHash);
                 if (pOld != &mBarrelPoseMatrix[i])
                 {
                     if (pOld)
                     {
-                        pose.Remove(barrel.mHash);
+                        pose.Remove(mClass->mBarrelInfo[i].mHash);
                     }
-                    pose.Store(barrel.mHash, &mBarrelPoseMatrix[i]);
+                    pose.Store(mClass->mBarrelInfo[i].mHash, &mBarrelPoseMatrix[i]);
                 }
             }
         }

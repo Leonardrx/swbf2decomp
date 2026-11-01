@@ -417,8 +417,9 @@ bool EntityMine::Update(float fDeltaTime)
         }
         if (!bClient && static_cast<EntityMineClass*>(mClass)->mExplosionTrigger)
         {
+            DamageOwner owner(mOwner, this, mTeam, mClass, 0, 1.0f);
             static_cast<EntityMineClass*>(mClass)->mExplosionTrigger->CreateExplosion(
-                GetPosition(), DamageOwner(mOwner, this, mTeam, mClass, 0, 1.0f), false, COLL_UNKNOWN);
+                GetPosition(), owner, false, COLL_UNKNOWN);
         }
         mNetDead = true;
         return bClient;

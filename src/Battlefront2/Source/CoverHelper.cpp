@@ -364,9 +364,7 @@ bool CoverHelper::HELPERFaceTarget() const
     {
         PblVector3 vMe = GetMe()->GetMatrix().GetTranslation();
         PblVector3 vHint = mHint->GetCollisionCenter();
-        float dx = vHint.x - vMe.x;
-        float dz = vHint.z - vMe.z;
-        if (dx * dx + dz * dz > 9.0f)
+        if (SquaredLengthXZ(vHint - vMe) > 9.0f)
         {
             return false;
         }

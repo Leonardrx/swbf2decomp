@@ -176,8 +176,7 @@ bool EntityTrap::CollisionCallback(const CollisionResult* pResult, CollisionObje
         GameObject* pObject = pOther->GetGameObject();
         if (pObject && Team::sTeams[pObject->GetTeam()]->GetSide() == mTrapClass->mTriggerSide)
         {
-            Damageable* pDamageable = static_cast<Damageable*>(pObject);
-            pDamageable->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
+            pObject->InstantDeath(DamageOwner(0, 0, 0, 0, 0, 1.0f), true);
         }
     }
     return CollisionObject::CollisionCallback(pResult, pOther, pRestrictor);

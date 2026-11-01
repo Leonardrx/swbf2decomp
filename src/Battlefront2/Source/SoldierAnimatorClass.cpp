@@ -2412,7 +2412,7 @@ void SoldierAnimatorClass::_PostLoad()
         const int NUM_SAMPLES = 4;
 
         // GLOBAL: SWBF2 0x01fac234
-        static const float NUM_SAMPLES_INV = 1.0f / NUM_SAMPLES;
+        static const float NUM_SAMPLES_INV = 1.0f / (float)NUM_SAMPLES;
         // GLOBAL: SWBF2 0x01fac204
         static const PblVector3 s_vHeadOffset(0.035f, 0.03f, 0.0f);
         // GLOBAL: SWBF2 0x01fac1f8
@@ -2523,7 +2523,7 @@ void SoldierAnimatorClass::_PostLoad()
             for (int iCustom = 0; iCustom < SoldierAnimationBank::GetNumAnimations(); ++iCustom)
             {
                 // GLOBAL: SWBF2 0x01fac1f4
-                static const float FRAME_9POSE_CENTER = 4.0f / 30.0f;
+                static const float FRAME_9POSE_CENTER = 4.0f * ANIM_FRAME_SPEED;
                 PblVector3 vHead;
                 GetAnimationBoneMatrix(eMap, (SoldierAnimationBank::ANIMATION)iCustom, uiBoneHead, FRAME_9POSE_CENTER,
                                        mBone);

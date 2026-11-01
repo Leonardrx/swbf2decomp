@@ -224,14 +224,14 @@ void EntityBuildingArmed::Init()
     }
     if (mModel->GetRedModel(0)->_pStencilShadow)
     {
-        RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
-        if (!pLight->IsShadowCaster())
+        RedDirectionalLight* pLight = NULL;
+        if (RedLight::GetGlobalDirectionalLight(0)->IsShadowCaster())
+        {
+            pLight = RedLight::GetGlobalDirectionalLight(0);
+        }
+        else if (RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster())
         {
             pLight = RedLight::GetGlobalDirectionalLight(1);
-            if (!pLight->IsShadowCaster())
-            {
-                pLight = NULL;
-            }
         }
         if (pLight)
         {
@@ -241,8 +241,7 @@ void EntityBuildingArmed::Init()
             {
                 fGrow /= vDir.y * -2.0f;
             }
-            SetRenderPos(PblVector3(vDir.x * fGrow + _Sphere.x, vDir.y * fGrow + _Sphere.y,
-                                    vDir.z * fGrow + _Sphere.z));
+            SetRenderPos(GetRenderPos() + vDir * fGrow);
             SetRenderRadius(_Sphere.w + fGrow);
             SetTestBBox(false);
         }
@@ -474,21 +473,21 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
     const PblMatrix& mView = RedRenderer::GetCamera()->GetMatrix();
     if (GetModel()->GetRedModel(0)->_pStencilShadow && RedStencilShadow::GetShadowEnable())
     {
-        RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
-        if (!pLight->IsShadowCaster())
+        RedDirectionalLight* pLight = NULL;
+        if (RedLight::GetGlobalDirectionalLight(0)->IsShadowCaster())
+        {
+            pLight = RedLight::GetGlobalDirectionalLight(0);
+        }
+        else if (RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster())
         {
             pLight = RedLight::GetGlobalDirectionalLight(1);
-            if (!pLight->IsShadowCaster())
-            {
-                pLight = NULL;
-            }
         }
         float fLength;
         if (pLight)
         {
             uMask |= 0x10000;
+            float fMinLength = _Sphere.w * -2.0f / pLight->m_vDirection.y;
             const PblVector3& vDir = pLight->m_vDirection;
-            float fMinLength = _Sphere.w * -2.0f / vDir.y;
             PblVector3 vStart = GetRenderPos();
             vStart.y += _Sphere.w;
             const GameObject* pIgnore = this;
@@ -539,11 +538,14 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
 
     mModel->Render(uFlags, fDist, &mMatrix, &mPose, color, uMask, NULL);
 
-    for (int i = 0; i < mNumTurrets; ++i)
+    if (mNumTurrets > 0)
     {
-        if (mTurret[i])
+        for (int i = 0; i < mNumTurrets; ++i)
         {
-            mTurret[i]->PostRender(mSaved[i]);
+            if (mTurret[i])
+            {
+                mTurret[i]->PostRender(mSaved[i]);
+            }
         }
     }
 }

@@ -122,13 +122,13 @@ float ParameterGraph::CalculateOutputValue(float fInput) const
             &mControlPoints, offsetof(ControlPoint, mNode));
         if (pPoint->mNode.mSortValue > fInput)
         {
-            if (!pPrev)
+            if (pPrev)
             {
-                return pPoint->mOutput;
+                const float fBlend = (pPoint->mNode.mSortValue - fInput)
+                                   / (pPoint->mNode.mSortValue - pPrev->mNode.mSortValue);
+                return (1.0f - fBlend) * pPoint->mOutput + pPrev->mOutput * fBlend;
             }
-            const float fBlend = (pPoint->mNode.mSortValue - fInput)
-                               / (pPoint->mNode.mSortValue - pPrev->mNode.mSortValue);
-            return (1.0f - fBlend) * pPoint->mOutput + pPrev->mOutput * fBlend;
+            return pPoint->mOutput;
         }
         pPrev = pPoint;
     }

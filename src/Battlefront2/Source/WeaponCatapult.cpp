@@ -105,19 +105,14 @@ void WeaponCatapult::SetArmAngle(float fAngle)
         mCatapultBuilding->mPose.Store(mCatapultClass->mArmHash, &mArmPoseMatrix);
     }
 
-    const PblVector3 vX(pArm->m[0][0], pArm->m[0][1], pArm->m[0][2]);
+    const PblVector3 vX = pArm->GetXAxis();
     const PblVector3 vUp(0.0f, 1.0f, 0.0f);
-    mArmPoseMatrix.m[0][0] = vX.x;
-    mArmPoseMatrix.m[0][1] = vX.y;
-    mArmPoseMatrix.m[0][2] = vX.z;
+    mArmPoseMatrix[0] = pArm->GetXAxis();
     mArmPoseMatrix.m[0][3] = 0.0f;
-    mArmPoseMatrix.m[1][0] = vUp.y * vX.z - vUp.z * vX.y;
-    mArmPoseMatrix.m[1][1] = vUp.z * vX.x - vUp.x * vX.z;
-    mArmPoseMatrix.m[1][2] = vUp.x * vX.y - vUp.y * vX.x;
+    mArmPoseMatrix[1] = PblVector3(vUp.y * vX.z - vUp.z * vX.y, vUp.z * vX.x - vUp.x * vX.z,
+                                   vUp.x * vX.y - vUp.y * vX.x);
     mArmPoseMatrix.m[1][3] = 0.0f;
-    mArmPoseMatrix.m[2][0] = vUp.x;
-    mArmPoseMatrix.m[2][1] = vUp.y;
-    mArmPoseMatrix.m[2][2] = vUp.z;
+    mArmPoseMatrix[2] = vUp;
     mArmPoseMatrix.m[2][3] = 0.0f;
 
     PblQuaternion qArm(mArmPoseMatrix);
@@ -126,14 +121,13 @@ void WeaponCatapult::SetArmAngle(float fAngle)
     if (fLength > 0.0001f)
     {
         const float fInv = 1.0f / fLength;
-        float fSin, fCos;
-        PblMath::SinCos(&fSin, &fCos, fLength * 0.5f);
-        qArm = qArm * PblQuaternion(fCos, vOmega.x * fInv * fSin, vOmega.y * fInv * fSin, vOmega.z * fInv * fSin);
+        const PblVector3 vAxis(vOmega.x * fInv, vOmega.y * fInv, vOmega.z * fInv);
+        qArm = qArm * PblQuaternion(vAxis, fLength);
     }
 
-    PblQuaternion qUnit;
+    D3DXQUATERNION qUnit;
     PblMatrix mPose;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mPose), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&qArm)));
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mPose), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qArm)));
     mPose.m[3][0] = pArm->m[3][0];
     mPose.m[3][1] = pArm->m[3][1];
     mPose.m[3][2] = pArm->m[3][2];

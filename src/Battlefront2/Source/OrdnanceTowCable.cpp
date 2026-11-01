@@ -728,7 +728,7 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             PblVector3& vIn = point.mSlopeIn;
-            float fLength = sqrt(vIn.x * vIn.x + vIn.y * vIn.y + vIn.z * vIn.z);
+            float fLength = Length(vIn);
             float fStep = fDeltaTime * 30.0f;
             if (fLength <= fStep)
             {
@@ -736,41 +736,32 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
             else
             {
-                vIn.x -= fStep * vIn.x * (1.0f / fLength);
-                vIn.y -= fStep * vIn.y * (1.0f / fLength);
-                vIn.z -= fStep * vIn.z * (1.0f / fLength);
+                vIn -= fStep * vIn / fLength;
             }
 
             PblVector3& vOut = mAttachPoints[i - 1].mSlopeOut;
-            fLength = sqrt(vOut.x * vOut.x + vOut.y * vOut.y + vOut.z * vOut.z);
+            fLength = Length(vOut);
             if (fLength <= fStep)
             {
                 vOut = gVectorZero;
             }
             else
             {
-                vOut.x -= fStep * vOut.x * (1.0f / fLength);
-                vOut.y -= fStep * vOut.y * (1.0f / fLength);
-                vOut.z -= fStep * vOut.z * (1.0f / fLength);
+                vOut -= fStep * vOut / fLength;
             }
 
             EntityWalker* pWalker = (EntityWalker*)pObject->GetEntity();
             PblVector3 vTarget = pWalker->GetTowCableCollisionOffset(point.mBodyID);
             vTarget.y = point.mBodyOffset.y;
-            PblVector3 vDiff;
-            vDiff.x = vTarget.x - point.mBodyOffset.x;
-            vDiff.y = vTarget.y - point.mBodyOffset.y;
-            vDiff.z = vTarget.z - point.mBodyOffset.z;
-            fLength = sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+            PblVector3 vDiff = vTarget - point.mBodyOffset;
+            fLength = Length(vDiff);
             if (fLength <= fStep)
             {
                 point.mBodyOffset = vTarget;
             }
             else
             {
-                point.mBodyOffset.x += vDiff.x * fStep * (1.0f / fLength);
-                point.mBodyOffset.y += vDiff.y * fStep * (1.0f / fLength);
-                point.mBodyOffset.z += vDiff.z * fStep * (1.0f / fLength);
+                point.mBodyOffset += vDiff * fStep / fLength;
             }
         }
     }
@@ -802,46 +793,37 @@ void TowCableRenderObject::UpdateAttachPoints(float fDeltaTime, GameObject* pObj
             }
 
             const PblVector3& vFinal = point.mFinalSlope;
-            float fLength = sqrt(vFinal.y * vFinal.y + vFinal.x * vFinal.x + vFinal.z * vFinal.z);
+            float fLength = Length(vFinal);
             PblVector3& vIn = point.mSlopeIn;
-            if (sqrt(vIn.y * vIn.y + vIn.x * vIn.x + vIn.z * vIn.z) + fDeltaTime > fLength)
+            if (Length(vIn) + fDeltaTime > fLength)
             {
                 vIn = vFinal;
             }
             else
             {
-                vIn.x += fDeltaTime * vFinal.x * (1.0f / fLength);
-                vIn.y += fDeltaTime * vFinal.y * (1.0f / fLength);
-                vIn.z += fDeltaTime * vFinal.z * (1.0f / fLength);
+                vIn += fDeltaTime * vFinal / fLength;
             }
 
             PblVector3& vOut = point.mSlopeOut;
-            fLength = sqrt(vOut.y * vOut.y + vOut.x * vOut.x + vOut.z * vOut.z);
+            fLength = Length(vOut);
             if (fDeltaTime + fLength > fLength)
             {
                 vOut = vFinal;
             }
             else
             {
-                vOut.x += vFinal.x * fDeltaTime * (1.0f / fLength);
-                vOut.y += vFinal.y * fDeltaTime * (1.0f / fLength);
-                vOut.z += fDeltaTime * vFinal.z * (1.0f / fLength);
+                vOut += vFinal * fDeltaTime / fLength;
             }
 
-            PblVector3 vDiff;
-            vDiff.x = point.mInitialBodyOffset.x - point.mBodyOffset.x;
-            vDiff.y = point.mInitialBodyOffset.y - point.mBodyOffset.y;
-            vDiff.z = point.mInitialBodyOffset.z - point.mBodyOffset.z;
-            fLength = sqrt(vDiff.x * vDiff.x + vDiff.y * vDiff.y + vDiff.z * vDiff.z);
+            PblVector3 vDiff = point.mInitialBodyOffset - point.mBodyOffset;
+            fLength = Length(vDiff);
             if (fLength <= fDeltaTime)
             {
                 point.mBodyOffset = point.mInitialBodyOffset;
             }
             else
             {
-                point.mBodyOffset.x += vDiff.x * fDeltaTime * (1.0f / fLength);
-                point.mBodyOffset.y += vDiff.y * fDeltaTime * (1.0f / fLength);
-                point.mBodyOffset.z += vDiff.z * fDeltaTime * (1.0f / fLength);
+                point.mBodyOffset += vDiff * fDeltaTime / fLength;
             }
         }
     }

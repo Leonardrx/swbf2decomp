@@ -347,12 +347,12 @@ bool EntityHologram::Update(float fDeltaTime)
     }
     m_fAspect = (1.0f - m_fAspect) * fReturn + m_fAspect;
 
-    if (PblRandom::GetGlobalFloat() < pClass->m_fPopRate * m_fPopTimer * 0.5f)
+    if (PblRandom::_Global.GetFloat() < pClass->m_fPopRate * m_fPopTimer * 0.5f)
     {
-        float fPop = PblRandom::GetGlobalFloat();
+        float fPop = PblRandom::_Global.GetFloat();
         if (fPop < kfHoloPopAspectProbability)
         {
-            float fAspect = PblRandom::GetGlobalFloat();
+            float fAspect = PblRandom::_Global.GetFloat();
             if (fAspect < 0.5f)
             {
                 fAspect *= 2.0f;
@@ -366,14 +366,14 @@ bool EntityHologram::Update(float fDeltaTime)
         }
         if (fPop > kfHoloPopRotateProbability)
         {
-            float fTilt = PblRandom::GetGlobalFloat();
+            float fTilt = PblRandom::_Global.GetFloat();
             m_fTilt = fTilt * fTilt * 0.017453292f * kfHoloMaxTilt;
-            m_fRotateTimer = PblRandom::GetGlobalFloat() * PblMath::fTwoPi / pClass->m_fRotateRate;
+            m_fRotateTimer = PblRandom::_Global.GetFloat() * PblMath::fTwoPi / pClass->m_fRotateRate;
         }
         m_fPopTimer = 0.0f;
     }
 
-    if (PblRandom::GetGlobalFloat() < pClass->m_fFlickerRate * m_fFlickerTimer * 0.5f)
+    if (PblRandom::_Global.GetFloat() < pClass->m_fFlickerRate * m_fFlickerTimer * 0.5f)
     {
         m_fFlickerTimer = 0.0f;
     }
@@ -414,26 +414,25 @@ bool EntityHologram::Update(float fDeltaTime)
     if (m_fFlickerTimer <= 0.0f)
     {
         m_fCurrentIntensity =
-            ((pClass->m_fFlickerAlphaMax - pClass->m_fFlickerAlphaMin) * PblRandom::GetGlobalFloat() +
+            ((pClass->m_fFlickerAlphaMax - pClass->m_fFlickerAlphaMin) * PblRandom::_Global.GetFloat() +
              pClass->m_fFlickerAlphaMin) * m_fCurrentIntensity;
     }
 
-    RedColor teamColor;
-    const RedColor* pLightColor = &m_color;
-    if (pClass->m_eType == TYPE_ICON_BUILD)
+    const int iType = pClass->m_eType;
+    if (iType == TYPE_ICON_BUILD)
     {
         CameraManager* pCameraManager = CameraManager::Instance();
         unsigned int uView = pCameraManager->m_hView[0];
         if (uView < 1)
         {
             unsigned char ucBit = (unsigned char)(1 << uView);
-            if (pCameraManager->m_uiVisibleIconMask[0] & 1)
+            if (!(pCameraManager->m_uiVisibleIconMask[0] & 1))
             {
-                m_uiHideInView &= ~ucBit;
+                m_uiHideInView |= ucBit;
             }
             else
             {
-                m_uiHideInView |= ucBit;
+                m_uiHideInView &= ~ucBit;
             }
             m_pLightBeam->HideInView(uView, true);
             if (m_apOmniLight[0])
@@ -441,11 +440,25 @@ bool EntityHologram::Update(float fDeltaTime)
                 m_apOmniLight[0]->m_uiHideInView |= ucBit;
             }
         }
+
+        if (m_apOmniLight[0])
+        {
+            m_apOmniLight[0]->SetColor(ToColorValue(
+                Interpolate(RedColor::BLACK, m_color, pClass->m_fLightIntensity * m_fCurrentIntensity)));
+        }
+        if (m_pLightBeam)
+        {
+            RedColor beamColor = m_color;
+            beamColor.a = (unsigned char)(int)(pClass->m_fBeamIntensity * m_fCurrentIntensity * m_color.a);
+            m_pLightBeam->SetColor(beamColor);
+            m_pLightBeam->SetFinalWidth(pClass->m_fSize * kfHoloBeamWidthCone * m_fCurrentFadeInFactor *
+                                        m_fAspect);
+        }
     }
     else
     {
         m_uiHideInView = 0;
-        if (pClass->m_eType == TYPE_ICON_ALIGNED)
+        if (iType == TYPE_ICON_ALIGNED)
         {
             int iPlayer = NetGame::GetLocalIndex(0);
             int iSpectator = NetGame::GetSpectator(iPlayer);
@@ -456,23 +469,37 @@ bool EntityHologram::Update(float fDeltaTime)
             Character* pCharacter = Character::FindPlayer(iPlayer);
             Team* pTeam = pCharacter ? pCharacter->mTeamPtr : Team::sTeams[1];
 
-            teamColor = pTeam->mColor[m_iTeam];
-            pLightColor = &teamColor;
+            RedColor teamColor = pTeam->mColor[m_iTeam];
+            if (m_apOmniLight[0])
+            {
+                m_apOmniLight[0]->SetColor(ToColorValue(
+                    Interpolate(RedColor::BLACK, teamColor, pClass->m_fLightIntensity * m_fCurrentIntensity)));
+            }
+            if (m_pLightBeam)
+            {
+                RedColor beamColor = m_color;
+                beamColor.a = (unsigned char)(int)(pClass->m_fBeamIntensity * m_fCurrentIntensity * m_color.a);
+                m_pLightBeam->SetColor(beamColor);
+                m_pLightBeam->SetFinalWidth(pClass->m_fSize * kfHoloBeamWidthCone * m_fCurrentFadeInFactor *
+                                            m_fAspect);
+            }
         }
-    }
-
-    if (m_apOmniLight[0])
-    {
-        m_apOmniLight[0]->SetColor(ToColorValue(
-            Interpolate(RedColor::BLACK, *pLightColor, pClass->m_fLightIntensity * m_fCurrentIntensity)));
-    }
-    if (m_pLightBeam)
-    {
-        RedColor beamColor = m_color;
-        beamColor.a = (unsigned char)(int)(pClass->m_fBeamIntensity * m_fCurrentIntensity * m_color.a);
-        m_pLightBeam->SetColor(beamColor);
-        m_pLightBeam->SetFinalWidth(pClass->m_fSize * kfHoloBeamWidthCone * m_fCurrentFadeInFactor *
-                                    m_fAspect);
+        else
+        {
+            if (m_apOmniLight[0])
+            {
+                m_apOmniLight[0]->SetColor(ToColorValue(
+                    Interpolate(RedColor::BLACK, m_color, pClass->m_fLightIntensity * m_fCurrentIntensity)));
+            }
+            if (m_pLightBeam)
+            {
+                RedColor beamColor = m_color;
+                beamColor.a = (unsigned char)(int)(pClass->m_fBeamIntensity * m_fCurrentIntensity * m_color.a);
+                m_pLightBeam->SetColor(beamColor);
+                m_pLightBeam->SetFinalWidth(pClass->m_fSize * kfHoloBeamWidthCone * m_fCurrentFadeInFactor *
+                                            m_fAspect);
+            }
+        }
     }
     return true;
 }
@@ -773,9 +800,11 @@ void EntityHologram::SetStoredMatrix(const PblMatrix& mMatrix)
 
     const EntityHologramClass* pClass = static_cast<const EntityHologramClass*>(mEntityClass);
     float fRadius = pClass->m_fSize * 0.5f + pClass->m_fHeight * 0.5f;
-    PblVector3 vOffset(0.0f, fRadius, 0.0f);
     PblVector3 vCenter;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&m_WorldMatrix));
+    {
+        PblVector3 vOffset(0.0f, fRadius, 0.0f);
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&vOffset), reinterpret_cast<const D3DXMATRIX*>(&m_WorldMatrix));
+    }
 
     PblMatrix mReflection;
     if (FLRenderer::IsReflected(vCenter, fRadius, mReflection, true))
@@ -789,7 +818,7 @@ void EntityHologram::SetStoredMatrix(const PblMatrix& mMatrix)
         if (fDist > fRadius * 2.0f)
         {
             vCenter = Interpolate(vCenter, vReflected, fRadius / fDist);
-            fRadius *= 2.0f;
+            fRadius += fRadius;
         }
         else
         {

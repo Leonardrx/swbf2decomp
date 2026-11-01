@@ -147,12 +147,24 @@ int UnitCTFOffenseAgent::EventHandler(AI::EventInfo* pInfo)
     case AI::EVT_Vision_CanSeeEnemy:
     case AI::EVT_Audible_CanHearEnemy:
     case AI::EVT_EndInvisibility:
-        if (GetFlag(mFlag))
+        if (const GameObject* pFlag = mFlag)
         {
+            if (mCurState == 3)
+            {
+                DamagedEventPlayerCentricness(pInfo);
+                return AI::EVT_NotHandled;
+            }
+            if (mCurState == 8)
+            {
+                DamagedEventPlayerCentricness(pInfo);
+                return AI::EVT_NotHandled;
+            }
             if (mCurState == 2)
             {
-                const PblMatrix& flagMat = GetCollisionObject(GetFlag(mFlag))->GetMatrix();
-                const PblMatrix& myMat = mCtrl->mOwner->GetMatrix();
+                const GameObject* pFlagObject = mFlag.operator->();
+                const Controllable* pMe = mCtrl->mOwner;
+                const PblMatrix& flagMat = pFlagObject->GetMatrix();
+                const PblMatrix& myMat = pMe->GetMatrix();
                 float dx = myMat.m[3][0] - flagMat.m[3][0];
                 float dz = myMat.m[3][2] - flagMat.m[3][2];
                 if (dx * dx + dz * dz < 100.0f)
@@ -160,7 +172,7 @@ int UnitCTFOffenseAgent::EventHandler(AI::EventInfo* pInfo)
                     return AI::EVT_NotHandled;
                 }
             }
-            if (mCurState == 3 || mCurState == 8 || mCurState == 4)
+            if (mCurState == 4)
             {
                 DamagedEventPlayerCentricness(pInfo);
                 return AI::EVT_NotHandled;
@@ -172,8 +184,7 @@ int UnitCTFOffenseAgent::EventHandler(AI::EventInfo* pInfo)
         }
         mCombatCmd = pInfo->mNextCmd;
         SetNextState(8);
-        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, PblHandle<GameObject>(), PblVector3(0, 0, 0),
-                                      PblHandle<GameObject>());
+        pInfo->mNextCmd = UnitCmdInfo(CMD_NONE, NULL, PblVector3(0, 0, 0), NULL);
         return AI::EVT_Handled;
 
     case AI::EVT_CTF_FlagKill:

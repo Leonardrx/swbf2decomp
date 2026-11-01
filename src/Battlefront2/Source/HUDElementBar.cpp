@@ -68,21 +68,22 @@ bool HUD::ElementBar::SetProperty(const unsigned int uHashID, const void* pValue
     {
     case kValueHash:
         mDefaultValue = mValue = *(const float*)pValue;
-        break;
+        SetValue(mValue);
+        return true;
     case kMinValueHash:
         mMinValue = *(const float*)pValue;
-        break;
+        SetValue(mValue);
+        return true;
     case kMaxValueHash:
         mMaxValue = *(const float*)pValue;
-        break;
+        SetValue(mValue);
+        return true;
     case kEventValueHash:
         Item::SetEvent(*(const char* const*)pValue, mEventValue);
         return true;
     default:
         return false;
     }
-    SetValue(mValue);
-    return true;
 }
 
 // FUNCTION: SWBF2 0x0054a340

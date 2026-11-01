@@ -189,7 +189,8 @@ void EntityClass::Read(PblFileChunk& chunk)
         case 0x504F5250:
         {
             const unsigned int uProperty = child._pFile->Read32();
-            pClass->SetProperty(uProperty, child.ReadString(acBuffer, sizeof(acBuffer)));
+            const char* pcValue = child.ReadString(acBuffer, sizeof(acBuffer));
+            pClass->SetProperty(uProperty, pcValue);
             break;
         }
         }

@@ -75,8 +75,8 @@ void RedDirectionalLight::DebugDraw() const
     case PblRegion::type_cylinder_zaligned:
     {
         PblMatrix mBase = m_boundingRegion->mMatrix;
-        mBase.SetTranslation(m_boundingRegion->mMatrix.GetTranslation() -
-                             m_boundingRegion->mMatrix.GetYAxis() * m_boundingRegion->mSize.y);
+        mBase.SetTranslation(mBase.GetTranslation() -
+                             mBase.GetYAxis() * m_boundingRegion->mSize.y);
         RedDebug::DrawCone(mBase, m_boundingRegion->mSize.y * 2.0f, m_boundingRegion->mSize.x,
                            m_boundingRegion->mSize.x,
                            RedColor((unsigned char)(int)(m_color.r * 255.0f),

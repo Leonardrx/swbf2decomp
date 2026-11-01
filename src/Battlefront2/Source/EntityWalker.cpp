@@ -715,13 +715,17 @@ void EntityWalkerClass::SetProperty(unsigned int uProperty, const char* pszValue
         }
         break;
     case 0x2c3e8078:
-        ReadAngleLimits(pszValue, mMinYaw, mMaxYaw);
+        sscanf(pszValue, "%f %f", &mMinYaw, &mMaxYaw);
+        mMinYaw *= 0.017453292f;
+        mMaxYaw *= 0.017453292f;
         break;
     case 0xb5534be0:
         sscanf(pszValue, "%f", &mMaxPitchSpeed);
         break;
     case 0x3403b139:
-        ReadAngleLimits(pszValue, mMinPitch, mMaxPitch);
+        sscanf(pszValue, "%f %f", &mMinPitch, &mMaxPitch);
+        mMinPitch *= 0.017453292f;
+        mMaxPitch *= 0.017453292f;
         break;
     case 0x7c8f02c0:
         sscanf(pszValue, "%f", &mStoppedTurnSpeed);
@@ -964,13 +968,61 @@ void EntityWalkerClass::SetProperty(unsigned int uProperty, const char* pszValue
         break;
 
     case 0xea47dd5c:
-        ReadThrustAngleTan(pszValue, m_fThrustAngleToStrafe_Tan);
+        sscanf(pszValue, "%f", &m_fThrustAngleToStrafe_Tan);
+        m_fThrustAngleToStrafe_Tan *= 0.017453292f;
+        if (m_fThrustAngleToStrafe_Tan < 0.0f)
+        {
+            m_fThrustAngleToStrafe_Tan = -m_fThrustAngleToStrafe_Tan;
+        }
+        {
+            const float fMax = PblMath::fHalfPi * 0.99f;
+            if (m_fThrustAngleToStrafe_Tan >= fMax)
+            {
+                m_fThrustAngleToStrafe_Tan = (float)tan(fMax);
+            }
+            else if (m_fThrustAngleToStrafe_Tan > 0.0f)
+            {
+                m_fThrustAngleToStrafe_Tan = (float)tan(m_fThrustAngleToStrafe_Tan);
+            }
+        }
         break;
     case 0xafb0caf4:
-        ReadThrustAngleTan(pszValue, m_fThrustAngleToTurn_Tan);
+        sscanf(pszValue, "%f", &m_fThrustAngleToTurn_Tan);
+        m_fThrustAngleToTurn_Tan *= 0.017453292f;
+        if (m_fThrustAngleToTurn_Tan < 0.0f)
+        {
+            m_fThrustAngleToTurn_Tan = -m_fThrustAngleToTurn_Tan;
+        }
+        {
+            const float fMax = PblMath::fHalfPi * 0.99f;
+            if (m_fThrustAngleToTurn_Tan >= fMax)
+            {
+                m_fThrustAngleToTurn_Tan = (float)tan(fMax);
+            }
+            else if (m_fThrustAngleToTurn_Tan > 0.0f)
+            {
+                m_fThrustAngleToTurn_Tan = (float)tan(m_fThrustAngleToTurn_Tan);
+            }
+        }
         break;
     case 0xbed8917f:
-        ReadThrustAngleTan(pszValue, m_fThrustAngleToStop_Tan);
+        sscanf(pszValue, "%f", &m_fThrustAngleToStop_Tan);
+        m_fThrustAngleToStop_Tan *= 0.017453292f;
+        if (m_fThrustAngleToStop_Tan < 0.0f)
+        {
+            m_fThrustAngleToStop_Tan = -m_fThrustAngleToStop_Tan;
+        }
+        {
+            const float fMax = PblMath::fHalfPi * 0.99f;
+            if (m_fThrustAngleToStop_Tan >= fMax)
+            {
+                m_fThrustAngleToStop_Tan = (float)tan(fMax);
+            }
+            else if (m_fThrustAngleToStop_Tan > 0.0f)
+            {
+                m_fThrustAngleToStop_Tan = (float)tan(m_fThrustAngleToStop_Tan);
+            }
+        }
         break;
     case 0xd128c668:
         sscanf(pszValue, "%f", &m_fSteerTowardAimRate);
@@ -2858,21 +2910,116 @@ void EntityWalker::UpdateOrientation(float fDeltaTime)
     float fHeightDifference = 0.0f;
     for (int i = 0; i < mLegPairCount; ++i)
     {
-        WalkerLegPair* pLegPair = mLegPairs[i];
         PblVector3 vFeet[2];
-        vFeet[0] = mCollisionModel->GetLocalMatrix(pLegPair->mFootCollisionBody[0], GetPose()).GetTranslation();
-        vFeet[1] = mCollisionModel->GetLocalMatrix(pLegPair->mFootCollisionBody[1], GetPose()).GetTranslation();
-        pLegPair->SetupGroundCollision(mMatrix, mBodyPitch, vFeet);
-        if (pLegPair->mPushValue > fMaxPush)
+        CollisionModel* pCollisionModel = mCollisionModel;
+        int iFootBody = mLegPairs[i]->mFootCollisionBody[0];
+        vFeet[0] = pCollisionModel->GetLocalMatrix(iFootBody, GetPose()).GetTranslation();
+        pCollisionModel = mCollisionModel;
+        iFootBody = mLegPairs[i]->mFootCollisionBody[1];
+        vFeet[1] = pCollisionModel->GetLocalMatrix(iFootBody, GetPose()).GetTranslation();
+        mLegPairs[i]->SetupGroundCollision(mMatrix, mBodyPitch, vFeet);
+        if (mLegPairs[i]->mPushValue > fMaxPush)
         {
-            fMaxPush = pLegPair->mPushValue;
+            fMaxPush = mLegPairs[i]->mPushValue;
         }
-        fHeightDifference += pLegPair->mFootHeightDifference / (float)mLegPairCount;
-        pLegPair->SetInterpolate(false);
+        fHeightDifference += mLegPairs[i]->mFootHeightDifference / (float)mLegPairCount;
+        mLegPairs[i]->SetInterpolate(false);
     }
 
     float fGravity = m_bIsJumping ? -9.8f : -29.4f;
-    if (mLegPairCount <= 1)
+    if (mLegPairCount > 1)
+    {
+        if (sBipedHack)
+        {
+            if (fMaxPush > 0.0f)
+            {
+                mBodyPitch = (-0.62f - mBodyPitch) * 0.05f + mBodyPitch;
+                float fCos = cosf(mBodyPitch);
+                float fSin = sinf(mBodyPitch);
+                mPitchOffset.mCos = fCos;
+                mPitchOffset.mSin = fSin;
+                SetPosition(PblVector3(mMatrix.m[3][0] + 0.0f, mMatrix.m[3][1] + fMaxPush, mMatrix.m[3][2] + 0.0f));
+                m_bIsGrounded = true;
+                mVelocityNoGrav.y = 0.0f;
+                mVelocity.y = 0.0f;
+            }
+            else
+            {
+                mVelocity.y = fGravity * fDeltaTime + mVelocity.y;
+            }
+        }
+        else
+        {
+            if (fMaxPush > 0.0f)
+            {
+                float fPushDifference = mLegPairs[1]->mPushValue - mLegPairs[0]->mPushValue;
+                if (fPushDifference != 0.0f)
+                {
+                    float fPitch = fPushDifference * 0.01f + mBodyPitch;
+                    if (-0.29552022f > fPitch)
+                    {
+                        fPitch = -0.29552022f;
+                    }
+                    else if (fPitch > 0.29552022f)
+                    {
+                        fPitch = 0.29552022f;
+                    }
+                    mBodyPitch = fPitch;
+                    float fCos = cosf(fPitch);
+                    float fSin = sinf(fPitch);
+                    mPitchOffset.mCos = fCos;
+                    mPitchOffset.mSin = fSin;
+                }
+                float fPush0 = mLegPairs[0]->mPushValue;
+                if (!(fPush0 > -0.1f))
+                {
+                    fPush0 = -0.1f;
+                }
+                float fPush1 = mLegPairs[1]->mPushValue;
+                if (!(fPush1 > -0.1f))
+                {
+                    fPush1 = -0.1f;
+                }
+                float fLift = (fPush1 + fPush0) * 0.5f;
+                if (fLift != 0.0f)
+                {
+                    SetPosition(PblVector3(mMatrix.m[3][0] + 0.0f, mMatrix.m[3][1] + fLift, mMatrix.m[3][2] + 0.0f));
+                }
+                m_bIsGrounded = true;
+                mVelocity.y = 0.0f;
+                mVelocityNoGrav.y = 0.0f;
+            }
+            else
+            {
+                mVelocity.y = fGravity * fDeltaTime + mVelocity.y;
+            }
+
+            if (mClass->mOrientRoll && (fHeightDifference > 0.0001f || -0.0001f > fHeightDifference))
+            {
+                float fInvLength = 1.0f / (float)sqrt(mClass->mWidth * mClass->mWidth +
+                                                      fHeightDifference * fHeightDifference);
+                float fTargetCos = mClass->mWidth * fInvLength;
+                float fTargetSin = fInvLength * fHeightDifference;
+                float fDelta = mRollOffset.mCos * fTargetSin - mRollOffset.mSin * fTargetCos;
+                float fSin = fDelta * mRollOffset.mCos * 0.05f + mRollOffset.mSin;
+                float fCos = mRollOffset.mCos - fDelta * mRollOffset.mSin * 0.05f;
+                mRollOffset.mSin = fSin;
+                mRollOffset.mCos = fCos;
+                mRollOffset.Renormalize();
+                if (mRollOffset.mSin > 0.29552022f)
+                {
+                    mRollOffset.mCos = 0.95533651f;
+                    mRollOffset.mSin = 0.29552022f;
+                }
+                else if (-0.29552022f > mRollOffset.mSin)
+                {
+                    mRollOffset.mCos = 0.95533651f;
+                    mRollOffset.mSin = -0.29552022f;
+                }
+            }
+        }
+    }
+    else
     {
         if (fMaxPush >= 0.0f)
         {
@@ -2888,89 +3035,6 @@ void EntityWalker::UpdateOrientation(float fDeltaTime)
         else
         {
             mVelocity.y = fGravity * fDeltaTime + mVelocity.y;
-        }
-    }
-    else if (sBipedHack)
-    {
-        if (fMaxPush > 0.0f)
-        {
-            mBodyPitch = (-0.62f - mBodyPitch) * 0.05f + mBodyPitch;
-            mPitchOffset = PblAngle(mBodyPitch);
-            SetPosition(PblVector3(mMatrix.m[3][0] + 0.0f, mMatrix.m[3][1] + fMaxPush, mMatrix.m[3][2] + 0.0f));
-            m_bIsGrounded = true;
-            mVelocityNoGrav.y = 0.0f;
-            mVelocity.y = 0.0f;
-        }
-        else
-        {
-            mVelocity.y = fGravity * fDeltaTime + mVelocity.y;
-        }
-    }
-    else
-    {
-        if (fMaxPush > 0.0f)
-        {
-            float fPushDifference = mLegPairs[1]->mPushValue - mLegPairs[0]->mPushValue;
-            if (fPushDifference != 0.0f)
-            {
-                float fPitch = fPushDifference * 0.01f + mBodyPitch;
-                if (-0.29552022f > fPitch)
-                {
-                    fPitch = -0.29552022f;
-                }
-                else if (fPitch > 0.29552022f)
-                {
-                    fPitch = 0.29552022f;
-                }
-                mBodyPitch = fPitch;
-                mPitchOffset = PblAngle(fPitch);
-            }
-            float fPush0 = mLegPairs[0]->mPushValue;
-            if (!(fPush0 > -0.1f))
-            {
-                fPush0 = -0.1f;
-            }
-            float fPush1 = mLegPairs[1]->mPushValue;
-            if (!(fPush1 > -0.1f))
-            {
-                fPush1 = -0.1f;
-            }
-            float fLift = (fPush1 + fPush0) * 0.5f;
-            if (fLift != 0.0f)
-            {
-                SetPosition(PblVector3(mMatrix.m[3][0] + 0.0f, mMatrix.m[3][1] + fLift, mMatrix.m[3][2] + 0.0f));
-            }
-            m_bIsGrounded = true;
-            mVelocity.y = 0.0f;
-            mVelocityNoGrav.y = 0.0f;
-        }
-        else
-        {
-            mVelocity.y = fGravity * fDeltaTime + mVelocity.y;
-        }
-
-        if (mClass->mOrientRoll && (fHeightDifference > 0.0001f || -0.0001f > fHeightDifference))
-        {
-            float fInvLength = 1.0f / (float)sqrt(mClass->mWidth * mClass->mWidth +
-                                                  fHeightDifference * fHeightDifference);
-            float fTargetCos = mClass->mWidth * fInvLength;
-            float fTargetSin = fInvLength * fHeightDifference;
-            float fDelta = mRollOffset.mCos * fTargetSin - mRollOffset.mSin * fTargetCos;
-            float fSin = fDelta * mRollOffset.mCos * 0.05f + mRollOffset.mSin;
-            float fCos = mRollOffset.mCos - fDelta * mRollOffset.mSin * 0.05f;
-            mRollOffset.mSin = fSin;
-            mRollOffset.mCos = fCos;
-            mRollOffset.Renormalize();
-            if (mRollOffset.mSin > 0.29552022f)
-            {
-                mRollOffset.mCos = 0.95533651f;
-                mRollOffset.mSin = 0.29552022f;
-            }
-            else if (-0.29552022f > mRollOffset.mSin)
-            {
-                mRollOffset.mCos = 0.95533651f;
-                mRollOffset.mSin = -0.29552022f;
-            }
         }
     }
 
@@ -4086,49 +4150,42 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
     {
         float fHeight = mClass->mLegRayHitLength * 0.85f;
         PblVector3 vStart(mMatrix.m[3][0] + 0.0f, mMatrix.m[3][1] + fHeight, mMatrix.m[3][2] + 0.0f);
-        PblVector3 vFlat(mMatrix.m[2][0], 0.0f, mMatrix.m[2][2]);
+        PblVector3 vFlat = mMatrix.GetZAxis();
+        vFlat.y = 0.0f;
         PblVector3 vFront;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFront), reinterpret_cast<const D3DXVECTOR3*>(&vFlat));
+        PblVector3 vDir = vFront;
         PblVector3 vSide(-vFront.z, 0.0f, vFront.x);
         float fLength = fHeight;
         if (mLegPairCount > 1)
         {
             fLength = fHeight * 1.3f;
             float fOffset = mLegPairs[mDirection == Backward]->mLocalZOffset;
-            vStart.x = fOffset * vFront.x + vStart.x;
-            vStart.y = fOffset * vFront.y + vStart.y;
-            vStart.z = fOffset * vFront.z + vStart.z;
+            vStart += vFront * fOffset;
         }
-        PblVector3 vDir = vFront;
         if (mDirection == Backward)
         {
-            vDir.x = vFront.x * -1.0f;
-            vDir.y = vFront.y * -1.0f;
-            vDir.z = vFront.z * -1.0f;
+            vDir *= -1.0f;
         }
         float fAhead = fLength * 0.8f;
         float fAside = fLength * 0.7f;
 
-        PblVector3 vRay(fAhead * vDir.x + vSide.x * fAside, vDir.y * fAhead + fAside * vSide.y,
-                        vDir.z * fAhead + fAside * vSide.z);
-        PblVector3 vEnd(vRay.x + vStart.x, vRay.y + vStart.y, vRay.z + vStart.z);
+        PblVector3 vRay = vDir * fAhead + vSide * fAside;
+        PblVector3 vEnd = vRay + vStart;
         float fHit = RedTerrain::RayHit(vStart, vEnd, 0.1f, 3.0f);
         if (1.0f > fHit)
         {
             float fBack = 1.0f - fHit;
-            SetPosition(PblVector3(mMatrix.m[3][0] - vRay.x * fBack, mMatrix.m[3][1] - vRay.y * fBack,
-                                   mMatrix.m[3][2] - vRay.z * fBack));
+            SetPosition(mMatrix.GetTranslation() - vRay * fBack);
         }
 
-        vRay = PblVector3(fAhead * vDir.x - vSide.x * fAside, fAhead * vDir.y - fAside * vSide.y,
-                          fAhead * vDir.z - fAside * vSide.z);
-        vEnd = PblVector3(vRay.x + vStart.x, vRay.y + vStart.y, vRay.z + vStart.z);
+        vRay = vDir * fAhead - vSide * fAside;
+        vEnd = vRay + vStart;
         fHit = RedTerrain::RayHit(vStart, vEnd, 0.1f, 3.0f);
         if (1.0f > fHit)
         {
             float fBack = 1.0f - fHit;
-            SetPosition(PblVector3(mMatrix.m[3][0] - vRay.x * fBack, mMatrix.m[3][1] - vRay.y * fBack,
-                                   mMatrix.m[3][2] - vRay.z * fBack));
+            SetPosition(mMatrix.GetTranslation() - vRay * fBack);
         }
     }
 
@@ -4163,51 +4220,42 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
         {
 
             PblMatrix mLook =
-                DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z), mMatrix.GetYAxis(), gVectorZero);
+                DirectionMatrix(-mEyeDir, mMatrix.GetYAxis(), gVectorZero);
             PblQuaternion qLook = PblQuaternion(mLook);
             float fSin;
             float fCos;
-            PblMath::SinCos(&fSin, &fCos, -mClass->mCameraSettings.GetCameraTiltValue() * 0.5f);
+            PblMath::SinCos(&fSin, &fCos, -mClass->mCameraSettings.GetCameraTiltValue() / 2.0f);
             PblQuaternion qTilt;
             qTilt._fX = fSin * gVectorUnitX.x;
             qTilt._fY = gVectorUnitX.y * fSin;
             qTilt._fZ = gVectorUnitX.z * fSin;
             qTilt._fS = fCos;
-            PblQuaternion qCamera = qLook * qTilt;
-
-            PblMatrix mCamera(qCamera, gVectorZero);
+            PblMatrix mCamera(qLook * qTilt, gVectorZero);
 
             mTargetInfo.mAimStart = mClass->mCameraSettings.CalcCameraPoint(mMatrix, mCamera);
-            float fAlong = mEyeDir.y * (mEyePoint.y - mTargetInfo.mAimStart.y) +
-                           mEyeDir.x * (mEyePoint.x - mTargetInfo.mAimStart.x) +
-                           mEyeDir.z * (mEyePoint.z - mTargetInfo.mAimStart.z);
-            mTargetInfo.mAimStart.x = mTargetInfo.mAimStart.x + mEyeDir.x * fAlong;
-            mTargetInfo.mAimStart.y = mEyeDir.y * fAlong + mTargetInfo.mAimStart.y;
-            mTargetInfo.mAimStart.z = mEyeDir.z * fAlong + mTargetInfo.mAimStart.z;
+            PblVector3 vToEye = mEyePoint - mTargetInfo.mAimStart;
+            float fAlong = mEyeDir.y * vToEye.y + mEyeDir.x * vToEye.x + mEyeDir.z * vToEye.z;
+            mTargetInfo.mAimStart += mEyeDir * fAlong;
         }
         const GameObject* pIgnore = this;
         CollisionObject* pHit;
         float fDist =
             CollisionManager::RayHit(mTargetInfo.mAimStart, mEyeDir, 512.0f, pHit, 0, &pIgnore, 1, 0x9a, true) *
             512.0f;
-        mTargetInfo.mAimPoint = PblVector3(mTargetInfo.mAimStart.x + mEyeDir.x * fDist,
-                                           mTargetInfo.mAimStart.y + mEyeDir.y * fDist,
-                                           mTargetInfo.mAimStart.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mTargetInfo.mAimStart + mEyeDir * fDist;
     }
     else
     {
         mTargetInfo.mAimStart = mEyePoint;
         float fDist = 512.0f;
-        int iIndex = mWeaponIndex[0];
-        if (iIndex >= 0 && mWeapon[iIndex] && mWeapon[iIndex]->mTarget)
+        if (mWeaponIndex[0] >= 0 && mWeapon[mWeaponIndex[0]] && mWeapon[mWeaponIndex[0]]->mTarget)
         {
-            PblVector3 vTarget = mWeapon[iIndex]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
+            PblVector3 vTarget = mWeapon[mWeaponIndex[0]]->mTarget->GetTargetPoint(mEyePoint, mEyeDir, -1);
             fDist = PblMath::Sqrt((vTarget.x - mEyePoint.x) * (vTarget.x - mEyePoint.x) +
                           (vTarget.y - mEyePoint.y) * (vTarget.y - mEyePoint.y) +
                           (vTarget.z - mEyePoint.z) * (vTarget.z - mEyePoint.z));
         }
-        mTargetInfo.mAimPoint = PblVector3(mEyeDir.x * fDist + mEyePoint.x, mEyePoint.y + mEyeDir.y * fDist,
-                                           mEyePoint.z + mEyeDir.z * fDist);
+        mTargetInfo.mAimPoint = mEyePoint + mEyeDir * fDist;
     }
 
     mClass->UpdatePilotAnimation(mPilot, &mPose, mMatrix, mVelocity, fDeltaTime, -1.0f, -1.0f, -1.0f);
@@ -4221,13 +4269,14 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
         const RedDirectionalLight* pLight = 0;
         if (mStencilShadow)
         {
-            if (RedLight::m_sGlobalDirectionals[0]->IsShadowCaster())
-            {
-                pLight = RedLight::m_sGlobalDirectionals[0];
-            }
-            else if (RedLight::m_sGlobalDirectionals[1]->IsShadowCaster())
+            pLight = RedLight::m_sGlobalDirectionals[0];
+            if (!pLight->IsShadowCaster())
             {
                 pLight = RedLight::m_sGlobalDirectionals[1];
+                if (!pLight->IsShadowCaster())
+                {
+                    pLight = 0;
+                }
             }
         }
         if (pLight)
@@ -4242,16 +4291,13 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
             {
                 fOffset = GetCollisionRadius();
             }
-            SetRenderPos(PblVector3(vSmoothed.x + vCenter.x - vPos.x + fOffset * pLight->m_vDirection.x,
-                                    vSmoothed.y + vCenter.y - vPos.y + pLight->m_vDirection.y * fOffset,
-                                    vSmoothed.z + vCenter.z - vPos.z + pLight->m_vDirection.z * fOffset));
+            SetRenderPos(vSmoothed + vCenter - vPos + pLight->m_vDirection * fOffset);
             SetRenderRadius(GetCollisionRadius() + fOffset);
             SetTestBBox(false);
         }
         else
         {
-            SetRenderPos(PblVector3(vSmoothed.x + vCenter.x - vPos.x, vSmoothed.y + vCenter.y - vPos.y,
-                                    vSmoothed.z + vCenter.z - vPos.z));
+            SetRenderPos(vSmoothed + vCenter - vPos);
         }
     }
 
@@ -4272,10 +4318,12 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
         if (bFeed)
         {
             gameObjectInterpolator.SetNext(mNetUniqueId, &GetSmoothedMatrix());
-            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 0, mBlend->GetTurnState());
-            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 1, mLegPairs[0]->GetTurnState());
-            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 2,
-                                                mLegPairCount > 1 ? mLegPairs[1]->GetTurnState() : 0.0f);
+            float fBlendTurn = mBlend->GetTurnState();
+            float fFrontTurn = mLegPairs[0]->GetTurnState();
+            float fBackTurn = mLegPairCount > 1 ? mLegPairs[1]->GetTurnState() : 0.0f;
+            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 0, fBlendTurn);
+            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 1, fFrontTurn);
+            gameObjectInterpolator.SetNextFloat(mNetUniqueId, 2, fBackTurn);
             if (mAimer[0])
             {
                 gameObjectInterpolator.SetNextVector(mNetUniqueId, &mAimer[0]->mDirection);
@@ -4286,9 +4334,8 @@ bool EntityWalker::PostCollisionUpdate(float fDeltaTime)
     if (mPilot && mPilot->GetGameObject()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
     {
         GameObject* pSoldier = mPilot->GetGameObject();
-        PblMatrix mInverse = GetMatrix().GetInverseFast();
         PblMatrix mSeat;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mSeat), reinterpret_cast<const D3DXMATRIX*>(&pSoldier->GetMatrix()), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mSeat), reinterpret_cast<const D3DXMATRIX*>(&pSoldier->GetMatrix()), reinterpret_cast<const D3DXMATRIX*>(&GetMatrix().GetInverseFast()));
         PblMatrix mLocal = mSeat;
         PblMatrix mSmoothed = GetSmoothedMatrix();
         PblMatrix mRender;

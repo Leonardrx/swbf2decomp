@@ -302,7 +302,7 @@ bool BirdParticle::UpdateWalkingCircleBird(float fDeltaTime)
     {
         mCircleTime -= mTotalCircleTime;
     }
-    float fAngle = mCircleTime / mTotalCircleTime * PblMath::fTwoPi;
+    float fAngle = mCircleTime / mTotalCircleTime * (PblMath::fPi * 2.0f);
 
     PblVector3 vPos = mCircleCenter;
     float fSin, fCos;
@@ -787,11 +787,11 @@ void BirdParticle::RespawnScatterBird(const PblVector3& vPos, const BirdParticle
     mState = BIRD_SCATTER;
     mTimeOffCamera = 0.0f;
     mTotalLifetime = 0.0f;
-    mFlapTime = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
+    mFlapTime = PblRandom::_Global.GetFloat() * (PblMath::fPi * 2.0f);
 
     PblQuaternion q = PblQuaternion(gMatrixIdentity);
     {
-        PblVector3 initomega = PblVector3(0.0f, PblRandom::_Global.GetFloat() * PblMath::fTwoPi, 0.0f);
+        PblVector3 initomega = PblVector3(0.0f, PblRandom::_Global.GetFloat() * (PblMath::fPi * 2.0f), 0.0f);
         float initAngle = Length(initomega);
         if (initAngle > EPSILON)
         {
@@ -813,13 +813,21 @@ void BirdParticle::RespawnScatterBird(const PblVector3& vPos, const BirdParticle
     if (vAway.y >= -EPSILON &&
         mMatrix.m[2][0] * vAway.x + mMatrix.m[2][1] * vAway.y + mMatrix.m[2][2] * vAway.z < 0.0f)
     {
-
-        const PblVector3 vX = mMatrix[0];
-        const PblVector3 vY = mMatrix[1];
-        const PblVector3 vZ = mMatrix[2];
-        mMatrix.SetXAxis(-vX.x, vX.y, -vX.z, 0.0f);
-        mMatrix.SetYAxis(-vY.x, vY.y, -vY.z, 0.0f);
-        mMatrix.SetZAxis(-vZ.x, vZ.y, -vZ.z, 0.0f);
+        PblVector3 vX = mMatrix[0];
+        PblVector3 vY = mMatrix[1];
+        PblVector3 vZ = mMatrix[2];
+        vX.x = -vX.x;
+        vX.z = -vX.z;
+        vY.x = -vY.x;
+        vY.z = -vY.z;
+        vZ.x = -vZ.x;
+        vZ.z = -vZ.z;
+        mMatrix[0] = vX;
+        mMatrix.m[0][3] = 0.0f;
+        mMatrix[1] = vY;
+        mMatrix.m[1][3] = 0.0f;
+        mMatrix[2] = vZ;
+        mMatrix.m[2][3] = 0.0f;
     }
 
     mInitMatrix = mMatrix;

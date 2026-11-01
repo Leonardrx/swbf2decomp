@@ -120,7 +120,7 @@ void FreeCamera::Update(float fDeltaTime)
         gSetTetherPosition = false;
         if (sFollowedObject)
         {
-            PblMatrix mat = GetMatrix();
+            const PblMatrix& mat = GetMatrix();
             const PblVector3& vPos = sFollowedObject->GetPosition();
             gFollowingTethered = true;
             sTetherOffset = vPos - mat.GetTranslation();
@@ -152,11 +152,8 @@ void FreeCamera::Update(float fDeltaTime)
         }
 
         PblMatrix mat = GetMatrix();
-        float fHalfHeight = sFollowedObject->GetCollisionRadius() * 0.5f;
-        const PblVector3& vTarget = sFollowedObject->GetPosition();
-        PblVector3 vAt(vTarget.x + 0.0f, vTarget.y + fHalfHeight, vTarget.z + 0.0f);
-        PblVector3 vDir = mat.GetTranslation() - vAt;
-        PblVector3 vZ = Normalize(vDir);
+        PblVector3 vAt = sFollowedObject->GetPosition() + PblVector3(0.0f, sFollowedObject->GetCollisionRadius() * 0.5f, 0.0f);
+        PblVector3 vZ = Normalize(mat.GetTranslation() - vAt);
         mat[2] = vZ;
         mat.m[2][3] = 0.0f;
 
@@ -165,7 +162,7 @@ void FreeCamera::Update(float fDeltaTime)
         mat[0] = vX;
         mat.m[0][3] = 0.0f;
 
-        PblVector3 vY = Normalize(CrossProduct(vZ, vX));
+        PblVector3 vY = Normalize(CrossProduct(mat[2], vX));
         mat[1] = vY;
         mat.m[1][3] = 0.0f;
 
@@ -182,10 +179,7 @@ void FreeCamera::Update(float fDeltaTime)
 
     if (fDeltaTime > 0.0f)
     {
-        float fInvDeltaTime = 1.0f / fDeltaTime;
-        mVelocity = PblVector3((mMatrix.m[3][0] - vOldPos.x) * fInvDeltaTime,
-                               (mMatrix.m[3][1] - vOldPos.y) * fInvDeltaTime,
-                               (mMatrix.m[3][2] - vOldPos.z) * fInvDeltaTime);
+        mVelocity = (mMatrix.GetTranslation() - vOldPos) / fDeltaTime;
     }
 
     if (sResetFollowRotation || sResetFollowPosition)
@@ -202,9 +196,7 @@ void FreeCamera::Update(float fDeltaTime)
         PblVector3 vDir(-mat.m[2][0], -mat.m[2][1], -mat.m[2][2]);
         CollisionObject* pObject;
         float fDist = CollisionManager::RayHit(vPos, vDir, 20.0f, pObject, NULL, NULL, 0, 0x90, false) * 20.0f - 0.75f;
-        PblVector3 vLightPos(vPos.x - mat.m[2][0] * fDist,
-                             vPos.y - mat.m[2][1] * fDist,
-                             vPos.z - mat.m[2][2] * fDist);
+        PblVector3 vLightPos = vPos - mat[2] * fDist;
         if (!s_pFreeCamLightFreeze)
         {
             s_pFreeCamLight->SetPosition(vLightPos);

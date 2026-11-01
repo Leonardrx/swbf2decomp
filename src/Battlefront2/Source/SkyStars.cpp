@@ -143,9 +143,10 @@ void SkyStars::Read(PblConfig& config)
 // FUNCTION: SWBF2 0x00639e00
 void SkyStars::_BuildStarFields()
 {
+    static const float fBand1Top = 0.5f;
     static const float fBand2Top = (float)sqrt(0.75);
-    static const float fBand1Ratio = 0.5f / 16;
-    static const float fBand2Ratio = (fBand2Top - 0.5f) / 16;
+    static const float fBand1Ratio = fBand1Top / 16;
+    static const float fBand2Ratio = (fBand2Top - fBand1Top) / 16;
     static const float fBand3Ratio = (1.0f - fBand2Top) / 4;
     static const float fSector12 = PblMath::fTwoPi / 16;
     static const float fSector3 = PblMath::fTwoPi / 4;
@@ -160,34 +161,32 @@ void SkyStars::_BuildStarFields()
     {
         StarField& field = m_aStarFields[i];
         const float fStars = fBand1Stars + fRemainder;
-        field.uiNumStars = (unsigned int)floor(fStars + 0.5f);
-        fRemainder = fStars - (float)field.uiNumStars;
-        if (!field.uiNumStars)
+        const unsigned int uiNumStars = (unsigned int)floor(fStars + 0.5f);
+        field.uiNumStars = uiNumStars;
+        fRemainder = fStars - (float)uiNumStars;
+        if (!uiNumStars)
         {
             field.aStar = NULL;
             continue;
         }
-        field.aStar = new Star[field.uiNumStars];
+        field.aStar = new Star[uiNumStars];
         const float fBaseAngle = (float)i * fSector12;
-        for (unsigned int j = 0; j < field.uiNumStars; ++j)
+        for (unsigned int j = 0; j < uiNumStars; ++j)
         {
-            Star& star = field.aStar[j];
             const float fAngle = rand.GetFloat();
-            const float fHeight = rand.GetFloat() * 0.5f;
+            const float fHeight = rand.GetFloat() * fBand1Top;
             const float fRadius = (float)sqrt(1.0f - fHeight * fHeight);
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, fAngle * fSector12 + fBaseAngle);
-            star.vPos.x = fCos * fRadius;
-            star.vPos.y = fHeight;
-            star.vPos.z = fSin * fRadius;
+            field.aStar[j].vPos = PblVector3(fCos * fRadius, fHeight, fSin * fRadius);
             const float fColor = rand.GetFloat();
-            star.color = _GetStarColor(rand.GetFloat(), fColor);
+            field.aStar[j].color = _GetStarColor(rand.GetFloat(), fColor);
             if (m_fSinAngleFade > fHeight)
             {
                 const float fFade = fHeight > m_fSinAngleMin
                                         ? (fHeight - m_fSinAngleMin) / (m_fSinAngleFade - m_fSinAngleMin)
                                         : 0.0f;
-                star.color.a = (unsigned char)(int)((float)star.color.a * fFade);
+                field.aStar[j].color.a = (unsigned char)(int)((float)field.aStar[j].color.a * fFade);
             }
         }
     }
@@ -197,34 +196,32 @@ void SkyStars::_BuildStarFields()
     {
         StarField& field = m_aStarFields[i];
         const float fStars = fBand2Stars + fRemainder;
-        field.uiNumStars = (unsigned int)floor(fStars + 0.5f);
-        fRemainder = fStars - (float)field.uiNumStars;
-        if (!field.uiNumStars)
+        const unsigned int uiNumStars = (unsigned int)floor(fStars + 0.5f);
+        field.uiNumStars = uiNumStars;
+        fRemainder = fStars - (float)uiNumStars;
+        if (!uiNumStars)
         {
             field.aStar = NULL;
             continue;
         }
-        field.aStar = new Star[field.uiNumStars];
+        field.aStar = new Star[uiNumStars];
         const float fBaseAngle = (float)(i - 16) * fSector12;
-        for (unsigned int j = 0; j < field.uiNumStars; ++j)
+        for (unsigned int j = 0; j < uiNumStars; ++j)
         {
-            Star& star = field.aStar[j];
             const float fAngle = rand.GetFloat();
-            const float fHeight = (fBand2Top - 0.5f) * rand.GetFloat() + 0.5f;
+            const float fHeight = (fBand2Top - fBand1Top) * rand.GetFloat() + fBand1Top;
             const float fRadius = (float)sqrt(1.0f - fHeight * fHeight);
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, fAngle * fSector12 + fBaseAngle);
-            star.vPos.x = fCos * fRadius;
-            star.vPos.y = fHeight;
-            star.vPos.z = fSin * fRadius;
+            field.aStar[j].vPos = PblVector3(fCos * fRadius, fHeight, fSin * fRadius);
             const float fColor = rand.GetFloat();
-            star.color = _GetStarColor(rand.GetFloat(), fColor);
+            field.aStar[j].color = _GetStarColor(rand.GetFloat(), fColor);
             if (m_fSinAngleFade > fHeight)
             {
                 const float fFade = fHeight > m_fSinAngleMin
                                         ? (fHeight - m_fSinAngleMin) / (m_fSinAngleFade - m_fSinAngleMin)
                                         : 0.0f;
-                star.color.a = (unsigned char)(int)((float)star.color.a * fFade);
+                field.aStar[j].color.a = (unsigned char)(int)((float)field.aStar[j].color.a * fFade);
             }
         }
     }
@@ -234,34 +231,32 @@ void SkyStars::_BuildStarFields()
     {
         StarField& field = m_aStarFields[i];
         const float fStars = fBand3Stars + fRemainder;
-        field.uiNumStars = (unsigned int)floor(fStars + 0.5f);
-        fRemainder = fStars - (float)field.uiNumStars;
-        if (!field.uiNumStars)
+        const unsigned int uiNumStars = (unsigned int)floor(fStars + 0.5f);
+        field.uiNumStars = uiNumStars;
+        fRemainder = fStars - (float)uiNumStars;
+        if (!uiNumStars)
         {
             field.aStar = NULL;
             continue;
         }
-        field.aStar = new Star[field.uiNumStars];
+        field.aStar = new Star[uiNumStars];
         const float fBaseAngle = (float)(i - 32) * fSector3;
-        for (unsigned int j = 0; j < field.uiNumStars; ++j)
+        for (unsigned int j = 0; j < uiNumStars; ++j)
         {
-            Star& star = field.aStar[j];
             const float fAngle = rand.GetFloat();
             const float fHeight = (1.0f - fBand2Top) * rand.GetFloat() + fBand2Top;
             const float fRadius = (float)sqrt(1.0f - fHeight * fHeight);
             float fSin, fCos;
             PblMath::SinCos(&fSin, &fCos, fAngle * fSector3 + fBaseAngle);
-            star.vPos.x = fCos * fRadius;
-            star.vPos.y = fHeight;
-            star.vPos.z = fSin * fRadius;
+            field.aStar[j].vPos = PblVector3(fCos * fRadius, fHeight, fSin * fRadius);
             const float fColor = rand.GetFloat();
-            star.color = _GetStarColor(rand.GetFloat(), fColor);
+            field.aStar[j].color = _GetStarColor(rand.GetFloat(), fColor);
             if (m_fSinAngleFade > fHeight)
             {
                 const float fFade = fHeight > m_fSinAngleMin
                                         ? (fHeight - m_fSinAngleMin) / (m_fSinAngleFade - m_fSinAngleMin)
                                         : 0.0f;
-                star.color.a = (unsigned char)(int)((float)star.color.a * fFade);
+                field.aStar[j].color.a = (unsigned char)(int)((float)field.aStar[j].color.a * fFade);
             }
         }
     }
@@ -321,9 +316,9 @@ void SkyStars::Render(unsigned int uiFlags) const
         return;
     }
 
+    const unsigned int uiViewport = FLRenderer::GetCurrentViewport();
     CameraManager* pCameraManager = CameraManager::sInstance;
-    RedCamera* pCamera = pCameraManager->GetCamera(
-        pCameraManager->GetCameraIdForView(FLRenderer::GetCurrentViewport()));
+    RedCamera* pCamera = pCameraManager->GetCamera(pCameraManager->GetCameraIdForView(uiViewport));
 
     float fNear, fFar, fWidth, fHeight;
     pCamera->GetFrustum(fNear, fFar, fWidth, fHeight);
@@ -336,10 +331,11 @@ void SkyStars::Render(unsigned int uiFlags) const
     if (!m_bRenderBottom)
     {
         const float fRight = mCamera.m[0][1] * fTanHalfWidth;
-        const float fUp = mCamera.m[1][1] * fTanHalfHeight;
-        const float fFront = -mCamera.m[2][1];
-        if (fFront + fRight + fUp < 0.0f && fFront - fRight + fUp < 0.0f &&
-            fFront + fRight - fUp < 0.0f && fFront - fRight - fUp < 0.0f)
+        const float fTopRight = -mCamera.m[2][1] + fRight + mCamera.m[1][1] * fTanHalfHeight;
+        const float fTopLeft = -mCamera.m[2][1] - fRight + mCamera.m[1][1] * fTanHalfHeight;
+        const float fBottomRight = -mCamera.m[2][1] + fRight - mCamera.m[1][1] * fTanHalfHeight;
+        const float fBottomLeft = -mCamera.m[2][1] - fRight - mCamera.m[1][1] * fTanHalfHeight;
+        if (fTopRight < 0.0f && fTopLeft < 0.0f && fBottomRight < 0.0f && fBottomLeft < 0.0f)
         {
             return;
         }
@@ -351,18 +347,12 @@ void SkyStars::Render(unsigned int uiFlags) const
     PblMatrix mTop = gMatrixIdentity;
     D3DXMatrixScaling((D3DXMATRIX*)&mScale, fScale, fScale, fScale);
     D3DXMatrixMultiply((D3DXMATRIX*)&mTop, (D3DXMATRIX*)&mTop, (D3DXMATRIX*)&mScale);
-    mTop.m[3][0] = mCamera.m[3][0];
-    mTop.m[3][1] = mCamera.m[3][1];
-    mTop.m[3][2] = mCamera.m[3][2];
-    mTop.m[3][3] = 1.0f;
+    mTop.SetTranslation(mCamera.GetTranslation());
 
     PblMatrix mBottom(PblVector3(1.0f, 0.0f, 0.0f), PblVector3(0.0f, -1.0f, 0.0f), PblVector3(0.0f, 0.0f, 1.0f), PblVector3(0.0f, 0.0f, 0.0f));
     D3DXMatrixScaling((D3DXMATRIX*)&mScale, fScale, fScale, fScale);
     D3DXMatrixMultiply((D3DXMATRIX*)&mBottom, (D3DXMATRIX*)&mBottom, (D3DXMATRIX*)&mScale);
-    mBottom.m[3][0] = mCamera.m[3][0];
-    mBottom.m[3][1] = mCamera.m[3][1];
-    mBottom.m[3][2] = mCamera.m[3][2];
-    mBottom.m[3][3] = 1.0f;
+    mBottom.SetTranslation(mCamera.GetTranslation());
 
     PblVector3 aBand1[5], aBand1Bottom[5];
     PblVector3 aBand2[5], aBand2Bottom[5];
@@ -371,23 +361,16 @@ void SkyStars::Render(unsigned int uiFlags) const
     aBand1[1] = PblVector3(fBand2Top, 0.5f, 0.0f);
     aBand1Bottom[0] = PblVector3(1.0f, 0.0f, 0.0f);
     aBand1Bottom[1] = PblVector3(fBand2Top, -0.5f, 0.0f);
-    aBand2[0] = PblVector3(fBand2Top, 0.5f, 0.0f);
+    aBand2[0] = aBand1[1];
     aBand2[1] = PblVector3(0.5f, fBand2Top, 0.0f);
-    aBand2Bottom[0] = PblVector3(fBand2Top, 0.5f, 0.0f);
+    aBand2Bottom[0] = aBand1[1];
     aBand2Bottom[1] = PblVector3(0.5f, -fBand2Top, 0.0f);
     aBand3[0] = PblVector3(0.0f, 1.0f, 0.0f);
-    aBand3[1] = PblVector3(0.5f, fBand2Top, 0.0f);
+    aBand3[1] = aBand2[1];
     aBand3Bottom[0] = PblVector3(0.0f, -1.0f, 0.0f);
-    aBand3Bottom[1] = PblVector3(0.5f, -fBand2Top, 0.0f);
+    aBand3Bottom[1] = aBand2Bottom[1];
 
-    PblMatrix mView;
-    for (int r = 0; r < 3; ++r)
-    {
-        for (int c = 0; c < 4; ++c)
-        {
-            mView.m[r][c] = mCamera.m[r][c];
-        }
-    }
+    PblMatrix mView = mCamera;
     mView.m[3][0] = 0.0f;
     mView.m[3][1] = 0.0f;
     mView.m[3][2] = 0.0f;
@@ -428,10 +411,10 @@ void SkyStars::Render(unsigned int uiFlags) const
             _PlatformRenderField(field1, uiFlags, apMatrices, iNumMatrices);
         }
 
-        aBand2[2] = PblVector3(fCos * fBand2Top, 0.5f, fSin * fBand2Top);
+        aBand2[2] = aBand1[3];
         aBand2[3] = PblVector3(fCos * 0.5f, fBand2Top, fSin * 0.5f);
         aBand2[4] = PblVector3(fMidCos * fBand2Top, 0.5f, fMidSin * fBand2Top);
-        aBand2Bottom[2] = PblVector3(fCos * fBand2Top, -0.5f, fSin * fBand2Top);
+        aBand2Bottom[2] = aBand1Bottom[3];
         aBand2Bottom[3] = PblVector3(fCos * 0.5f, -fBand2Top, fSin * 0.5f);
         aBand2Bottom[4] = PblVector3(fMidCos * fBand2Top, -0.5f, fMidSin * fBand2Top);
 
@@ -453,9 +436,9 @@ void SkyStars::Render(unsigned int uiFlags) const
 
         const int iSub = i & 3;
         aBand3[2 + 2 * iSub] = PblVector3(fMidCos * 0.5f, fBand2Top, fMidSin * 0.5f);
-        aBand3[3 + 2 * iSub] = PblVector3(fCos * 0.5f, fBand2Top, fSin * 0.5f);
+        aBand3[3 + 2 * iSub] = aBand2[3];
         aBand3Bottom[2 + 2 * iSub] = PblVector3(fMidCos * 0.5f, -fBand2Top, fMidSin * 0.5f);
-        aBand3Bottom[3 + 2 * iSub] = PblVector3(fCos * 0.5f, -fBand2Top, fSin * 0.5f);
+        aBand3Bottom[3 + 2 * iSub] = aBand2Bottom[3];
         if (iSub == 3)
         {
             const StarField& field3 = m_aStarFields[32 + (i >> 2)];

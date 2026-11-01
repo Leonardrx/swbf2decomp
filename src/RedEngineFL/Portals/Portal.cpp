@@ -327,7 +327,7 @@ bool pvs::Portal::Clip(const pvs::ICamera& rCam, geo::Box& rBox, const geo::Frus
     bound.min_.z = 0.0f;
     rBox.min_.z = 0.0f;
     bool bVisible = geo::Intersect3D::Op(rBox, bound, rBox);
-    travmark_ = bVisible;
+    travmark_ = bVisible ? 1 : 0;
     return bVisible;
 }
 
@@ -372,8 +372,7 @@ pvs::IPortal* pvs::Manager::FindNearestPortal(const geo::Sphere& rSphere, float 
             continue;
         }
 
-        Portal** ppEnd = pSect->portals_.End();
-        for (Portal** ppPortal = pSect->portals_.Begin(); ppPortal < ppEnd; ++ppPortal)
+        for (Portal** ppPortal = pSect->portals_.Begin(), **ppEnd = pSect->portals_.End(); ppPortal != ppEnd; ++ppPortal)
         {
             Portal* pPortal = *ppPortal;
             if (!pPortal)
@@ -882,10 +881,11 @@ bool pvs::Sector::TestWindingOrder()
 
     const geo::Vector2<float>& rP0 = bound_.points_._elements[0];
     const geo::Vector2<float>& rP1 = bound_.points_._elements[1];
-    geo::Vector3<float> edge(rP1.x - rP0.x, rP1.y - rP0.y, 0.0f);
-    geo::Vector3<float> edgeDir = geo::normalize(edge);
+    geo::Vector3<float> p0(rP0.x, rP0.y, 0.0f);
+    geo::Vector3<float> p1(rP1.x, rP1.y, 0.0f);
+    geo::Vector3<float> edgeDir = geo::normalize(p1 - p0);
     geo::Vector3<float> edgeNormal = geo::cross(edgeDir, geo::Vector3<float>(0.0f, 0.0f, 1.0f));
-    geo::Vector3<float> edgeMid((rP0.x + rP1.x) * 0.5f, (rP0.y + rP1.y) * 0.5f, 0.0f);
+    geo::Vector3<float> edgeMid = (p0 + p1) * 0.5f;
     geo::Vector3<float> vTest = edgeMid + edgeNormal * -0.00001f;
 
     bool bResult = Contains(vTest);

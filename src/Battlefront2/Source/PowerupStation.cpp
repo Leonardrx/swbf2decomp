@@ -485,10 +485,10 @@ bool PowerupStation::Update(float fDeltaTime)
             bool bUsed = PowerupUtility::ApplyBuff(pObject, mClass->mBuffOffenseTimer, mClass->mBuffOffenseMult,
                                                    mClass->mBuffDefenseTimer, mClass->mBuffDefenseMult,
                                                    mClass->mBuffHealthTimer, mClass->mBuffHealthRate,
-                                                   mClass->mDebuffDamageTimer, mClass->mDebuffDamageRate);
-            bUsed |= PowerupUtility::ApplyHealth(pObject, fHealth, 0, false);
-            bUsed |= PowerupUtility::ApplyAmmo(pObject, fAmmo, false);
-            bUsed |= PowerupUtility::ApplyEnergy(pObject, fEnergy);
+                                                   mClass->mDebuffDamageTimer, mClass->mDebuffDamageRate) |
+                         PowerupUtility::ApplyHealth(pObject, fHealth, 0, false) |
+                         PowerupUtility::ApplyAmmo(pObject, fAmmo, false) |
+                         PowerupUtility::ApplyEnergy(pObject, fEnergy);
             if (bUsed)
             {
                 bApplied = true;
@@ -548,9 +548,9 @@ bool PowerupStation::Update(float fDeltaTime)
         return true;
     }
 
+    int iNumProcedural = 0;
     mModel->GetRedModel(0)->SetupPose(mPose);
 
-    int iNumProcedural = 0;
     PblMatrix* pWobbleMatrix = 0;
     if (mClass->mIdleWobbleHash)
     {
@@ -570,6 +570,151 @@ bool PowerupStation::Update(float fDeltaTime)
 
     switch (mPowerupState)
     {
+    case PS_APPLY:
+    {
+        mRotateWaitTime -= fDeltaTime;
+        if (mClass->mIdleWobbleHash)
+        {
+            if (pWobbleMatrix)
+            {
+                PblVector3 vWobblePos = pWobbleMatrix->GetTranslation();
+                *pWobbleMatrix = gMatrixIdentity;
+                float fCos = PblMath::Cos(mRotateWaitTime * PblMath::fTwoPi);
+                vWobblePos.y += (fCos - 1.0f) * (mClass->mIdleWobbleFactor * 0.5f);
+                pWobbleMatrix->SetTranslation(vWobblePos);
+            }
+
+            if (mClass->mIdleWobbleLeftFootHash)
+            {
+                const PblMatrix* pFoot = mPose.Find(mClass->mIdleWobbleLeftFootHash);
+                if (pFoot && iNumProcedural < 5)
+                {
+                    PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural++];
+                    if (pFoot != pMatrix)
+                    {
+                        mPose.Remove(mClass->mIdleWobbleLeftFootHash);
+                        mPose.Store(mClass->mIdleWobbleLeftFootHash, pMatrix);
+                        *pMatrix = *pFoot;
+                    }
+                    PblVector3 vFootPos = pMatrix->GetTranslation();
+                    vFootPos.y = 0.0f;
+                    pMatrix->SetTranslation(vFootPos);
+                }
+            }
+            if (mClass->mIdleWobbleRightFootHash)
+            {
+                const PblMatrix* pFoot = mPose.Find(mClass->mIdleWobbleRightFootHash);
+                if (pFoot && iNumProcedural < 5)
+                {
+                    PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural++];
+                    if (pFoot != pMatrix)
+                    {
+                        mPose.Remove(mClass->mIdleWobbleRightFootHash);
+                        mPose.Store(mClass->mIdleWobbleRightFootHash, pMatrix);
+                        *pMatrix = *pFoot;
+                    }
+                    PblVector3 vFootPos = pMatrix->GetTranslation();
+                    vFootPos.y = 0.0f;
+                    pMatrix->SetTranslation(vFootPos);
+                }
+            }
+        }
+
+        PblMatrix* pNext = &mProceduralMatrix[iNumProcedural];
+        for (int i = 0; i < 4; i++)
+        {
+            if (!mClass->mActiveRotateHash[i])
+            {
+                continue;
+            }
+            const PblMatrix* pNode = mPose.Find(mClass->mActiveRotateHash[i]);
+            if (!pNode || iNumProcedural >= 5)
+            {
+                continue;
+            }
+            iNumProcedural++;
+            PblMatrix* pMatrix = pNext++;
+            if (pNode != pMatrix)
+            {
+                mPose.Remove(mClass->mActiveRotateHash[i]);
+                mPose.Store(mClass->mActiveRotateHash[i], pMatrix);
+                *pMatrix = *pNode;
+            }
+
+            PblMatrix mIdentity(gMatrixIdentity);
+            PblMatrix mDefault;
+            bool bFound = false;
+            for (int iBone = 0; iBone < 128; iBone++)
+            {
+                if (mModel->GetRedModel(0)->GetSkeleton()->GetBoneNameHash(iBone) == mClass->mActiveRotateHash[i])
+                {
+                    mDefault = mModel->GetRedModel(0)->GetSkeleton()->GetDefaultPoseMatrix(iBone);
+                    bFound = true;
+                    break;
+                }
+            }
+            if (!bFound)
+            {
+                mDefault = mIdentity;
+            }
+
+            float fAngle = PblMath::Sin((mRotateWaitTime - (float)i) * PblMath::fTwoPi) * 0.15f;
+            PblVector3 vNodePos = pMatrix->GetTranslation();
+            *pMatrix = mDefault;
+            PblQuaternion q = PblQuaternion(*pMatrix);
+            if ((float)fabs((double)fAngle) > 0.0001f)
+            {
+                q = q * PblQuaternion(gVectorUnitX, fAngle);
+            }
+            *pMatrix = PblMatrix(q, vNodePos);
+        }
+
+        if (!mClass->mActiveSpinHash)
+        {
+            return true;
+        }
+        const PblMatrix* pNode = mPose.Find(mClass->mActiveSpinHash);
+        if (!pNode || iNumProcedural >= 5)
+        {
+            return true;
+        }
+        PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural];
+        if (pNode != pMatrix)
+        {
+            mPose.Remove(mClass->mActiveSpinHash);
+            mPose.Store(mClass->mActiveSpinHash, pMatrix);
+            *pMatrix = *pNode;
+        }
+
+        PblMatrix mIdentity(gMatrixIdentity);
+        PblMatrix mDefault;
+        bool bFound = false;
+        for (int iBone = 0; iBone < 128; iBone++)
+        {
+            if (mModel->GetRedModel(0)->GetSkeleton()->GetBoneNameHash(iBone) == mClass->mActiveSpinHash)
+            {
+                mDefault = mModel->GetRedModel(0)->GetSkeleton()->GetDefaultPoseMatrix(iBone);
+                bFound = true;
+                break;
+            }
+        }
+        if (!bFound)
+        {
+            mDefault = mIdentity;
+        }
+
+        float fAngle = PblMath::Sin(mRotateWaitTime * PblMath::fTwoPi) * PblMath::fPi;
+        PblVector3 vNodePos = pMatrix->GetTranslation();
+        *pMatrix = mDefault;
+        PblQuaternion q = PblQuaternion(*pMatrix);
+        if ((float)fabs((double)fAngle) > 0.0001f)
+        {
+            q = q * PblQuaternion(gVectorUnitZ, fAngle);
+        }
+        *pMatrix = PblMatrix(q, vNodePos);
+        return true;
+    }
+
     case PS_IDLE:
     case PS_FACE:
     {
@@ -587,21 +732,21 @@ bool PowerupStation::Update(float fDeltaTime)
         {
             q = q * PblQuaternion(gVectorUnitY, fAngle);
         }
-        mRenderMatrix = PblMatrix_FromQuaternion(q, vPos);
+        mRenderMatrix = PblMatrix(q, vPos);
 
         if (mClass->mIdleWobbleHash)
         {
             float fWobble = PblMath::Sin(mIdleWobblePeriodicity * mRotateWaitTime) * mClass->mIdleWobbleFactor;
             if (pWobbleMatrix)
             {
-                PblVector3 vWobblePos = pWobbleMatrix->GetTranslation();
+                vPos = pWobbleMatrix->GetTranslation();
                 *pWobbleMatrix = gMatrixIdentity;
-                PblQuaternion qWobble = PblQuaternion(*pWobbleMatrix);
+                q = PblQuaternion(*pWobbleMatrix);
                 if ((float)fabs((double)fWobble) > 0.0001f)
                 {
-                    qWobble = qWobble * PblQuaternion(gVectorUnitZ, fWobble);
+                    q = q * PblQuaternion(gVectorUnitZ, fWobble);
                 }
-                *pWobbleMatrix = PblMatrix_FromQuaternion(qWobble, vWobblePos);
+                *pWobbleMatrix = PblMatrix(q, vPos);
             }
 
             if (mClass->mIdleWobbleLeftFootHash)
@@ -664,143 +809,6 @@ bool PowerupStation::Update(float fDeltaTime)
             }
         }
         return true;
-
-    case PS_APPLY:
-    {
-        mRotateWaitTime -= fDeltaTime;
-        if (mClass->mIdleWobbleHash)
-        {
-            if (pWobbleMatrix)
-            {
-                PblVector3 vWobblePos = pWobbleMatrix->GetTranslation();
-                *pWobbleMatrix = gMatrixIdentity;
-                float fCos = PblMath::Cos(mRotateWaitTime * PblMath::fTwoPi);
-                vWobblePos.y += (fCos - 1.0f) * (mClass->mIdleWobbleFactor * 0.5f);
-                pWobbleMatrix->m[3][0] = vWobblePos.x;
-                pWobbleMatrix->m[3][1] = vWobblePos.y;
-                pWobbleMatrix->m[3][2] = vWobblePos.z;
-                pWobbleMatrix->m[3][3] = 1.0f;
-            }
-
-            if (mClass->mIdleWobbleLeftFootHash)
-            {
-                const PblMatrix* pFoot = mPose.Find(mClass->mIdleWobbleLeftFootHash);
-                if (pFoot && iNumProcedural < 5)
-                {
-                    PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural++];
-                    if (pFoot != pMatrix)
-                    {
-                        mPose.Remove(mClass->mIdleWobbleLeftFootHash);
-                        mPose.Store(mClass->mIdleWobbleLeftFootHash, pMatrix);
-                        *pMatrix = *pFoot;
-                    }
-                    pMatrix->m[3][1] = 0.0f;
-                    pMatrix->m[3][3] = 1.0f;
-                }
-            }
-            if (mClass->mIdleWobbleRightFootHash)
-            {
-                const PblMatrix* pFoot = mPose.Find(mClass->mIdleWobbleRightFootHash);
-                if (pFoot && iNumProcedural < 5)
-                {
-                    PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural++];
-                    if (pFoot != pMatrix)
-                    {
-                        mPose.Remove(mClass->mIdleWobbleRightFootHash);
-                        mPose.Store(mClass->mIdleWobbleRightFootHash, pMatrix);
-                        *pMatrix = *pFoot;
-                    }
-                    pMatrix->m[3][1] = 0.0f;
-                    pMatrix->m[3][3] = 1.0f;
-                }
-            }
-        }
-
-        const RedSkeleton* pSkeleton;
-        PblMatrix* pNext = &mProceduralMatrix[iNumProcedural];
-        for (int i = 0; i < 4; i++)
-        {
-            unsigned int uHash = mClass->mActiveRotateHash[i];
-            if (!uHash)
-            {
-                continue;
-            }
-            const PblMatrix* pNode = mPose.Find(uHash);
-            if (!pNode || iNumProcedural >= 5)
-            {
-                continue;
-            }
-            iNumProcedural++;
-            PblMatrix* pMatrix = pNext++;
-            if (pNode != pMatrix)
-            {
-                mPose.Remove(uHash);
-                mPose.Store(uHash, pMatrix);
-                *pMatrix = *pNode;
-            }
-
-            PblMatrix mDefault(gMatrixIdentity);
-            pSkeleton = mModel->GetRedModel(0)->GetSkeleton();
-            for (unsigned int uBone = 0; uBone < 128; uBone++)
-            {
-                if (pSkeleton->GetBoneNameHash(uBone) == uHash)
-                {
-                    mDefault = pSkeleton->GetDefaultPoseMatrix(uBone);
-                    break;
-                }
-            }
-
-            float fAngle = PblMath::Sin((mRotateWaitTime - (float)i) * PblMath::fTwoPi) * 0.15f;
-            PblVector3 vNodePos = pMatrix->GetTranslation();
-            *pMatrix = mDefault;
-            PblQuaternion q = PblQuaternion(*pMatrix);
-            if ((float)fabs((double)fAngle) > 0.0001f)
-            {
-                q = q * PblQuaternion(gVectorUnitX, fAngle);
-            }
-            *pMatrix = PblMatrix_FromQuaternion(q, vNodePos);
-        }
-
-        unsigned int uSpinHash = mClass->mActiveSpinHash;
-        if (!uSpinHash)
-        {
-            return true;
-        }
-        const PblMatrix* pNode = mPose.Find(uSpinHash);
-        if (!pNode || iNumProcedural >= 5)
-        {
-            return true;
-        }
-        PblMatrix* pMatrix = &mProceduralMatrix[iNumProcedural];
-        if (pNode != pMatrix)
-        {
-            mPose.Remove(uSpinHash);
-            mPose.Store(uSpinHash, pMatrix);
-            *pMatrix = *pNode;
-        }
-
-        PblMatrix mDefault(gMatrixIdentity);
-        pSkeleton = mModel->GetRedModel(0)->GetSkeleton();
-        for (unsigned int uBone = 0; uBone < 128; uBone++)
-        {
-            if (pSkeleton->GetBoneNameHash(uBone) == uSpinHash)
-            {
-                mDefault = pSkeleton->GetDefaultPoseMatrix(uBone);
-                break;
-            }
-        }
-
-        float fAngle = PblMath::Sin(mRotateWaitTime * PblMath::fTwoPi) * PblMath::fPi;
-        PblVector3 vNodePos = pMatrix->GetTranslation();
-        *pMatrix = mDefault;
-        PblQuaternion q = PblQuaternion(*pMatrix);
-        if ((float)fabs((double)fAngle) > 0.0001f)
-        {
-            q = q * PblQuaternion(gVectorUnitZ, fAngle);
-        }
-        *pMatrix = PblMatrix_FromQuaternion(q, vNodePos);
-        return true;
-    }
 
     default:
         return true;

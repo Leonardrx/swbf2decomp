@@ -92,14 +92,12 @@ void SoundStream::Init()
 
     for (unsigned int i = 0; i < 24; ++i)
     {
-        PblListDoubleSorted::Node* pNode = &smFireForget[i].mNode;
-
-        if (pNode->mNode.IsAttached())
+        if (smFireForget[i].mNode.mNode.IsAttached())
         {
-            pNode->mNode.Remove();
+            smFireForget[i].mNode.mNode.Remove();
         }
 
-        smFree.Add(pNode);
+        smFree.Add(&smFireForget[i].mNode);
     }
 }
 

@@ -779,10 +779,21 @@ void PropModelMesh::SetupMatrix(PblMatrix& matrix, float rotation)
         vDir.z = -PblMath::Cos(rotation);
 
         PblMatrix scale;
-        memset(&scale, 0, sizeof(scale));
         scale.m[0][0] = fScale;
+        scale.m[0][1] = 0.0f;
+        scale.m[0][2] = 0.0f;
+        scale.m[0][3] = 0.0f;
+        scale.m[1][0] = 0.0f;
         scale.m[1][1] = fScale;
+        scale.m[1][2] = 0.0f;
+        scale.m[1][3] = 0.0f;
+        scale.m[2][0] = 0.0f;
+        scale.m[2][1] = 0.0f;
         scale.m[2][2] = fScale;
+        scale.m[2][3] = 0.0f;
+        scale.m[3][0] = 0.0f;
+        scale.m[3][1] = 0.0f;
+        scale.m[3][2] = 0.0f;
         scale.m[3][3] = 1.0f;
 
         const PblMatrix frame = NormalMatrix(vDir, vNormal, vPos);

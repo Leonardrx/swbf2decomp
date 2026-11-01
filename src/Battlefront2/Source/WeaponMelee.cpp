@@ -175,9 +175,8 @@ void WeaponMelee::Render(const PblMatrix& matrix, const RedPose* pPose,
         }
         if (!bThrown && edge.colorTrail.a && !bNoTrail && bRenderModel)
         {
-            PblMatrix mTrail = *pEdgeMatrix;
-            const_cast<WeaponMelee*>(this)->RenderLightsaberTrail(i, &mTrail,
-                                                                   ((1u << i) & m_uiTrailOnMask) && IsOn(uiWeapon), uiFlags);
+            const_cast<WeaponMelee*>(this)->RenderLightsaberTrail(i, &PblMatrix(*pEdgeMatrix),
+                                                                   (m_uiTrailOnMask & (1u << i)) && IsOn(uiWeapon), uiFlags);
         }
         PblVector3 vPosition, vDirection;
         D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vPosition), reinterpret_cast<const D3DXVECTOR3*>(&edge.vOffsetPos), reinterpret_cast<const D3DXMATRIX*>(pEdgeMatrix));
@@ -1097,7 +1096,9 @@ bool WeaponMelee::AlignVectorToThrust(PblVector3& v, bool bInitial) const
     {
         return false;
     }
-    const PblVector3 vOld = v;
+    const PblVector3 vFlat(v.x, 0.0f, v.z);
+    const PblVector3 vSide(v.z, 0.0f, -v.x);
+    const float fY = v.y;
     if (!bInitial)
     {
         fX = -fX;
@@ -1125,8 +1126,8 @@ bool WeaponMelee::AlignVectorToThrust(PblVector3& v, bool bInitial) const
         fCos = fInvLength * fZ;
         fSin = fInvLength * fX;
     }
-    v.x = vOld.x * fCos + vOld.z * fSin;
-    v.z = vOld.z * fCos - vOld.x * fSin;
+    v = vFlat * fCos + vSide * fSin;
+    v.y = fY;
     return true;
 }
 

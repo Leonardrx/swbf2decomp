@@ -540,9 +540,8 @@ void RedTerrain::SetFarTerrainTexture(unsigned int uiHash, float fA, unsigned in
 void TerrainRenderable::SetFarTerrainTexture(unsigned int uiHash, float fA, unsigned int uiB, float fC)
 {
     float fScale = fA / ((float)RedTerrain::_iPointsPerDimension * RedTerrain::_fMetersPerPoint);
-    float fOffset = RedTerrain::_fMetersPerPoint * 0.5f * fScale;
-    float fMinX = fOffset - 0.5f;
-    float fMinY = -0.5f - fOffset;
+    float fMinX = RedTerrain::_fMetersPerPoint * 0.5f * fScale - 0.5f;
+    float fMinY = -0.5f - RedTerrain::_fMetersPerPoint * 0.5f * fScale;
     if (!pcTerrainShader2::IsEnabled())
     {
         pcTerrainShader::_InitFarRendering(uiHash, fScale, fScale, fMinX, fMinY);
@@ -554,10 +553,11 @@ void TerrainRenderable::SetFarTerrainTexture(unsigned int uiHash, float fA, unsi
     }
     bool bEnableDetail = uiB != 0;
     m_bEnableFarDetail = bEnableDetail;
-    if (m_pFarShader)
+    pcTerrainShader* pFarShader = m_pFarShader;
+    if (pFarShader)
     {
-        m_pFarShader->m_uiOptions |= 8;
-        unsigned char uiOptions = m_pFarShader->m_uiOptions;
+        pFarShader->m_uiOptions |= 8;
+        unsigned char uiOptions = pFarShader->m_uiOptions;
         if (bEnableDetail)
         {
             uiOptions |= 1;
@@ -566,7 +566,7 @@ void TerrainRenderable::SetFarTerrainTexture(unsigned int uiHash, float fA, unsi
         {
             uiOptions &= ~1;
         }
-        m_pFarShader->m_uiOptions = uiOptions;
+        pFarShader->m_uiOptions = uiOptions;
     }
 }
 

@@ -1264,9 +1264,9 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
     data.mLength = 0;
     Restrictor restrictor(10);
 
+    int numCams = CameraManager::Instance()->GetNumCameras();
     int numStoredMatrices = 0;
     int numStoredObjects = 0;
-    int numCams = CameraManager::Instance()->GetNumCameras();
     for (int i = 0; i < numCams; ++i)
     {
         camPos[i] = CameraManager::Instance()->GetCamera(i)->GetMatrix().GetTranslation();
@@ -1278,17 +1278,18 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
     PblList<CollisionObject>::Itor it(aList);
     sSafetyIt = &it;
     unsigned char ctr = 0;
-    while (CollisionObject* obj = it)
+    while (it)
     {
+        CollisionObject* obj = it;
         ++it;
         restrictor.Clear();
         sSafetyObjPointer = &obj;
 
-        const PblVector3& vPosition = obj->GetPosition();
         const PblVector3& vLastPosition = obj->mLastPosition;
+        const PblVector3& vPosition = obj->GetPosition();
         PblVector3 diff(vPosition.x - vLastPosition.x, vPosition.y - vLastPosition.y,
                         vPosition.z - vLastPosition.z);
-        float totalDist = sqrtf(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+        float totalDist = PblMath::Sqrt(diff.y * diff.y + diff.x * diff.x + diff.z * diff.z);
         if (totalDist > 100.0f)
         {
             obj->mLastPosition = obj->GetPosition();
@@ -1339,8 +1340,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
         if (bTest)
         {
             data.mMe = obj;
-            const PblVector3& vCenter = obj->GetCollisionCenter();
-            data.mCenter = vCenter - diff * 0.5f;
+            data.mCenter = obj->GetCollisionCenter() - diff * 0.5f;
             data.mRadius = totalDist * 0.5f + obj->GetCollisionRadius();
             data.mMinPos = PblVector3(data.mCenter.x - data.mRadius, data.mCenter.y - data.mRadius,
                                       data.mCenter.z - data.mRadius);
@@ -1352,7 +1352,8 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
             }
             else
             {
-                I_GetObjectsFromLists(data.mMinPos, data.mMaxPos, CollectDataCallback, aTypeMask, &data);
+                I_GetObjectsFromLists(data.mMinPos, data.mMaxPos, CollectDataCallback, data.GetObjectTypeFilter(),
+                                      &data);
             }
 
             for (int i = 0; i < 3; ++i)
@@ -1363,7 +1364,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
                 }
                 for (int j = 0; j < data.mLength; ++j)
                 {
-                    if (data.mArray[j] == obj->mLastCollidedObjs[i] && j != i)
+                    if (obj->mLastCollidedObjs[i] == data.mArray[j] && j != i)
                     {
                         CollisionObject* pSwap = data.mArray[i];
                         data.mArray[i] = data.mArray[j];
@@ -1389,7 +1390,7 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
                                                                      sizeof(CollisionMask));
                         for (int t = 0; t < pOther->mCollisionModel->GetNumBodies(); ++t)
                         {
-                            ignoreMasks[i][t] = CollisionMask(0);
+                            ignoreMasks[i][t].ClearAll();
                         }
                     }
                     else
@@ -1437,7 +1438,10 @@ void CollisionManager::UpdateRestricted(PblList<CollisionObject>& aList, int aTy
         {
             ++currTest;
             const PblVector3& vLast = obj->mLastPosition;
-            PblVector3 vStep(deltaMove.x + vLast.x, vLast.y + deltaMove.y, vLast.z + deltaMove.z);
+            PblVector3 vStep;
+            vStep.x = deltaMove.x + vLast.x;
+            vStep.y = vLast.y + deltaMove.y;
+            vStep.z = vLast.z + deltaMove.z;
             obj->SetPosition(vStep);
             for (int b = 0; b < obj->mCollisionModel->GetNumBodies(); ++b)
             {

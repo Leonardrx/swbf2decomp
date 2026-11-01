@@ -338,8 +338,7 @@ void ControllerManager::UpdatePilotSelf()
             continue;
         }
 
-        UnitCmdInfo cmd(CMD_DEATHMATCH, PblHandle<GameObject>(), PblVector3(0.0f, 0.0f, 0.0f),
-                        PblHandle<GameObject>());
+        UnitCmdInfo cmd(CMD_DEATHMATCH, NULL, PblVector3(0.0f, 0.0f, 0.0f), NULL);
         it->QueueCommand(cmd);
     }
 }
@@ -365,9 +364,8 @@ void ControllerManager::UpdateCrowd(Controller* pCtrl)
 
     for (PblList<PlayerController>::Itor it(*sPlayerCtrls); it; ++it)
     {
-        PlayerController* pOther = it;
-        Controllable* pOtherOwner = pOther->mOwner;
-        if (pOther == pCtrl || !pOtherOwner || !pOtherOwner->GetGameObject() ||
+        Controllable* pOtherOwner = it->mOwner;
+        if (it == pCtrl || !pOtherOwner || !pOtherOwner->GetGameObject() ||
             !pOtherOwner->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
         {
             continue;
@@ -387,9 +385,8 @@ void ControllerManager::UpdateCrowd(Controller* pCtrl)
 
     for (PblOrderedList<UnitController, float>::Itor it(*sAICtrls); it; ++it)
     {
-        UnitController* pOther = it;
-        Controllable* pOtherOwner = pOther->mOwner;
-        if (pOther == pCtrl || !pOtherOwner || !pOtherOwner->GetGameObject() ||
+        Controllable* pOtherOwner = it->mOwner;
+        if (it == pCtrl || !pOtherOwner || !pOtherOwner->GetGameObject() ||
             !pOtherOwner->GetEntity()->IsRtti(EntitySoldier::rttiHashEntitySoldier))
         {
             continue;
@@ -479,13 +476,20 @@ void ControllerManager::Update(float fDeltaTime)
     }
 
     int iScale = 1;
-    if (PathManager::IsDone())
+    if (!PathManager::IsDone())
     {
-        iScale = 2;
+        if (AIUtil::IsUberMode())
+        {
+            PathManager::Update(10.0f);
+        }
+        else
+        {
+            PathManager::Update(1.0f);
+        }
     }
     else
     {
-        PathManager::Update(AIUtil::IsUberMode() ? 10.0f : 1.0f);
+        iScale = 2;
     }
     if (!VisionManager::RayTests((AIUtil::IsUberMode() ? 50 : 10) * iScale))
     {

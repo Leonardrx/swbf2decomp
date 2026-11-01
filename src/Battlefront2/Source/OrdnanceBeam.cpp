@@ -339,10 +339,7 @@ void OrdnanceBeam::CreateRicochet(const PblVector3& vPos, const PblVector3& vNor
 void OrdnanceBeam::Render(unsigned char, float, unsigned int)
 {
     const PblVector3 vStart = mPosition;
-    PblVector3 vEnd;
-    vEnd.x = mPosition.x + mDirection.x * mLength;
-    vEnd.y = mPosition.y + mDirection.y * mLength;
-    vEnd.z = mPosition.z + mDirection.z * mLength;
+    const PblVector3 vEnd = mPosition + mLength * mDirection;
 
     const float fBeamWidth = ((OrdnanceBeamClass*)mClass)->mBeamWidth;
     const float fGlowWidth = ((OrdnanceBeamClass*)mClass)->mGlowWidth;

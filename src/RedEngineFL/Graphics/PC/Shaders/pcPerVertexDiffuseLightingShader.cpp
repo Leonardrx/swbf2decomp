@@ -200,162 +200,154 @@ void pcPerVertexDiffuseLightingShader::Render_Prog1(const RenderItem* pItem, uns
 {
     RedRenderer::pcLoadFormat(pItem->pPrim->m_vertexFormat);
 
-    if (pItem->uiShaderState)
+    if (!pItem->uiShaderState)
     {
-        const RedLightingState* pLighting = pItem->pLightingState;
-        const bool bVertexLit = (pItem->pPrim->m_vertexFormat->m_uiVertexBufferRVF & 0x100) != 0;
-        if (pLighting != m_pLightingStatePrev)
+        pItem->pPrim->Draw();
+        return;
+    }
+
+    const RedLightingState* pLighting = pItem->pLightingState;
+    const bool bVertexLit = (pItem->pPrim->m_vertexFormat->m_uiVertexBufferRVF & 0x100) != 0;
+    if (pLighting != m_pLightingStatePrev)
+    {
+        m_pLightingStatePrev = (void*)pLighting;
+        const RedColorValue& black = RedColorValue::BLACK;
+
+        pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(19, 6);
+        if (!bVertexLit)
         {
-            m_pLightingStatePrev = (void*)pLighting;
-            const RedColorValue& black = RedColorValue::BLACK;
+            const RedAmbientLight* pAmbient = &pLighting->ambientLight;
+            pRegs[19].component[0] = pAmbient->m_topColor.r;
+            pRegs[19].component[1] = pAmbient->m_topColor.g;
+            pRegs[19].component[2] = pAmbient->m_topColor.b;
+            pRegs[19].component[3] = pAmbient->m_topColor.a;
+            pRegs[20].component[0] = pAmbient->m_bottomColor.r;
+            pRegs[20].component[1] = pAmbient->m_bottomColor.g;
+            pRegs[20].component[2] = pAmbient->m_bottomColor.b;
+            pRegs[20].component[3] = pAmbient->m_bottomColor.a;
+        }
+        else
+        {
+            pRegs[19].component[0] = black.r;
+            pRegs[19].component[1] = black.g;
+            pRegs[19].component[2] = black.b;
+            pRegs[19].component[3] = black.a;
+            pRegs[20].component[0] = black.r;
+            pRegs[20].component[1] = black.g;
+            pRegs[20].component[2] = black.b;
+            pRegs[20].component[3] = black.a;
+        }
 
-            pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(19, 6);
-            if (bVertexLit)
-            {
-                pRegs[19].component[0] = black.r;
-                pRegs[19].component[1] = black.g;
-                pRegs[19].component[2] = black.b;
-                pRegs[19].component[3] = black.a;
-                pRegs[20].component[0] = black.r;
-                pRegs[20].component[1] = black.g;
-                pRegs[20].component[2] = black.b;
-                pRegs[20].component[3] = black.a;
-            }
-            else
-            {
-                const RedAmbientLight* pAmbient =
-                    &pLighting->ambientLight;
-                pRegs[19].component[0] = pAmbient->m_topColor.r;
-                pRegs[19].component[1] = pAmbient->m_topColor.g;
-                pRegs[19].component[2] = pAmbient->m_topColor.b;
-                pRegs[19].component[3] = pAmbient->m_topColor.a;
-                pRegs[20].component[0] = pAmbient->m_bottomColor.r;
-                pRegs[20].component[1] = pAmbient->m_bottomColor.g;
-                pRegs[20].component[2] = pAmbient->m_bottomColor.b;
-                pRegs[20].component[3] = pAmbient->m_bottomColor.a;
-            }
+        pRegs[21].SetFloats(pLighting->pDirectionalLights[0]->m_color.r,
+                            pLighting->pDirectionalLights[0]->m_color.g,
+                            pLighting->pDirectionalLights[0]->m_color.b,
+                            pLighting->pDirectionalFactor[0]);
+        pRegs[22].SetFloats(pLighting->pDirectionalLights[0]->m_vDirection.x,
+                            pLighting->pDirectionalLights[0]->m_vDirection.y,
+                            pLighting->pDirectionalLights[0]->m_vDirection.z);
+        if (pLighting->pDirectionalLights[1])
+        {
+            pRegs[23].SetFloats(pLighting->pDirectionalLights[1]->m_color.r,
+                                pLighting->pDirectionalLights[1]->m_color.g,
+                                pLighting->pDirectionalLights[1]->m_color.b,
+                                pLighting->pDirectionalFactor[1]);
+            pRegs[24].SetFloats(pLighting->pDirectionalLights[1]->m_vDirection.x,
+                                pLighting->pDirectionalLights[1]->m_vDirection.y,
+                                pLighting->pDirectionalLights[1]->m_vDirection.z);
+        }
+        else
+        {
+            pRegs[23].component[0] = black.r;
+            pRegs[23].component[1] = black.g;
+            pRegs[23].component[2] = black.b;
+            pRegs[23].component[3] = 0.0f;
+            pRegs[24].component[0] = 0.0f;
+            pRegs[24].component[1] = 0.0f;
+            pRegs[24].component[2] = 0.0f;
+            pRegs[24].component[3] = 1.0f;
+        }
+        RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
-            const RedDirectionalLight* pDir = pLighting->pDirectionalLights[0];
-            pRegs[21].component[0] = pDir->m_color.r;
-            pRegs[21].component[1] = pDir->m_color.g;
-            pRegs[21].component[2] = pDir->m_color.b;
-            pRegs[21].component[3] = pLighting->pDirectionalFactor[0];
-            pRegs[22].component[0] = pDir->m_vDirection.x;
-            pRegs[22].component[1] = pDir->m_vDirection.y;
-            pRegs[22].component[2] = pDir->m_vDirection.z;
-            pDir = pLighting->pDirectionalLights[1];
-            if (pDir)
-            {
-                pRegs[23].component[0] = pDir->m_color.r;
-                pRegs[23].component[1] = pDir->m_color.g;
-                pRegs[23].component[2] = pDir->m_color.b;
-                pRegs[23].component[3] = pLighting->pDirectionalFactor[1];
-                pRegs[24].component[0] = pDir->m_vDirection.x;
-                pRegs[24].component[1] = pDir->m_vDirection.y;
-                pRegs[24].component[2] = pDir->m_vDirection.z;
-            }
-            else
-            {
-                pRegs[23].component[0] = black.r;
-                pRegs[23].component[1] = black.g;
-                pRegs[23].component[2] = black.b;
-                pRegs[23].component[3] = 0.0f;
-                pRegs[24].component[0] = 0.0f;
-                pRegs[24].component[1] = 0.0f;
-                pRegs[24].component[2] = 0.0f;
-                pRegs[24].component[3] = 1.0f;
-            }
+        if (pLighting->pSpotLights[0])
+        {
+            pRegs = RedRenderer::pcLockVertexShaderConstants(29, 5);
+            const RedSpotLight* pSpot = pLighting->pSpotLights[0];
+            pRegs[29].SetFloats(pSpot->m_color.r, pSpot->m_color.g, pSpot->m_color.b, 1.0f);
+            pRegs[30].SetFloats(pSpot->m_vPos.x, pSpot->m_vPos.y, pSpot->m_vPos.z,
+                                pSpot->m_fRadiusInvSq);
+            pRegs[31].SetFloats(pSpot->m_vDirection.x, pSpot->m_vDirection.y,
+                                pSpot->m_vDirection.z, pSpot->m_bBidirectional ? 2.0f : 0.0f);
+            pRegs[32].SetFloats(
+                pSpot->m_fCosHalfOuterConeAngle, pSpot->m_fCosHalfInnerConeAngle,
+                1.0f / (pSpot->m_fCosHalfInnerConeAngle - pSpot->m_fCosHalfOuterConeAngle),
+                pSpot->m_fFalloff);
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
-            const RedSpotLight* pSpot = pLighting->pSpotLights[0];
-            if (pSpot)
+            pRegs = RedRenderer::pcLockVertexShaderConstants(35, 3);
+            pRegs[35].SetFloats(pSpot->GetProjectionMatrix().m[0][0],
+                                pSpot->GetProjectionMatrix().m[1][0],
+                                pSpot->GetProjectionMatrix().m[2][0],
+                                pSpot->GetProjectionMatrix().m[3][0]);
+            pRegs[36].SetFloats(pSpot->GetProjectionMatrix().m[0][1],
+                                pSpot->GetProjectionMatrix().m[1][1],
+                                pSpot->GetProjectionMatrix().m[2][1],
+                                pSpot->GetProjectionMatrix().m[3][1]);
+            pRegs[37].SetFloats(pSpot->GetProjectionMatrix().m[0][3],
+                                pSpot->GetProjectionMatrix().m[1][3],
+                                pSpot->GetProjectionMatrix().m[2][3],
+                                pSpot->GetProjectionMatrix().m[3][3]);
+            RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+
+            RedRenderer::pcSetTexture(0, RedTexture::Find(PblHash("flames1")));
+            RedRenderer::pcSetTexture(1, RedTexture::Find(PblHash("white")));
+            RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &RedColorValue::WHITE.r, 1);
+            RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, &RedColorValue::BLACK.r, 1);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+            RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetTexture(1, RedShadowMap::GetShadowMapTexture());
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, RedShadowMap::GetShadowMapWrapMode());
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, RedShadowMap::GetShadowMapWrapMode());
+            RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcGetDevice()->SetPixelShaderConstantF(
+                2, &pLighting->pDirectionalLights[0]->m_color.r, 1);
+        }
+
+        if (pLighting->pOmniLights[0])
+        {
+            pRegs = RedRenderer::pcLockVertexShaderConstants(25, 8);
+            if (pLighting->pOmniLights[3])
             {
-                pRegs = RedRenderer::pcLockVertexShaderConstants(29, 5);
-                pRegs[29].component[0] = pSpot->m_color.r;
-                pRegs[29].component[1] = pSpot->m_color.g;
-                pRegs[29].component[2] = pSpot->m_color.b;
-                pRegs[29].component[3] = 1.0f;
-                pRegs[30].component[0] = pSpot->m_vPos.x;
-                pRegs[30].component[1] = pSpot->m_vPos.y;
-                pRegs[30].component[2] = pSpot->m_vPos.z;
-                pRegs[30].component[3] = pSpot->m_fRadiusInvSq;
-                pRegs[31].component[0] = pSpot->m_vDirection.x;
-                pRegs[31].component[1] = pSpot->m_vDirection.y;
-                pRegs[31].component[2] = pSpot->m_vDirection.z;
-                pRegs[31].component[3] = pSpot->m_bBidirectional ? 2.0f : 0.0f;
-                pRegs[32].component[0] = pSpot->m_fCosHalfOuterConeAngle;
-                pRegs[32].component[1] = pSpot->m_fCosHalfInnerConeAngle;
-                pRegs[32].component[2] =
-                    1.0f / (pSpot->m_fCosHalfInnerConeAngle - pSpot->m_fCosHalfOuterConeAngle);
-                pRegs[32].component[3] = pSpot->m_fFalloff;
-                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
-
-                pRegs = RedRenderer::pcLockVertexShaderConstants(35, 3);
-                pRegs[35].component[0] = pSpot->GetProjectionMatrix().m[0][0];
-                pRegs[35].component[1] = pSpot->GetProjectionMatrix().m[1][0];
-                pRegs[35].component[2] = pSpot->GetProjectionMatrix().m[2][0];
-                pRegs[35].component[3] = pSpot->GetProjectionMatrix().m[3][0];
-                pRegs[36].component[0] = pSpot->GetProjectionMatrix().m[0][1];
-                pRegs[36].component[1] = pSpot->GetProjectionMatrix().m[1][1];
-                pRegs[36].component[2] = pSpot->GetProjectionMatrix().m[2][1];
-                pRegs[36].component[3] = pSpot->GetProjectionMatrix().m[3][1];
-                pRegs[37].component[0] = pSpot->GetProjectionMatrix().m[0][3];
-                pRegs[37].component[1] = pSpot->GetProjectionMatrix().m[1][3];
-                pRegs[37].component[2] = pSpot->GetProjectionMatrix().m[2][3];
-                pRegs[37].component[3] = pSpot->GetProjectionMatrix().m[3][3];
-                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
-
-                RedRenderer::pcSetTexture(0, RedTexture::Find(PblHash("flames1")));
-                RedRenderer::pcSetTexture(1, RedTexture::Find(PblHash("white")));
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &RedColorValue::WHITE.r, 1);
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, &RedColorValue::BLACK.r, 1);
-                RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-                RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-                RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-                RedRenderer::pcSetTexture(1, RedShadowMap::GetShadowMapTexture());
-                RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSU, RedShadowMap::GetShadowMapWrapMode());
-                RedRenderer::pcSetSamplerState(1, D3DSAMP_ADDRESSV, RedShadowMap::GetShadowMapWrapMode());
-                RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
-                RedRenderer::pcSetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-                RedRenderer::pcSetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-                RedRenderer::pcSetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-                RedRenderer::pcGetDevice()->SetPixelShaderConstantF(
-                    2, &pLighting->pDirectionalLights[0]->m_color.r, 1);
+                SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
+                SetOmniLightConstants(pRegs, 1, pLighting->pOmniLights[1]);
+                SetOmniLightConstants(pRegs, 2, pLighting->pOmniLights[2]);
+                SetOmniLightConstants(pRegs, 3, pLighting->pOmniLights[3]);
             }
-
-            if (pLighting->pOmniLights[0])
+            else if (pLighting->pOmniLights[2])
             {
-                pRegs = RedRenderer::pcLockVertexShaderConstants(25, 8);
-                if (pLighting->pOmniLights[3])
+                SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
+                SetOmniLightConstants(pRegs, 1, pLighting->pOmniLights[1]);
+                SetOmniLightConstants(pRegs, 2, pLighting->pOmniLights[2]);
+                SetNullOmniLightConstants(pRegs, 3);
+            }
+            else
+            {
+                SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
+                if (pLighting->pOmniLights[1])
                 {
-                    SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
                     SetOmniLightConstants(pRegs, 1, pLighting->pOmniLights[1]);
-                    SetOmniLightConstants(pRegs, 2, pLighting->pOmniLights[2]);
-                    SetOmniLightConstants(pRegs, 3, pLighting->pOmniLights[3]);
-                }
-                else if (pLighting->pOmniLights[2])
-                {
-                    SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
-                    SetOmniLightConstants(pRegs, 1, pLighting->pOmniLights[1]);
-                    SetOmniLightConstants(pRegs, 2, pLighting->pOmniLights[2]);
-                    SetNullOmniLightConstants(pRegs, 3);
                 }
                 else
                 {
-                    SetOmniLightConstants(pRegs, 0, pLighting->pOmniLights[0]);
-                    if (pLighting->pOmniLights[1])
-                    {
-                        SetOmniLightConstants(pRegs, 1, pLighting->pOmniLights[1]);
-                    }
-                    else
-                    {
-                        SetNullOmniLightConstants(pRegs, 1);
-                    }
-                    SetNullOmniLightConstants(pRegs, 2);
-                    SetNullOmniLightConstants(pRegs, 3);
+                    SetNullOmniLightConstants(pRegs, 1);
                 }
-                RedRenderer::pcUnlockVertexShaderConstants(pRegs);
+                SetNullOmniLightConstants(pRegs, 2);
+                SetNullOmniLightConstants(pRegs, 3);
             }
+            RedRenderer::pcUnlockVertexShaderConstants(pRegs);
         }
     }
 

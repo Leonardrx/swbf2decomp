@@ -137,18 +137,13 @@ PblMatrix BaseHint::BuildMatrix() const
     mat.m[2][3] = 0.0f;
 
     const PblVector3 vUp(0.0f, 1.0f, 0.0f);
-    PblVector3 vRight;
-    vRight = PblVector3(mForward.y * vUp.z - mForward.z * vUp.y,
-                        mForward.z * vUp.x - mForward.x * vUp.z,
-                        mForward.x * vUp.y - mForward.y * vUp.x);
+    const PblVector3 vRight = CrossProduct(mForward, vUp);
     PblVector3 vX;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vX), reinterpret_cast<const D3DXVECTOR3*>(&vRight));
     mat[0] = vX;
     mat.m[0][3] = 0.0f;
 
-    mat[1] = PblVector3(mat[0].z * mForward.y - mat[0].y * mForward.z,
-                        mat[0].x * mForward.z - mat[0].z * mForward.x,
-                        mat[0].y * mForward.x - mat[0].x * mForward.y);
+    mat[1] = CrossProduct(mForward, mat[0]);
     mat.m[1][3] = 0.0f;
     return mat;
 }

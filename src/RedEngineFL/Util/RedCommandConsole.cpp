@@ -16,10 +16,11 @@ RedCommandConsole::Group* RedCommandConsole::sRootNode;
 // FUNCTION: SWBF2 0x006ec960
 void RedCommandConsole::Group::List::Add(Group* pGroup)
 {
-    Node* pAt = _head._pNext;
-    while (pAt->_pObject)
+    const char* pcName = pGroup->mName;
+    Node* pAt;
+    for (pAt = _head._pNext; pAt->_pObject; pAt = pAt->_pNext)
     {
-        int iOrder = _stricmp(pGroup->mName, pAt->_pObject->mName);
+        int iOrder = _stricmp(pcName, pAt->_pObject->mName);
         if (iOrder == 0)
         {
             return;
@@ -28,7 +29,6 @@ void RedCommandConsole::Group::List::Add(Group* pGroup)
         {
             break;
         }
-        pAt = pAt->_pNext;
     }
     AddBefore(pAt, &pGroup->_Node, pGroup);
 }

@@ -101,11 +101,8 @@ PblVector3 HUD::TransformNumberVector3::CalculateOutputVector3(float fInput) con
     const NumberVector3 high = mMapping[(i == mNumMappings) ? i - 1 : i];
     const NumberVector3 low = mMapping[i ? i - 1 : 0];
     const float fDelta = high.number - low.number;
-    PblVector3 result = high.vector3;
-    if (fDelta != 0.0f)
-    {
-        result = Interpolate(low.vector3, high.vector3, (fValue - low.number) / fDelta);
-    }
+    const PblVector3 result = (fDelta != 0.0f) ? Interpolate(low.vector3, high.vector3, (fValue - low.number) / fDelta)
+                                               : high.vector3;
     return result;
 }
 

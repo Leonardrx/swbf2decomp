@@ -27,23 +27,23 @@ void HUD::TransformNumberColorBlend::EventInput(const Event& event, void* const 
         return;
     }
     RedColor color = pTransform->CalculateOutputColor(event.GetDataFloat());
-    const int iAlpha = pTransform->mAlpha;
+    const unsigned char alpha = pTransform->mAlpha;
     const unsigned char* pBlend = (const unsigned char*)pTransform->mBlendColor;
     switch (pTransform->mBlendMode)
     {
     case blendMode_Alpha:
     {
-        const int iOther = 255 - iAlpha;
-        color.r = (unsigned char)(((pBlend[2] * iOther) >> 8) + ((color.r * iAlpha) >> 8));
-        color.g = (unsigned char)(((pBlend[1] * iOther) >> 8) + ((color.g * iAlpha) >> 8));
-        color.b = (unsigned char)(((pBlend[0] * iOther) >> 8) + ((color.b * iAlpha) >> 8));
+        const int iOther = 255 - alpha;
+        color.r = (unsigned char)(((pBlend[2] * iOther) >> 8) + ((color.r * alpha) >> 8));
+        color.g = (unsigned char)(((pBlend[1] * iOther) >> 8) + ((color.g * alpha) >> 8));
+        color.b = (unsigned char)(((pBlend[0] * iOther) >> 8) + ((color.b * alpha) >> 8));
         break;
     }
     case blendMode_Additive:
     {
-        unsigned short r = (unsigned short)(((color.r * iAlpha) >> 8) + pBlend[2]);
-        unsigned short g = (unsigned short)(((color.g * iAlpha) >> 8) + pBlend[1]);
-        unsigned short b = (unsigned short)(((color.b * iAlpha) >> 8) + pBlend[0]);
+        unsigned short r = (unsigned short)(((color.r * alpha) >> 8) + pBlend[2]);
+        unsigned short g = (unsigned short)(((color.g * alpha) >> 8) + pBlend[1]);
+        unsigned short b = (unsigned short)(((color.b * alpha) >> 8) + pBlend[0]);
         color.r = (unsigned char)(r > 255 ? 255 : r);
         color.g = (unsigned char)(g > 255 ? 255 : g);
         color.b = (unsigned char)(b > 255 ? 255 : b);

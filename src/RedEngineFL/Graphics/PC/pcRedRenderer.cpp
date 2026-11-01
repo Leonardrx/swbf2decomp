@@ -2180,86 +2180,7 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
     RenderSortKey key;
     key.id = 0;
 
-    switch (phase)
-    {
-    case 0x10:
-    case 0x20:
-    case 2:
-    {
-        unsigned char low =
-            (unsigned char)internalGetTransformAndLightingID(uiRVF, uiEnvState, uiPassCaps);
-        key.translucent.material =
-            ((pCurShader->GetID(uiState) & 0xff) << 8) | low;
-        key.translucent.translucent = 1;
-
-        unsigned int hidden = uiFlags & 0x10000000;
-        if (hidden)
-        {
-            phase = 2;
-        }
-
-        if (uiFlags & 0x8000000)
-        {
-            key.translucent.depth = 0x7ff;
-            key.translucent.pass = 2;
-
-            unsigned int uiZState = pItem->pRootShader->GetZPrepassState();
-            unsigned int uiZPassCaps =
-                m_systemShaders[SYSTEM_SHADER_ZPREPASS]->GetShaderDef()->m_states[uiZState].pass[0].uiPassCaps;
-            unsigned int copyCount = m_curRenderItemOffset;
-            RenderItem* pCopy = &m_renderItemPool[copyCount];
-            m_curRenderItemOffset = copyCount + 1;
-            *pCopy = *pItem;
-            pCopy->pPrim->AddRef();
-            if (pCopy->pShadingState)
-            {
-                pCopy->pShadingState->AddRef();
-            }
-            pCopy->pRootShader = pItem->pRootShader;
-            pCopy->pRootShader->AddRef();
-            pCopy->pShaderChain[0] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
-            pCopy->pShaderChain[0]->AddRef();
-            pCopy->uiShaderChainSize = 1;
-            pCopy->uiCurrentShader = 0;
-            pCopy->uiShaderState = uiZState;
-            pCopy->flags |= 0x10;
-            pCopy->pLightingState = &m_aLightingStatePool[2049];
-
-            unsigned char copyLow =
-                (unsigned char)internalGetTransformAndLightingID(uiRVF, uiEnvState, uiZPassCaps);
-            RenderSortKey copyKey;
-            copyKey.id = 0;
-            copyKey.translucent.material =
-                ((GetShaderID_(pCopy->pShaderChain[pCopy->uiCurrentShader], pCopy,
-                               pCopy->uiShaderState) &
-                  0xff)
-                 << 8) |
-                copyLow;
-            copyKey.translucent.depth = 0x7ff;
-            copyKey.translucent.pass = 2;
-            copyKey.translucent.translucent = 1;
-
-            m_preShadowTransparentItems.Push(pCopy, ~copyKey.id);
-        }
-        else if ((uiFlags & 0x20000000) &&
-                 pItem->pRootShader->SortAsZWritingTransparent())
-        {
-            if (hidden)
-            {
-                key.translucent.pass = 1;
-            }
-        }
-        else if (hidden)
-        {
-            key.translucent.pass = 2;
-        }
-        else
-        {
-            key.translucent.pass = 3;
-        }
-        break;
-    }
-    default:
+    if (phase != 0x10 && phase != 0x20 && phase != 2)
     {
         if (phase == 1)
         {
@@ -2342,8 +2263,8 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
         if (phase != 4 && m_iImmediateMode == 0 &&
             &mWorld != &gMatrixIdentity)
         {
-            PblVector3 vCenter = (pPrim->m_bbox.GetMax() + pPrim->m_bbox.GetMin()) * 0.5f;
             PblVector3 vView;
+            PblVector3 vCenter = (pPrim->m_bbox.GetMin() + pPrim->m_bbox.GetMax()) * 0.5f;
             D3DXVec3TransformCoord((D3DXVECTOR3*)&vView, (const D3DXVECTOR3*)&vCenter,
                                    (const D3DXMATRIX*)&mWorld);
 
@@ -2368,8 +2289,80 @@ void RedRenderer::pcRenderPrimitive(pcRedPrimitive* pPrim, pcRedShader* pShader,
             }
             key.opaque.depth = uiDepth;
         }
-        break;
     }
+    else
+    {
+        unsigned char low =
+            (unsigned char)internalGetTransformAndLightingID(uiRVF, uiEnvState, uiPassCaps);
+        key.translucent.material =
+            ((pCurShader->GetID(uiState) & 0xff) << 8) | low;
+        key.translucent.translucent = 1;
+
+        unsigned int hidden = uiFlags & 0x10000000;
+        if (hidden)
+        {
+            phase = 2;
+        }
+
+        if (uiFlags & 0x8000000)
+        {
+            key.translucent.depth = 0x7ff;
+            key.translucent.pass = 2;
+
+            unsigned int uiZState = pItem->pRootShader->GetZPrepassState();
+            unsigned int uiZPassCaps =
+                m_systemShaders[SYSTEM_SHADER_ZPREPASS]->GetShaderDef()->m_states[uiZState].pass[0].uiPassCaps;
+            unsigned int copyCount = m_curRenderItemOffset;
+            RenderItem* pCopy = &m_renderItemPool[copyCount];
+            m_curRenderItemOffset = copyCount + 1;
+            *pCopy = *pItem;
+            pCopy->pPrim->AddRef();
+            if (pCopy->pShadingState)
+            {
+                pCopy->pShadingState->AddRef();
+            }
+            pCopy->pRootShader = pItem->pRootShader;
+            pCopy->pRootShader->AddRef();
+            pCopy->pShaderChain[0] = m_systemShaders[SYSTEM_SHADER_ZPREPASS];
+            pCopy->pShaderChain[0]->AddRef();
+            pCopy->uiShaderChainSize = 1;
+            pCopy->uiCurrentShader = 0;
+            pCopy->uiShaderState = uiZState;
+            pCopy->flags |= 0x10;
+            pCopy->pLightingState = &m_aLightingStatePool[2049];
+
+            unsigned char copyLow =
+                (unsigned char)internalGetTransformAndLightingID(uiRVF, uiEnvState, uiZPassCaps);
+            RenderSortKey copyKey;
+            copyKey.id = 0;
+            copyKey.translucent.material =
+                ((GetShaderID_(pCopy->pShaderChain[pCopy->uiCurrentShader], pCopy,
+                               pCopy->uiShaderState) &
+                  0xff)
+                 << 8) |
+                copyLow;
+            copyKey.translucent.depth = 0x7ff;
+            copyKey.translucent.pass = 2;
+            copyKey.translucent.translucent = 1;
+
+            m_preShadowTransparentItems.Push(pCopy, ~copyKey.id);
+        }
+        else if ((uiFlags & 0x20000000) &&
+                 pItem->pRootShader->SortAsZWritingTransparent())
+        {
+            if (hidden)
+            {
+                key.translucent.pass = 1;
+            }
+        }
+        else if (hidden)
+        {
+            key.translucent.pass = 2;
+        }
+        else
+        {
+            key.translucent.pass = 3;
+        }
     }
 
     int firstIndex = GetPhasePass_(RENDERPHASE_OPAQUE);
@@ -2591,9 +2584,9 @@ void RedRenderer::Init()
     GetClientRect(GetDesktopWindow(), &desktop);
 
     const int iWidth = rc.right - rc.left;
-    const int iX = (desktop.left - iWidth + desktop.right) / 2;
+    const int iX = (desktop.right - iWidth + desktop.left) / 2;
     const int iHeight = rc.bottom - rc.top;
-    const int iY = (desktop.top - iHeight + desktop.bottom) / 2;
+    const int iY = (desktop.bottom - iHeight + desktop.top) / 2;
     SetWindowPos(hGlobalWnd, 0, iX, iY, iWidth, iHeight, uFlags);
 
     HRESULT hr = m_pd3dDevice->Reset(&m_d3dpp);
@@ -3249,25 +3242,29 @@ void RedRenderer::internalInitOcclusionQuery()
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
 
         const float fZero = 0.0f;
-        const float fXZero = fCos * fZero;
         const float fZZero = fSin * fZero;
+        const float fXZero = fCos * fZero;
         pVertex[0] = fXZero;
         pVertex[1] = 0.0f;
         pVertex[2] = fZZero;
-        pVertex[3] = fCos;
+        const float fZRim = fSin;
+        const float fXRim = fCos;
+        pVertex[3] = fXRim;
         pVertex[4] = 1.0f;
-        pVertex[5] = fSin;
+        pVertex[5] = fZRim;
         pVertex += 6;
     }
 
-    const float fX1 = fCos;
     const float fZ1 = fSin;
+    const float fX1 = fCos;
     pVertex[0] = fX1;
     pVertex[1] = 1.0f;
     pVertex[2] = fZ1;
-    pVertex[3] = fCos;
+    const float fZ1b = fSin;
+    const float fX1b = fCos;
+    pVertex[3] = fX1b;
     pVertex[4] = 1.0f;
-    pVertex[5] = fSin;
+    pVertex[5] = fZ1b;
     pVertex += 6;
 
     for (i = 0; i <= 6; i++)
@@ -3298,44 +3295,52 @@ void RedRenderer::internalInitOcclusionQuery()
         pVertex[0] = 0.0f;
         pVertex[1] = -1.0f;
         pVertex[2] = 0.0f;
-        pVertex[3] = fCos;
+        const float fZRim = fSin;
+        const float fXRim = fCos;
+        pVertex[3] = fXRim;
         pVertex[4] = -1.0f;
-        pVertex[5] = fSin;
+        pVertex[5] = fZRim;
         pVertex += 6;
     }
 
-    const float fX3 = fCos;
     const float fZ3 = fSin;
+    const float fX3 = fCos;
     pVertex[0] = fX3;
     pVertex[1] = -1.0f;
     pVertex[2] = fZ3;
-    pVertex[3] = fCos;
+    const float fZ3b = fSin;
+    const float fX3b = fCos;
+    pVertex[3] = fX3b;
     pVertex[4] = -1.0f;
-    pVertex[5] = fSin;
+    pVertex[5] = fZ3b;
     pVertex += 6;
 
     for (i = 0; i <= 6; i++)
     {
         PblMath::SinCos(&fSin, &fCos, (float)i * PblMath::fTwoPi / 6.0f);
-        const float fX4 = fCos;
         const float fZ4 = fSin;
+        const float fX4 = fCos;
         pVertex[0] = fX4;
         pVertex[1] = -1.0f;
         pVertex[2] = fZ4;
-        pVertex[3] = fCos;
+        const float fZ4b = fSin;
+        const float fX4b = fCos;
+        pVertex[3] = fX4b;
         pVertex[4] = 1.0f;
-        pVertex[5] = fSin;
+        pVertex[5] = fZ4b;
         pVertex += 6;
     }
 
-    const float fX5 = fCos;
     const float fZ5 = fSin;
+    const float fX5 = fCos;
     pVertex[0] = fX5;
     pVertex[1] = 1.0f;
     pVertex[2] = fZ5;
-    pVertex[3] = fCos;
+    const float fZ5b = fSin;
+    const float fX5b = fCos;
+    pVertex[3] = fX5b;
     pVertex[4] = 1.0f;
-    pVertex[5] = fSin;
+    pVertex[5] = fZ5b;
     pVertex += 6;
 
     for (i = 0; i <= 6; i++)
@@ -4275,7 +4280,7 @@ void RedRenderer::internalUpdateSceneConstants()
 
     if (m_renderCaps.pipeline != PIPELINE_FIXED)
     {
-        pcRedVertexShaderConstantRegister* pRegs = pcLockVertexShaderConstants(2, 7);
+        pcRedVertexShaderConstantRegister* pRegs = m_VSConstants.GetRegisterArray(2, 7);
         pRegs[2].SetMatrix4x4(RedRenderer::m_mViewProjection);
 
         const PblMatrix& rCamera = ((const RedCamera*)RedRenderer::m_camera)->GetMatrix();
@@ -4324,7 +4329,7 @@ void RedRenderer::internalUpdateSceneConstants()
         pRegs[8].component[2] = RedRenderer::m_lightingScale;
         pRegs[8].component[3] = 1.0f;
 
-        pcUnlockVertexShaderConstants(pRegs);
+        m_VSConstants.Update();
     }
     else
     {
@@ -4973,16 +4978,17 @@ void RedRenderer::SetMultiplicativeFog(int iPower)
 
     RedColorValue value(c);
     float fExp = 1.0f / (float)iPower;
-    float fR = (float)pow((double)value.r, (double)fExp);
-    float fG = (float)pow((double)value.g, (double)fExp);
-    float fB = (float)pow((double)value.b, (double)fExp);
-    float fA = (float)pow((double)value.a, (double)fExp);
+    value.r = (float)pow((double)value.r, (double)fExp);
+    value.g = (float)pow((double)value.g, (double)fExp);
+    value.b = (float)pow((double)value.b, (double)fExp);
+    value.a = (float)pow((double)value.a, (double)fExp);
 
-    pcSetRenderState(D3DRS_FOGCOLOR,
-                     ((((((unsigned int)(unsigned char)(int)(fA * 255.0f) << 8)
-                         | (unsigned char)(int)(fR * 255.0f)) << 8)
-                       | (unsigned char)(int)(fG * 255.0f)) << 8)
-                         | (unsigned char)(int)(fB * 255.0f));
+    const unsigned char b = (unsigned char)(int)(value.b * 255.0f);
+    const unsigned char g = (unsigned char)(int)(value.g * 255.0f);
+    const unsigned char r = (unsigned char)(int)(value.r * 255.0f);
+    const unsigned char a = (unsigned char)(int)(value.a * 255.0f);
+    pcSetRenderState(D3DRS_FOGCOLOR, ((unsigned int)a << 24) | ((unsigned int)r << 16) |
+                                         ((unsigned int)g << 8) | (unsigned int)b);
 }
 
 // FUNCTION: SWBF2 0x006b3c60
@@ -5250,16 +5256,18 @@ void RedRenderer::internalRenderImmediate(RenderItem* pItem)
         sortId.o_tnl = internalGetTransformAndLightingID(uiRVF, pItem->uiEnvState, uiCaps);
         internalRenderFunc(pItem, sortId.o_shaderID, sortId.o_pass);
 
+        unsigned int uiPassState = pItem->uiShaderState;
         while (sortId.o_pass + 1 < pItem->pShaderChain[pItem->uiCurrentShader]
-                                       ->GetShaderDef()->m_states[pItem->uiShaderState].uiNumPasses)
+                                       ->GetShaderDef()->m_states[uiPassState].uiNumPasses)
         {
+            uiPassState = pItem->uiShaderState;
             ++sortId.o_pass;
-            const pcRedShaderDef::StateT& rState =
-                pItem->pShaderChain[pItem->uiCurrentShader]
-                    ->GetShaderDef()->m_states[pItem->uiShaderState];
             sortId.o_tnl = internalGetTransformAndLightingID(
-                uiRVF, pItem->uiEnvState, rState.pass[sortId.o_pass].uiPassCaps);
+                uiRVF, pItem->uiEnvState,
+                pItem->pShaderChain[pItem->uiCurrentShader]
+                    ->GetShaderDef()->m_states[uiPassState].pass[sortId.o_pass].uiPassCaps);
             internalRenderFunc(pItem, sortId.o_shaderID, sortId.o_pass);
+            uiPassState = pItem->uiShaderState;
         }
     }
     pItem->Free();
@@ -5558,62 +5566,74 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
         float fOmniProjected = 0.0f;
         const RedColorValue black = RedColorValue::BLACK;
 
-        const RedDirectionalLight* pDir0 = pLS->pDirectionalLights[0];
-        const RedDirectionalLight* pDir1 = 0;
         if (!bNormals)
         {
             const RedAmbientLight& rAmbient = pLS->ambientLight;
             SetColor_(pRegs[19], rAmbient.m_topColor);
             SetColor_(pRegs[20], rAmbient.m_bottomColor);
-            if (pDir0)
+            if (pLS->pDirectionalLights[0])
             {
-                const float fFactor = pLS->pDirectionalFactor[0];
-                SetRGBW_(pRegs[21], ScaledColor_(pDir0, fFactor), LightFlag1_(pDir0));
-                SetXYZ_(pRegs[22], pDir0->m_vDirection);
-                fDirProjected = (float)(int)((const RedLight*)pDir0 ==
+                SetRGBW_(pRegs[21],
+                         ScaledColor_(pLS->pDirectionalLights[0], pLS->pDirectionalFactor[0]),
+                         (float)pLS->pDirectionalLights[0]->IsShadowCaster());
+                SetXYZ_(pRegs[22], pLS->pDirectionalLights[0]->m_vDirection);
+                fDirProjected = (float)(int)((const RedLight*)pLS->pDirectionalLights[0] ==
                                              pItem->pLightingState->pProjectedLight);
-                pDir1 = pLS->pDirectionalLights[1];
-                if (pDir1)
+                if (pLS->pDirectionalLights[1])
                 {
-                    SetRGBW_(pRegs[23], ScaledColor_(pDir1, pLS->pDirectionalFactor[1]),
-                             LightFlag1_(pDir1));
+                    SetRGBW_(pRegs[23],
+                             ScaledColor_(pLS->pDirectionalLights[1], pLS->pDirectionalFactor[1]),
+                             (float)pLS->pDirectionalLights[1]->IsShadowCaster());
+                    SetXYZ_(pRegs[24], pLS->pDirectionalLights[1]->m_vDirection);
                 }
+                else
+                {
+                    SetRGBW_(pRegs[23], black, 0.0f);
+                }
+            }
+            else
+            {
+                SetRGBW_(pRegs[21], black, 0.0f);
+                SetRGBW_(pRegs[23], black, 0.0f);
             }
         }
         else
         {
             SetColor_(pRegs[19], black);
             SetColor_(pRegs[20], black);
-            if (pDir0)
+            if (pLS->pDirectionalLights[0])
             {
-                RedColorValue color = LightFlag0_(pDir0)
-                                          ? black
-                                          : ScaledColor_(pDir0, pLS->pDirectionalFactor[0]);
-                SetRGBW_(pRegs[21], color, LightFlag1_(pDir0) * pLS->pDirectionalFactor[0]);
-                SetXYZ_(pRegs[22], pDir0->m_vDirection);
-                fDirProjected = (float)(int)((const RedLight*)pDir0 ==
+                RedColorValue color =
+                    LightFlag0_(pLS->pDirectionalLights[0])
+                        ? black
+                        : ScaledColor_(pLS->pDirectionalLights[0], pLS->pDirectionalFactor[0]);
+                SetRGBW_(pRegs[21], color,
+                         (float)pLS->pDirectionalLights[0]->IsShadowCaster() *
+                             pLS->pDirectionalFactor[0]);
+                SetXYZ_(pRegs[22], pLS->pDirectionalLights[0]->m_vDirection);
+                fDirProjected = (float)(int)((const RedLight*)pLS->pDirectionalLights[0] ==
                                              pItem->pLightingState->pProjectedLight);
-                pDir1 = pLS->pDirectionalLights[1];
-                if (pDir1)
+                if (pLS->pDirectionalLights[1])
                 {
-
-                    color = LightFlag0_(pDir0) ? black
-                                               : ScaledColor_(pDir1, pLS->pDirectionalFactor[1]);
-                    SetRGBW_(pRegs[23], color, LightFlag1_(pDir1) * pLS->pDirectionalFactor[1]);
+                    color = LightFlag0_(pLS->pDirectionalLights[0])
+                                ? black
+                                : ScaledColor_(pLS->pDirectionalLights[1],
+                                               pLS->pDirectionalFactor[1]);
+                    SetRGBW_(pRegs[23], color,
+                             (float)pLS->pDirectionalLights[1]->IsShadowCaster() *
+                                 pLS->pDirectionalFactor[1]);
+                    SetXYZ_(pRegs[24], pLS->pDirectionalLights[1]->m_vDirection);
+                }
+                else
+                {
+                    SetRGBW_(pRegs[23], black, 0.0f);
                 }
             }
-        }
-        if (!pDir0)
-        {
-            SetRGBW_(pRegs[21], black, 0.0f);
-        }
-        if (pDir1)
-        {
-            SetXYZ_(pRegs[24], pDir1->m_vDirection);
-        }
-        else
-        {
-            SetRGBW_(pRegs[23], black, 0.0f);
+            else
+            {
+                SetRGBW_(pRegs[21], black, 0.0f);
+                SetRGBW_(pRegs[23], black, 0.0f);
+            }
         }
 
         unsigned int uiOmni = uiTnl & 3;
@@ -5625,9 +5645,9 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
                 const RedOmniLight* pOmni3 = pLS->pOmniLights[3];
                 if (pOmni3)
                 {
-                    SetRGBW_(pRegs[31], pOmni3->m_color, LightFlag1_(pOmni3));
-                    SetXYZ_(pRegs[32], pOmni3->m_pos);
-                    pRegs[32].component[3] = pOmni3->m_fRadiusInvSq;
+                    SetRGBW_(pRegs[31], pOmni3->m_color, (float)pOmni3->IsShadowCaster());
+                    pRegs[32].SetFloats(pOmni3->m_pos.x, pOmni3->m_pos.y, pOmni3->m_pos.z,
+                                        pOmni3->m_fRadiusInvSq);
                 }
                 else
                 {
@@ -5648,25 +5668,25 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
             case 3:
             {
                 const RedOmniLight* pOmni = pLS->pOmniLights[2];
-                SetRGBW_(pRegs[29], pOmni->m_color, LightFlag1_(pOmni));
-                SetXYZ_(pRegs[30], pOmni->m_pos);
-                pRegs[30].component[3] = pOmni->m_fRadiusInvSq;
+                SetRGBW_(pRegs[29], pOmni->m_color, (float)pOmni->IsShadowCaster());
+                pRegs[30].SetFloats(pOmni->m_pos.x, pOmni->m_pos.y, pOmni->m_pos.z,
+                                    pOmni->m_fRadiusInvSq);
             }
 
             case 2:
             {
                 const RedOmniLight* pOmni = pLS->pOmniLights[1];
-                SetRGBW_(pRegs[27], pOmni->m_color, LightFlag1_(pOmni));
-                SetXYZ_(pRegs[28], pOmni->m_pos);
-                pRegs[28].component[3] = pOmni->m_fRadiusInvSq;
+                SetRGBW_(pRegs[27], pOmni->m_color, (float)pOmni->IsShadowCaster());
+                pRegs[28].SetFloats(pOmni->m_pos.x, pOmni->m_pos.y, pOmni->m_pos.z,
+                                    pOmni->m_fRadiusInvSq);
             }
 
             case 1:
             {
                 const RedOmniLight* pOmni = pLS->pOmniLights[0];
-                SetRGBW_(pRegs[25], pOmni->m_color, LightFlag1_(pOmni));
-                SetXYZ_(pRegs[26], pOmni->m_pos);
-                pRegs[26].component[3] = pOmni->m_fRadiusInvSq;
+                SetRGBW_(pRegs[25], pOmni->m_color, (float)pOmni->IsShadowCaster());
+                pRegs[26].SetFloats(pOmni->m_pos.x, pOmni->m_pos.y, pOmni->m_pos.z,
+                                    pOmni->m_fRadiusInvSq);
                 fOmniProjected = (float)(int)((const RedLight*)pOmni ==
                                               pItem->pLightingState->pProjectedLight);
             }
@@ -5682,20 +5702,22 @@ void __cdecl RedRenderer::internalRenderProg1(RenderItem* pItem, unsigned int ui
                 const RedSpotLight* pSpot = pLS->pSpotLights[0];
                 if (pSpot)
                 {
-                    SetRGBW_(pRegs[29], pSpot->m_color, LightFlag1_(pSpot));
-                    SetXYZ_(pRegs[30], pSpot->m_vPos);
-                    pRegs[30].component[3] = pSpot->m_fRadiusInvSq;
+                    SetRGBW_(pRegs[29], pSpot->m_color, (float)pSpot->IsShadowCaster());
+                    pRegs[30].SetFloats(pSpot->m_vPos.x, pSpot->m_vPos.y, pSpot->m_vPos.z,
+                                        pSpot->m_fRadiusInvSq);
                     if (!pSpot->m_bBidirectional)
                     {
                         fSpotW = 0.0f;
                     }
                     SetXYZ_(pRegs[31], pSpot->m_vDirection);
                     pRegs[31].component[3] = fSpotW;
-                    pRegs[32].component[1] = pSpot->m_fCosHalfInnerConeAngle;
-                    pRegs[32].component[0] = pSpot->m_fCosHalfOuterConeAngle;
-                    pRegs[32].component[3] = pSpot->m_fFalloff;
-                    pRegs[32].component[2] = 1.0f / (pSpot->m_fCosHalfInnerConeAngle -
-                                                     pSpot->m_fCosHalfOuterConeAngle);
+                    const float fCosInner = pSpot->m_fCosHalfInnerConeAngle;
+                    const float fCosOuter = pSpot->m_fCosHalfOuterConeAngle;
+                    const float fFalloff = pSpot->m_fFalloff;
+                    pRegs[32].component[1] = fCosInner;
+                    pRegs[32].component[0] = fCosOuter;
+                    pRegs[32].component[3] = fFalloff;
+                    pRegs[32].component[2] = 1.0f / (fCosInner - fCosOuter);
                     fSpotProjected = (float)(int)((const RedLight*)pSpot ==
                                                   pItem->pLightingState->pProjectedLight);
                 }

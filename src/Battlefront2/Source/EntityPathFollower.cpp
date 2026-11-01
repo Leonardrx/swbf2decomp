@@ -714,8 +714,8 @@ unsigned int EntityPathFollower::CreateSquadronFromClosestEntities(const PblVect
 
     RedStack stack;
     PblListDoubleSorted candidates;
-    unsigned int uCount = 0;
     char* pMemory = (char*)stack.Alloc(sList.GetCount() * sizeof(Candidate));
+    unsigned int uCount = 0;
     unsigned int uAllegiance = GetAllegiance();
     for (PblList<EntityPathFollower>::Itor it(sList); (EntityPathFollower*)it; ++it)
     {
@@ -764,11 +764,10 @@ unsigned int EntityPathFollower::CreateSquadronFromClosestEntities(const PblVect
             if (CreateSquadron(uCount + 1))
             {
                 unsigned int uAdded = 0;
-                for (PblListDouble::Node* pLink = candidates.mTerminator.mNext; pLink != &candidates.mTerminator;
-                     pLink = pLink->mNext)
+                PblListDoubleSorted::Itor addItor(candidates);
+                for (;;)
                 {
-                    PblListDoubleSorted::Node* pNode =
-                        (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+                    PblListDoubleSorted::Node* const pNode = addItor.GetNode(&candidates);
                     if (pNode == candidates.GetTerminator())
                     {
                         break;
@@ -778,6 +777,7 @@ unsigned int EntityPathFollower::CreateSquadronFromClosestEntities(const PblVect
                     {
                         break;
                     }
+                    ++addItor;
                 }
                 if (uAdded == uCount)
                 {
@@ -788,11 +788,9 @@ unsigned int EntityPathFollower::CreateSquadronFromClosestEntities(const PblVect
                     start.mAttrib.mSquareDist = 0.0f;
                     start.mAttrib.mVectorDist = PblVector3(0.0f, 0.0f, 0.0f);
                     start.mDirection = mDirection;
-                    for (PblListDouble::Node* pLink = candidates.mTerminator.mNext;
-                         pLink != &candidates.mTerminator; pLink = pLink->mNext)
+                    for (PblListDoubleSorted::Itor moveItor(candidates);; ++moveItor)
                     {
-                        PblListDoubleSorted::Node* pNode =
-                            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+                        PblListDoubleSorted::Node* const pNode = moveItor.GetNode(&candidates);
                         if (pNode == candidates.GetTerminator())
                         {
                             break;
@@ -956,39 +954,44 @@ void EntityPathFollower::EndOfSegment(BranchParams& params, const PblVector3* co
                                       bool bSetupNext)
 {
     bool bBranch = bForceBranch || (!mPath && !GetPointIsSet(2) && !GetPointIsSet(3));
-    bBranch = bBranch || (mPath && (mIndex < 0 || mIndex >= mPath->GetNumPoints()));
+    bBranch |= mPath && (mIndex < 0 || mIndex >= mPath->GetNumPoints());
     if (!bBranch && mPath)
     {
         int iPrev = mIndex - mDirection;
         const EntityPath::NodeProperties* pProps =
             iPrev >= 0 && iPrev < mPath->GetNumPoints() ? &mPath->GetNodeProperties(iPrev) : 0;
-        bBranch = pProps && pProps->mBranchProbability > PblRandom::GetGlobalFloat();
+        if (pProps)
+        {
+            const float fProbability = pProps->mBranchProbability;
+            bBranch = fProbability > PblRandom::GetGlobalFloat();
+        }
+    }
+
+    if (bBranch && !NetGame::IsEnabled() && !gAttractMode && params.mPathClass->mbFlyerVsFlyer &&
+        IsFlyerPlayerCentric(params))
+    {
+        Character* pPlayer = NetGame::GetLocalPlayer(0);
+        if (pPlayer && pPlayer->GetVehicle())
+        {
+            Controllable* pControllable = pPlayer->GetControllable();
+            if (pControllable)
+            {
+                PblVector3 vPosition = pPosition ? *pPosition : params.mMatrix.GetTranslation();
+                PblVector3 vTarget = pControllable->GetMatrix().GetTranslation();
+                if ((vTarget.x - vPosition.x) * (vTarget.x - vPosition.x) +
+                            (vTarget.y - vPosition.y) * (vTarget.y - vPosition.y) +
+                            (vTarget.z - vPosition.z) * (vTarget.z - vPosition.z) >
+                        160000.0f &&
+                    HeadTowards(vTarget, 150.0f, params))
+                {
+                    return;
+                }
+            }
+        }
     }
 
     if (bBranch)
     {
-        if (!NetGame::IsEnabled() && !gAttractMode && params.mPathClass->mbFlyerVsFlyer &&
-            IsFlyerPlayerCentric(params))
-        {
-            Character* pPlayer = NetGame::GetLocalPlayer(0);
-            if (pPlayer && pPlayer->GetVehicle())
-            {
-                Controllable* pControllable = pPlayer->GetControllable();
-                if (pControllable)
-                {
-                    PblVector3 vPosition = pPosition ? *pPosition : params.mMatrix.GetTranslation();
-                    PblVector3 vTarget = pControllable->GetMatrix().GetTranslation();
-                    if ((vTarget.x - vPosition.x) * (vTarget.x - vPosition.x) +
-                                (vTarget.y - vPosition.y) * (vTarget.y - vPosition.y) +
-                                (vTarget.z - vPosition.z) * (vTarget.z - vPosition.z) >
-                            160000.0f &&
-                        HeadTowards(vTarget, 150.0f, params))
-                    {
-                        return;
-                    }
-                }
-            }
-        }
         Branch(params, pPosition ? pPosition : &params.mMatrix.GetTranslation(), pPosition != 0);
     }
     else if (bSetupNext)
@@ -1408,13 +1411,12 @@ void EntityPathFollower::PickupCTFFlag(BranchParams& params)
         const PblVector3& vForward = GetMatrix().GetZAxis();
         PblVector3 vPosition = GetMatrix().GetTranslation();
         PblVector3 vAhead = vPosition + vForward * 300.0f * 0.5f;
-        if (!(90000.0f > (vFlag.x - vAhead.x) * (vFlag.x - vAhead.x) + (vFlag.y - vAhead.y) * (vFlag.y - vAhead.y) +
-                             (vFlag.z - vAhead.z) * (vFlag.z - vAhead.z)))
+        if (!(90000.0f > SquaredLength(vFlag - vAhead)))
         {
             continue;
         }
-        const GameObject* pIgnore = params.mGameObject;
         PblVector3 vEnd = vFlag + (vFlag - vPosition);
+        const GameObject* pIgnore = params.mGameObject;
         if (!CollisionManager::RayTest(vPosition, vEnd, &pIgnore, 1, -2))
         {
             continue;
@@ -1425,16 +1427,15 @@ void EntityPathFollower::PickupCTFFlag(BranchParams& params)
         SetPoint(vPosition, 1);
         SetPoint(vFlag, 2);
         PblVector3 vDelta = vFlag - vPosition;
-        float fLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+        float fLength = Length(vDelta);
         float fInv = 1.0f / fLength;
+        PblVector3 vDir = vDelta * fInv;
         float fBeyond = fLength * 3.0f;
         if (!(200.0f > fBeyond))
         {
             fBeyond = 200.0f;
         }
-        PblVector3 vBeyond(vFlag.x + vDelta.x * fInv * fBeyond, vFlag.y + vDelta.y * fInv * fBeyond,
-                           vFlag.z + vDelta.z * fInv * fBeyond);
-        SetPoint(vBeyond, 3);
+        SetPoint(vFlag + vDir * fBeyond, 3);
         return;
     }
 }
@@ -1495,8 +1496,7 @@ bool EntityPathFollower::CirclePoint(float fRadius)
                 return false;
             }
             float fCloser = fRadius - 10.0f;
-            vNext = PblVector3(fCloser * vDir.x + mPointToCircle.x, mPointToCircle.y + vDir.y * fCloser,
-                               mPointToCircle.z + vDir.z * fCloser);
+            vNext = mPointToCircle + vDir * fCloser;
         }
         mPathSpline.AddPoint(vNext);
         mT -= 1.0f;
@@ -1518,10 +1518,9 @@ void EntityPathFollower::GetNextTowardsAttackerPoint(BranchParams& params, PblVe
         const PblMatrix attacker = mAttacker->GetControllable()->GetMatrix();
         PblVector3 vAhead(attacker.m[2][0] * 30.0f, attacker.m[2][1] * 30.0f, attacker.m[2][2] * 30.0f);
         float fUp = PblRandom::GetGlobalFloatRange(0.0f, 2.0f);
+        PblVector3 vUp = attacker.GetYAxis() * fUp;
         float fRight = PblRandom::GetGlobalFloatRange(0.0f, 2.0f);
-        PblVector3 vOffset(attacker.m[0][0] * fRight + attacker.m[1][0] * fUp,
-                           attacker.m[0][1] * fRight + attacker.m[1][1] * fUp,
-                           attacker.m[0][2] * fRight + attacker.m[1][2] * fUp);
+        PblVector3 vOffset = attacker.GetXAxis() * fRight + vUp;
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vOffset));
         const PblVector3& vPosition = params.mMatrix.GetTranslation();

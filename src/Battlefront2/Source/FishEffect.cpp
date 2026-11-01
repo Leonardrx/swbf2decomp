@@ -56,8 +56,8 @@ void FishParticle::RespawnFish(const PblVector3& vPos, const FishParticleType& t
             q *= PblQuaternion(initomega / initAngle, initAngle);
         }
     }
-    mState = eState;
     mMatrix = PblMatrix(q, vPos);
+    mState = eState;
     mBaseMatrix = mMatrix;
     mPhase = PblRandom::_Global.GetFloat() * PblMath::fTwoPi;
 
@@ -192,20 +192,21 @@ bool FishParticle::UpdateFloatingFish(float fDeltaTime)
         return true;
     }
 
+    if (mUnderwater && fWaterHeight > vPos.y)
+    {
+        vPos = vPos + mVelocity * fDeltaTime;
+        mMatrix.SetTranslation(vPos);
+        SetRenderPos(vPos);
+        return true;
+    }
+
     if (mUnderwater)
     {
-        if (fWaterHeight > vPos.y)
-        {
-            vPos = mVelocity * fDeltaTime + vPos;
-            mMatrix.SetTranslation(vPos);
-            SetRenderPos(vPos);
-            return true;
-        }
         mUnderwater = false;
         mVelocity.x = 0.0f;
         mVelocity.y = 0.0f;
         mVelocity.z = 0.0f;
-        mOmega.x = (0.5f - PblRandom::_Global.GetFloat()) * 0.125f;
+        mOmega.x = (0.5f - PblRandom::GetGlobalFloat()) * 0.125f;
         mOmega.y = 0.0f;
         mOmega.z = 0.0f;
     }
@@ -222,10 +223,8 @@ bool FishParticle::UpdateFloatingFish(float fDeltaTime)
     }
 
     vPos.y = fWaterHeight;
-    float fBob = PblMath::Sin(mPhase) * 0.01f * mType.mSize + vPos.y;
-    vPos.x = vWaterVelocity.x * fDeltaTime + vPos.x;
-    vPos.y = vWaterVelocity.y * fDeltaTime + fBob;
-    vPos.z = vWaterVelocity.z * fDeltaTime + vPos.z;
+    vPos.y = PblMath::Sin(mPhase) * 0.01f * mType.mSize + vPos.y;
+    vPos = vWaterVelocity * fDeltaTime + vPos;
 
     PblQuaternion q(mMatrix);
     float initAngle = Length(mOmega);
@@ -397,21 +396,16 @@ bool FishParticleManager::Update(float fDeltaTime)
 
         if (iNumFree > 10)
         {
-            int iCam = PblRandom::GetGlobalInt() % CameraManager::Instance()->GetNumCameras();
+            unsigned int uiNumCameras = CameraManager::Instance()->GetNumCameras();
+            int iCam = PblRandom::GetGlobalInt() % uiNumCameras;
             PblMatrix mCamera = CameraManager::Instance()->GetCamera(iCam)->GetMatrix();
-            const PblVector3& vAt = *(const PblVector3*)&mCamera.m[2][0];
-            const PblVector3& vCamPos = *(const PblVector3*)&mCamera.m[3][0];
+            const PblVector3& vAt = mCamera.GetZAxis();
+            const PblVector3& vCamPos = mCamera.GetTranslation();
 
-            PblVector3 vCross(vAt.z - vAt.y * 0.0f, vAt.x * 0.0f - vAt.z * 0.0f, vAt.y * 0.0f - vAt.x);
-            PblVector3 vRight;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vRight, (const D3DXVECTOR3*)&vCross);
-
-            vCross = PblVector3(vRight.z - vRight.y * 0.0f, vRight.x * 0.0f - vRight.z * 0.0f,
-                                vRight.y * 0.0f - vRight.x);
-            PblVector3 vBack;
-            D3DXVec3Normalize((D3DXVECTOR3*)&vBack, (const D3DXVECTOR3*)&vCross);
-
-            PblVector3 vSpawn(vCamPos.x + vBack.x * 35.0f, vCamPos.y + vBack.y * 35.0f, vCamPos.z + vBack.z * 35.0f);
+            const PblVector3 vUp(0.0f, 1.0f, 0.0f);
+            PblVector3 vRight = Normalize(CrossProduct(vUp, vAt));
+            PblVector3 vBack = Normalize(CrossProduct(vUp, vRight));
+            PblVector3 vSpawn = vCamPos + vBack * 35.0f;
 
             SpawnSwimmingFish(vSpawn, 10.0f, 0);
         }

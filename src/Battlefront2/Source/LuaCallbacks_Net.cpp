@@ -2776,11 +2776,11 @@ void ResortSessions(bool bForward)
     {
         char* pcMap;
         bool bPresent;
+        bool bRightVersion;
         bool bPassword;
         int iType;
         int iSortPos;
         bool bLocked;
-        bool bRightVersion;
         char* pcVersion;
         findGame->GetInfo(pKey->name, pcMap, pKey->first, pKey->second, bPassword,
                           pKey->ping, iType, iSortPos, bLocked, bRightVersion, pcVersion,
@@ -2802,21 +2802,25 @@ void ResortSessions(bool bForward)
         if (nameLen)
         {
             const size_t len = strlen(pKey->name);
-            if (nameLen <= len)
+            if (nameLen > len)
             {
-                size_t pos = 0;
-                while (_strnicmp(pKey->name + pos, pFilters[0], nameLen))
-                {
-                    if (++pos > len - nameLen)
-                    {
-                        bFiltered = true;
-                        break;
-                    }
-                }
+                bFiltered = true;
             }
             else
             {
-                bFiltered = true;
+                bool bFound = false;
+                for (size_t pos = 0; pos <= len - nameLen; ++pos)
+                {
+                    if (!_strnicmp(pKey->name + pos, pFilters[0], nameLen))
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                if (!bFound)
+                {
+                    bFiltered = true;
+                }
             }
         }
         if (iMinPlayers && pKey->first < iMinPlayers)
@@ -2879,7 +2883,14 @@ void ResortSessions(bool bForward)
         findGame->Select(1);
     }
 
-    qsort(sessions, iVisible, sizeof(SessionSortKey), gSortForward ? SessionCompare : ReverseSessionCompare);
+    if (gSortForward)
+    {
+        qsort(sessions, iVisible, sizeof(SessionSortKey), SessionCompare);
+    }
+    else
+    {
+        qsort(sessions, iVisible, sizeof(SessionSortKey), ReverseSessionCompare);
+    }
 
     findGame->SelectFirst();
     for (int i = 0; i < iCount; ++i)
@@ -3804,17 +3815,11 @@ void sub_52E430() {}
 // FUNCTION: SWBF2 0x00530170
 int __cdecl FillWordRange(unsigned int first, unsigned int last, const int* value)
 {
-    unsigned int count = (last - first + 3) >> 2;
-    if (first > last)
-    {
-        count = 0;
-    }
     int result = 0;
-    int* dest = (int*)first;
-    for (unsigned int i = 0; i < count; ++i)
+    for (int* dest = (int*)first; dest < (int*)last; ++dest)
     {
         result = *value;
-        *dest++ = result;
+        *dest = result;
     }
     return result;
 }

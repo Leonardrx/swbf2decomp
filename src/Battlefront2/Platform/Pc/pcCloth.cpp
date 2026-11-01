@@ -57,10 +57,12 @@ void EntityCloth::PlatformRender(unsigned char ucViewport, RedColor color, unsig
         RedRenderer::SetLightingState(*pLightingState);
     }
 
+    const unsigned int uiNumVertices = mData->m_uiNumParticles * 2;
+    const unsigned int uiNumIndices = mData->m_uiNumTriangles * 3 * 2;
     pcRedPrimitive* pPrimitive =
         pcRedPrimitive::Create(D3DPT_TRIANGLELIST, 0x222, sizeof(ClothVertex),
-                               (unsigned short)(mData->m_uiNumParticles * 2),
-                               (unsigned short)(mData->m_uiNumTriangles * 6), false);
+                               (unsigned short)uiNumVertices,
+                               (unsigned short)uiNumIndices, false);
 
     ClothVertex* pVertices = (ClothVertex*)pPrimitive->BeginVertexData();
     if (!pVertices)
@@ -75,12 +77,12 @@ void EntityCloth::PlatformRender(unsigned char ucViewport, RedColor color, unsig
         pVertices[i].normal.SetNormal(m_pNormal[i]);
         pVertices[i].uv.SetUV(pTexCoords[i].x, pTexCoords[i].y);
     }
-    ClothVertex* pBack = pVertices + mData->m_uiNumParticles;
+    pVertices += mData->m_uiNumParticles;
     for (unsigned int i = 0; i < mData->m_uiNumParticles; ++i)
     {
-        pBack[i].pos.SetPos(m_pPos[i].x, m_pPos[i].y, m_pPos[i].z);
-        pBack[i].normal.SetNormal(PblVector3(-m_pNormal[i].x, -m_pNormal[i].y, -m_pNormal[i].z));
-        pBack[i].uv.SetUV(pTexCoords[i].x, pTexCoords[i].y);
+        pVertices[i].pos.SetPos(m_pPos[i].x, m_pPos[i].y, m_pPos[i].z);
+        pVertices[i].normal.SetNormal(PblVector3(-m_pNormal[i].x, -m_pNormal[i].y, -m_pNormal[i].z));
+        pVertices[i].uv.SetUV(pTexCoords[i].x, pTexCoords[i].y);
     }
     pPrimitive->EndVertexData();
 

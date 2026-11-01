@@ -9,14 +9,13 @@ void SaveFile::StringToTime(const unsigned short* pusString, int& iYear, int& iM
     for (const unsigned short* p = pusString; *p; ++p)
     {
         value *= 16;
-        unsigned int digit = *p;
-        if (digit >= '0' && digit <= '9')
+        if (*p >= '0' && *p <= '9')
         {
-            value += digit - '0';
+            value += *p - '0';
         }
         else
         {
-            value += tolower(digit) - 'a' + 10;
+            value += tolower(*p) - 'a' + 10;
         }
     }
 

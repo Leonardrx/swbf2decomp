@@ -50,32 +50,30 @@ void AI::ConquestGoal::Update()
 
     for (PblList<Character>::Itor it(mUnitList); it; ++it)
     {
-        Character* pChr = it;
-        if (!pChr->GetControllable())
+        if (!it->GetControllable())
         {
             continue;
         }
 
-        UnitController* pCtrl = UnitControllerPtr(pChr->GetControllable()->mCtrl);
+        UnitController* pCtrl = UnitControllerPtr(it->GetControllable()->mCtrl);
         if (!pCtrl || pCtrl->GetCurCmdType() == CMD_SC_FOLLOW)
         {
             continue;
         }
 
-        const int iTeam = pChr->mTeamNumber;
-        const CommandPost* pPost = pChr->GetAssignedCP();
+        const CommandPost* pPost = it->GetAssignedCP();
         if (pPost && pPost->GetGameObject() && GameObjectTeam(pPost->GetGameObject()) > 0 &&
             Team::sTeams[GameObjectTeam(pPost->GetGameObject())] &&
-            Team::sTeams[GameObjectTeam(pPost->GetGameObject())]->GetAffiliation(iTeam) > 0 &&
-            !pPost->GetStrategicDefendValue(pChr->mTeamPtr->GetSide()))
+            Team::sTeams[GameObjectTeam(pPost->GetGameObject())]->GetAffiliation(it->mTeamNumber) > 0 &&
+            !pPost->GetStrategicDefendValue(it->mTeamPtr->GetSide()))
         {
-            sAssign(pChr, 0);
+            sAssign(it, 0);
             continue;
         }
 
         if (pCtrl->GetCurCmdType() == CMD_NONE || pCtrl->GetCurCmdType() == CMD_WAIT)
         {
-            Assign(pChr);
+            Assign(it);
         }
     }
 }

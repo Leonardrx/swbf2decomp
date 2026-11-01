@@ -367,10 +367,11 @@ void UnitTrooperAgent::UpdateStatePostVision(float dt)
                 if (fRange * fRange > SquaredLength(vDelta))
                 {
                     AILowLevel& pathLowLevel = GetLowLevel();
-                    const PblVector3& from = mCtrl->mOwner->GetMatrix().GetTranslation();
+                    Controllable* pVehicle = mCtrl->mOwner;
+                    const PblVector3& from = pVehicle->GetMatrix().GetTranslation();
                     if (!PathFinder::TestTrivialStraightLineHit(
                             from, pathLowLevel.GetGlobalDest(),
-                            mCtrl->mOwner->GetGameObject()))
+                            pVehicle->GetGameObject()))
                     {
                         GetLowLevel().Navigator_Wait(5.0f);
                     }

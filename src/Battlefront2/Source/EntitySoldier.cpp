@@ -2710,17 +2710,12 @@ bool EntitySoldier::PostCollisionUpdate(float fDeltaTime)
     }
     mCollisionState = COLLSTATE_NONE;
 
-    if (mAvgFlyGroundCollisionNormal.x * mAvgFlyGroundCollisionNormal.x +
-            mAvgFlyGroundCollisionNormal.y * mAvgFlyGroundCollisionNormal.y +
-            mAvgFlyGroundCollisionNormal.z * mAvgFlyGroundCollisionNormal.z >
-        0.0001f)
+    float fLengthSq = mAvgFlyGroundCollisionNormal.x * mAvgFlyGroundCollisionNormal.x +
+                      mAvgFlyGroundCollisionNormal.y * mAvgFlyGroundCollisionNormal.y +
+                      mAvgFlyGroundCollisionNormal.z * mAvgFlyGroundCollisionNormal.z;
+    if (fLengthSq > 0.0001f)
     {
-        float fInv = 1.0f / (float)sqrt((double)(mAvgFlyGroundCollisionNormal.x * mAvgFlyGroundCollisionNormal.x +
-                                                 mAvgFlyGroundCollisionNormal.y * mAvgFlyGroundCollisionNormal.y +
-                                                 mAvgFlyGroundCollisionNormal.z * mAvgFlyGroundCollisionNormal.z));
-        mAvgFlyGroundCollisionNormal.x = fInv * mAvgFlyGroundCollisionNormal.x;
-        mAvgFlyGroundCollisionNormal.y = mAvgFlyGroundCollisionNormal.y * fInv;
-        mAvgFlyGroundCollisionNormal.z = mAvgFlyGroundCollisionNormal.z * fInv;
+        mAvgFlyGroundCollisionNormal = mAvgFlyGroundCollisionNormal * (1.0f / (float)sqrt((double)fLengthSq));
         if (mAvgFlyGroundCollisionNormal.y > 0.6f && !(mFlags & flags_isGrounded))
         {
             mGroundNormal = mAvgFlyGroundCollisionNormal;
@@ -2799,8 +2794,7 @@ bool EntitySoldier::PostCollisionUpdate(float fDeltaTime)
         const PblVector3& vCenter = GetCollisionCenter();
         const PblVector3& vPos = GetPosition();
         const PblMatrix& mSmoothed = GetSmoothedMatrix();
-        SetRenderPos(PblVector3(mSmoothed.m[3][0] + vCenter.x - vPos.x, mSmoothed.m[3][1] + vCenter.y - vPos.y,
-                                mSmoothed.m[3][2] + vCenter.z - vPos.z));
+        SetRenderPos(mSmoothed.GetTranslation() + vCenter - vPos);
     }
 
     if (!netFrameLock && NetGame::IsEnabled())
@@ -10058,15 +10052,16 @@ bool EntitySoldier::ExitVehicle(bool bForce, bool bEject)
     if (bEject)
     {
         GameObject* pObject = pVehicle->GetGameObject();
-        const CollisionObject* pCollision = ((const GameObject*)pObject)->GetCollisionObject();
+        const CollisionObject* pCollision = pObject->GetCollisionObject();
         PblVector3 vCenter = pCollision->GetCollisionCenter();
 
         float fRadius = pCollision->GetCollisionRadius() + 0.68400007f;
         float fDiag = fRadius * 0.7071f;
+        float fNegDiag = -fRadius * 0.7071f;
         PblVector3 avPoint[9] = {
             PblVector3(0.0f, 1.0f, -fRadius), PblVector3(-fRadius, 1.0f, 0.0f), PblVector3(fRadius, 1.0f, 0.0f),
-            PblVector3(-fDiag, 1.0f, -fDiag), PblVector3(fDiag, 1.0f, -fDiag),  PblVector3(fDiag, 1.0f, fDiag),
-            PblVector3(-fDiag, 1.0f, fDiag),  PblVector3(0.0f, 1.0f, fRadius),  PblVector3(0.0f, 1.0f, 0.0f)
+            PblVector3(fNegDiag, 1.0f, fNegDiag), PblVector3(fDiag, 1.0f, fNegDiag),  PblVector3(fDiag, 1.0f, fDiag),
+            PblVector3(fNegDiag, 1.0f, fDiag),  PblVector3(0.0f, 1.0f, fRadius),  PblVector3(0.0f, 1.0f, 0.0f)
         };
         PblMatrix mSeat = NormalMatrix(pVehicle->GetMatrix().GetZAxis(), pObject->GetMatrix().GetYAxis(),
                                      pObject->GetMatrix().GetTranslation());
@@ -10098,7 +10093,7 @@ bool EntitySoldier::ExitVehicle(bool bForce, bool bEject)
                 float fDown = CollisionManager::RayHit(avFoot[j], vDown, 15.0f, pHit, 0, 0, 0, 0x98, true);
                 if (fDown < 1.0f)
                 {
-                    avFoot[j].y += fDown * -10.0f;
+                    avFoot[j].y = fDown * -10.0f + avFoot[j].y;
                     if (iBest < 0 || avFoot[j].y > avFoot[iBest].y)
                     {
                         iBest = j;
@@ -10107,14 +10102,15 @@ bool EntitySoldier::ExitVehicle(bool bForce, bool bEject)
             }
             if (iBest >= 0)
             {
-                vExit = PblVector3(avFoot[0].x, avFoot[iBest].y, avFoot[0].z);
+                vExit = avFoot[0];
+                vExit.y = avFoot[iBest].y;
                 break;
             }
         }
         SetMatrix(NormalMatrix(mSeat.GetZAxis(), gVectorUnitY, vExit));
     }
 
-    mVelocity = PblVector3(0.0f, 0.0f, 0.0f);
+    mVelocity.SetAll(0.0f);
     pVehicle->SetPilot(0);
     mCharacter->SetVehicle(0);
     if (mPlayerId >= 0 && pVehicle->GetGameObject())
@@ -10149,7 +10145,7 @@ bool EntitySoldier::ExitVehicle(bool bForce, bool bEject)
     ClearControllable();
     Stand(false);
 
-    static const float sFallingStartTimer = 0.9999f;
+    static const float sFallingStartTimer = 1.0f - 0.0001f;
     mStateTimer = sFallingStartTimer;
     mFlags = (unsigned char)((mFlags & ~flags_isGrounded) | flags_fallTimer);
 
@@ -10475,11 +10471,12 @@ void EntitySoldier::UpdateAcklayFoleyFX(const RedPose& pose, const PblMatrix& mW
 
     for (int i = 0; i < 6; ++i)
     {
-        const PblMatrix* pBone = pBones[i];
         float* pElevation = i == 0 ? &mLeftFootElevation
                            : i == 1 ? &mRightFootElevation
                            : &mAcklayData->mFeetElevation[i - 2];
-        const PblVector3 vFoot = (*pBone * mWorld).GetTranslation();
+        const PblMatrix* pBone = pBones[i];
+        const PblMatrix mBone = *pBone;
+        const PblVector3 vFoot = (mBone * mWorld).GetTranslation();
         const float fElevation = pBone->m[3][1] - 2.5f;
 
         PblVector3 vBone = pBone->GetXAxis();

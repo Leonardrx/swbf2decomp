@@ -841,53 +841,52 @@ void RedStencilShadow::Read(PblFileChunk& chunk)
 // FUNCTION: SWBF2 0x006e5d30
 void ShadowData::Read(PblFileChunk& chunk)
 {
-    PblBox box(FLT_MAX, FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
     PblVector3* pVertices = 0;
     ShadowEdge* pEdges = 0;
     unsigned char* puiSkinData = 0;
     unsigned int uiSkinNumBones = 0;
     PblVector3* pSkinnedVertices = 0;
+    PblBox box(FLT_MAX, FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
     PblTraceP("Model has shadow data\n");
     while (chunk.HasMoreChildren())
     {
         PblFileChunk child = chunk.ReadNextChild();
-        PblFile* pFile = child._pFile;
         switch (child._iId)
         {
         case 0x4E494B53:
         {
-            unsigned int uiNumVertices = pFile->Read32();
-            uiSkinNumBones = pFile->Read32();
+            unsigned int uiNumVertices = child._pFile->Read32();
+            uiSkinNumBones = child._pFile->Read32();
             int iSize = (2 * uiSkinNumBones - 1) * uiNumVertices;
             puiSkinData = new unsigned char[iSize];
-            pFile->ReadData(puiSkinData, iSize);
+            child._pFile->ReadData(puiSkinData, iSize);
             pSkinnedVertices = new PblVector3[uiNumVertices];
             break;
         }
         case 0x49444853:
             for (unsigned short i = 0; i < _edgeCount; ++i)
             {
-                pEdges[i].vertex = pFile->Read16();
-                pEdges[i].next = pFile->Read16();
-                pEdges[i].twin = pFile->Read16();
+                pEdges[i].vertex = child._pFile->Read16();
+                pEdges[i].next = child._pFile->Read16();
+                pEdges[i].twin = child._pFile->Read16();
                 pEdges[i].mark = 0;
                 pEdges[i].visible = 0;
-                pFile->Read16();
+                child._pFile->Read16();
             }
             break;
         case 0x4F464E49:
-            _iNumVertices = (unsigned short)pFile->Read32();
-            _edgeCount = (unsigned short)((unsigned short)pFile->Read32() >> 2);
+            _iNumVertices = (unsigned short)child._pFile->Read32();
+            _edgeCount = (unsigned short)((unsigned short)child._pFile->Read32() >> 2);
             pVertices = new PblVector3[_iNumVertices];
             pEdges = new ShadowEdge[_edgeCount];
             break;
         case 0x56444853:
             for (unsigned short i = 0; i < _iNumVertices; ++i)
             {
-                pVertices[i].x = pFile->ReadFloat();
-                pVertices[i].y = pFile->ReadFloat();
-                pVertices[i].z = pFile->ReadFloat();
+                pVertices[i].x = child._pFile->ReadFloat();
+                pVertices[i].y = child._pFile->ReadFloat();
+                pVertices[i].z = child._pFile->ReadFloat();
                 box.AddPoint(pVertices[i]);
             }
             break;
@@ -947,16 +946,8 @@ void ShadowData::Read(PblFileChunk& chunk)
         PblVector3 vBest;
         do
         {
-            const float d1x = pVertices[a].x - pVertices[b].x;
-            const float d1y = pVertices[a].y - pVertices[b].y;
-            const float d1z = pVertices[a].z - pVertices[b].z;
-            const float d2x = pVertices[c].x - pVertices[b].x;
-            const float d2y = pVertices[c].y - pVertices[b].y;
-            const float d2z = pVertices[c].z - pVertices[b].z;
-            PblVector3 n;
-            n.x = d2y * d1z - d2z * d1y;
-            n.y = d2z * d1x - d1z * d2x;
-            n.z = d1y * d2x - d2y * d1x;
+            const PblVector3 n =
+                CrossProduct(pVertices[c] - pVertices[b], pVertices[a] - pVertices[b]);
             const float fLenSq = n.x * n.x + n.y * n.y + n.z * n.z;
             if (fLenSq > fBest)
             {
@@ -970,11 +961,8 @@ void ShadowData::Read(PblFileChunk& chunk)
             c = _edgeList[e].vertex;
         } while (e != i);
 
-        PblVector4 plane;
-        plane.x = _fSizeInvSqr * vBest.x;
-        plane.y = vBest.y * _fSizeInvSqr;
-        plane.z = vBest.z * _fSizeInvSqr;
-        plane.w = -(pVertices[a].x * plane.x + pVertices[a].y * plane.y + pVertices[a].z * plane.z);
+        vBest *= _fSizeInvSqr;
+        const PblVector4 plane(vBest.x, vBest.y, vBest.z, -DotProduct(pVertices[a], vBest));
         _facePlanes[iFace] = plane;
         _facePlanesEntry[iFace] = i;
         ++iFace;
@@ -1218,7 +1206,7 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
     s_mSkin[2] = (*pBone)[2] * fWeight;
     s_mSkin[3] = (*pBone)[3] * fWeight;
 
-    for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i - 1])
+    for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i++])
     {
         pBone = &pMatrices[puiIndices[i]];
         fWeight = puiWeights[i] * kInv255;
@@ -1231,7 +1219,6 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
             s_mSkin[3] = s_mSkin[3] * fScale + (*pBone)[3] * fWeight;
             break;
         }
-        ++i;
         s_mSkin[0] += (*pBone)[0] * fWeight;
         s_mSkin[1] += (*pBone)[1] * fWeight;
         s_mSkin[2] += (*pBone)[2] * fWeight;

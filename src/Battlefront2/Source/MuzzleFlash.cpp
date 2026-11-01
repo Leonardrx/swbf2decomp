@@ -81,28 +81,28 @@ void MuzzleFlashRenderer::Render(int)
 
     for (int i = 0; i < mNumMuzzleFlashes; i++)
     {
-        const MuzzleFlashData& data = mMuzzleFlashData[mCurrentBuffer][i];
-        const float fDot = data.mDir.y * mCamera.m[2][1] + data.mDir.x * mCamera.m[2][0] +
-                           data.mDir.z * mCamera.m[2][2];
-        RedColor color = data.mColor;
+        const float fDot = mMuzzleFlashData[mCurrentBuffer][i].mDir.y * mCamera.m[2][1] +
+                           mMuzzleFlashData[mCurrentBuffer][i].mDir.x * mCamera.m[2][0] +
+                           mMuzzleFlashData[mCurrentBuffer][i].mDir.z * mCamera.m[2][2];
+        RedColor color = mMuzzleFlashData[mCurrentBuffer][i].mColor;
         const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
         color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 255.0f);
         if (color.a)
         {
-            RenderStreak(data, color);
+            RenderStreak(mMuzzleFlashData[mCurrentBuffer][i], color);
         }
     }
     for (int i = 0; i < mOldNumMuzzleFlashes; i++)
     {
-        const MuzzleFlashData& data = mMuzzleFlashData[1 - mCurrentBuffer][i];
-        const float fDot = data.mDir.y * mCamera.m[2][1] + data.mDir.x * mCamera.m[2][0] +
-                           data.mDir.z * mCamera.m[2][2];
-        RedColor color = data.mColor;
+        const float fDot = mMuzzleFlashData[1 - mCurrentBuffer][i].mDir.y * mCamera.m[2][1] +
+                           mMuzzleFlashData[1 - mCurrentBuffer][i].mDir.x * mCamera.m[2][0] +
+                           mMuzzleFlashData[1 - mCurrentBuffer][i].mDir.z * mCamera.m[2][2];
+        RedColor color = mMuzzleFlashData[1 - mCurrentBuffer][i].mColor;
         const float fAbsDot = fDot < 0.0f ? -fDot : fDot;
         color.a = (unsigned char)(int)((1.0f - fAbsDot * 0.3f) * 128.0f);
         if (color.a)
         {
-            RenderStreak(data, color);
+            RenderStreak(mMuzzleFlashData[1 - mCurrentBuffer][i], color);
         }
     }
 
@@ -110,15 +110,13 @@ void MuzzleFlashRenderer::Render(int)
 
     for (int i = 0; i < mNumMuzzleFlashes; i++)
     {
-        const MuzzleFlashData& data = mMuzzleFlashData[mCurrentBuffer][i];
-        RenderFlash(data, data.mColor);
+        RenderFlash(mMuzzleFlashData[mCurrentBuffer][i], mMuzzleFlashData[mCurrentBuffer][i].mColor);
     }
     for (int i = 0; i < mOldNumMuzzleFlashes; i++)
     {
-        const MuzzleFlashData& data = mMuzzleFlashData[1 - mCurrentBuffer][i];
-        RedColor color = data.mColor;
+        RedColor color = mMuzzleFlashData[1 - mCurrentBuffer][i].mColor;
         color.a >>= 1;
-        RenderFlash(data, color);
+        RenderFlash(mMuzzleFlashData[1 - mCurrentBuffer][i], color);
     }
 
     mCurrentBuffer = 1 - mCurrentBuffer;

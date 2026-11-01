@@ -369,11 +369,10 @@ void Music::IgnoreInactiveTime(bool bIgnore)
 // FUNCTION: SWBF2 0x005a9eb0
 void Music::StopAll()
 {
-    PblListDouble::Node* pLink = sMusicActive.mTerminator.mNext;
-    while (pLink != &sMusicActive.mTerminator)
+    PblListDoubleSorted::Itor itor(sMusicActive);
+    for (;;)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+        PblListDoubleSorted::Node* pNode = itor.GetNode(&sMusicActive);
         if (pNode == sMusicActive.GetTerminator())
         {
             break;
@@ -387,7 +386,7 @@ void Music::StopAll()
             pTransport->Stop();
         }
 
-        pLink = pLink->mNext;
+        ++itor;
         pMusic->mPlayStateCurrent = playState_stopped;
         pMusic->Stop();
     }

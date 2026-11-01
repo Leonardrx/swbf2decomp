@@ -182,8 +182,7 @@ void VoiceVirtual::Update(float fDeltaTime)
             mVoice->SourceTransport::Play(true);
             if (mFlags & flags_restorePlaybackPos)
             {
-                mVoice->mPlaybackPosition = mPlaybackPosition;
-                mVoice->SourceTransport::mFlags |= flags_updatePlaybackPosition;
+                mVoice->SetPlaybackPosition(mPlaybackPosition);
             }
         }
         mVoice->CopyParameters(*this, false);
@@ -207,8 +206,7 @@ void VoiceVirtual::Update(float fDeltaTime)
         SetPlayState(playState_playing);
         if (mVoice && GetPlaybackPositionChanged())
         {
-            mVoice->mPlaybackPosition = mPlaybackPosition;
-            mVoice->SourceTransport::mFlags |= flags_updatePlaybackPosition;
+            mVoice->SetPlaybackPosition(mPlaybackPosition);
         }
         break;
     }
@@ -229,8 +227,9 @@ void VoiceVirtual::Update(float fDeltaTime)
         unsigned int uiPos = mPlaybackPosition;
         const unsigned int uiLength = pSample->mLengthSamples;
         DetermineClosestListener();
+        const unsigned int uiFrequency = pSample->mFrequency;
         uiPos += (unsigned int)(Source2D3D::CalculatePitch(this) * fDeltaTime
-                                * (float)pSample->mFrequency);
+                                * (float)uiFrequency);
         if (uiPos >= uiLength)
         {
             if (GetLooping())

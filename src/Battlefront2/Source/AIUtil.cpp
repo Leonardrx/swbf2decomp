@@ -682,15 +682,15 @@ void AIUtil::CalculateHeadingControls(const Controllable* pMe, float fScale,
         const PblVector3 vToDest(rDest.mPos.x - vPos.x, rDest.mPos.y - vPos.y, rDest.mPos.z - vPos.z);
         const float fStop = StopDist(pMe);
         PblVector3 vAhead;
-        if (rDest.mHasDest && vToDest.z * vToDest.z + vToDest.x * vToDest.x > fStop * fStop)
+        if (rDest.mHasDest && vToDest.x * vToDest.x + vToDest.z * vToDest.z > fStop * fStop)
         {
-            vAhead = GetSafeNormal(vToDest) * 30.0f;
+            vAhead = GetSafeNormal(vToDest);
         }
         else
         {
-            vAhead = pMe->GetMatrix().GetZAxis() * 30.0f;
+            vAhead = pMe->GetMatrix().GetZAxis();
         }
-        vAim = pMe->GetMatrix().GetTranslation() + vAhead;
+        vAim = pMe->GetMatrix().GetTranslation() + vAhead * 30.0f;
     }
 
     PblVector3 vBubble(0.0f, 0.0f, 0.0f);
@@ -1739,16 +1739,9 @@ PblVector3 AIUtil::DumbDown(const GameObject* pObject, float fDeltaTime, Aimer* 
         const PblVector3 vRight = CrossProduct(vDir, vUp);
         PblMatrix mAim(vRight, vUp, vDir, gVectorZero);
         PblMatrix mRotate;
-        float fAngle;
-        if (vUp.y > 0.0f)
-        {
-            fAngle = 0.523598790f;
-        }
-        else
-        {
-            fAngle = -0.523598790f;
-        }
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mAim), reinterpret_cast<const D3DXMATRIX*>(&mAim), D3DXMatrixRotationY(reinterpret_cast<D3DXMATRIX*>(&mRotate), fAngle));
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mAim), reinterpret_cast<const D3DXMATRIX*>(&mAim),
+                           D3DXMatrixRotationY(reinterpret_cast<D3DXMATRIX*>(&mRotate),
+                                               vUp.y > 0.0f ? 0.523598790f : -0.523598790f));
         vAim = mAim.GetZAxis();
         pAimer->SetAngVel(gVectorZero);
     }
@@ -1765,11 +1758,7 @@ PblVector3 AIUtil::DumbDown(const GameObject* pObject, float fDeltaTime, Aimer* 
         pAimer->SetAngVel(vNewVel);
     }
 
-    const PblVector3& vAngVel = pAimer->GetAngVel();
-    const PblVector3 vNext = vAngVel * fDeltaTime + vAim;
-    PblVector3 vResult;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vResult), reinterpret_cast<const D3DXVECTOR3*>(&vNext));
-    return vResult;
+    return Normalize(pAimer->GetAngVel() * fDeltaTime + vAim);
 }
 
 // FUNCTION: SWBF2 0x00442ab0

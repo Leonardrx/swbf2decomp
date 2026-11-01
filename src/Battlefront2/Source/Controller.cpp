@@ -195,48 +195,27 @@ void Controller::UpdateTargetBubbleSize(float dt)
     }
     IncreaseTargetBubbleSize(fIncrease);
 
-    float fCharge = mAvailableBubbleCharge - fShrink * 0.5f;
-    if (fCharge < 0.0f)
-    {
-        fCharge = 0.0f;
-    }
-    else if (fCharge > 5.0f)
-    {
-        fCharge = 5.0f;
-    }
-    mAvailableBubbleCharge = fCharge;
+    mAvailableBubbleCharge = Clamp(mAvailableBubbleCharge - fShrink * 0.5f, 0.0f, 5.0f);
 
     if (mOwner->GetGameObject())
     {
         PblVector3 vVelocity = mOwner->GetGameObject()->GetVelocity();
-        float fMaxSpeed = mOwner->GetGameObject()->GetMaxSpeed();
-        if (fMaxSpeed < 0.1f)
-        {
-            fMaxSpeed = 0.1f;
-        }
+        float fMaxSpeed = Max(0.1f, mOwner->GetGameObject()->GetMaxSpeed());
         PblVector3 vDelta(mTargetBubbleLastVel.x - vVelocity.x,
                           mTargetBubbleLastVel.y - vVelocity.y,
                           mTargetBubbleLastVel.z - vVelocity.z);
         mTargetBubbleLastVel = vVelocity;
         IncreaseTargetBubbleSize(
-            sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.455f
+            PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.455f
             / fMaxSpeed);
     }
 
     PblVector3 vRandom = PblRandom::_Global.GetVector3();
-    PblVector3 vAxis(mTargetBubbleAxis.x + vRandom.x, mTargetBubbleAxis.y + vRandom.y,
-                     mTargetBubbleAxis.z + vRandom.z);
+    PblVector3 vAxis = mTargetBubbleAxis + vRandom;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vRandom), reinterpret_cast<const D3DXVECTOR3*>(&vAxis));
     mTargetBubbleAxis = vRandom;
 
-    float fAngle = dt * 2.0f;
-    float fSin, fCos;
-    PblMath::SinCos(&fSin, &fCos, fAngle * 0.5f);
-    PblQuaternion qTurn;
-    qTurn._fX = mTargetBubbleAxis.x * fSin;
-    qTurn._fY = mTargetBubbleAxis.y * fSin;
-    qTurn._fZ = mTargetBubbleAxis.z * fSin;
-    qTurn._fS = fCos;
+    PblQuaternion qTurn(mTargetBubbleAxis, dt * 2.0f);
     mTargetBubbleRotation = mTargetBubbleRotation * qTurn;
     mTargetBubbleOffset = mTargetBubbleRotation.RotateVector(PblVector3(0.0f, 1.0f, 0.0f));
 

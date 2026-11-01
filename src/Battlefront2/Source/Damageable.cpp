@@ -295,9 +295,8 @@ void Damageable::ApplyNetClientDamage(const DamageDesc& damage, unsigned int uFl
                         {
                             fAmount = 1.0f;
                         }
-                        float fTime = fAmount * 0.15f + 0.15f;
                         ScreenFilterEffect::Instance()->TimedFilter(
-                            iViewport, fTime, 0.0f, fTime,
+                            iViewport, fAmount * 0.15f + 0.15f, 0.0f, fAmount * 0.15f + 0.15f,
                             RedColor(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f)),
                             0xDE020766);
                     }
@@ -469,9 +468,8 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
                         {
                             fAmount = 1.0f;
                         }
-                        float fTime = fAmount * 0.15f + 0.15f;
                         ScreenFilterEffect::Instance()->TimedFilter(
-                            iViewport, fTime, 0.0f, fTime,
+                            iViewport, fAmount * 0.15f + 0.15f, 0.0f, fAmount * 0.15f + 0.15f,
                             RedColor(RedColor::RED, (unsigned char)(int)(fAmount * 96.0f + 32.0f)),
                             0xDE020766);
                     }
@@ -677,8 +675,8 @@ void Damageable::HealthChangeCallback(bool, float)
         {
             return;
         }
-        const bool bShow = !bUnbuilt && pStage->mPercent + 0.0001f > fRatio &&
-                           (pStage->mPercentStop <= 0.0f || fRatio >= pStage->mPercentStop - 0.0001f);
+        const bool bShow = !bUnbuilt && fRatio < pStage->mPercent + 0.0001f &&
+                           (pStage->mPercentStop <= 0.0f || pStage->mPercentStop - 0.0001f <= fRatio);
 
         if (!(mDamageEffect[i] == 0))
         {
@@ -724,8 +722,10 @@ void Damageable::HealthChangeCallback(bool, float)
                 mDamageEffect[i]->AttachEffectToObject(pGeometry, pStage->mHardPoint, mOffset, true);
             }
             GameObject* pOwner = GetGameObject();
-            const PblVector3* pEffectPos = reinterpret_cast<const PblVector3*>(&mDamageEffect[i]->m_mWorldMatrix.m[3][0]);
-            mDamageEffectSound[i].Play(&pStage->mSound, pEffectPos, &pOwner->GetVelocity(), true);
+            const FLEffectObject* pEffect = mDamageEffect[i].operator->();
+            mDamageEffectSound[i].Play(&pStage->mSound,
+                                       reinterpret_cast<const PblVector3*>(&pEffect->m_mWorldMatrix.m[3][0]),
+                                       &pOwner->GetVelocity(), true);
         }
     }
 }
@@ -759,26 +759,22 @@ void Event<GameObject, DamageOwner>::Callback::Trigger(GameObject& item, DamageO
         if (pChild)
         {
             pChild->AddRef();
-            while (pChild)
-            {
-                bool bAlive = pChild->mAliveFlag;
-                if (!bAlive)
-                {
-                    break;
-                }
-                Callback* pNext = (Callback*)pChild->mSibling;
-                if (pNext)
-                {
-                    pNext->AddRef();
-                }
-                pChild->Trigger(item, param);
-                pChild->Release();
-                pChild = pNext;
-            }
-            if (pChild)
+        }
+        while (pChild)
+        {
+            if (!pChild->IsAlive())
             {
                 pChild->Release();
+                break;
             }
+            Callback* pNext = (Callback*)pChild->mSibling;
+            if (pNext)
+            {
+                pNext->AddRef();
+            }
+            pChild->Trigger(item, param);
+            pChild->Release();
+            pChild = pNext;
         }
     }
     Release();
@@ -795,23 +791,22 @@ void Event<GameObject, float>::Callback::Trigger(GameObject& item, float& param)
         if (pChild)
         {
             pChild->AddRef();
-            while (pChild)
+        }
+        while (pChild)
+        {
+            if (!pChild->IsAlive())
             {
-                bool bAlive = pChild->mAliveFlag;
-                if (!bAlive)
-                {
-                    pChild->Release();
-                    break;
-                }
-                Callback* pNext = (Callback*)pChild->mSibling;
-                if (pNext)
-                {
-                    pNext->AddRef();
-                }
-                pChild->Trigger(item, param);
                 pChild->Release();
-                pChild = pNext;
+                break;
             }
+            Callback* pNext = (Callback*)pChild->mSibling;
+            if (pNext)
+            {
+                pNext->AddRef();
+            }
+            pChild->Trigger(item, param);
+            pChild->Release();
+            pChild = pNext;
         }
     }
     Release();

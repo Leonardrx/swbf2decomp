@@ -231,52 +231,44 @@ void DSBufferRenderer::UpdateGain(bool bEnable, float fGain)
 
     if ((mFlags & 0x10) != 0)
     {
-
         if (Source2D3D::Get3DMode())
         {
             DSBuffer::SetGain(fSourceGain * fGain);
-            return;
         }
-
-        DSBuffer::SetGain(fSourceGain);
-        DSBuffer::SetPan(Source2D::mPan);
-        return;
+        else
+        {
+            DSBuffer::SetGain(fSourceGain);
+            DSBuffer::SetPan(Source2D::mPan);
+        }
     }
-
-    if (Source2D3D::Get3DMode())
+    else if (Source2D3D::Get3DMode())
     {
-
         const int iGain =
             (int)(fSourceGain * fGain * 32767.0f) << 16;
-        int* pTarget = mGainTarget;
         for (unsigned int i = 0; i < mNumChannels; ++i)
         {
-            *pTarget++ = iGain;
+            mGainTarget[i] = iGain;
         }
-        return;
     }
-
-    if (mNumChannels == 2)
+    else if (mNumChannels == 2)
     {
-
         GainMatrix gains;
         Source2D::CalculateGain(fSourceGain, 1.0f, gains);
 
         mGainTarget[0] = (int)(gains.frontLeft * 32767.0f) << 16;
 
         mGainTarget[1] = (int)(gains.frontRight * 32767.0f) << 16;
-
-        return;
     }
-
-    const int iGain = (int)(fSourceGain * 32767.0f) << 16;
-    int* pTarget = mGainTarget;
-    for (unsigned int i = 0; i < mNumChannels; ++i)
+    else
     {
-        *pTarget++ = iGain;
-    }
+        const int iGain = (int)(fSourceGain * 32767.0f) << 16;
+        for (unsigned int i = 0; i < mNumChannels; ++i)
+        {
+            mGainTarget[i] = iGain;
+        }
 
-    DSBuffer::SetPan(Source2D::mPan);
+        DSBuffer::SetPan(Source2D::mPan);
+    }
 }
 
 // FUNCTION: SWBF2 0x0073eab0

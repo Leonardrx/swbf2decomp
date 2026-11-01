@@ -128,12 +128,12 @@ void EndDisplay::Show(unsigned int uiWinners, float fMinDisplayTime)
         Character* pPlayer = NetGame::GetLocalPlayer(i);
         if (pPlayer)
         {
-            int iWon = (uiWinners >> pPlayer->mTeamNumber) & 1;
+            bool bPlayerWon = ((uiWinners >> pPlayer->mTeamNumber) & 1) != 0;
             RedBitmapElement* pText = &mEndText[i];
             pText->Enable(true);
-            pText->SetColor(sColor[iWon]);
-            pText->SetTexCoords(sTexcoords[iWon * 2][0], sTexcoords[iWon * 2][1],
-                                sTexcoords[iWon * 2 + 1][0], sTexcoords[iWon * 2 + 1][1], false);
+            pText->SetColor(sColor[bPlayerWon]);
+            pText->SetTexCoords(sTexcoords[bPlayerWon * 2][0], sTexcoords[bPlayerWon * 2][1],
+                                sTexcoords[bPlayerWon * 2 + 1][0], sTexcoords[bPlayerWon * 2 + 1][1], false);
         }
     }
     if (bFirstShow)

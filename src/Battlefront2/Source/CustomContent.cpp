@@ -31,29 +31,27 @@ void CopyFiles()
 
     PblFile input;
     input.Open(fullName, true, false, true);
-    if (!input.IsOpen())
+    if (input.IsOpen())
     {
-        return;
-    }
+        strlcpy(destination, fullName, sizeof(destination));
+        PblFile output;
+        output.OpenCreate(destination, true, false, true);
+        if (!output.IsOpen())
+        {
+            input.Close();
+            return;
+        }
 
-    strlcpy(destination, fullName, sizeof(destination));
-    PblFile output;
-    output.OpenCreate(destination, true, false, true);
-    if (!output.IsOpen())
-    {
+        for (int remaining = input.GetSize(); remaining > 0; )
+        {
+            int count = remaining < (int)sizeof(source) ? remaining : (int)sizeof(source);
+            input.ReadData(source, count);
+            output.WriteData(source, count);
+            remaining -= count;
+        }
         input.Close();
-        return;
+        output.Close();
     }
-
-    for (int remaining = input.GetSize(); remaining > 0; )
-    {
-        int count = remaining < (int)sizeof(source) ? remaining : (int)sizeof(source);
-        input.ReadData(source, count);
-        output.WriteData(source, count);
-        remaining -= count;
-    }
-    input.Close();
-    output.Close();
 }
 
 // GLOBAL: SWBF2 0x007e6321

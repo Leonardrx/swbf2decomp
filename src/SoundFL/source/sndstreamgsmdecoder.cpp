@@ -94,15 +94,15 @@ void StreamGSMDecoder::Update()
                 for (i = 0; i < 79; ++i)
                 {
                     short* const pOut = pSamples + (mOutputPacketOffset + i * 2);
-                    const short* const pIn = &(*mFrame)[mFrameOffset + i];
-                    pOut[0] = pIn[0];
-                    pOut[1] = (short)((pIn[0] + pIn[1]) >> 1);
+                    const unsigned int uiFrame = mFrameOffset + i;
+                    pOut[0] = (*mFrame)[uiFrame];
+                    pOut[1] = (short)(((*mFrame)[uiFrame] + (*mFrame)[uiFrame + 1]) >> 1);
                 }
 
                 short* const pOut = pSamples + (mOutputPacketOffset + i * 2);
-                const short* const pIn = &(*mFrame)[mFrameOffset + i];
-                pOut[0] = pIn[0];
-                pOut[1] = pIn[0];
+                const unsigned int uiFrame = mFrameOffset + i;
+                pOut[0] = (*mFrame)[uiFrame];
+                pOut[1] = (*mFrame)[uiFrame];
 
                 mOutputPacketOffset += 160;
                 mFrameOffset += 80;

@@ -110,9 +110,7 @@ void MapCamera::Update(float fDeltaTime)
         break;
     case ZOOM_NORMAL:
         mZoomNewDir = Normalize(sOffset[ZOOM_NORMAL]);
-        mZoomNewPos = PblVector3(mMoveCurPos.x + sOffset[mZoomLevel].x,
-                                 mMoveCurPos.y + sOffset[mZoomLevel].y,
-                                 mMoveCurPos.z + sOffset[mZoomLevel].z);
+        mZoomNewPos = mMoveCurPos + sOffset[mZoomLevel];
         break;
     default:
         mZoomNewDir = mTarget[2];
@@ -120,11 +118,7 @@ void MapCamera::Update(float fDeltaTime)
         break;
     }
 
-    const PblVector3& vUp = gVectorUnitY;
-    PblVector3 vAxis(vUp.y * mZoomNewDir.z - vUp.z * mZoomNewDir.y,
-                     vUp.z * mZoomNewDir.x - vUp.x * mZoomNewDir.z,
-                     vUp.x * mZoomNewDir.y - vUp.y * mZoomNewDir.x);
-    D3DXVec3Normalize((D3DXVECTOR3*)&vAxis, (const D3DXVECTOR3*)&vAxis);
+    PblVector3 vAxis = Normalize(CrossProduct(gVectorUnitY, mZoomNewDir));
     D3DXMATRIX mRotation;
     D3DXMatrixRotationAxis(&mRotation, (const D3DXVECTOR3*)&vAxis, sPitch[mZoomLevel]);
     PblVector3 vDir;
@@ -133,10 +127,7 @@ void MapCamera::Update(float fDeltaTime)
 
     if (mZoomRatio == 0.0f)
     {
-        float dx = mZoomNewPos.x - mZoomOldPos.x;
-        float dy = mZoomNewPos.y - mZoomOldPos.y;
-        float dz = mZoomNewPos.z - mZoomOldPos.z;
-        mZoomDist = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
+        mZoomDist = Length(mZoomNewPos - mZoomOldPos);
     }
 
     mZoomRatio += fDeltaTime * 0.5f;
@@ -144,19 +135,16 @@ void MapCamera::Update(float fDeltaTime)
     {
         float fT = 0.5f - PblMath::Cos(mZoomRatio * PblMath::fPi) * 0.5f;
         float fDir = (float)mZoomDir;
-        const float t2 = fT * fT;
-        const float t3 = t2 * fT;
-        const float h00 = 2.0f * t3 - 3.0f * t2 + 1.0f;
-        const float h10 = t3 - 2.0f * t2 + fT;
-        const float h01 = 3.0f * t2 - 2.0f * t3;
-        const float h11 = t3 - t2;
-        PblVector3 vZoomDir(h00 * mZoomOldDir.x + h10 * (mZoomOldDir.x * fDir) + h01 * mZoomNewDir.x + h11 * (mZoomNewDir.x * fDir),
-                            h00 * mZoomOldDir.y + h10 * (mZoomOldDir.y * fDir) + h01 * mZoomNewDir.y + h11 * (mZoomNewDir.y * fDir),
-                            h00 * mZoomOldDir.z + h10 * (mZoomOldDir.z * fDir) + h01 * mZoomNewDir.z + h11 * (mZoomNewDir.z * fDir));
+        PblVector3 vOldTangent = mZoomOldDir * fDir;
+        PblVector3 vNewTangent = mZoomNewDir * fDir;
         float fTangent = -(mZoomDist * fDir);
-        PblVector3 vZoomPos(h00 * mZoomOldPos.x + h10 * (mZoomOldDir.x * fTangent) + h01 * mZoomNewPos.x + h11 * (mZoomNewDir.x * fTangent),
-                            h00 * mZoomOldPos.y + h10 * (mZoomOldDir.y * fTangent) + h01 * mZoomNewPos.y + h11 * (mZoomNewDir.y * fTangent),
-                            h00 * mZoomOldPos.z + h10 * (mZoomOldDir.z * fTangent) + h01 * mZoomNewPos.z + h11 * (mZoomNewDir.z * fTangent));
+        float t2 = fT * fT;
+        float t3 = t2 * fT;
+        PblVector3 vZoomDir = mZoomOldDir * (2.0f * t3 - 3.0f * t2 + 1.0f) + vOldTangent * (t3 - 2.0f * t2 + fT)
+                            + mZoomNewDir * (3.0f * t2 - 2.0f * t3) + vNewTangent * (t3 - t2);
+        PblVector3 vZoomPos = mZoomOldPos * (2.0f * t3 - 3.0f * t2 + 1.0f)
+                            + mZoomOldDir * fTangent * (t3 - 2.0f * t2 + fT)
+                            + mZoomNewPos * (3.0f * t2 - 2.0f * t3) + mZoomNewDir * fTangent * (t3 - t2);
         mMatrix = DirectionMatrix(vZoomDir, gVectorUnitY, vZoomPos);
     }
     else
@@ -168,11 +156,7 @@ void MapCamera::Update(float fDeltaTime)
 
     if (fDeltaTime > 0.0f)
     {
-        float fInv = 1.0f / fDeltaTime;
-        const PblVector3& vPos = mMatrix[3];
-        mVelocity = PblVector3((vPos.x - vOldPos.x) * fInv,
-                               (vPos.y - vOldPos.y) * fInv,
-                               (vPos.z - vOldPos.z) * fInv);
+        mVelocity = (mMatrix[3] - vOldPos) * (1.0f / fDeltaTime);
     }
 }
 

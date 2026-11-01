@@ -265,87 +265,85 @@ PblVector3 EntityGeometry::GetTargetPointMissVector() const
 bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pModel, unsigned char ucLod,
                                  unsigned int& uFlags, unsigned int uShadowTexture)
 {
-    RedDirectionalLight* pLight = RedLight::GetGlobalDirectionalLight(0);
-    if (!pLight->IsShadowCaster())
+    RedDirectionalLight* pLight = NULL;
+    if (RedLight::GetGlobalDirectionalLight(0)->IsShadowCaster())
+    {
+        pLight = RedLight::GetGlobalDirectionalLight(0);
+    }
+    else if (RedLight::GetGlobalDirectionalLight(1)->IsShadowCaster())
     {
         pLight = RedLight::GetGlobalDirectionalLight(1);
-        if (!pLight->IsShadowCaster())
-        {
-            pLight = NULL;
-        }
     }
-    if (!pLight)
+    if (pLight)
     {
-        uFlags &= ~0x10000;
-        return false;
-    }
-
-    if (ucLod == 0 && !(uFlags & 0x220000) && pModel->GetRedModel(0)->_pStencilShadow &&
-        RedStencilShadow::GetShadowEnable())
-    {
-        const PblVector3& vLightDir = pLight->m_vDirection;
-        float fMinLength = _Sphere.w * -2.0f / vLightDir.y;
-        if (fMinLength < 6.0f)
+        if (ucLod == 0 && !(uFlags & 0x220000) && pModel->GetRedModel(0)->_pStencilShadow &&
+            RedStencilShadow::GetShadowEnable())
         {
-            fMinLength = 6.0f;
-        }
-        uFlags |= 0x10000;
-
-        PblVector3 vStart = GetRenderPos();
-        PblVector3 vDir = pLight->m_vDirection;
-        vStart -= vDir * (_Sphere.w * 2.0f);
-        CollisionObject* pHit;
-        float fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pObject, pObject != NULL,
-                                                 0x90, false) * 50.0f;
-        if (fMinLength > fLength)
-        {
-            fLength = fMinLength;
-        }
-
-        float fNear, fFar, fWidth, fHeight;
-        RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
-        const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
-        const PblVector3& vCamPos = mCamera.GetTranslation();
-        const PblVector3& vCamDir = mCamera.GetZAxis();
-        float fDX = vCamPos.x - vCamDir.x * fNear - _Sphere.x;
-        float fDY = vCamPos.y - vCamDir.y * fNear - _Sphere.y;
-        float fDZ = vCamPos.z - vCamDir.z * fNear - _Sphere.z;
-        float fReach = _Sphere.w + fLength + fWidth * 1.33f;
-        RedRenderer::SetStencilShadowLength(fLength);
-        RedRenderer::SetStencilShadowZFail(fReach * fReach > fDX * fDX + fDY * fDY + fDZ * fDZ);
-        uFlags |= 0x10000;
-        return true;
-    }
-
-    uFlags &= ~0x10000;
-    if (uShadowTexture)
-    {
-        PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
-        PblVector3 vPos = GetRenderPos();
-        float fRadius = GetCollisionRadius();
-        if (const RedModel* pRedModel = pModel->GetRedModel(ucLod))
-        {
-            fRadius = pRedModel->_BoundingSphere.w;
-        }
-        PblVector3 vNormal = gVectorUnitY;
-        CollisionObject* pHit;
-        float fHit = CollisionManager::RayHit(vPos, vDown, 5.0f, pHit, &vNormal, &pObject, pObject != NULL,
-                                              0x90, false);
-        if (fHit < 1.0f)
-        {
-            float fAlpha = 1.0f - RedRenderer::GetShadowIntensity();
-            float fDist = fHit * 5.0f;
-            PblVector3 vHit(vPos.x + vDown.x * fDist, vPos.y + vDown.y * fDist, vPos.z + vDown.z * fDist);
-            const PblVector3& vDir = pLight->m_vDirection;
-            PblVector3 vShadowNormal(0.0f - vDir.x * 0.2f, 0.8f - vDir.y * 0.2f, 0.0f - vDir.z * 0.2f);
-            float fStart = vPos.y - fRadius - vHit.y;
-            if (-vDir.x * vShadowNormal.x - vShadowNormal.z * vDir.z > -vDir.x * vNormal.x - vNormal.z * vDir.z)
+            const PblVector3& vLightDir = pLight->m_vDirection;
+            float fMinLength = _Sphere.w * -2.0f / vLightDir.y;
+            if (fMinLength < 6.0f)
             {
-                RedDropShadowManager::AddShadow(uShadowTexture, vHit, vShadowNormal, vDir, fStart,
-                                                fStart + fRadius * 2.0f, fRadius * 2.0f, fAlpha);
+                fMinLength = 6.0f;
+            }
+            uFlags |= 0x10000;
+
+            PblVector3 vStart = GetRenderPos();
+            PblVector3 vDir = pLight->m_vDirection;
+            vStart -= vDir * (_Sphere.w * 2.0f);
+            const GameObject* pIgnore = pObject;
+            CollisionObject* pHit;
+            float fLength = CollisionManager::RayHit(vStart, vDir, 50.0f, pHit, NULL, &pIgnore, pIgnore != NULL,
+                                                     0x90, false) * 50.0f;
+            if (fMinLength > fLength)
+            {
+                fLength = fMinLength;
+            }
+
+            float fNear, fFar, fWidth, fHeight;
+            RedRenderer::GetCamera()->GetFrustum(fNear, fFar, fWidth, fHeight);
+            const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
+            const PblVector3 vDelta = mCamera.GetTranslation() - mCamera.GetZAxis() * fNear - GetRenderPos();
+            float fReach = _Sphere.w + fLength + fWidth * 1.33f;
+            RedRenderer::SetStencilShadowLength(fLength);
+            RedRenderer::SetStencilShadowZFail(fReach * fReach >
+                                               vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+            uFlags |= 0x10000;
+            return true;
+        }
+
+        uFlags &= ~0x10000;
+        if (uShadowTexture)
+        {
+            PblVector3 vDown(-gVectorUnitY.x, -gVectorUnitY.y, -gVectorUnitY.z);
+            PblVector3 vPos = GetRenderPos();
+            float fRadius = GetCollisionRadius();
+            if (const RedModel* pRedModel = pModel->GetRedModel(ucLod))
+            {
+                fRadius = pRedModel->_BoundingSphere.w;
+            }
+            PblVector3 vNormal = gVectorUnitY;
+            const GameObject* pIgnore = pObject;
+            CollisionObject* pHit;
+            float fHit = CollisionManager::RayHit(vPos, vDown, 5.0f, pHit, &vNormal, &pIgnore, pIgnore != NULL,
+                                                  0x90, false);
+            if (fHit < 1.0f)
+            {
+                float fAlpha = 1.0f - RedRenderer::GetShadowIntensity();
+                float fDist = fHit * 5.0f;
+                PblVector3 vHit(vPos.x + vDown.x * fDist, vPos.y + vDown.y * fDist, vPos.z + vDown.z * fDist);
+                const PblVector3& vDir = pLight->m_vDirection;
+                PblVector3 vShadowNormal(0.0f - vDir.x * 0.2f, 0.8f - vDir.y * 0.2f, 0.0f - vDir.z * 0.2f);
+                float fStart = vPos.y - fRadius - vHit.y;
+                if (-vDir.x * vShadowNormal.x - vShadowNormal.z * vDir.z > -vDir.x * vNormal.x - vNormal.z * vDir.z)
+                {
+                    RedDropShadowManager::AddShadow(uShadowTexture, vHit, vShadowNormal, vDir, fStart,
+                                                    fStart + fRadius * 2.0f, fRadius * 2.0f, fAlpha);
+                }
             }
         }
+        return false;
     }
+    uFlags &= ~0x10000;
     return false;
 }
 
@@ -1155,30 +1153,22 @@ void EntityGeometry::CreateChunkCluster(float fScale)
     }
 
     int iNumChunks = 0;
-    float fCenterX = 0.0f;
-    float fCenterY = 0.0f;
-    float fCenterZ = 0.0f;
+    PblVector3 vCenter(0.0f, 0.0f, 0.0f);
     for (int i = 0; i < 10; ++i)
     {
-        ChunkDescriptor* pDesc = pClass->mChunkDescriptors[i];
-        if (!pDesc)
+        if (!pClass->mChunkDescriptors[i])
         {
             continue;
         }
-        pDesc->mMatrix = mMatrix;
+        pClass->mChunkDescriptors[i]->mMatrix = mMatrix;
         if (pClass->mChunkAttachPoints[i] && pPose)
         {
             if (const PblMatrix* pAttach = pPose->Find(pClass->mChunkAttachPoints[i]))
             {
-                PblMatrix mAttached;
-                mAttached = *pAttach * mMatrix;
-                pDesc->mMatrix = mAttached;
+                pClass->mChunkDescriptors[i]->mMatrix = *pAttach * mMatrix;
             }
         }
-        PblMatrix mChunk = pDesc->mPrimitive->GetWorldMatrix(mMatrix, pPose);
-        fCenterX += mChunk.m[3][0];
-        fCenterY += mChunk.m[3][1];
-        fCenterZ += mChunk.m[3][2];
+        vCenter += pClass->mChunkDescriptors[i]->mPrimitive->GetWorldMatrix(mMatrix, pPose).GetTranslation();
         ++iNumChunks;
     }
     if (iNumChunks <= 0)
@@ -1187,8 +1177,8 @@ void EntityGeometry::CreateChunkCluster(float fScale)
     }
 
     float fInvCount = 1.0f / (float)iNumChunks;
-    fCenterZ *= fInvCount;
-    fCenterX *= fInvCount;
+    vCenter.z *= fInvCount;
+    vCenter.x *= fInvCount;
     ChunkCluster* pCluster = ChunkClusterManager::GetFreeCluster(true);
     if (!pCluster)
     {
@@ -1196,37 +1186,32 @@ void EntityGeometry::CreateChunkCluster(float fScale)
     }
     pCluster->mParentClass = pClass;
     GetGameObject();
-    fCenterY = GetPosition().y;
+    vCenter.y = GetPosition().y;
 
     for (int i = 0; i < 10; ++i)
     {
-        ChunkDescriptor* pDesc = pClass->mChunkDescriptors[i];
-        if (!pDesc)
+        if (!pClass->mChunkDescriptors[i])
         {
             continue;
         }
-        pDesc->mFullCollisionModel =
+        pClass->mChunkDescriptors[i]->mFullCollisionModel =
             pClass->mFullChunkCollisions[i]->GetNumBodies() ? pClass->mFullChunkCollisions[i] : 0;
-        pDesc->mMatrix = mMatrix;
+        pClass->mChunkDescriptors[i]->mMatrix = mMatrix;
         const PblVector3& vVelocity = GetVelocity();
-        float fFactor = pClass->mChunkVelocityFactor[i];
-        pDesc->mVelocity.x = vVelocity.x * fFactor;
-        pDesc->mVelocity.y = vVelocity.y * fFactor;
-        pDesc->mVelocity.z = vVelocity.z * fFactor;
+        pClass->mChunkDescriptors[i]->mVelocity = vVelocity * pClass->mChunkVelocityFactor[i];
         if (pClass->mChunkAttachPoints[i] && pPose)
         {
             if (const PblMatrix* pAttach = pPose->Find(pClass->mChunkAttachPoints[i]))
             {
-                PblMatrix mAttached;
-                mAttached = *pAttach * mMatrix;
-                pDesc->mMatrix = mAttached;
+                pClass->mChunkDescriptors[i]->mMatrix = *pAttach * mMatrix;
             }
         }
 
-        PblMatrix mChunk = pDesc->mPrimitive->GetWorldMatrix(mMatrix, pPose);
-        float fDX = mChunk.m[3][0] - fCenterX;
-        float fDY = mChunk.m[3][1] - fCenterY;
-        float fDZ = mChunk.m[3][2] - fCenterZ;
+        const PblVector3 vDelta =
+            pClass->mChunkDescriptors[i]->mPrimitive->GetWorldMatrix(mMatrix, pPose).GetTranslation() - vCenter;
+        float fDX = vDelta.x;
+        float fDY = vDelta.y;
+        float fDZ = vDelta.z;
         float fDistSq = fDX * fDX + fDY * fDY + fDZ * fDZ;
         float fUp = PblMath::Sqrt(fDistSq) * pClass->mChunkUpFactor[i];
         PblVector3 vOut(fDX + 0.0f, fUp + fDY, fDZ + 0.0f);
@@ -1240,39 +1225,33 @@ void EntityGeometry::CreateChunkCluster(float fScale)
             {
                 float fRadius = GetCollisionRadius();
                 float fKick = PblRandom::GetSim().GetFloat() * 15.0f + 15.0f;
-                float fInvRadius = 1.0f / fRadius;
-                pDesc->mVelocity.x += vDir.x * fKick * fInvRadius;
-                pDesc->mVelocity.y += vDir.y * fKick * fInvRadius;
-                pDesc->mVelocity.z += vDir.z * fKick * fInvRadius;
+                pClass->mChunkDescriptors[i]->mVelocity += vDir * fKick * (1.0f / fRadius);
             }
-            if (pDesc->mPhysicsType == PHYSICS_LEAF)
+            if (pClass->mChunkDescriptors[i]->mPhysicsType == PHYSICS_LEAF)
             {
-                pDesc->mVelocity.x *= 0.25f;
-                pDesc->mVelocity.y *= 0.25f;
-                pDesc->mVelocity.z *= 0.25f;
+                pClass->mChunkDescriptors[i]->mVelocity *= 0.25f;
             }
-            const PblVector3& v = pDesc->mVelocity;
+            const PblVector3& v = pClass->mChunkDescriptors[i]->mVelocity;
             if (5.0f > PblMath::Sqrt(v.x * v.x + v.y * v.y + v.z * v.z))
             {
                 float fPush = PblRandom::GetSim().GetFloat() * 2.0f + 4.0f;
-                pDesc->mVelocity.x = vDir.x * fPush;
-                pDesc->mVelocity.y = vDir.y * fPush;
-                pDesc->mVelocity.z = vDir.z * fPush;
-                if (2.0f > pDesc->mVelocity.y)
+                pClass->mChunkDescriptors[i]->mVelocity = vDir * fPush;
+                if (2.0f > pClass->mChunkDescriptors[i]->mVelocity.y)
                 {
-                    pDesc->mVelocity.y = PblRandom::GetSim().GetFloat() + 2.0f;
+                    pClass->mChunkDescriptors[i]->mVelocity.y = PblRandom::GetSim().GetFloat() + 2.0f;
                 }
             }
         }
         else
         {
-            pDesc->mVelocity.x += vDir.x * fSpeed;
-            pDesc->mVelocity.y += vDir.y * fSpeed;
-            pDesc->mVelocity.z += vDir.z * fSpeed;
+            pClass->mChunkDescriptors[i]->mVelocity += vDir * fSpeed;
         }
-        pDesc->mVelocity *= fScale;
+        pClass->mChunkDescriptors[i]->mVelocity *= fScale;
 
-        ChunkDescriptor kChunk(*pDesc);
+        ChunkDescriptor kChunk(*pClass->mChunkDescriptors[i]);
+        kChunk.mOmega = pClass->mChunkDescriptors[i]->mOmega;
+        kChunk.mSimpleFrictionConstant = pClass->mChunkDescriptors[i]->mSimpleFrictionConstant;
+        kChunk.mMaxStaticLifetime = pClass->mChunkDescriptors[i]->mMaxStaticLifetime;
         pCluster->AddChunk(kChunk);
     }
 

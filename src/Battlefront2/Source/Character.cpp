@@ -97,34 +97,36 @@ namespace TestSpawn
 // FUNCTION: SWBF2 0x00438750
 PblMatrix GetTestSpawnMatrix(Character* pCharacter)
 {
-    PblMatrix result;
-    result.Reset();
-    float* p = reinterpret_cast<float*>(&result);
     if (pCharacter->mPlayerId < 0 &&
-        pCharacter != AIDebug::TestSpawn::aic[0] &&
-        pCharacter != AIDebug::TestSpawn::aic[1] &&
-        pCharacter != AIDebug::TestSpawn::aic[2] &&
-        pCharacter != AIDebug::TestSpawn::aic[3])
+        AIDebug::TestSpawn::aic[0] != pCharacter &&
+        AIDebug::TestSpawn::aic[1] != pCharacter &&
+        AIDebug::TestSpawn::aic[2] != pCharacter &&
+        AIDebug::TestSpawn::aic[3] != pCharacter)
     {
-        p[12] = (float)(pCharacter - Character::sCharacters) * 3.0f;
-        p[13] = 100.0f;
-        return result;
+        PblMatrix mSpawn(gMatrixIdentity);
+        mSpawn.SetTranslation(PblVector3((float)(pCharacter - Character::sCharacters) * 3.0f, 100.0f, 0.0f));
+        return mSpawn;
     }
 
+    const float kHalfHeight = 25.0f;
+    const PblVector3 kCylinderCenter(-74.0f, 12.0f, 20.0f);
+
     const float fAngle = PblRandom::_Global.GetFloat() * 6.2831855f;
-    float fSin, fCos;
+    float fCos, fSin;
     PblMath::SinCos(&fSin, &fCos, fAngle);
     const float fRadius = PblRandom::_Global.GetFloat() * 32.0f;
-    const PblVector3 vStart(fRadius * fSin - 74.0f, 37.0f, fRadius * fCos + 20.0f);
-    const PblVector3 vDirection(0.0f, -1.0f, 0.0f);
+    const PblVector3 vStart = fRadius * PblVector3(fSin, 0.0f, fCos) + kCylinderCenter + PblVector3(0.0f, kHalfHeight, 0.0f);
+    const PblVector3 vDown = -PblVector3(0.0f, 1.0f, 0.0f);
     CollisionObject* pHitObject = 0;
-    const float fHit = CollisionManager::RayHit(vStart, vDirection, 50.0f,
+    const float fHit = CollisionManager::RayHit(vStart, vDown, kHalfHeight * 2.0f,
                                                  pHitObject, 0, 0, 0, 0, false);
-    p[0] = -fCos; p[1] = 0.0f; p[2] = fSin; p[3] = 0.0f;
-    p[4] = 0.0f; p[5] = 1.0f; p[6] = 0.0f; p[7] = 0.0f;
-    p[8] = -fSin; p[9] = 0.0f; p[10] = -fCos; p[11] = 0.0f;
-    p[12] = vStart.x; p[13] = vStart.y - fHit * 50.0f;
-    p[14] = vStart.z; p[15] = 1.0f;
+    const PblVector3 vPosition = vStart - PblVector3(0.0f, fHit * kHalfHeight * 2.0f, 0.0f);
+
+    PblMatrix result;
+    result.SetXAxis(-fCos, 0.0f, fSin, 0.0f);
+    result.SetYAxis(0.0f, 1.0f, 0.0f, 0.0f);
+    result.SetZAxis(-fSin, 0.0f, -fCos, 0.0f);
+    result.SetTranslation(vPosition);
     return result;
 }
 }

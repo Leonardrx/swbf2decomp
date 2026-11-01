@@ -374,11 +374,7 @@ FlagItem::FlagGameplayType FlagItem::sFlagGameplayType;
 // FUNCTION: SWBF2 0x005250f0
 void FlagItem::RenderHelper(unsigned char ucLod, float fAlpha, unsigned int uiFlags)
 {
-    const FlagItemClass* pClass = static_cast<const FlagItemClass*>(mEntityClass);
-    const bool bCarried = mOwner != 0;
-    EntityCloth* const* pCloth = mClothPiece;
-
-    if (pClass->mTeamColorize[bCarried])
+    if (static_cast<const FlagItemClass*>(mEntityClass)->mTeamColorize[mOwner != 0])
     {
         int iLocal = NetGame::GetLocalIndex(CameraManager::sInstance->mUpdatedCameraId);
         int iSpectator = NetGame::GetSpectator(iLocal);
@@ -386,9 +382,16 @@ void FlagItem::RenderHelper(unsigned char ucLod, float fAlpha, unsigned int uiFl
         {
             iLocal = iSpectator;
         }
-        Character* pCharacter = Character::GetPtr(iLocal);
-        Team* pTeam = pCharacter && pCharacter->mPlayerId == iLocal
-                    ? pCharacter->mTeamPtr : Team::sTeams[1];
+        Team* pTeam;
+        Character* pCharacter = Character::FindPlayer(iLocal);
+        if (pCharacter)
+        {
+            pTeam = pCharacter->mTeamPtr;
+        }
+        else
+        {
+            pTeam = Team::sTeams[1];
+        }
         const int iFlagTeam = mTeam;
         RedColor color = pTeam->GetColor(iFlagTeam);
         const float fLife = mLifeTimer;
@@ -397,14 +400,12 @@ void FlagItem::RenderHelper(unsigned char ucLod, float fAlpha, unsigned int uiFl
         const PblMatrix mWorld = mMatrix;
         if (mModel->mClothCount)
         {
-            RedColor modelColor = RedColor::WHITE;
-            modelColor.a = color.a;
-            mModel->Render(ucLod, fAlpha, &mWorld, 0, modelColor, uiFlags, 0);
-            for (unsigned int i = 0; i < mModel->mClothCount; ++i, ++pCloth)
+            mModel->Render(ucLod, fAlpha, &mWorld, 0, RedColor(RedColor::WHITE, color.a), uiFlags, 0);
+            for (unsigned int i = 0; i < mModel->mClothCount; ++i)
             {
-                if (*pCloth)
+                if (mClothPiece[i])
                 {
-                    (*pCloth)->Render(mWorld, 0, ucLod, color, uiFlags, 1);
+                    mClothPiece[i]->Render(mWorld, 0, ucLod, color, uiFlags, 1);
                 }
             }
         }
@@ -422,13 +423,13 @@ void FlagItem::RenderHelper(unsigned char ucLod, float fAlpha, unsigned int uiFl
             const float fLife = mLifeTimer;
             const float fFade = fLife + 1.0f > 1.0f ? 1.0f : fLife + 1.0f;
             const float fClothAlpha = fFade * fAlpha;
-            for (unsigned int i = 0; i < mModel->mClothCount; ++i, ++pCloth)
+            for (unsigned int i = 0; i < mModel->mClothCount; ++i)
             {
-                if (*pCloth)
+                if (mClothPiece[i])
                 {
-                    RedColor color = RedColor::WHITE;
-                    color.a = static_cast<unsigned char>(static_cast<int>(fClothAlpha * 255.0f));
-                    (*pCloth)->Render(mWorld, 0, ucLod, color, uiFlags, 1);
+                    mClothPiece[i]->Render(mWorld, 0, ucLod,
+                                      RedColor(RedColor::WHITE, static_cast<unsigned char>(static_cast<int>(fClothAlpha * 255.0f))),
+                                      uiFlags, 1);
                 }
             }
         }

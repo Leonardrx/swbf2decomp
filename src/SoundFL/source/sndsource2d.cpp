@@ -13,16 +13,13 @@ void Source2D::CalculateGain(float fGain, float fReverbGain,
     const float fPan = mPan;
     if (fPan > 0.0f)
     {
-
-        rMatrix.frontRight = fGain;
         rMatrix.frontLeft = (1.0f - fPan) * fGain;
-
+        rMatrix.frontRight = fGain;
     }
     else
     {
         rMatrix.frontLeft = fGain;
         rMatrix.frontRight = (mPan + 1.0f) * fGain;
-
     }
 
     rMatrix.rearLeft = rMatrix.frontLeft;

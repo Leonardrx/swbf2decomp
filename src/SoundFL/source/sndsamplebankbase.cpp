@@ -207,24 +207,24 @@ bool SampleBankBase::LoadSamples(PblFileChunk& chunk, SampleBankBase const* pBas
 
         while (chunk.HasMoreChildren() && bContinue)
         {
-            switch ((unsigned int)chunk._pFile->Read32())
+            switch (chunk._pFile->Read32())
             {
-            case 0x2FB31C01u:
+            case 0x2FB31C01:
                 uiFrequency = chunk._pFile->Read32();
                 break;
-            case 0x1D48FEEFu:
+            case 0x1D48FEEF:
                 uiLengthSamples = chunk._pFile->Read32();
                 break;
-            case 0x23A0D95Cu:
+            case 0x23A0D95C:
                 uiSize = chunk._pFile->Read32();
                 break;
-            case 0x2E789FB4u:
+            case 0x2E789FB4:
                 bContinue = false;
                 break;
-            case 0x37386AE0u:
+            case 0x37386AE0:
                 uiHashID = chunk._pFile->Read32();
                 break;
-            case 0x7D268157u:
+            case 0x7D268157:
             {
                 const unsigned int uiAliasHashID = chunk._pFile->Read32();
                 for (unsigned int i = 0; i < uiIndex; ++i)
@@ -287,9 +287,9 @@ bool SampleBankBase::LoadSamples(PblFileChunk& chunk, SampleBankBase const* pBas
 
         if (pBase)
         {
-            const bool bOk = uiIndex
-                                 ? EngineBase::smSoundRAMAllocator.Resize(uiRAMSize, mHandle)
-                                 : EngineBase::smSoundRAMAllocator.Alloc(uiRAMSize, mHandle);
+            const bool bOk = uiIndex == 0
+                                 ? EngineBase::smSoundRAMAllocator.Alloc(uiRAMSize, mHandle)
+                                 : EngineBase::smSoundRAMAllocator.Resize(uiRAMSize, mHandle);
             if (!bOk)
             {
 
@@ -304,18 +304,12 @@ bool SampleBankBase::LoadSamples(PblFileChunk& chunk, SampleBankBase const* pBas
             ++mNumSamples;
         }
 
-        if (mTemplate == 1)
-        {
-            pAddress = 0;
-        }
-        else if (!bAlias || bAliasMissing)
-        {
-            pAddress = (void*)(GetBaseAddress() - uiSize + uiRAMSize);
-        }
-
         new (&mSamples[uiIndex++], false)
-            Sample(uiHashID, pAddress, uiSize, uiLengthSamples, (float)uiFrequency,
-                   mFormat, pAlias);
+            Sample(uiHashID,
+                   mTemplate == 1 ? 0
+                   : (bAlias && !bAliasMissing) ? pAddress
+                                                : (void*)(GetBaseAddress() - uiSize + uiRAMSize),
+                   uiSize, uiLengthSamples, (float)uiFrequency, mFormat, pAlias);
 
         --uiRemaining;
     }

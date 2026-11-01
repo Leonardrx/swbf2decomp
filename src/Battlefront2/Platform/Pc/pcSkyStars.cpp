@@ -49,7 +49,8 @@ void SkyStars::_PlatformRenderField(const StarField& field, unsigned int,
         unsigned int uSeed0 = uCycle ^ 0xc71c2830u;
         unsigned int uSeed1 = (uCycle + 1) ^ 0xc71c2830u;
         float fFraction = fCycle - (float)uCycle;
-        for (unsigned int i = 0; i < field.uiNumStars; ++i)
+        Star* pVertex = pVertices;
+        for (unsigned int i = 0; i < field.uiNumStars; ++i, ++pVertex)
         {
             uSeed0 = uSeed0 * 1664525u + 1013904223u;
             unsigned int uRand0 = uSeed0 >> 16;
@@ -68,7 +69,7 @@ void SkyStars::_PlatformRenderField(const StarField& field, unsigned int,
             float fRandom = (fRand0 - 1.0f) * (1.0f - fFraction)
                           + (fRand1 - 1.0f) * fFraction;
             float fDim = fRandom * m_fTwinkleFactor * (1.0f - field.aStar[i].vPos.y * 0.5f);
-            pVertices[i].color.a = (unsigned char)(int)((1.0f - fDim) * pVertices[i].color.a);
+            pVertex->color.a = (unsigned char)(int)((1.0f - fDim) * pVertex->color.a);
         }
     }
 

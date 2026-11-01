@@ -1541,10 +1541,9 @@ void _LoadVendorDeviceRenderCapOverrides()
     bool bVendorMatched;
     bool bDeviceMatched;
     bool bDone;
-    bDone = bVendorMatched = bDeviceMatched = false;
-
     unsigned int uiLen = 0;
     int iKey = 0;
+    bDone = bVendorMatched = bDeviceMatched = false;
 
     _bOverride_geometry = _bOverride_pipeline = _bOverride_textureCaps = _bOverride_skinning = _bOverride_shadowVolume = _bOverride_backBufferCopy = _bOverride_cubemaps = _bOverride_volumemaps = _bOverride_nonpow2textures = false;
 

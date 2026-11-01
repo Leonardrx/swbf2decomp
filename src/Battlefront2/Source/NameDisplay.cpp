@@ -250,30 +250,20 @@ bool NameDisplayThread::Update(float)
         {
             GameObject* pHost = pCollision->GetGameObject();
             PblMatrix mHost(pHost->GetMatrix());
-            float fOffsetX = vPos.x - mHost.m[3][0];
-            float fOffsetY = vPos.y - mHost.m[3][1];
-            float fOffsetZ = vPos.z - mHost.m[3][2];
+            PblVector3 vOffset = vPos - mHost.GetTranslation();
             gameObjectInterpolator.GetMatrix(pHost->GetNetUniqueId(), mHost);
-            vPos.x = mHost.m[3][0] + fOffsetX;
-            vPos.y = mHost.m[3][1] + fOffsetY;
-            vPos.z = mHost.m[3][2] + fOffsetZ;
+            vPos = mHost.GetTranslation() + vOffset;
         }
-        vPos.x += 0.0f;
-        vPos.y += fHeight;
-        vPos.z += 0.0f;
+        vPos += PblVector3(0.0f, fHeight, 0.0f);
 
-        PblVector3 vScreen;
-        vScreen = pCamera->TransformWorldPointToProjectionSpace(vPos);
+        PblVector3 vScreen = pCamera->TransformWorldPointToProjectionSpace(vPos);
         if (vScreen.z < -1.0f || vScreen.z > 1.0f)
         {
             continue;
         }
         const PblMatrix& mCamera = pCamera->GetMatrix();
         PblVector3 vEye = mCamera.GetTranslation();
-        PblVector3 vToUnit;
-        vToUnit.x = vPos.x - vEye.x;
-        vToUnit.y = vPos.y - vEye.y;
-        vToUnit.z = vPos.z - vEye.z;
+        PblVector3 vToUnit = vPos - vEye;
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vToUnit));
         const PblVector3 vBack = -mCamera.GetZAxis();
@@ -284,16 +274,12 @@ bool NameDisplayThread::Update(float)
 
         Entity* pEntity = pUnit->GetEntity();
         float fFadeRange = pEntity && pEntity->IsRtti(EntityFlyer::rttiHashEntityFlyer) ? 350.0f : 20.0f;
-        float fDistance = PblMath::Sqrt(vToUnit.y * vToUnit.y + vToUnit.x * vToUnit.x + vToUnit.z * vToUnit.z);
+        float fDistance = Length(vPos - vEye);
         unsigned char ucAlpha = 0xff;
         if (fDistance > fFadeRange)
         {
             int iAlpha = 335 - ((int)fDistance << 2);
-            ucAlpha = (unsigned char)iAlpha;
-            if (iAlpha < 0)
-            {
-                ucAlpha = 0;
-            }
+            ucAlpha = iAlpha < 0 ? 0 : (unsigned char)iAlpha;
             if (!ucAlpha)
             {
                 continue;
@@ -304,7 +290,7 @@ bool NameDisplayThread::Update(float)
         {
             text.m_color = pLocalCharacter->GetTeamPtr()->GetColor(pCharacter->GetTeamNumber());
             if (NetGame::IsEnabled() && pCharacter->GetTeamNumber() == pLocalCharacter->GetTeamNumber() &&
-                FriendBuddyList::IsFriendBuddy(NetGame::GetLocalIndex(mJoystickIndex), i))
+                FriendBuddyList::IsFriendBuddy(iLocalIndex, i))
             {
                 RedColor white(gHudHighlightColor);
                 text.m_color = white;

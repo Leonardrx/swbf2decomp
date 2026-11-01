@@ -1057,20 +1057,18 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
             return DSClose();
         }
 
-        const unsigned long ulCaps = smDirectSoundCaps.dwFlags;
-
-        if (ulCaps & DSCAPS_SECONDARY16BIT)
+        if (smDirectSoundCaps.dwFlags & DSCAPS_SECONDARY16BIT)
         {
             smSecBufFormat = SampleInfo::format_PCM16;
         }
-        else if (ulCaps & DSCAPS_SECONDARY8BIT)
+        else if (smDirectSoundCaps.dwFlags & DSCAPS_SECONDARY8BIT)
         {
 
             smSecBufFormat = SampleInfo::format_PCM8;
         }
 
-        if (!((ulCaps & DSCAPS_SECONDARYSTEREO) &&
-              (ulCaps & DSCAPS_SECONDARYMONO)))
+        if (!((smDirectSoundCaps.dwFlags & DSCAPS_SECONDARYSTEREO) &&
+              (smDirectSoundCaps.dwFlags & DSCAPS_SECONDARYMONO)))
         {
             if (smMixConfig == mixConfig_DirectSoundHardware)
             {
@@ -1112,11 +1110,11 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
         }
 
         unsigned int uiNumChannels = 0;
-        if (ulCaps & DSCAPS_PRIMARYSTEREO)
+        if (smDirectSoundCaps.dwFlags & DSCAPS_PRIMARYSTEREO)
         {
             uiNumChannels = 2;
         }
-        else if (ulCaps & DSCAPS_PRIMARYMONO)
+        else if (smDirectSoundCaps.dwFlags & DSCAPS_PRIMARYMONO)
         {
             uiNumChannels = 1;
         }
@@ -1201,11 +1199,10 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
 
             smSoftOutput = new (gSoftOutputStorage, false) SoftOutput();
 
-            const bool bEffects = (bEnable &&
-                                   smMixConfig == mixConfig_Software);
-
-            smSoftOutput->SetOutputBufferSize(fMinStreamBufferSizeMs, false,
-                                              bEffects, smOutputFrequency);
+            smSoftOutput->SetOutputBufferSize(
+                fMinStreamBufferSizeMs, false,
+                bEnable && smMixConfig == mixConfig_Software,
+                smOutputFrequency);
 
             smSoftOutput->SetBusGain(1, 0.5f, 0.5f, false);
 
@@ -1264,35 +1261,45 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
     EngineBase::Open();
     sndEngineThreadUpdate.Resume();
 
-    unsigned int uiInitialised;
     if (smMixConfig == mixConfig_DirectSoundHardware)
     {
 
-        uiInitialised = smDirectSoundCaps.dwFreeHw3DStreamingBuffers - 8;
+        const unsigned int uiInitialised =
+            smDirectSoundCaps.dwFreeHw3DStreamingBuffers - 8;
+
+        for (unsigned int i = 0; i < uiInitialised; ++i)
+        {
+
+            EngineBase::smVoices[i].Initialize();
+        }
+
+        for (unsigned int i = uiInitialised; i < 32; ++i)
+        {
+            if ((EngineBase::smVoices[i].VoiceBase::mFlags & 1) == 0)
+            {
+                EngineBase::smVoices[i].Lock(true);
+            }
+            EngineBase::smVoices[i].RemoveFromManager();
+            EngineBase::smVoices[i].Initialize();
+        }
     }
     else
     {
-        uiInitialised = uiNumVoices;
-    }
-
-    for (unsigned int i = 0; i < uiInitialised; ++i)
-    {
-
-        ((Voice*)((unsigned char*)EngineBase::smVoices +
-                  i * sizeof(Voice)))->Initialize();
-    }
-
-    for (unsigned int i = uiInitialised; i < 32; ++i)
-    {
-        Voice* const pVoice =
-            (Voice*)((unsigned char*)EngineBase::smVoices + i * sizeof(Voice));
-
-        if ((pVoice->VoiceBase::mFlags & 1) == 0)
+        for (unsigned int i = 0; i < uiNumVoices; ++i)
         {
-            pVoice->Lock(true);
+
+            EngineBase::smVoices[i].Initialize();
         }
-        pVoice->RemoveFromManager();
-        pVoice->Initialize();
+
+        for (unsigned int i = uiNumVoices; i < 32; ++i)
+        {
+            if ((EngineBase::smVoices[i].VoiceBase::mFlags & 1) == 0)
+            {
+                EngineBase::smVoices[i].Lock(true);
+            }
+            EngineBase::smVoices[i].RemoveFromManager();
+            EngineBase::smVoices[i].Initialize();
+        }
     }
 
     if (!File::SystemOpen(0x7FFFFFFF))
@@ -1309,15 +1316,16 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
         return false;
     }
 
-    I3DL2Reverb reverb;
-    reverb.mFlags = (unsigned short)(reverb.mFlags | 1 | 2);
-    reverb.mRoomGain = 0.0f;
-    reverb.mRoomHFGain = 0.0f;
-    SetGlobalReverb(&reverb);
+    {
+        I3DL2Reverb reverb;
+        reverb.SetRoomGain(0.0f);
+        reverb.SetRoomHFGain(0.0f);
+        SetGlobalReverb(&reverb);
+    }
 
     if (smDirectSound != 0)
     {
-        unsigned long ulSpeakerConfig = 0;
+        unsigned long ulSpeakerConfig;
 
         smDirectSound->GetSpeakerConfig(&ulSpeakerConfig);
 
@@ -1329,17 +1337,17 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
         EngineBase::SpeakerConfig eSpeakers = EngineBase::speakerConfig_Stereo;
         switch (ulSpeakerConfig)
         {
-        case DSSPEAKER_HEADPHONE:
-            eSpeakers = EngineBase::speakerConfig_Headphones;
-            break;
         case DSSPEAKER_MONO:
             eSpeakers = EngineBase::speakerConfig_Mono;
             break;
-        case DSSPEAKER_QUAD:
-            eSpeakers = EngineBase::speakerConfig_Quadraphonic;
+        case DSSPEAKER_HEADPHONE:
+            eSpeakers = EngineBase::speakerConfig_Headphones;
             break;
         case DSSPEAKER_SURROUND:
             eSpeakers = EngineBase::speakerConfig_AnalogSurround;
+            break;
+        case DSSPEAKER_QUAD:
+            eSpeakers = EngineBase::speakerConfig_Quadraphonic;
             break;
         case DSSPEAKER_5POINT1:
             eSpeakers = EngineBase::speakerConfig_5point1;
@@ -1371,29 +1379,18 @@ void Engine::Calculate3DParams(Source3D* const pSource,
     const Listener* const pListener = pSource->mClosestListener;
 
     PblMatrix matListener;
-    matListener.m[0][0] = pListener->mRight.x;
-    matListener.m[0][1] = pListener->mRight.y;
-    matListener.m[0][2] = pListener->mRight.z;
+    matListener[0] = pListener->mRight;
     matListener.m[0][3] = 0.0f;
-    matListener.m[1][0] = pListener->mUp->x;
-    matListener.m[1][1] = pListener->mUp->y;
-    matListener.m[1][2] = pListener->mUp->z;
+    matListener[1] = *pListener->mUp;
     matListener.m[1][3] = 0.0f;
-    matListener.m[2][0] = -pListener->mFront->x;
-    matListener.m[2][1] = -pListener->mFront->y;
-    matListener.m[2][2] = -pListener->mFront->z;
+    matListener[2] = *pListener->mFront;
+    matListener[2] = -matListener[2];
     matListener.m[2][3] = 0.0f;
-    matListener.m[3][0] = Globals::smNullVector.x;
-    matListener.m[3][1] = Globals::smNullVector.y;
-    matListener.m[3][2] = Globals::smNullVector.z;
-    matListener.m[3][3] = 1.0f;
+    matListener.SetTranslation(Globals::smNullVector);
 
     matListener = matListener.GetInverseFast();
 
-    PblVector3 vDelta;
-    vDelta.x = pSource->mPos3D->x - pListener->mPos->x;
-    vDelta.y = pSource->mPos3D->y - pListener->mPos->y;
-    vDelta.z = pSource->mPos3D->z - pListener->mPos->z;
+    const PblVector3 vDelta = *pSource->mPos3D - *pListener->mPos;
 
     D3DXVECTOR3 vLocal;
     D3DXVec3TransformNormal(&vLocal,
@@ -1401,21 +1398,21 @@ void Engine::Calculate3DParams(Source3D* const pSource,
                             (const D3DXMATRIX*)&matListener);
 
     pParams->dwSize = sizeof(DS3DBUFFER);
-    pParams->vPosition.x = vLocal.x;
-    pParams->vPosition.y = vLocal.y;
-    pParams->vPosition.z = vLocal.z;
+    pParams->dwInsideConeAngle = 360;
+    pParams->dwOutsideConeAngle = 360;
+    pParams->dwMode = DS3DMODE_HEADRELATIVE;
     pParams->vVelocity.x = 0.0f;
     pParams->vVelocity.y = 0.0f;
     pParams->vVelocity.z = 0.0f;
-    pParams->dwInsideConeAngle = 360;
-    pParams->dwOutsideConeAngle = 360;
+    pParams->vPosition.x = vLocal.x;
+    pParams->vPosition.y = vLocal.y;
+    pParams->vPosition.z = vLocal.z;
+    pParams->lConeOutsideVolume = 0;
     pParams->vConeOrientation.x = 0.0f;
     pParams->vConeOrientation.y = 0.0f;
     pParams->vConeOrientation.z = 1.0f;
-    pParams->lConeOutsideVolume = 0;
     pParams->flMinDistance = pSource->mProps->mMaxDistance;
     pParams->flMaxDistance = pSource->mProps->mMaxDistance;
-    pParams->dwMode = DS3DMODE_HEADRELATIVE;
 }
 
 // FUNCTION: SWBF2 0x00732ff0

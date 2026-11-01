@@ -441,16 +441,16 @@ void SpawnDisplay::UpdateObjectText(GameObjectClass* pClass, int iSlot)
                 continue;
             }
 
-            if (pWeapon->mLabel)
-            {
-                PblUnicode::ustrlcat(text, pWeapon->mLabel, 256);
-            }
-            else
+            if (!pWeapon->mLabel)
             {
                 unsigned short name[128];
                 memset(name, 0, sizeof(name));
                 PblUnicode::ustrncnv(name, pWeapon->mFilename, 128);
                 PblUnicode::ustrlcat(text, name, 256);
+            }
+            else
+            {
+                PblUnicode::ustrlcat(text, pWeapon->mLabel, 256);
             }
         }
         PblUnicode::ustrlcat(text, sNewlineStr16, 256);
@@ -891,8 +891,7 @@ void SpawnDisplay::UpdateTimer()
     if (NetGame::IsEnabled() && NetGame::IsClient())
     {
         unsigned int uTurn = NetGame::GetTurnNumber();
-        fTime = mLastSpawnTime;
-        if (fTime > 0.0f)
+        if (mLastSpawnTime > 0.0f)
         {
             fTime = mBaseCycleTime - (float)(int)(uTurn - mBaseTurn) * netSecondsPerTurn;
             if (fTime < 0.0f)
@@ -900,7 +899,11 @@ void SpawnDisplay::UpdateTimer()
                 fTime = 0.0f;
             }
         }
-        if (mTextSpawnTimer.IsEnabled() && fTime != mLastSpawnTime)
+        else
+        {
+            fTime = mLastSpawnTime;
+        }
+        if (mTextSpawnTimer.IsEnabled() && mLastSpawnTime != fTime)
         {
             mLastSpawnTime = fTime;
             char acText[32];

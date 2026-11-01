@@ -246,7 +246,6 @@ bool HUD::ElementModel3D::SetProperty(const unsigned int uHashID, const void* co
     if (pMeshInfo)
     {
         const float* pfValue = (const float*)pValue;
-        bool bMeshInfoProperty = true;
         switch (uHashID)
         {
         case kPositionHash:
@@ -255,11 +254,19 @@ bool HUD::ElementModel3D::SetProperty(const unsigned int uHashID, const void* co
             matrix[3] = *(const PblVector3*)pValue;
             matrix.m[3][3] = 1.0f;
             SetModel(pElement->GetModel());
+            if (pMeshInfo != &mDefault)
+            {
+                return true;
+            }
             break;
         }
         case kRotationHash:
             pMeshInfo->GetMatrixInfo().SetRotation(pfValue[0], pfValue[1], pfValue[2]);
             SetModel(pElement->GetModel());
+            if (pMeshInfo != &mDefault)
+            {
+                return true;
+            }
             break;
         case kScaleUniformHash:
         {
@@ -268,6 +275,10 @@ bool HUD::ElementModel3D::SetProperty(const unsigned int uHashID, const void* co
             info.SetScale(pfValue[0], pfValue[0], pfValue[0]);
             info.ApplyScale();
             SetModel(pElement->GetModel());
+            if (pMeshInfo != &mDefault)
+            {
+                return true;
+            }
             break;
         }
         case kScaleHash:
@@ -277,30 +288,27 @@ bool HUD::ElementModel3D::SetProperty(const unsigned int uHashID, const void* co
             info.SetScale(pfValue[0], pfValue[1], pfValue[2]);
             info.ApplyScale();
             SetModel(pElement->GetModel());
+            if (pMeshInfo != &mDefault)
+            {
+                return true;
+            }
             break;
         }
         case kPositionRelativeHash:
             pMeshInfo->GetMatrixInfo().SetRelativeMode(*(const RelativeMode*)pValue);
             SetModel(pElement->GetModel());
-            break;
-        case kDepthHash:
-            pMeshInfo->SetDepth(*pfValue);
-            if (pMeshInfo == &mDefault)
-            {
-                pElement->SetDepth(*pfValue);
-            }
-            return true;
-        default:
-            bMeshInfoProperty = false;
-            break;
-        }
-        if (bMeshInfoProperty)
-        {
             if (pMeshInfo != &mDefault)
             {
                 return true;
             }
-            return HUD::Element::SetProperty(uHashID, pValue);
+            break;
+        case kDepthHash:
+            pMeshInfo->SetDepth(*pfValue);
+            if (pMeshInfo != &mDefault)
+            {
+                return true;
+            }
+            break;
         }
     }
 

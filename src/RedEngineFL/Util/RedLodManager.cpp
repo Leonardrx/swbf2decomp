@@ -211,9 +211,8 @@ void Render(unsigned int uiFlags)
                 if (uiFlags & 0x20000000)
                 {
                     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
-                    float fFront = -DotProduct(mCamera.GetZAxis(),
-                                               pObject->GetRenderPos() - mCamera.GetTranslation())
-                                   + pObject->_Sphere.w;
+                    float fFront = -DotProduct(mCamera.GetZAxis(), pObject->GetRenderPos() - mCamera.GetTranslation());
+                    fFront += pObject->_Sphere.w;
                     if (RedRenderer::pcGetNearSceneStart() > fFront)
                     {
                         uiObjectFlags &= ~0x20000000;

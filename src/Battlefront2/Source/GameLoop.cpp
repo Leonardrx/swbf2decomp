@@ -1005,8 +1005,8 @@ int Init()
 
     QOSDisplay::InitHost();
 
-    sMissionTime.Mark(&GameState::_TimeBase);
     sMissionTimeInitialized = true;
+    sMissionTime.Mark(&GameState::_TimeBase);
     GameLoop::sDeltaTime = 0.0f;
     sSystemDeltaTime = 0.0f;
     GameLoop::sClientDeltaTime = 0.0f;
@@ -1619,12 +1619,12 @@ void Update(float fDeltaTime, float fSystemDeltaTime)
                         const Team* pTeam = Team::sTeams[iTeam];
                         const bool bPlayerTeam = AIUtil::IsPlayerTeam(iTeam);
                         const int iReinforcements = pTeam->mMaxReinforcements < 0x7fffffff ? pTeam->mCurReinforcements : -1;
-                        const char cResult = (Team::sWinningTeams & (1 << iTeam)) ? 'W' : 'L';
+                        const int iWinningTeams = Team::sWinningTeams;
                         const int iMembers = pTeam->mMemberCount;
-                        const char* pcSide = sSideNamePrefixes[pTeam->mSide];
+                        const int iSide = pTeam->mSide;
                         fprintf(pFile, "\t%c=%s\t%du@%d%c\t%3dr\t%2dp",
-                                cResult,
-                                pcSide,
+                                (iWinningTeams & (1 << iTeam)) ? 'W' : 'L',
+                                sSideNamePrefixes[iSide],
                                 iMembers,
                                 AIDifficulty::GetIntSkill((const UnitController*)bPlayerTeam, false),
                                 bPlayerTeam ? 'P' : ' ',

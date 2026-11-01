@@ -1370,7 +1370,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         const float fRoundsPerClip = (float)pWeaponClass->mAmmoCounterClass.mRoundsPerClip;
         const bool bNoClips =
             fRoundsPerClip >= 2147483648.0f || pWeaponClass->mAmmoCounterClass.mAmmoPerRound == 0.0f;
-        const bool bInfinite = fNumClips == FLT_MAX;
+        const bool bInfinite = FLT_MAX == fNumClips;
         float fClipFraction;
         float fTotalFraction;
         if (bNoClips)
@@ -1381,7 +1381,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         else
         {
             fClipFraction = pAmmo->mCurClip;
-            fTotalFraction = bInfinite ? 1.0f : (fNumClips + fClipFraction) / pAmmo->mMaxClips;
+            fTotalFraction = bInfinite ? 1.0f : (fClipFraction + fNumClips) / pAmmo->mMaxClips;
         }
 
         if (weaponData.ammoTotalFraction != fTotalFraction || weaponData.clipTotalFraction != fClipFraction ||
@@ -1425,6 +1425,9 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         const float fStateTimer = pWeapon->mStateTimer;
         switch (pWeapon->mState)
         {
+        case Weapon::CHARGE:
+            fHeat = fStateLimit != 0.0f ? fStateTimer / fStateLimit : 0.0f;
+            break;
         case Weapon::FIRE:
         case Weapon::FIRE2:
             if (!pWeapon->mClass->mDisplayRefire)
@@ -1450,9 +1453,6 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fRefire = 0.0f;
             }
-            break;
-        case Weapon::CHARGE:
-            fHeat = fStateLimit != 0.0f ? fStateTimer / fStateLimit : 0.0f;
             break;
         case Weapon::OVERHEAT:
         {
@@ -1487,8 +1487,6 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         {
             HUD::Event evHeat(weaponEvents.heat, fHeat);
             evHeat.Send();
-            HUD::Event evRefire(weaponEvents.refire, fRefire);
-            evRefire.Send();
         }
         else
         {
@@ -1507,9 +1505,13 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             pBar = pWeapon->m_pEnergyBar;
             const float fUsed = 1.0f - pBar->m_fEnergy / pBar->m_pClass->m_fEnergyMax;
             const float fOverheat = 1.0f - pBar->m_pClass->m_fEnergyOverheat / pBar->m_pClass->m_fEnergyMax;
-            HUD::Event evRefire(weaponEvents.refire, fOverheat > fUsed ? 0.0f : fRefire);
-            evRefire.Send();
+            if (fOverheat > fUsed)
+            {
+                fRefire = 0.0f;
+            }
         }
+        HUD::Event evRefire(weaponEvents.refire, fRefire);
+        evRefire.Send();
 
         PblHandle<GameObject const> hTarget =
             pWeapon->mTarget ? pWeapon->mTarget : pControllable->mReticuleTarget[uWeapon];
@@ -1517,8 +1519,11 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
         {
             const GameObjectClass* pClass = hTarget->GetGameObjectClass();
             EntityClass* pEntityClass = const_cast<EntityClass*>(hTarget->GetEntityClass());
-            const bool bBuilding =
-                pEntityClass && pEntityClass->IsRtti(EntityBuildingClass::rttiHashEntityBuildingClass);
+            bool bBuilding = false;
+            if (pEntityClass)
+            {
+                bBuilding = pEntityClass->IsRtti(EntityBuildingClass::rttiHashEntityBuildingClass);
+            }
             if ((pClass && pClass->mbHideHealthBar) || (!bBuilding && !hTarget->IsAlive()))
             {
                 hTarget = 0;
@@ -1589,6 +1594,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fR = 255.0f;
             }
+            const int iBrightRed = (int)fR;
             float fG = (float)iGreen * fScale;
             if (0.0f > fG)
             {
@@ -1598,6 +1604,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fG = 255.0f;
             }
+            const int iBrightGreen = (int)fG;
             float fB = (float)iBlue * fScale;
             if (0.0f > fB)
             {
@@ -1607,11 +1614,12 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             {
                 fB = 255.0f;
             }
+            const int iBrightBlue = (int)fB;
             RedColor bright;
-            bright.g = (unsigned char)(int)fG;
-            bright.r = (unsigned char)(int)fR;
+            bright.g = (unsigned char)iBrightGreen;
+            bright.r = (unsigned char)iBrightRed;
             bright.a = 0xff;
-            bright.b = (unsigned char)(int)fB;
+            bright.b = (unsigned char)iBrightBlue;
             HUD::Event evTeamColorBright(weaponEvents.targetTeamColorBright, &bright);
             evTeamColorBright.Send();
 
@@ -1698,9 +1706,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                     pRoot = 0;
                 }
             }
-            float fOffsetX = 0.0f;
-            float fOffsetY = 0.0f;
-            float fOffsetZ = 0.0f;
+            PblVector3 vOffset(0.0f, 0.0f, 0.0f);
             if (pRoot && pRoot->IsInScene())
             {
                 PblMatrix mSmoothed = pRoot->GetSmoothedMatrix();
@@ -1708,19 +1714,12 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
                 {
                     gameObjectInterpolator.GetMatrix(pRoot->GetNetUniqueId(), mSmoothed);
                 }
-                const PblVector3 vOffset = mSmoothed.GetTranslation() - pRoot->GetMatrix().GetTranslation();
-                fOffsetX = vOffset.x;
-                fOffsetY = vOffset.y;
-                fOffsetZ = vOffset.z;
+                vOffset = mSmoothed.GetTranslation() - pRoot->GetMatrix().GetTranslation();
             }
 
             const int iBodyId = pWeapon->GetLockedTargetBodyId();
-            const PblVector3 vAim =
-                pLocked->GetTargetPoint(pControllable->mTargetInfo.mAimStart, pControllable->mEyeDir, iBodyId);
-            PblVector3 vPoint;
-            vPoint.x = fOffsetX + vAim.x;
-            vPoint.y = vAim.y + fOffsetY;
-            vPoint.z = vAim.z + fOffsetZ;
+            const PblVector3 vPoint =
+                vOffset + pLocked->GetTargetPoint(pControllable->mTargetInfo.mAimStart, pControllable->mEyeDir, iBodyId);
             PblVector3 vCamera;
             D3DXVec3TransformCoord((D3DXVECTOR3*)&vCamera, (const D3DXVECTOR3*)&vPoint,
                                    (const D3DXMATRIX*)&pCamera->GetMatrixInverse());
@@ -1752,10 +1751,7 @@ void HUD::GameEvents::UpdateWeaponEvents(const RedCamera* const pCamera, const C
             fMultiplier = fFriendMultiplier;
         }
         const float fEnemyMultiplier = pCharacter->GetObjectHitMultiplier(-1);
-        if (fEnemyMultiplier > fMultiplier)
-        {
-            fMultiplier = fEnemyMultiplier;
-        }
+        fMultiplier = fEnemyMultiplier > fMultiplier ? fEnemyMultiplier : fMultiplier;
         HUD::Event evHit(fMultiplier > 1.0f ? weaponEvents.targetHitCritical : weaponEvents.targetHit, true);
         evHit.Send();
         const RedColor color = fHitFriend != 0.0f ? Team::GetColorByAffiliation(1)

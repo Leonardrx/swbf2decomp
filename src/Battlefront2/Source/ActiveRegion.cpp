@@ -206,7 +206,8 @@ bool ActiveRegion::Update(float fDeltaTime)
     PblBitVector<600> notOld(~oldPlayers);
     PblBitVector<600> entered(mPlayers);
     entered.And(notOld);
-    PblBitVector<600> left(~mPlayers);
+    PblBitVector<600> left;
+    left = ~mPlayers;
     left.And(oldPlayers);
 
     for (int i = 0; i < Character::sCharacterCount; ++i)

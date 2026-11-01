@@ -251,8 +251,8 @@ bool Obstacle::IntersectionNewer(const ObstacleTest& rTest, float fRadius, float
 
     float fTestRadius = rTest.mBoundRadius + fRadius;
     PblVector3 center = GetBoundingCircleCenter();
-    float fDZ = rTest.mBoundCenter.z - center.z;
     float fDX = rTest.mBoundCenter.x - center.x;
+    float fDZ = rTest.mBoundCenter.z - center.z;
     float fReach = GetBoundingCircleRadius() + fTestRadius;
     if (fDZ * fDZ + fDX * fDX >= fReach * fReach)
     {
@@ -304,16 +304,15 @@ bool Obstacle::IntersectionNewer(const ObstacleTest& rTest, float fRadius, float
         }
     }
 
-    if (fBest >= 1e10f)
+    if (fBest < 1e10f)
     {
-        return false;
+        *pDistSq = (dir.x * dir.x + dir.y * dir.y + dir.z * dir.z) * fBest * fBest;
+        PblVector3 n;
+        D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&n), reinterpret_cast<const D3DXVECTOR3*>(pNormal));
+        *pNormal = n;
+        return true;
     }
-
-    *pDistSq = (dir.x * dir.x + dir.y * dir.y + dir.z * dir.z) * fBest * fBest;
-    PblVector3 n;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&n), reinterpret_cast<const D3DXVECTOR3*>(pNormal));
-    *pNormal = n;
-    return true;
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00610800
@@ -834,9 +833,7 @@ bool PathFinder::TestTrivialStraightLineHit(const PblVector3& from, const PblVec
     ObstacleTest test;
     test.mSrc = from;
     test.mDest = to;
-    test.mBoundCenter = PblVector3((test.mSrc.x + test.mDest.x) * 0.5f,
-                                   (test.mSrc.y + test.mDest.y) * 0.5f,
-                                   (test.mSrc.z + test.mDest.z) * 0.5f);
+    test.mBoundCenter = (test.mSrc + test.mDest) * 0.5f;
     float fCX = test.mBoundCenter.x - test.mSrc.x;
     float fCY = test.mBoundCenter.y - test.mSrc.y;
     float fCZ = test.mBoundCenter.z - test.mSrc.z;
@@ -869,8 +866,7 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
         return;
     }
 
-    float fPerp = (rPos.x - sDestPos.x) * sPerpVec.x + (rPos.y - sDestPos.y) * sPerpVec.y +
-                  (rPos.z - sDestPos.z) * sPerpVec.z;
+    float fPerp = DotProduct(rPos - sDestPos, sPerpVec);
     if ((float)fabs((double)fPerp) > sPerpLength)
     {
         return;
@@ -932,9 +928,7 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
         }
     }
 
-    float fNewDX = rPos.x - pParent->GetPos().x;
-    float fNewDZ = rPos.z - pParent->GetPos().z;
-    PathNode* pNode = new PathNode(rPos, pParent->GetCostSoFar() + PblMath::Sqrt(fNewDZ * fNewDZ + fNewDX * fNewDX),
+    PathNode* pNode = new PathNode(rPos, pParent->GetCostSoFar() + PblMath::Sqrt(SquaredLengthXZ(rPos - pParent->GetPos())),
                                    pParent);
     if (pNode)
     {

@@ -272,6 +272,14 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
         return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
 
+    case FT_FLYINGV:
+    {
+        const float fRow = (float)(iOrder / 2) + 0.25f;
+        const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
+        const PblVector3 vBack = PblVector3(fSide, 0.0f, -1.0f) * fRow;
+        return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
+    }
+
     case FT_DOUBLEFILE_RAND:
     {
         const float fBits = (float)(((unsigned int)pSelf >> 5) & 7);
@@ -284,9 +292,7 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
         const float fRow = (float)(iOrder / 2) + 0.25f;
         const PblVector3 vBack = PblVector3(0.0f, 0.0f, -1.0f) * fRow;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return PblVector3(vBack.x + (fSide * 0.75f + vJitter.x),
-                          vBack.y + (fSide * 0.0f + vJitter.y),
-                          vBack.z + (fSide * 0.0f + vJitter.z));
+        return vBack + (PblVector3(fSide * 0.75f, fSide * 0.0f, fSide * 0.0f) + vJitter);
     }
 
     case FT_CIRCLE:
@@ -295,14 +301,6 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
         float fCos;
         PblMath::SinCos(&fSin, &fCos, (float)iOrder / (float)iCount * 6.2831855f);
         return PblVector3(fSin, 0.0f, -fCos);
-    }
-
-    case FT_FLYINGV:
-    {
-        const float fRow = (float)(iOrder / 2) + 0.25f;
-        const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        const PblVector3 vBack = PblVector3(fSide, 0.0f, -1.0f) * fRow;
-        return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
 
     default:

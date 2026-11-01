@@ -702,9 +702,6 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
 {
     switch (pInfo->mType)
     {
-    case AI::EVT_None:
-        return 0;
-
     case AI::EVT_EmptyVehicle:
         if (!ShouldAgentGetInNearbyVehicle(static_cast<GameObject*>(pInfo->mGameObject)))
         {
@@ -740,6 +737,8 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
 
     case AI::EVT_SC_FollowChr:
     case AI::EVT_SC_FollowChrLoose:
+        return HandleSquadCommandEvent(pInfo);
+
     case AI::EVT_SC_GetIntoVehicle:
     case AI::EVT_SC_GetOutOfVehicle:
         return HandleSquadCommandEvent(pInfo);
@@ -772,7 +771,7 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
         {
             return AI::EVT_Ignored;
         }
-        pInfo->mNextCmd = UnitCmdInfo(CMD_WAIT, PblHandle<GameObject>(), PblVector3(0, 0, 0), PblHandle<GameObject>());
+        pInfo->mNextCmd = UnitCmdInfo(CMD_WAIT, NULL, PblVector3(0, 0, 0), NULL);
         return 1;
 
     case AI::EVT_Nav_NavigatorFinished:
@@ -790,6 +789,15 @@ int UnitAgent::EventHandler(AI::EventInfo* pInfo)
         pInfo->mNextCmd = UnitCombatInfo(UnitCombatInfo::TURN,
                                          pInfo->mGameObject->GetPosition(), true);
         return 1;
+
+    case AI::EVT_None:
+    case AI::EVT_Path_NextNode:
+    case AI::EVT_CTF_FlagPickup:
+    case AI::EVT_CTF_FlagDrop:
+    case AI::EVT_CTF_FlagKill:
+    case AI::EVQ_SC_IsFollowingChr:
+    case AI::EVT_SC_StopFollowChr:
+        return 0;
     }
     return 0;
 }

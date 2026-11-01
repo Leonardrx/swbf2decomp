@@ -146,11 +146,25 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
             RedColor color;
             if (mColorFriendly.a > 0)
             {
-                color = info.mFriendly ? mColorFriendly : m_color;
+                if (info.mFriendly)
+                {
+                    color = mColorFriendly;
+                }
+                else
+                {
+                    color = m_color;
+                }
             }
             else
             {
-                color = bEnabled ? bitmap.m_color : m_color;
+                if (bEnabled)
+                {
+                    color = bitmap.m_color;
+                }
+                else
+                {
+                    color = m_color;
+                }
             }
             bitmap = *this;
             bitmap.SetColorOnly(color);
@@ -178,10 +192,13 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
     bool bVehicleView;
     float fVehicleScale;
     if (info.mOnScreen && pCharacter && pCharacter->mVehicle &&
-        pCharacter->mVehicle->GetGameObject() &&
-        (pCharacter->mVehicle->GetGameObject()->IsRtti(EntityFlyer::rttiHashEntityFlyer) ||
-         pCharacter->mVehicle->GetGameObject()->IsRtti(
-             EntityRemoteTerminal::rttiHashEntityRemoteTerminal)))
+        static_cast<const Controllable*>(pCharacter->mVehicle)->GetGameObject() &&
+        (static_cast<const Controllable*>(pCharacter->mVehicle)
+             ->GetGameObject()
+             ->IsRtti(EntityFlyer::rttiHashEntityFlyer) ||
+         static_cast<const Controllable*>(pCharacter->mVehicle)
+             ->GetGameObject()
+             ->IsRtti(EntityRemoteTerminal::rttiHashEntityRemoteTerminal)))
     {
         bVehicleView = true;
         float fT = (fDist - 200.0f) / 1500.0f;
@@ -247,7 +264,8 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
         const RedColor& pulse = info.mVisible ? RedColor::WHITE : RedColor::DKGREY;
         const float fTime = fmod(GameLoop::GetMissionTime(), 1.0f);
         color.a = 0xff;
-        const unsigned short uBlend = (unsigned short)(int)(fabs(fTime - 0.5f) * 2.0f * 255.0f);
+        const unsigned short uBlend =
+            (unsigned short)(int)((float)fabs((double)(fTime - 0.5f)) * 2.0f * 255.0f);
         const unsigned short uInverse = (unsigned short)(255 - uBlend);
         color.r = (unsigned char)((color.r * uBlend) >> 8) + (unsigned char)((pulse.r * uInverse) >> 8);
         color.g = (unsigned char)((color.g * uBlend) >> 8) + (unsigned char)((pulse.g * uInverse) >> 8);
@@ -270,9 +288,15 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
                     const RedColor markerColor = pMarker->color;
                     const bool bPulseSize = pMarker->pulseSize && info.mOnScreen;
                     const bool bFlashAlpha = pMarker->flashAlpha;
-                    const float fTime = (bPulseSize || bFlashAlpha)
-                                            ? fmod(GameLoop::GetMissionTime(), 1.0f)
-                                            : 1.0f;
+                    float fTime;
+                    if (bPulseSize || bFlashAlpha)
+                    {
+                        fTime = fmod(GameLoop::GetMissionTime(), 1.0f);
+                    }
+                    else
+                    {
+                        fTime = 1.0f;
+                    }
                     if (bPulseSize)
                     {
                         fScale = (1.0f - fTime) * fScale + pMarker->pulseStartScale;
@@ -309,69 +333,71 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
     RedBitmapElement& element = bitmap;
     element.SetColorOnly(color);
 
-    if (!info.mOnScreen)
+    if (info.mOnScreen)
     {
-        const float fRotation = PblMath::Atan2(vPos.x, -vPos.y);
-        element.SetMatrixPosRotScale(fX, fY, fRotation, fScale, fScale);
-        return;
-    }
-
-    if (pLockOn)
-    {
-        float fLockOnScale;
-        if (bVehicleView)
+        if (pLockOn)
         {
-            if (fVehicleScale < 0.9f)
+            float fLockOnScale;
+            if (bVehicleView)
             {
-                fLockOnScale = 0.9f;
-            }
-            else if (fVehicleScale > 1.4f)
-            {
-                fLockOnScale = 1.4f;
+                if (fVehicleScale < 0.9f)
+                {
+                    fLockOnScale = 0.9f;
+                }
+                else if (fVehicleScale > 1.4f)
+                {
+                    fLockOnScale = 1.4f;
+                }
+                else
+                {
+                    fLockOnScale = fVehicleScale;
+                }
             }
             else
             {
-                fLockOnScale = fVehicleScale;
+                fVehicleScale = fScale;
+                fLockOnScale = 1.2f;
+            }
+            float fLeft, fTop, fRight, fBottom;
+            RedBitmapElement::GetRect(fLeft, fTop, fRight, fBottom);
+            const float fHalfWidth = (fRight - fLeft) * fVehicleScale;
+            const float fHalfHeight = (fBottom - fTop) * fVehicleScale;
+            const float fCorners[4][2] =
+            {
+                { fX - fHalfWidth, fY - fHalfHeight },
+                { fX + fHalfWidth, fY - fHalfHeight },
+                { fX + fHalfWidth, fY + fHalfHeight },
+                { fX - fHalfWidth, fY + fHalfHeight }
+            };
+            for (unsigned int i = 0; i < 4; ++i)
+            {
+                pLockOn[i].RedInterfaceElement::SetColor(bitmap.m_color);
+                pLockOn[i].SetMatrixPosRotScale(fCorners[i][0], fCorners[i][1],
+                                                HUD::ElementTarget::sLockOnRotation[i],
+                                                fLockOnScale, fLockOnScale);
             }
         }
         else
         {
-            fVehicleScale = fScale;
-            fLockOnScale = 1.2f;
+            float fOffset;
+            if (info.mLocked && info.mFlagCarrier)
+            {
+                float fLeft, fTop, fRight, fBottom;
+                RedBitmapElement::GetRect(fLeft, fTop, fRight, fBottom);
+                fOffset = (fBottom - fTop) * fScale;
+            }
+            else
+            {
+                fOffset = 0.0f;
+            }
+            element.SetMatrixPosScale(fX, fY - fOffset, fScale, fScale);
         }
-        float fLeft, fTop, fRight, fBottom;
-        RedBitmapElement::GetRect(fLeft, fTop, fRight, fBottom);
-        const float fHalfWidth = (fRight - fLeft) * fVehicleScale;
-        const float fHalfHeight = (fBottom - fTop) * fVehicleScale;
-        const float fCorners[4][2] =
-        {
-            { fX - fHalfWidth, fY - fHalfHeight },
-            { fX + fHalfWidth, fY - fHalfHeight },
-            { fX + fHalfWidth, fY + fHalfHeight },
-            { fX - fHalfWidth, fY + fHalfHeight }
-        };
-        for (unsigned int i = 0; i < 4; ++i)
-        {
-            pLockOn[i].RedInterfaceElement::SetColor(bitmap.m_color);
-            pLockOn[i].SetMatrixPosRotScale(fCorners[i][0], fCorners[i][1],
-                                            HUD::ElementTarget::sLockOnRotation[i],
-                                            fLockOnScale, fLockOnScale);
-        }
-        return;
-    }
-
-    float fOffset;
-    if (info.mLocked && info.mFlagCarrier)
-    {
-        float fLeft, fTop, fRight, fBottom;
-        RedBitmapElement::GetRect(fLeft, fTop, fRight, fBottom);
-        fOffset = (fBottom - fTop) * fScale;
     }
     else
     {
-        fOffset = 0.0f;
+        const float fRotation = PblMath::Atan2(vPos.x, -vPos.y);
+        element.SetMatrixPosRotScale(fX, fY, fRotation, fScale, fScale);
     }
-    element.SetMatrixPosScale(fX, fY - fOffset, fScale, fScale);
 }
 
 // FUNCTION: SWBF2 0x00559b50
@@ -429,10 +455,10 @@ bool HUD::ElementTarget::Target::ReadData(PblConfig& config, PblConfig::Data& da
     switch (data.GetId())
     {
     case kColorFriendlyHash:
-        mColorFriendly.b = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(2));
-        mColorFriendly.g = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(1));
-        mColorFriendly.r = (unsigned char)(int)ClampColorComponent(data.GetFloatArg(0));
-        mColorFriendly.a = 0xff;
+        mColorFriendly = RedColor((unsigned char)(int)ClampColorComponent(data.GetFloatArg(0)),
+                                  (unsigned char)(int)ClampColorComponent(data.GetFloatArg(1)),
+                                  (unsigned char)(int)ClampColorComponent(data.GetFloatArg(2)),
+                                  0xff);
         return true;
     case kMinScaleHash:
         mMinScale = data.GetFloatArg(0);

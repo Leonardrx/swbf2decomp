@@ -768,12 +768,11 @@ void FLEffectObject::_UpdateWorldMatrix()
                     vOffset.y += m_pmLocalOffsetMatrix->m[3][1];
                     vOffset.z += m_pmLocalOffsetMatrix->m[3][2];
                 }
+                PblMatrix& mWorld = m_mWorldMatrix;
                 PblVector3 vWorld;
                 D3DXVec3TransformNormal((D3DXVECTOR3*)&vWorld, (const D3DXVECTOR3*)&vOffset,
-                                        (const D3DXMATRIX*)&m_mWorldMatrix);
-                m_mWorldMatrix.m[3][0] += vWorld.x;
-                m_mWorldMatrix.m[3][1] += vWorld.y;
-                m_mWorldMatrix.m[3][2] += vWorld.z;
+                                        (const D3DXMATRIX*)&mWorld);
+                mWorld[3] += vWorld;
                 UpdatedWorldMatrix();
             }
             return;

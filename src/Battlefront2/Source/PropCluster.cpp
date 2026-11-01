@@ -77,9 +77,9 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
     const PblMatrix& mCamera = pCamera->GetMatrix();
 
     int iNumObjects = 0;
-    float fCamDist = (_Sphere.x - mCamera.m[3][0]) * -mCamera.m[2][0]
-                   + -mCamera.m[2][1] * 0.0f
-                   + (_Sphere.z - mCamera.m[3][2]) * -mCamera.m[2][2];
+    const PblVector3 vCamPos = mCamera.GetTranslation();
+    const PblVector3 vToCluster(_Sphere.x - vCamPos.x, 0.0f, _Sphere.z - vCamPos.z);
+    float fCamDist = DotProduct(vToCluster, -mCamera.GetZAxis());
     float fScale = 1.0f;
     if (!(1.0f > sGrassDistanceScale))
     {
@@ -90,7 +90,6 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
     {
         for (int i = 0; i < 4; i++)
         {
-            PropClusterLayer& layer = mLayers[i];
             float fLayerDist = PropGenerator::GetLayerMaxDist(i) * fScale;
 
             if (!(mSize + fLayerDist > fCamDist))
@@ -102,27 +101,27 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
             }
             else
             {
-                if (layer.mCreateObjectsFlag)
+                if (mLayers[i].mCreateObjectsFlag)
                 {
-                    PropGenerator::AddObjectsFromClusterIndex(mMapIndex, i, layer.mObjects);
-                    if (layer.mObjects.GetCount() > 0)
+                    PropGenerator::AddObjectsFromClusterIndex(mMapIndex, i, mLayers[i].mObjects);
+                    if (mLayers[i].mObjects.GetCount() > 0)
                     {
-                        layer.mCreateObjectsFlag = false;
+                        mLayers[i].mCreateObjectsFlag = false;
                     }
                 }
 
-                if (layer.mObjects.GetCount() > 0)
+                if (mLayers[i].mObjects.GetCount() > 0)
                 {
                     mWasRenderedFlag |= 1 << CameraManager::sInstance->GetCameraIdForView(
                                                  FLRenderer::GetCurrentViewport());
-                    for (PblList<PropObject>::Itor it(layer.mObjects); (PropObject*)it; ++it)
+                    for (PblList<PropObject>::Itor it(mLayers[i].mObjects); (PropObject*)it; ++it)
                     {
                         it->Render(pCamera, fCamDist - mSize, uiFlags);
                     }
                 }
             }
 
-            iNumObjects += layer.mObjects.GetCount();
+            iNumObjects += mLayers[i].mObjects.GetCount();
         }
     }
 
@@ -144,13 +143,12 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
 // FUNCTION: SWBF2 0x006299e0
 void PropCluster::UncreateObjects(int iLayer)
 {
-    PropClusterLayer& layer = mLayers[iLayer];
-    while (layer.mObjects.GetCount())
+    while (mLayers[iLayer].mObjects.GetCount())
     {
-        layer.mObjects.GetFirst()->_pObject->Release();
-        layer.mObjects.Remove(layer.mObjects.GetFirst());
+        mLayers[iLayer].mObjects.GetFirst()->_pObject->Release();
+        mLayers[iLayer].mObjects.Remove(mLayers[iLayer].mObjects.GetFirst());
     }
-    layer.mCreateObjectsFlag = true;
+    mLayers[iLayer].mCreateObjectsFlag = true;
 }
 
 // FUNCTION: SWBF2 0x00629a40

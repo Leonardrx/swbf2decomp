@@ -413,7 +413,8 @@ void CombatUtil::GetAverageDamageValues(const DamageOwner& owner, const Ordnance
     const UnitController* pCtrl = 0;
     if (HandleObject(owner.mGameObject))
     {
-        pCtrl = UnitControllerPtr(GetControllable(const_cast<GameObject*>(HandleObject(owner.mGameObject))));
+        const GameObject* pOwnerObj = owner.mGameObject;
+        pCtrl = UnitControllerPtr(GetControllable(const_cast<GameObject*>(pOwnerObj)));
     }
     float fChargeBot;
     float fChargeTop;

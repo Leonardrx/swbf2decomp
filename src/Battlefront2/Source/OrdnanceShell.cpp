@@ -116,16 +116,22 @@ bool OrdnanceShell::Update(float fDeltaTime)
     {
         float fDrag = fDeltaTime * 0.7f;
         fDrag = fDrag / (fDrag + 1.0f);
-        mVelocity.x -= mVelocity.x * fDrag;
-        mVelocity.y -= (mVelocity.y - -0.5f) * fDrag;
-        mVelocity.z -= mVelocity.z * fDrag;
+        mVelocity -= PblVector3(mVelocity.x, mVelocity.y - -0.5f, mVelocity.z) * fDrag;
+        if (!OrdnanceBullet::Update(fDeltaTime))
+        {
+            return false;
+        }
     }
     else
     {
         mVelocity.y += mGravity * fDeltaTime;
+        if (!OrdnanceBullet::Update(fDeltaTime))
+        {
+            return false;
+        }
     }
 
-    return OrdnanceBullet::Update(fDeltaTime);
+    return true;
 }
 
 

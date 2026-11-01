@@ -320,9 +320,9 @@ void VehicleSpawn::UpdateLive(float fDeltaTime, VehicleTracker& tracker)
     tracker.mEmptyTimer += 1.0f;
     if (tracker.mEmptyTimer > fExpireTime)
     {
-        GameObject* pDecaying = static_cast<GameObject*>(tracker.mVehicle);
-        const DamageDesc damage(DamageOwner(0, 0, 0, 0, 0, 1.0f), pDecaying->mMaxHealth / mDecayTime);
-        static_cast<Damageable*>(pDecaying)->ApplyDamage(damage, (unsigned int)-1);
+        const DamageDesc damage(DamageOwner(0, 0, 0, 0, 0, 1.0f),
+                                static_cast<GameObject*>(tracker.mVehicle)->mMaxHealth / mDecayTime);
+        static_cast<Damageable*>(static_cast<GameObject*>(tracker.mVehicle))->ApplyDamage(damage, (unsigned int)-1);
     }
 }
 

@@ -161,27 +161,19 @@ int GetApproxObjectsAlongLine(const PblVector3& vStart, const PblVector3& vEnd, 
         return 0;
     }
 
-    const PblVector3 vCenter((vEnd.x + vStart.x) * 0.5f, (vEnd.y + vStart.y) * 0.5f,
-                             (vEnd.z + vStart.z) * 0.5f);
-    const PblVector3 vDelta(vEnd.x - vStart.x, vEnd.y - vStart.y, vEnd.z - vStart.z);
+    const PblVector3 vCenter = (vEnd + vStart) * 0.5f;
+    const PblVector3 vDelta = vEnd - vStart;
     const PblVector3 vDir = AIUtil::GetSafeNormal(vDelta);
-    const float fHalfLength = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z) * 0.5f;
+    const float fHalfLength = Length(vDelta) * 0.5f;
 
     GameObject* apObjects[1200];
     const int iCount = GetObjectsInRange(vCenter, fHalfLength, apObjects, iMax, pIgnore, eAffil);
-    const float fRadius2 = fRadius * fRadius;
     int iFound = 0;
     for (int i = 0; i < iCount; ++i)
     {
         GameObject* pObject = apObjects[i];
         const PblVector3 vPos = pObject->GetMatrix().GetTranslation();
-        const float fX = vPos.x - vStart.x;
-        const float fY = vPos.y - vStart.y;
-        const float fZ = vPos.z - vStart.z;
-        const float fCX = fY * vDir.z - fZ * vDir.y;
-        const float fCY = fZ * vDir.x - fX * vDir.z;
-        const float fCZ = fX * vDir.y - fY * vDir.x;
-        if (fRadius2 > fCX * fCX + fCY * fCY + fCZ * fCZ)
+        if (fRadius * fRadius > SquaredLength(CrossProduct(vPos - vStart, vDir)))
         {
             ppObjects[iFound++] = pObject;
         }

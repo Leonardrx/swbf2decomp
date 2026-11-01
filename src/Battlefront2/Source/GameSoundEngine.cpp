@@ -620,16 +620,15 @@ void InitializeBusGains()
 void Music::UpdateAll(float fDeltaTime)
 {
     int i = 0;
-    PblListDouble::Node* pLink = sMusicActive.mTerminator.mNext;
-    while (pLink != &sMusicActive.mTerminator)
+    PblListDoubleSorted::Itor itor(sMusicActive);
+    for (;;)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+        PblListDoubleSorted::Node* pNode = itor.GetNode(&sMusicActive);
         if (pNode == sMusicActive.GetTerminator())
         {
             break;
         }
-        pLink = pLink->mNext;
+        ++itor;
 
         Music* pMusic = (Music*)((char*)pNode - offsetof(Music, mNode));
         if (i == 0)
@@ -653,16 +652,15 @@ void Music::UpdateAll(float fDeltaTime)
         ++i;
     }
 
-    pLink = sMusicInactive.mTerminator.mNext;
-    while (pLink != &sMusicInactive.mTerminator)
+    PblListDoubleSorted::Itor inactiveItor(sMusicInactive);
+    for (;;)
     {
-        PblListDoubleSorted::Node* pNode =
-            (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
+        PblListDoubleSorted::Node* pNode = inactiveItor.GetNode(&sMusicInactive);
         if (pNode == sMusicInactive.GetTerminator())
         {
             break;
         }
-        pLink = pLink->mNext;
+        ++inactiveItor;
         ((Music*)((char*)pNode - offsetof(Music, mNode)))->Update(fDeltaTime);
     }
 

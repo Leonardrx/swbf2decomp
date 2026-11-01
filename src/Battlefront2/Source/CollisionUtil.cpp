@@ -91,30 +91,29 @@ bool CollisionUtil::CollideSpheres2(const PblVector3& rCenter1, float fRadius1,
 int FindAACenteredBoxRayIntersection(const PblVector3& vStart, const PblVector3& vDir, float fLength,
                                      float fWidth, float fHeight, float fDepth, float& fHit)
 {
-    const float* pStart = &vStart.x;
-    float aExtent[3] = { fWidth, fHeight, fDepth };
+    bool bInside = true;
+    PblVector3 vExtent(fWidth, fHeight, fDepth);
     float aPlane[3];
     int aSide[3];
-    bool bInside = true;
     int i;
     for (i = 0; i < 3; i++)
     {
-        if (-aExtent[i] > pStart[i])
+        if (-vExtent[i] > vStart[i])
         {
             aSide[i] = -1;
-            aPlane[i] = -aExtent[i];
+            aPlane[i] = -vExtent[i];
             bInside = false;
         }
-        else if (pStart[i] > aExtent[i])
+        else if (vStart[i] > vExtent[i])
         {
             aSide[i] = 1;
-            aPlane[i] = aExtent[i];
+            aPlane[i] = vExtent[i];
             bInside = false;
         }
         else
         {
             aSide[i] = 0;
-            aPlane[i] = aExtent[i];
+            aPlane[i] = vExtent[i];
         }
     }
     if (bInside)
@@ -122,13 +121,13 @@ int FindAACenteredBoxRayIntersection(const PblVector3& vStart, const PblVector3&
         return 0;
     }
 
-    float aRay[3] = { vDir.x * fLength, vDir.y * fLength, vDir.z * fLength };
+    PblVector3 vRay = vDir * fLength;
     float aT[3];
     for (i = 0; i < 3; i++)
     {
-        if (aSide[i] != 0 && fabsf(aRay[i]) > 0.0001f)
+        if (aSide[i] != 0 && fabsf(vRay[i]) > 0.0001f)
         {
-            aT[i] = (aPlane[i] - pStart[i]) / aRay[i];
+            aT[i] = (aPlane[i] - vStart[i]) / vRay[i];
         }
         else
         {
@@ -140,13 +139,10 @@ int FindAACenteredBoxRayIntersection(const PblVector3& vStart, const PblVector3&
     {
         if (aT[i] > 0.0f)
         {
-            float aHit[3];
-            aHit[0] = pStart[0] + aRay[0] * aT[i];
-            aHit[1] = pStart[1] + aRay[1] * aT[i];
-            aHit[2] = pStart[2] + aRay[2] * aT[i];
+            PblVector3 vHit = vStart + vRay * aT[i];
             for (int j = 0; j < 3; j++)
             {
-                if (j != i && (-aExtent[j] > aHit[j] || aHit[j] > aExtent[j]))
+                if (j != i && (-vExtent[j] > vHit[j] || vHit[j] > vExtent[j]))
                 {
                     aT[i] = -1.0f;
                     break;
@@ -725,14 +721,15 @@ namespace CollisionUtil
 bool CollideCapsules(const PblMatrix& m1, float fRadius1, float fHalfHeight1, const PblMatrix& m2, float fRadius2,
                 float fHalfHeight2, PblVector3& vNormal, float& fDepth)
 {
-    PblVector3 vStart1 = m1.GetTranslation() - m1.GetYAxis() * fHalfHeight1;
-    PblVector3 vEnd1 = m1.GetTranslation() + m1.GetYAxis() * fHalfHeight1;
-    PblVector3 vStart2 = m2.GetTranslation() - m2.GetYAxis() * fHalfHeight2;
-    PblVector3 vEnd2 = m2.GetTranslation() + m2.GetYAxis() * fHalfHeight2;
-    PblVector3 vPoint1, vPoint2;
+    PblVector3 vStart1, vEnd1, vStart2, vEnd2;
+    vStart1 = m1.GetTranslation() - fHalfHeight1 * m1.GetYAxis();
+    vEnd1 = m1.GetTranslation() + fHalfHeight1 * m1.GetYAxis();
+    vStart2 = m2.GetTranslation() - fHalfHeight2 * m2.GetYAxis();
+    vEnd2 = m2.GetTranslation() + fHalfHeight2 * m2.GetYAxis();
+    PblVector3 vPoint1, vPoint2, vDelta;
     CollisionUtil::GetClosestPoints_SegmentSegment(vStart1, vEnd1, vStart2, vEnd2, vPoint1, vPoint2);
 
-    PblVector3 vDelta = vPoint2 - vPoint1;
+    vDelta = vPoint2 - vPoint1;
     float fDist2 = SquaredLength(vDelta);
     if (0.0001f > fDist2)
     {
@@ -750,13 +747,13 @@ bool CollideCapsules(const PblMatrix& m1, float fRadius1, float fHalfHeight1, co
     }
     float fDist = (float)sqrt((double)fDist2);
     fDepth = fRadius1 + fRadius2 - fDist;
-    if (!(fDepth > 0.0001f))
+    if (fDepth > 0.0001f)
     {
-        return false;
+        float fInv = 1.0f / fDist;
+        vNormal = vDelta * fInv;
+        return true;
     }
-    float fInv = 1.0f / fDist;
-    vNormal = vDelta * fInv;
-    return true;
+    return false;
 }
 }
 
@@ -1006,15 +1003,17 @@ float RayHitAACylinder(const PblVector3& vStart, const PblVector3& vDir, float f
     {
         if (pNormal)
         {
-            pNormal->x = 0.0f;
-            pNormal->z = 0.0f;
             if (vStart.y > vCenter.y)
             {
+                pNormal->x = 0.0f;
                 pNormal->y = 1.0f;
+                pNormal->z = 0.0f;
             }
             else
             {
+                pNormal->x = 0.0f;
                 pNormal->y = -1.0f;
+                pNormal->z = 0.0f;
             }
         }
         return 1.0f;
@@ -1039,11 +1038,9 @@ float RayHitAACylinder(const PblVector3& vStart, const PblVector3& vDir, float f
     {
         return 1.0f;
     }
-    float fInv = 1.0f / fFlatLen;
-    PblVector3 vFlatDir(vFlat.x * fInv, vFlat.y * fInv, vFlat.z * fInv);
+    PblVector3 vFlatDir = vFlat * (1.0f / fFlatLen);
 
-    float fProj = (vCenter.x - vStart.x) * vFlatDir.x + (vCenter.y - vStart.y) * vFlatDir.y +
-                  (vCenter.z - vStart.z) * vFlatDir.z;
+    float fProj = DotProduct(vCenter - vStart, vFlatDir);
     if (fProj < 0.0f || fProj > fFlatLen + fRadius)
     {
         return 1.0f;
@@ -1064,8 +1061,7 @@ float RayHitAACylinder(const PblVector3& vStart, const PblVector3& vDir, float f
     float fHit = fEnter / fFlatLen * fClipped;
     if (pNormal)
     {
-        *pNormal = PblVector3(vStart.x + vDir.x * fHit - vCenter.x, vStart.y + vDir.y * fHit - vCenter.y,
-                              vStart.z + vDir.z * fHit - vCenter.z);
+        *pNormal = vStart + vDir * fHit - vCenter;
         pNormal->y = 0.0f;
         PblVector3 vUnit;
         D3DXVec3Normalize((D3DXVECTOR3*)&vUnit, (const D3DXVECTOR3*)pNormal);
@@ -1085,69 +1081,67 @@ float RayHitAxisAlignedCylinder(const PblVector3& vStart, const PblVector3& vDir
     float fTop = vCenter.y + fHalfHeight;
     if (vStart.y > fTop)
     {
-        if (!(fTop > fEndY))
+        if (fTop > fEndY)
         {
-            return 1.0f;
-        }
-        float t = (vStart.y - fTop) / (vStart.y - fEndY);
-        float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
-        float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
-        if (fRadius * fRadius > dx * dx + dz * dz)
-        {
-            if (pNormal)
+            float t = (vStart.y - fTop) / (vStart.y - fEndY);
+            float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
+            float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
+            if (fRadius * fRadius > dx * dx + dz * dz)
             {
-                pNormal->x = 0.0f;
-                pNormal->y = 1.0f;
-                pNormal->z = 0.0f;
+                if (pNormal)
+                {
+                    pNormal->x = 0.0f;
+                    pNormal->y = 1.0f;
+                    pNormal->z = 0.0f;
+                }
+                return t;
             }
-            return t;
-        }
 
-        t += 0.0001f;
-        float fStep = t * fLength;
-        PblVector3 vS(fStep * vDir.x + vStart.x, fStep * vDir.y + vStart.y, fStep * vDir.z + vStart.z);
-        float fRest = 1.0f - t;
-        float fHit = RayHitAACylinder(vS, vDir, fRest * fLength, vCenter, fRadius, fHalfHeight, pNormal);
-        if (fHit < 1.0f)
-        {
-            return fRest * fHit + t;
+            t += 0.0001f;
+            float fStep = t * fLength;
+            PblVector3 vS(fStep * vDir.x + vStart.x, fStep * vDir.y + vStart.y, fStep * vDir.z + vStart.z);
+            float fRest = 1.0f - t;
+            float fHit = RayHitAACylinder(vS, vDir, fRest * fLength, vCenter, fRadius, fHalfHeight, pNormal);
+            if (fHit < 1.0f)
+            {
+                return fRest * fHit + t;
+            }
         }
         return 1.0f;
     }
 
     float fBottom = vCenter.y - fHalfHeight;
-    if (!(fBottom > vStart.y))
+    if (fBottom > vStart.y)
     {
-        return RayHitAACylinder(vStart, vDir, fLength, vCenter, fRadius, fHalfHeight, pNormal);
-    }
-    if (!(fEndY > fBottom))
-    {
+        if (fEndY > fBottom)
+        {
+            float t = (vStart.y - fBottom) / (vStart.y - fEndY);
+            float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
+            float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
+            if (fRadius * fRadius > dx * dx + dz * dz)
+            {
+                if (pNormal)
+                {
+                    pNormal->x = 0.0f;
+                    pNormal->y = -1.0f;
+                    pNormal->z = 0.0f;
+                }
+                return t;
+            }
+
+            t += 0.0001f;
+            float fStep = t * fLength;
+            PblVector3 vS(fStep * vDir.x + vStart.x, fStep * vDir.y + vStart.y, fStep * vDir.z + vStart.z);
+            float fRest = 1.0f - t;
+            float fHit = RayHitAACylinder(vS, vDir, fRest * fLength, vCenter, fRadius, fHalfHeight, pNormal);
+            if (fHit < 1.0f)
+            {
+                return fRest * fHit + t;
+            }
+        }
         return 1.0f;
     }
-    float t = (vStart.y - fBottom) / (vStart.y - fEndY);
-    float dx = t * fLength * vDir.x + vStart.x - vCenter.x;
-    float dz = t * fLength * vDir.z + vStart.z - vCenter.z;
-    if (fRadius * fRadius > dx * dx + dz * dz)
-    {
-        if (pNormal)
-        {
-            pNormal->x = 0.0f;
-            pNormal->y = -1.0f;
-            pNormal->z = 0.0f;
-        }
-        return t;
-    }
-
-    t += 0.0001f;
-    float fStep = t * fLength;
-    PblVector3 vS(fStep * vDir.x + vStart.x, fStep * vDir.y + vStart.y, fStep * vDir.z + vStart.z);
-    float fRest = 1.0f - t;
-    float fHit = RayHitAACylinder(vS, vDir, fRest * fLength, vCenter, fRadius, fHalfHeight, pNormal);
-    if (fHit < 1.0f)
-    {
-        return fRest * fHit + t;
-    }
-    return 1.0f;
+    return RayHitAACylinder(vStart, vDir, fLength, vCenter, fRadius, fHalfHeight, pNormal);
 }
 }
 

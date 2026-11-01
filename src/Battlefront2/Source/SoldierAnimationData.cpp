@@ -206,14 +206,14 @@ void SoldierAnimationData::ReadConfig(PblConfig& config, const char* pcName)
                 bool bByTime = false;
                 if (data.GetNumArgs() >= 2 && data.IsStringArg(1))
                 {
-                    unsigned int uiSyncHash = PblHash(data.GetStringArg(1));
-                    if (uiSyncHash == 0x4dcb9735)
+                    switch (PblHash(data.GetStringArg(1)))
                     {
-                        bByTime = true;
-                    }
-                    else if (uiSyncHash == 0xfc82911d)
-                    {
+                    case 0xfc82911d:
                         bByTime = false;
+                        break;
+                    case 0x4dcb9735:
+                        bByTime = true;
+                        break;
                     }
                 }
                 m_uiSyncType = AddSyncType(pcSync, bByTime);
@@ -396,14 +396,16 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
             }
 
             SoldierAnimationData* pUpper = Find((SoldierAnimationBank::COMBO_ANIMATION)iAnim, UPPER);
-            if (!pUpper->m_bReadFromConfig)
+            const bool bUpperReadFromConfig = pUpper->m_bReadFromConfig;
+            if (!bUpperReadFromConfig)
             {
                 pUpper->SetAimType(AIM_TORSO);
                 pUpper->SetBlendInTime(fBlendInTime);
                 pUpper->SetBlendOutTime(fBlendOutTime);
             }
             SoldierAnimationData* pLower = Find((SoldierAnimationBank::COMBO_ANIMATION)iAnim, LOWER);
-            if (!pLower->m_bReadFromConfig)
+            const bool bLowerReadFromConfig = pLower->m_bReadFromConfig;
+            if (!bLowerReadFromConfig)
             {
                 pLower->SetBlendInTime(fBlendInTime);
                 pLower->SetBlendOutTime(fBlendOutTime);
@@ -485,15 +487,15 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
 
     for (int iAnim = 0; iAnim < NUM_ACTION_ANIMATIONS; ++iAnim)
     {
-        int i = SoldierAnimType::GetAnimIndex((ActionAnimation)iAnim) * NUM_SCOPES;
+        SoldierAnimationData* pData = &aData[SoldierAnimType::GetAnimIndex((ActionAnimation)iAnim) * NUM_SCOPES];
         if (iAnim == SPRINT)
         {
-            aData[i + UPPER].m_uiSyncType = auiSyncType[0];
-            aData[i + LOWER].m_uiSyncType = auiSyncType[0];
+            pData[UPPER].m_uiSyncType = auiSyncType[0];
+            pData[LOWER].m_uiSyncType = auiSyncType[0];
         }
         else if (iAnim == JET)
         {
-            aData[i + UPPER].SetAimType(AIM_TORSO);
+            pData[UPPER].SetAimType(AIM_TORSO);
         }
     }
 
@@ -501,22 +503,23 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
     {
         for (int iAnim = 0; iAnim < NUM_MOVEMENT_ANIMATIONS; ++iAnim)
         {
-            int i = SoldierAnimType::GetAnimIndex((Posture)iPosture, (MovementAnimation)iAnim) * NUM_SCOPES;
+            SoldierAnimationData* pData =
+                &aData[SoldierAnimType::GetAnimIndex((Posture)iPosture, (MovementAnimation)iAnim) * NUM_SCOPES];
             if (iAnim >= WALK_FORWARD)
             {
-                aData[i + UPPER].m_uiSyncType = auiSyncType[(iAnim - WALK_FORWARD) >> 1];
+                pData[UPPER].m_uiSyncType = auiSyncType[(iAnim - WALK_FORWARD) >> 1];
             }
             if (iPosture >= NUM_STANDARD_POSTURES || iPosture == PRONE)
             {
-                aData[i + UPPER].SetAimType(AIM_TORSO);
+                pData[UPPER].SetAimType(AIM_TORSO);
             }
             else
             {
-                aData[i + UPPER].SetAimType(AIM_HEAD);
+                pData[UPPER].SetAimType(AIM_HEAD);
             }
             if (iAnim >= WALK_FORWARD)
             {
-                aData[i + LOWER].m_uiSyncType = auiSyncType[(iAnim - WALK_FORWARD) >> 1];
+                pData[LOWER].m_uiSyncType = auiSyncType[(iAnim - WALK_FORWARD) >> 1];
             }
         }
     }
@@ -525,14 +528,15 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
     {
         for (int iAnim = 0; iAnim < NUM_WEAPON_ANIMATIONS; ++iAnim)
         {
-            int i = SoldierAnimType::GetAnimIndex((Posture)iPosture, (WeaponAnimation)iAnim) * NUM_SCOPES;
+            SoldierAnimationData* pData =
+                &aData[SoldierAnimType::GetAnimIndex((Posture)iPosture, (WeaponAnimation)iAnim) * NUM_SCOPES];
             if (iAnim <= CHARGE || iPosture == PRONE)
             {
-                aData[i + UPPER].SetAimType(AIM_TORSO);
+                pData[UPPER].SetAimType(AIM_TORSO);
             }
             else
             {
-                aData[i + UPPER].SetAimType(AIM_HEAD);
+                pData[UPPER].SetAimType(AIM_HEAD);
             }
         }
     }
@@ -544,76 +548,90 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
 
     for (int iAnim = 0; iAnim < NUM_ACTION_ANIMATIONS; ++iAnim)
     {
-        const AnimationSetting& setting = aActionSettings[iAnim];
-        int i = SoldierAnimType::GetAnimIndex((ActionAnimation)iAnim) * NUM_SCOPES;
-        aData[i + UPPER].SetLooping(setting.bLoop);
-        aData[i + UPPER].SetBlendInTime(setting.fBlendInTime);
-        aData[i + UPPER].SetBlendOutTime(setting.fBlendOutTime);
-        aData[i + LOWER].SetLooping(setting.bLoop);
-        aData[i + LOWER].SetBlendInTime(setting.fBlendInTime);
-        aData[i + LOWER].SetBlendOutTime(setting.fBlendOutTime);
+        bool bLoop = aActionSettings[iAnim].bLoop;
+        float fBlendInTime = aActionSettings[iAnim].fBlendInTime;
+        float fBlendOutTime = aActionSettings[iAnim].fBlendOutTime;
+        SoldierAnimationData* pData = &aData[SoldierAnimType::GetAnimIndex((ActionAnimation)iAnim) * NUM_SCOPES];
+        pData[UPPER].SetLoopType(bLoop ? LOOP_RESTART : LOOP_END);
+        pData[UPPER].SetBlendInTime(fBlendInTime);
+        pData[UPPER].SetBlendOutTime(fBlendOutTime);
+        pData[LOWER].SetLoopType(bLoop ? LOOP_RESTART : LOOP_END);
+        pData[LOWER].SetBlendInTime(fBlendInTime);
+        pData[LOWER].SetBlendOutTime(fBlendOutTime);
     }
 
     for (int iPosture = 0; iPosture < NUM_POSTURES; ++iPosture)
     {
         for (int iAnim = 0; iAnim < NUM_MOVEMENT_ANIMATIONS; ++iAnim)
         {
-            bool bLoop = iAnim != TURN_LEFT && iAnim != TURN_RIGHT;
-            bool bProne = iPosture == PRONE || iPosture == PRONE_ALERT;
+            bool bLoop = iAnim < TURN_LEFT || iAnim > TURN_RIGHT;
 
-            float fUpperTime;
-            if (bProne)
+            float fBlendInTime;
+            float fBlendOutTime;
+            if (iPosture != PRONE && iPosture != PRONE_ALERT)
             {
-                fUpperTime = 0.4f;
-            }
-            else if (iAnim == IDLE)
-            {
-                fUpperTime = 0.5f;
+                if (iAnim == IDLE)
+                {
+                    fBlendInTime = 0.5f;
+                    fBlendOutTime = 0.5f;
+                }
+                else
+                {
+                    fBlendInTime = 0.25f;
+                    fBlendOutTime = 0.25f;
+                }
             }
             else
             {
-                fUpperTime = 0.25f;
+                fBlendInTime = 0.4f;
+                fBlendOutTime = 0.4f;
             }
 
-            int i = SoldierAnimType::GetAnimIndex((Posture)iPosture, (MovementAnimation)iAnim) * NUM_SCOPES;
-            aData[i + UPPER].SetLooping(bLoop);
-            aData[i + UPPER].SetBlendInTime(fUpperTime);
-            aData[i + UPPER].SetBlendOutTime(fUpperTime);
+            SoldierAnimationData* pData =
+                &aData[SoldierAnimType::GetAnimIndex((Posture)iPosture, (MovementAnimation)iAnim) * NUM_SCOPES];
+            pData[UPPER].SetLoopType(bLoop ? LOOP_RESTART : LOOP_END);
+            pData[UPPER].SetBlendInTime(fBlendInTime);
+            pData[UPPER].SetBlendOutTime(fBlendOutTime);
 
-            float fLowerTime;
-            if (bProne)
+            if (iPosture != PRONE && iPosture != PRONE_ALERT)
             {
-                fLowerTime = 0.4f;
-            }
-            else if (iAnim > IDLE_LOOK_AROUND)
-            {
-                fLowerTime = 0.15f;
+                if (iAnim <= IDLE_LOOK_AROUND)
+                {
+                    fBlendInTime = 0.5f;
+                    fBlendOutTime = 0.5f;
+                }
+                else
+                {
+                    fBlendInTime = 0.15f;
+                    fBlendOutTime = 0.15f;
+                }
             }
             else
             {
-                fLowerTime = 0.5f;
+                fBlendInTime = 0.4f;
+                fBlendOutTime = 0.4f;
             }
 
-            aData[i + LOWER].SetLooping(bLoop);
-            aData[i + LOWER].SetBlendInTime(fLowerTime);
-            aData[i + LOWER].SetBlendOutTime(fLowerTime);
+            pData[LOWER].SetLoopType(bLoop ? LOOP_RESTART : LOOP_END);
+            pData[LOWER].SetBlendInTime(fBlendInTime);
+            pData[LOWER].SetBlendOutTime(fBlendOutTime);
 
             if (iAnim >= WALK_FORWARD)
             {
                 if (iPosture == STAND || iPosture == CROUCH)
                 {
-                    aData[i + LOWER].AddBlendOverride(
+                    pData[LOWER].AddBlendOverride(
                         SoldierAnimType::GetAnimIndex((Posture)(iPosture + 3), (MovementAnimation)iAnim), 0.0f);
                 }
                 else if (iPosture == STAND_ALERT || iPosture == CROUCH_ALERT)
                 {
-                    aData[i + LOWER].AddBlendOverride(
+                    pData[LOWER].AddBlendOverride(
                         SoldierAnimType::GetAnimIndex((Posture)(iPosture - 3), (MovementAnimation)iAnim), 0.0f);
                 }
             }
             else if (iAnim <= IDLE_LOOK_AROUND && (iPosture == STAND || iPosture == CROUCH))
             {
-                aData[i + LOWER].AddBlendOverride(
+                pData[LOWER].AddBlendOverride(
                     SoldierAnimType::GetAnimIndex((Posture)(iPosture + 3), (MovementAnimation)iAnim), 0.15f);
             }
         }
@@ -623,6 +641,9 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
     {
         for (int iAnim = 0; iAnim < NUM_WEAPON_ANIMATIONS; ++iAnim)
         {
+            SoldierAnimationData* pData =
+                &aData[SoldierAnimType::GetAnimIndex((Posture)iPosture, (WeaponAnimation)iAnim) * NUM_SCOPES];
+
             float fUpperTime;
             if (iAnim <= SHOOT2)
             {
@@ -637,11 +658,10 @@ void SoldierAnimationData::InitAnimationData(bool bDefaults)
                 fUpperTime = 0.5f;
             }
 
-            int i = SoldierAnimType::GetAnimIndex((Posture)iPosture, (WeaponAnimation)iAnim) * NUM_SCOPES;
-            aData[i + UPPER].SetBlendInTime(fUpperTime);
-            aData[i + UPPER].SetBlendOutTime(fUpperTime);
-            aData[i + LOWER].SetBlendInTime(0.5f);
-            aData[i + LOWER].SetBlendOutTime(0.5f);
+            pData[UPPER].SetBlendInTime(fUpperTime);
+            pData[UPPER].SetBlendOutTime(fUpperTime);
+            pData[LOWER].SetBlendInTime(0.5f);
+            pData[LOWER].SetBlendOutTime(0.5f);
         }
     }
 }

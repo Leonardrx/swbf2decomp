@@ -313,8 +313,11 @@ FLEffectClass* SunFlareEffect::BuildClass(PblConfig& config) const
             PblVector3 vDirection(fCosYaw * v.x - fSinYaw * v.z, v.y,
                                   fSinYaw * v.x + fCosYaw * v.z);
             pFlare->SetDirection(vDirection);
-            RedWater::SetSpecularDirection(
-                PblVector3(-vDirection.x, -vDirection.y, -vDirection.z));
+            if (!RedWater::IsSpecularDirectionSet())
+            {
+                RedWater::SetSpecularDirection(
+                    PblVector3(-vDirection.x, -vDirection.y, -vDirection.z));
+            }
             break;
         }
         case 0xE3C8D91Eu:

@@ -866,14 +866,14 @@ void WeaponCannon::UpdateWarmUpSound(float fDeltaTime)
             pVoice->SetPitch(mSoundPropsWarmUp.GetPitch());
         }
 
-        if (!(pClass->mWarmUpSoundFadeInTime <= 0.0f))
+        if (pClass->mWarmUpSoundFadeInTime <= 0.0f)
         {
-            fGain = Clamp(mSoundPropsWarmUp.GetGain() * fDeltaTime / pClass->mWarmUpSoundFadeInTime + fGain, 0.0f,
-                          mSoundPropsWarmUp.GetGain());
+            fGain = mSoundPropsWarmUp.GetGain();
         }
         else
         {
-            fGain = mSoundPropsWarmUp.GetGain();
+            fGain = Clamp(mSoundPropsWarmUp.GetGain() * fDeltaTime / pClass->mWarmUpSoundFadeInTime + fGain, 0.0f,
+                          mSoundPropsWarmUp.GetGain());
         }
     }
     else

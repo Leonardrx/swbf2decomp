@@ -85,14 +85,11 @@ void EntitySquadron::SetSquadronLeader(EntitySquadron* pLeader)
     pLeader->mLeader = pLeader;
     pLeader->mList.AddLast(&pLeader->mNode);
 
-    int i = 0;
-    PblListDouble::Node* pNode = mList.mTerminator.mNext;
-    while (pNode != &mList.mTerminator && i < 10)
+    PblListDouble::Itor it(mList);
+    for (int i = 0; it.GetNode() != &mList.mTerminator && i < 10; ++i)
     {
-        EntitySquadron* pMember = pNode == &mList.mTerminator
-                                      ? 0
-                                      : (EntitySquadron*)((char*)pNode - offsetof(EntitySquadron, mNode));
-        pNode = pNode->mNext;
+        EntitySquadron* pMember = (EntitySquadron*)it.GetNode()->GetObjectA(&mList, offsetof(EntitySquadron, mNode));
+        ++it;
 
         if (pMember != pLeader)
         {
@@ -100,7 +97,6 @@ void EntitySquadron::SetSquadronLeader(EntitySquadron* pLeader)
             pLeader->mList.AddLast(&pMember->mNode);
             pMember->mLeader = pLeader;
         }
-        i++;
     }
 }
 
@@ -173,14 +169,14 @@ bool EntitySquadron::AddToSquadron(EntitySquadron* const pMember, int iSlot)
     memset(pbUsed, 0, uNumSlots);
     if (!mFormation->RootIsSlot())
     {
-        uUsed = 1;
         pbUsed[mFormation->GetRootIndex()] = true;
+        uUsed = 1;
     }
 
     int i = 0;
-    for (PblListDouble::Node* pNode = mList.mTerminator.mNext; pNode != &mList.mTerminator; pNode = pNode->mNext)
+    for (PblListDouble::Itor it(mList); it.GetNode() != &mList.mTerminator; ++it)
     {
-        EntitySquadron* pOther = (EntitySquadron*)((char*)pNode - offsetof(EntitySquadron, mNode));
+        EntitySquadron* pOther = (EntitySquadron*)it.GetNode()->GetObjectA(&mList, offsetof(EntitySquadron, mNode));
         ++i;
         ++uUsed;
         pbUsed[pOther->mFormationSlot] = true;
@@ -259,16 +255,14 @@ void EntitySquadron::RemoveFromSquadron()
         const PblVector3& vLeader = mFormation->GetPointPosition(mFormationSlot);
         EntityDistance* pDistance = pDistances;
         int i = 0;
-        for (PblListDouble::Node* pNode = mList.mTerminator.mNext; pNode != &mList.mTerminator;
-             pNode = pNode->mNext, ++i)
+        for (PblListDouble::Itor it(mList); it.GetNode() != &mList.mTerminator; ++it, ++i)
         {
             if (i >= 10)
             {
                 break;
             }
-            EntitySquadron* pMember = pNode == &mList.mTerminator
-                                          ? 0
-                                          : (EntitySquadron*)((char*)pNode - offsetof(EntitySquadron, mNode));
+            EntitySquadron* pMember =
+                (EntitySquadron*)it.GetNode()->GetObjectA(&mList, offsetof(EntitySquadron, mNode));
             if (pMember != this)
             {
                 pDistance->mEntity = pMember;
@@ -294,12 +288,11 @@ void EntitySquadron::RemoveFromSquadron()
             (EntityDistance*)members.GetFirst()->GetObjectA(&members, offsetof(EntityDistance, mNode));
         mLeader->mLeader = 0;
         i = 0;
-        for (PblListDouble::Node* pNode = mList.mTerminator.mNext; pNode != &mList.mTerminator && i < 10;)
+        for (PblListDouble::Itor it(mList); it.GetNode() != &mList.mTerminator && i < 10;)
         {
-            EntitySquadron* pMember = pNode == &mList.mTerminator
-                                          ? 0
-                                          : (EntitySquadron*)((char*)pNode - offsetof(EntitySquadron, mNode));
-            pNode = pNode->mNext;
+            EntitySquadron* pMember =
+                (EntitySquadron*)it.GetNode()->GetObjectA(&mList, offsetof(EntitySquadron, mNode));
+            ++it;
             ++i;
             pMember->RemoveFromSquadron();
         }
@@ -309,17 +302,19 @@ void EntitySquadron::RemoveFromSquadron()
             EntitySquadron* pNewLeader = pFirst->mEntity;
             if (pNewLeader->CreateSquadron(uCount))
             {
-                for (PblListDouble::Node* pLink = members.GetFirst()->mNode.mNext; pLink != &members.mTerminator;
-                     pLink = pLink->mNext)
+                PblListDoubleSorted::Itor itor((PblListDoubleSorted::Node*)members.GetFirst()->mNode.mNext->GetObjectA(
+                    &members, offsetof(PblListDoubleSorted::Node, mNode)));
+                for (;;)
                 {
-                    PblListDoubleSorted::Node* pNode =
-                        (PblListDoubleSorted::Node*)((char*)pLink - offsetof(PblListDoubleSorted::Node, mNode));
-                    if (pNode == members.GetTerminator())
+                    PblListDoubleSorted::Node* const pCurrent = itor.GetNode(&members);
+                    if (pCurrent == members.GetTerminator())
                     {
                         break;
                     }
                     pNewLeader->AddToSquadron(
-                        ((EntityDistance*)pNode->GetObjectA(&members, offsetof(EntityDistance, mNode)))->mEntity, -1);
+                        ((EntityDistance*)pCurrent->GetObjectA(&members, offsetof(EntityDistance, mNode)))->mEntity,
+                        -1);
+                    ++itor;
                 }
             }
         }

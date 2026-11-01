@@ -543,10 +543,6 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
         return;
     }
 
-    PABaseKey key1;
-    PABaseKey key0;
-    PABaseKey key;
-
     if (!mLocalTranslation)
     {
         fTime += fDeltaTime;
@@ -563,6 +559,9 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
         }
 
         result = start;
+        PABaseKey key1;
+        PABaseKey key0;
+        PABaseKey key;
         if (GetKeys(fTime, key0, key1, true, 0, NULL))
         {
             InterpolateKeys(key0, key1, fTime, key);
@@ -578,10 +577,10 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
         {
             InterpolateKeys(key0, key1, fTime, key);
             PblVector3 vOrigin = start.GetTranslation();
-            result.SetTranslation(PblVector3(
-                vOrigin.x + key.mVal.x * start.m[0][0] + key.mVal.y * start.m[1][0] + key.mVal.z * start.m[2][0],
-                vOrigin.y + key.mVal.x * start.m[0][1] + key.mVal.y * start.m[1][1] + key.mVal.z * start.m[2][1],
-                vOrigin.z + key.mVal.x * start.m[0][2] + key.mVal.y * start.m[1][2] + key.mVal.z * start.m[2][2]));
+            vOrigin += start.GetXAxis() * key.mVal.x;
+            vOrigin += start.GetYAxis() * key.mVal.y;
+            vOrigin += start.GetZAxis() * key.mVal.z;
+            result.SetTranslation(vOrigin);
         }
         return;
     }
@@ -600,6 +599,9 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
 
     unsigned char ucKey;
     PblVector3 vLastPos;
+    PABaseKey key1;
+    PABaseKey key0;
+    PABaseKey key;
     if (GetKeys(fTime, key0, key1, false, 0, &ucKey))
     {
         InterpolateKeys(key0, key1, fTime, key);
@@ -632,14 +634,17 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
             }
         }
 
-        if (GetKeys(fKeyTime, key0, key1, true, 0, &ucKey))
+        PABaseKey rotKey1;
+        PABaseKey rotKey0;
+        if (GetKeys(fKeyTime, rotKey0, rotKey1, true, 0, &ucKey))
         {
             PblMatrix rot = gMatrixIdentity;
-            InterpolateKeys(key0, key1, fKeyTime, key);
+            PABaseKey rotKey;
+            InterpolateKeys(rotKey0, rotKey1, fKeyTime, rotKey);
             PblMatrix temp;
-            rot.RotateX(key.mVal.x);
-            rot.RotateY(key.mVal.y);
-            rot.RotateZ(key.mVal.z);
+            rot.RotateX(rotKey.mVal.x);
+            rot.RotateY(rotKey.mVal.y);
+            rot.RotateZ(rotKey.mVal.z);
             PblVector3 vPos = result.GetTranslation();
             D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&temp), reinterpret_cast<const D3DXMATRIX*>(&rot), reinterpret_cast<const D3DXMATRIX*>(&start));
             result = temp;
@@ -655,10 +660,10 @@ void PAAnimation::CalculateNextMatrix(float fDeltaTime, float& fTime, const PblM
         }
 
         PblVector3 vPos = result.GetTranslation();
-        result.SetTranslation(PblVector3(
-            vPos.x + vDelta.x * result.m[0][0] + vDelta.y * result.m[1][0] + vDelta.z * result.m[2][0],
-            vPos.y + vDelta.x * result.m[0][1] + vDelta.y * result.m[1][1] + vDelta.z * result.m[2][1],
-            vPos.z + vDelta.x * result.m[0][2] + vDelta.y * result.m[1][2] + vDelta.z * result.m[2][2]));
+        vPos += result.GetXAxis() * vDelta.x;
+        vPos += result.GetYAxis() * vDelta.y;
+        vPos += result.GetZAxis() * vDelta.z;
+        result.SetTranslation(vPos);
 
         fCurTime = fNextTime;
     } while (fEndTime > fCurTime);

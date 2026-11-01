@@ -298,11 +298,10 @@ PblMatrix CollisionBodyPrimitive::GetMomentOfInertia() const
     case CollisionPrimitive::AXIS_ALIGNED_CYLINDER:
     case CollisionPrimitive::CYLINDER:
     {
-        float fRadius = mPrimitive.mRadius;
-        float fXX = mPrimitive.mHeight * 0.08333f * mPrimitive.mHeight + fRadius * 0.25f * fRadius;
+        float fXX = mPrimitive.mHeight * 0.08333f * mPrimitive.mHeight + mPrimitive.mRadius * 0.25f * mPrimitive.mRadius;
         inertia.m[0][0] = fXX;
         inertia.m[2][2] = fXX;
-        inertia.m[1][1] = fRadius * 0.5f * fRadius;
+        inertia.m[1][1] = mPrimitive.mRadius * 0.5f * mPrimitive.mRadius;
         break;
     }
     default:

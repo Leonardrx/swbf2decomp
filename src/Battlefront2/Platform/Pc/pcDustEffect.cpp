@@ -139,8 +139,8 @@ void DustEffectRenderData::Begin() const
 void DustEffectRenderData::AddParticle(const PblVector3& vPos, float fSize, const RedColor& color,
                                        float fOffset) const
 {
-    PblVector3 up = m_vUp * fSize;
-    PblVector3 right = m_vRight * fSize;
+    PblVector3 up = fSize * m_vUp;
+    PblVector3 right = fSize * m_vRight;
     PblVector3 pos = (vPos - up * 0.5f) + right * (fOffset - 0.5f);
 
     if (RedRenderer::pcGetGeometryMode())
@@ -168,29 +168,35 @@ void DustEffectRenderData::AddParticle(const PblVector3& vPos, float fSize, cons
     }
     else
     {
+        DustVertex* pVertex;
+
         ((DustVertex*)m_pVertices)->pos = pos;
         ((DustVertex*)m_pVertices)->color = color;
-        ((DustVertex*)m_pVertices)->u = 1.0f;
-        ((DustVertex*)m_pVertices)->v = 0.0f;
-        m_pVertices = (DustVertex*)m_pVertices + 1;
+        pVertex = (DustVertex*)m_pVertices;
+        pVertex->u = 1.0f;
+        pVertex->v = 0.0f;
+        m_pVertices = pVertex + 1;
 
         ((DustVertex*)m_pVertices)->pos = pos + right;
         ((DustVertex*)m_pVertices)->color = color;
-        ((DustVertex*)m_pVertices)->u = 1.0f;
-        ((DustVertex*)m_pVertices)->v = 1.0f;
-        m_pVertices = (DustVertex*)m_pVertices + 1;
+        pVertex = (DustVertex*)m_pVertices;
+        pVertex->u = 1.0f;
+        pVertex->v = 1.0f;
+        m_pVertices = pVertex + 1;
 
         ((DustVertex*)m_pVertices)->pos = (pos + up) + right;
         ((DustVertex*)m_pVertices)->color = color;
-        ((DustVertex*)m_pVertices)->u = 0.0f;
-        ((DustVertex*)m_pVertices)->v = 1.0f;
-        m_pVertices = (DustVertex*)m_pVertices + 1;
+        pVertex = (DustVertex*)m_pVertices;
+        pVertex->u = 0.0f;
+        pVertex->v = 1.0f;
+        m_pVertices = pVertex + 1;
 
         ((DustVertex*)m_pVertices)->pos = pos + up;
         ((DustVertex*)m_pVertices)->color = color;
-        ((DustVertex*)m_pVertices)->u = 0.0f;
-        ((DustVertex*)m_pVertices)->v = 0.0f;
-        m_pVertices = (DustVertex*)m_pVertices + 1;
+        pVertex = (DustVertex*)m_pVertices;
+        pVertex->u = 0.0f;
+        pVertex->v = 0.0f;
+        m_pVertices = pVertex + 1;
     }
 }
 

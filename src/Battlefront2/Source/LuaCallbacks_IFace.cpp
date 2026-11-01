@@ -2715,13 +2715,13 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
     lua_newtable(LuaHelper::mState);
 
     unsigned short usColon[16];
+    unsigned short usNum[16];
     unsigned short usComma[16];
     unsigned short usHash[16];
     unsigned short usButton[256];
     unsigned short usAction[256];
     unsigned short usKeys[256];
     unsigned short usKey[256];
-    unsigned short usNum[16];
 
     usColon[0] = ':';
     usColon[1] = ' ';
@@ -2753,13 +2753,10 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
         RedLocalizeDB::GetLocalizedString(usAction, sizeof(usAction), GetActionName(iAction, iMode));
         PblUnicode::ustrlcat(usAction, usColon, 256);
 
-        ActionKey& rKey = pProfile->mGameOptions.mKeyboardBindings[iMode][iAction];
-
-        const unsigned char* pucMods = (const unsigned char*)&rKey.mKey[2];
         for (int j = 0; j < 2; ++j)
         {
             char acKey[128] = { 0 };
-            unsigned short usRaw = rKey.mKey[j];
+            unsigned short usRaw = pProfile->mGameOptions.mKeyboardBindings[iMode][iAction].mKey[j];
             if (!usRaw)
             {
                 continue;
@@ -2769,6 +2766,7 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
             {
                 RedLocalizeDB::GetLocalizedString(usButton, sizeof(usButton),
                                                   GetButtonName(ActionKeyToRawInput(usRaw)));
+                const unsigned char* pucMods = (const unsigned char*)&pProfile->mGameOptions.mKeyboardBindings[iMode][iAction].mKey[2];
                 unsigned char ucMod = pucMods[j];
                 if (ucMod)
                 {
@@ -2786,7 +2784,7 @@ int ScriptCB_GetKeyBoardCmds(lua_State* L)
             }
             else
             {
-                pJoystick->GetKeyboard()->pcGetKeyName((unsigned char)usRaw, usKey, 256);
+                pJoystick->GetKeyboard()->pcGetKeyName((unsigned char)pProfile->mGameOptions.mKeyboardBindings[iMode][iAction].mKey[j], usKey, 256);
                 _wcsupr((wchar_t*)usKey);
             }
 

@@ -206,9 +206,8 @@ int RayConvexPoly_intersect(const PblVector3& vStart, const PblVector3& vDir, co
     const PblVector3 v2 = pVerts[pIndices[2]];
     const PblVector3 e1 = vPrev - v0;
     const PblVector3 e2 = v2 - v0;
-    const PblVector3 vCross = CrossProduct(e1, e2);
     PblVector3 vNormal;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&vCross));
+    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vNormal), reinterpret_cast<const D3DXVECTOR3*>(&CrossProduct(e1, e2)));
 
     const float fDenom = DotProduct(vDir, vNormal);
     if (fDenom > -EPSILON)
@@ -353,46 +352,39 @@ bool CollisionMesh::_RayTestAABB(const PblVector3& vStart, const PblVector3& vDi
 int CollisionMesh::_RayHit(const PblVector3& vStart, const PblVector3& vDir, float fLength, CollisionTreeNode* pNode, const CollisionAABB& aabb, float& fT, CollisionTreeNode** ppHitLeaf) const
 {
     const CollisionMesh* pMesh = (const CollisionMesh*)this;
-    if (!pNode)
-    {
-        return 0;
-    }
     PblVector3 vCoord;
-    if (!CollisionMesh::_RayTestAABB(vStart, vDir, fT, aabb, vCoord))
+    if (pNode && CollisionMesh::_RayTestAABB(vStart, vDir, fT, aabb, vCoord))
     {
-        return 0;
-    }
-
-    if (!pNode->isleaf)
-    {
-        CollisionAABB lAABB(aabb, (pNode + 1)->aabb);
-        CollisionAABB gAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
-        if (BoxDistSq(vStart, lAABB) < BoxDistSq(vStart, gAABB))
+        if (!pNode->isleaf)
         {
-            const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
-            const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
-            return (iSecond | iFirst) != 0;
+            CollisionAABB lAABB(aabb, (pNode + 1)->aabb);
+            CollisionAABB gAABB(aabb, ((CollisionTreeNode*)pNode->data)->aabb);
+            if (BoxDistSq(vStart, lAABB) < BoxDistSq(vStart, gAABB))
+            {
+                const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
+                const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
+                return (iSecond | iFirst) != 0;
+            }
+            const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
+            const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
+            return (iFirst | iSecond) != 0;
         }
-        const int iFirst = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, ((CollisionTreeNode*)pNode->data), gAABB, fT, ppHitLeaf);
-        const int iSecond = ((CollisionMesh*)pMesh)->_RayHit(vStart, vDir, fLength, (pNode + 1), lAABB, fT, ppHitLeaf);
-        return (iFirst | iSecond) != 0;
-    }
 
-    float t = fT;
-    if (!RayConvexPoly_intersect(vStart, vDir, pMesh->mPoslList, pNode->numVerts, ((CollisionTreeLeaf*)pNode)->GetIndexPointer(),
-                    t))
-    {
-        return 0;
+        float t = fT;
+        if (RayConvexPoly_intersect(vStart, vDir, pMesh->mPoslList, pNode->numVerts, ((CollisionTreeLeaf*)pNode)->GetIndexPointer(),
+                        t))
+        {
+            if (fT > t)
+            {
+                fT = t;
+                sDrawThisLeaf = (CollisionTreeLeaf*)pNode;
+                *ppHitLeaf = pNode;
+                sDrawThisAABB = aabb;
+            }
+            return 1;
+        }
     }
-    if (fT > t)
-    {
-        fT = t;
-        sDrawThisLeaf = (CollisionTreeLeaf*)pNode;
-        *ppHitLeaf = pNode;
-        sDrawThisAABB.boxmin = aabb.boxmin;
-        sDrawThisAABB.boxmax = aabb.boxmax;
-    }
-    return 1;
+    return 0;
 }
 
 // FUNCTION: SWBF2 0x00461a30
@@ -694,23 +686,22 @@ CollisionMeshCache* CollisionMesh::_GetTriHits(const PblVector3& vPos, float fRa
     {
         PblVector3* pVerts = (PblVector3*)stack.Alloc(100 * sizeof(PblVector3));
 
-        CollisionMeshCache* pCaches = (CollisionMeshCache*)pSoldier->mCollisionMeshCache;
         for (int i = 0; i < 3; ++i)
         {
-            CollisionMeshCache& cache = pCaches[i];
-            if (cache.mMesh != pMesh)
+            CollisionMeshCache* pEntry = (CollisionMeshCache*)pSoldier->mCollisionMeshCache[i];
+            if (pEntry->mMesh != pMesh)
             {
                 continue;
             }
-            pCache = &cache;
-            float fX = vPos.x - cache.mInitialPos.x;
-            float fY = vPos.y - cache.mInitialPos.y;
-            float fZ = vPos.z - cache.mInitialPos.z;
-            if (fRadius * (0.65f * 0.65f) * fRadius > fX * fX + fY * fY + fZ * fZ && cache.mNumPolys < 70)
+            pCache = pEntry;
+            float fX = vPos.x - pCache->mInitialPos.x;
+            float fY = vPos.y - pCache->mInitialPos.y;
+            float fZ = vPos.z - pCache->mInitialPos.z;
+            if (fRadius * (0.65f * 0.65f) * fRadius > fX * fX + fY * fY + fZ * fZ && pCache->mNumPolys < 70)
             {
-                for (int k = 0; k < cache.mNumPolys; ++k)
+                for (int k = 0; k < pCache->mNumPolys; ++k)
                 {
-                    CollisionTreeLeaf* pLeaf = cache.mPolys[k];
+                    CollisionTreeLeaf* pLeaf = pCache->mPolys[k];
                     int iNumVerts = pLeaf->numVerts;
                     if (iNumVerts > 100)
                     {
@@ -729,12 +720,13 @@ CollisionMeshCache* CollisionMesh::_GetTriHits(const PblVector3& vPos, float fRa
         }
         if (!pCache)
         {
-            pCache = &pCaches[0];
+            pCache = (CollisionMeshCache*)pSoldier->mCollisionMeshCache[0];
             for (int i = 0; i < 3; ++i)
             {
-                if (pCaches[i].mNumPolys < pCache->mNumPolys)
+                CollisionMeshCache* pEntry = (CollisionMeshCache*)pSoldier->mCollisionMeshCache[i];
+                if (pEntry->mNumPolys < pCache->mNumPolys)
                 {
-                    pCache = &pCaches[i];
+                    pCache = pEntry;
                 }
             }
             pCache->lastPos = vPos;

@@ -89,21 +89,25 @@ static bool DoAmmo(GameObject* pObject, float fAmmo, bool bSkipPowerupDispensers
                 }
 
                 AmmoCounter* pAmmo = pWeapon->m_pAmmoCounter;
-                bool bReserveFull = pAmmo->IsReserveFull();
+                bool bReserveNotFull = !pAmmo->IsReserveFull();
                 bool bClipEmpty = pAmmo->mMaxClips <= 1.0f && pAmmo->mCurClip < 1.0f;
                 bool bInfinite = pAmmo->HasInfiniteAmmo();
-                bool bTook = false;
-                if (fAmmo > 0.0f && !bInfinite && (!bReserveFull || bClipEmpty))
+                bool bTook;
+                if (fAmmo > 0.0f && !bInfinite && (bReserveNotFull || bClipEmpty))
                 {
                     bTook = true;
                     if (bApply)
                     {
                         if (bClipEmpty)
                         {
-                            pWeapon->m_pAmmoCounter->UnloadClip();
+                            pAmmo->UnloadClip();
                         }
                         pWeapon->m_pAmmoCounter->AddClips(fAmmo);
                     }
+                }
+                else
+                {
+                    bTook = false;
                 }
                 bResult |= bTook;
             }
