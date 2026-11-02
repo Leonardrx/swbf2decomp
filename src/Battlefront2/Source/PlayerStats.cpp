@@ -883,12 +883,12 @@ void PlayerStats::AddTimePlayedAsClass(const EntityClass* pClass, float fTime)
         return;
     }
 
-    float fMinTime = FLT_MAX;
-    int iMin = 0;
     int iEmpty = -1;
     int iTeam = _GetTeamNumber();
     mTimePlayedPerTeam[iTeam].Inc(fTime);
     mMaxAliveTime[iTeam].Inc(fTime);
+    int iMin = 0;
+    float fMinTime = FLT_MAX;
 
     for (int i = 0; i < MAX_STAT_CLASSES; ++i)
     {

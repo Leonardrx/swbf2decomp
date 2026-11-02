@@ -356,10 +356,10 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
     unsigned int i = 1;
     float fWeight = puiWeights[0] * kInv255;
     const PblMatrix* pBone = &pMatrices[puiIndices[0]];
-    s_mSkin[0] = (*pBone)[0] * fWeight;
-    s_mSkin[1] = (*pBone)[1] * fWeight;
-    s_mSkin[2] = (*pBone)[2] * fWeight;
-    s_mSkin[3] = (*pBone)[3] * fWeight;
+    s_mSkin[0] = fWeight * (*pBone)[0];
+    s_mSkin[1] = fWeight * (*pBone)[1];
+    s_mSkin[2] = fWeight * (*pBone)[2];
+    s_mSkin[3] = fWeight * (*pBone)[3];
 
     for (unsigned int uiTotal = puiWeights[0]; uiTotal < 0xFF; uiTotal += puiWeights[i++])
     {
@@ -368,16 +368,16 @@ static const PblMatrix& _GetSkinMatrix(unsigned int uiNumBones, const unsigned c
         if (i >= uiNumBones - 1)
         {
             const float fScale = (1.0f - fWeight) / (uiTotal * kInv255);
-            s_mSkin[0] = s_mSkin[0] * fScale + (*pBone)[0] * fWeight;
-            s_mSkin[1] = s_mSkin[1] * fScale + (*pBone)[1] * fWeight;
-            s_mSkin[2] = s_mSkin[2] * fScale + (*pBone)[2] * fWeight;
-            s_mSkin[3] = s_mSkin[3] * fScale + (*pBone)[3] * fWeight;
+            s_mSkin[0] = s_mSkin[0] * fScale + fWeight * (*pBone)[0];
+            s_mSkin[1] = s_mSkin[1] * fScale + fWeight * (*pBone)[1];
+            s_mSkin[2] = s_mSkin[2] * fScale + fWeight * (*pBone)[2];
+            s_mSkin[3] = s_mSkin[3] * fScale + fWeight * (*pBone)[3];
             break;
         }
-        s_mSkin[0] += (*pBone)[0] * fWeight;
-        s_mSkin[1] += (*pBone)[1] * fWeight;
-        s_mSkin[2] += (*pBone)[2] * fWeight;
-        s_mSkin[3] += (*pBone)[3] * fWeight;
+        s_mSkin[0] += fWeight * (*pBone)[0];
+        s_mSkin[1] += fWeight * (*pBone)[1];
+        s_mSkin[2] += fWeight * (*pBone)[2];
+        s_mSkin[3] += fWeight * (*pBone)[3];
     }
     return s_mSkin;
 }
@@ -466,15 +466,15 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
                 uiMaterialFlags |= 0xC000;
             }
             unsigned int uiColor = child._pFile->Read32();
-            diffuse.r = (unsigned char)uiColor;
-            diffuse.g = (unsigned char)(uiColor >> 8);
-            diffuse.b = (unsigned char)(uiColor >> 16);
             diffuse.a = (unsigned char)(uiColor >> 24);
+            diffuse.b = (unsigned char)(uiColor >> 16);
+            diffuse.g = (unsigned char)(uiColor >> 8);
+            diffuse.r = (unsigned char)uiColor;
             uiColor = child._pFile->Read32();
-            specular.r = (unsigned char)uiColor;
-            specular.g = (unsigned char)(uiColor >> 8);
-            specular.b = (unsigned char)(uiColor >> 16);
             specular.a = (unsigned char)(uiColor >> 24);
+            specular.b = (unsigned char)(uiColor >> 16);
+            specular.g = (unsigned char)(uiColor >> 8);
+            specular.r = (unsigned char)uiColor;
             fSpecularPower = (float)child._pFile->Read32();
             shaderData.uiData0 = (unsigned char)child._pFile->Read32();
             shaderData.uiData1 = (unsigned char)child._pFile->Read32();
@@ -490,7 +490,7 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
         {
             unsigned int uiIndex = child._pFile->Read32();
             child.ReadString(acName, 256);
-            if (uiIndex < 4)
+            if (uiIndex <= 3)
             {
                 auiTextures[uiIndex] = PblHash(acName);
             }
@@ -535,23 +535,29 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
             }
             if (uiFormat & 0xF000)
             {
-                if (RedRenderer::pcGetRenderCaps().geometry != GEOMETRYMODE_COMPRESSED)
+                if (RedRenderer::pcGetRenderCaps().geometry == GEOMETRYMODE_COMPRESSED)
                 {
-                    break;
+                    uiVertexSize = uiSize;
+                    uiVertexFormat = uiFormat;
+                    bHaveVertices = true;
+                    pVertexBuffer = pcRedVertexBuffer::Create(
+                        uiCount, uiSize, true, RedModel::pcGetShareBufferEnable());
+                    void* pData = pVertexBuffer->Lock(uiCount, uiStartVertex);
+                    child._pFile->ReadData(pData, uiCount * uiSize);
+                    pVertexBuffer->Unlock();
                 }
             }
-            else if (bHaveVertices)
+            else if (!bHaveVertices)
             {
-                break;
+                uiVertexSize = uiSize;
+                uiVertexFormat = uiFormat;
+                bHaveVertices = true;
+                pVertexBuffer = pcRedVertexBuffer::Create(
+                    uiCount, uiSize, true, RedModel::pcGetShareBufferEnable());
+                void* pData = pVertexBuffer->Lock(uiCount, uiStartVertex);
+                child._pFile->ReadData(pData, uiCount * uiSize);
+                pVertexBuffer->Unlock();
             }
-            uiVertexSize = uiSize;
-            uiVertexFormat = uiFormat;
-            bHaveVertices = true;
-            pVertexBuffer = pcRedVertexBuffer::Create(
-                uiCount, uiSize, true, RedModel::pcGetShareBufferEnable());
-            void* pData = pVertexBuffer->Lock(uiCount, uiStartVertex);
-            child._pFile->ReadData(pData, uiCount * uiSize);
-            pVertexBuffer->Unlock();
             break;
         }
         case 0x46554249:
@@ -602,8 +608,9 @@ RedSegment* __cdecl RedSegment::Read(PblFileChunk& chunk, const RedModel* pModel
             const float fMinX = child._pFile->ReadFloat();
             const float fMinY = child._pFile->ReadFloat();
             const float fMinZ = child._pFile->ReadFloat();
+            const float fMaxX = child._pFile->ReadFloat();
             bbox._vMin = PblVector3(fMinX, fMinY, fMinZ);
-            bbox._vMax.x = child._pFile->ReadFloat();
+            bbox._vMax.x = fMaxX;
             bbox._vMax.y = child._pFile->ReadFloat();
             bbox._vMax.z = child._pFile->ReadFloat();
             break;

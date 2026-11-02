@@ -1023,9 +1023,16 @@ void SoldierAnimator::SetupPose(RedPose& pose)
         }
         else
         {
-            Controllable* pControllable = mOwner->mCharacter ? mOwner->mCharacter->GetControllable() : 0;
-            bool bMoving = pControllable &&
-                           (pControllable->mControlMove != 0.0f || pControllable->mControlStrafe != 0.0f);
+            Controllable* pControllable = 0;
+            if (mOwner->mCharacter)
+            {
+                pControllable = mOwner->mCharacter->GetControllable();
+            }
+            bool bMoving = false;
+            if (pControllable && (pControllable->mControlMove != 0.0f || pControllable->mControlStrafe != 0.0f))
+            {
+                bMoving = true;
+            }
             if (fDeltaTime > 0.0f && mActionTime > 0.0f && (m_bAnimControlledMove || bMoving))
             {
                 mAction = SoldierAnimType::MOVE;
@@ -1916,21 +1923,20 @@ SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float f
     }
 
     bool bAlert = m_bAlert;
-    const SoldierAnimatorClass* pClass = SoldierAnimatorClass::Instance();
     const SoldierAnimation* apAnim[SoldierAnimType::NUM_MOVEMENT_ANIMATIONS] = {
         0,
         0,
         0,
         0,
         0,
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_FORWARD, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_FORWARD, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_BACKWARD, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_BACKWARD, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_LEFT, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_LEFT, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_RIGHT, mPosture, mWeaponAnimationMap, bAlert),
-        pClass->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_RIGHT, mPosture, mWeaponAnimationMap, bAlert)
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_FORWARD, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_FORWARD, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_BACKWARD, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_BACKWARD, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_LEFT, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_LEFT, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::WALK_RIGHT, mPosture, mWeaponAnimationMap, bAlert),
+        SoldierAnimatorClass::Instance()->GetLowerBodyMovementAnimation(SoldierAnimType::RUN_RIGHT, mPosture, mWeaponAnimationMap, bAlert)
     };
 
     int eAnim;
@@ -1958,23 +1964,25 @@ SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float f
             fAngle = UnitCircleNormalize(fAngle + PblMath::fPi);
         }
     }
-    else if (mOwner)
-    {
-        eAnim = SoldierAnimType::WALK_FORWARD;
-        fAngle = mOwner->mLegAngle;
-        if (!mOwner->mLegAngleForward)
-        {
-            eAnim = SoldierAnimType::WALK_BACKWARD;
-        }
-    }
     else
     {
-        fAngle = atan2f(fSide, fForward);
         eAnim = SoldierAnimType::WALK_FORWARD;
-        if (fForward <= 0.0f)
+        if (mOwner)
         {
-            eAnim = SoldierAnimType::WALK_BACKWARD;
-            fAngle = UnitCircleNormalize(fAngle + PblMath::fPi);
+            fAngle = mOwner->mLegAngle;
+            if (!mOwner->mLegAngleForward)
+            {
+                eAnim = SoldierAnimType::WALK_BACKWARD;
+            }
+        }
+        else
+        {
+            fAngle = atan2f(fSide, fForward);
+            if (fForward <= 0.0f)
+            {
+                eAnim = SoldierAnimType::WALK_BACKWARD;
+                fAngle = UnitCircleNormalize(fAngle + PblMath::fPi);
+            }
         }
     }
 

@@ -215,18 +215,12 @@ bool ActiveRegion::Update(float fDeltaTime)
         if (entered.IsBitSet(i))
         {
             Character* pChr = Character::GetPtr(i);
-            if (!(NetGame::IsEnabled() && NetGame::OnClient()))
-            {
-                EventManager::RegionEvent::mEnterRegion.mRoot.Trigger(mRegion, *pChr);
-            }
+            EventManager::RegionEvent::mEnterRegion.Trigger(mRegion, *pChr);
         }
         else if (left.IsBitSet(i))
         {
             Character* pChr = Character::GetPtr(i);
-            if (!(NetGame::IsEnabled() && NetGame::OnClient()))
-            {
-                EventManager::RegionEvent::mLeaveRegion.mRoot.Trigger(mRegion, *pChr);
-            }
+            EventManager::RegionEvent::mLeaveRegion.Trigger(mRegion, *pChr);
         }
     }
     return true;

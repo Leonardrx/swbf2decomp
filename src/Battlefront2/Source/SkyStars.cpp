@@ -151,12 +151,12 @@ void SkyStars::_BuildStarFields()
     static const float fSector12 = PblMath::fTwoPi / 16;
     static const float fSector3 = PblMath::fTwoPi / 4;
 
+    const float fBand1Stars = (float)m_uiNumStars * fBand1Ratio;
     PblRandom rand(m_uiRandomSeed ^ 0xC71C2830u);
 
     float fRemainder = 0.0f;
     unsigned int i = 0;
 
-    const float fBand1Stars = (float)m_uiNumStars * fBand1Ratio;
     for (; i < 16; ++i)
     {
         StarField& field = m_aStarFields[i];

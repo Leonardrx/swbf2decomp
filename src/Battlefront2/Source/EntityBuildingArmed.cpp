@@ -236,11 +236,7 @@ void EntityBuildingArmed::Init()
         if (pLight)
         {
             const PblVector3& vDir = pLight->m_vDirection;
-            float fGrow = _Sphere.w;
-            if (vDir.y < -0.5f)
-            {
-                fGrow /= vDir.y * -2.0f;
-            }
+            float fGrow = vDir.y < -0.5f ? _Sphere.w / (vDir.y * -2.0f) : _Sphere.w;
             SetRenderPos(GetRenderPos() + vDir * fGrow);
             SetRenderRadius(_Sphere.w + fGrow);
             SetTestBBox(false);
@@ -512,11 +508,9 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
         }
         RedRenderer::SetStencilShadowLength(fShadowLength);
 
-        float fDX = mView.m[3][0] - mView.m[2][0] * fNear - _Sphere.x;
-        float fDY = mView.m[3][1] - mView.m[2][1] * fNear - _Sphere.y;
-        float fDZ = mView.m[3][2] - mView.m[2][2] * fNear - _Sphere.z;
+        PblVector3 vOffset = mView.GetTranslation() - mView.GetZAxis() * fNear - GetRenderPos();
         float fReach = _Sphere.w + fLength + fWidth * 1.33f;
-        RedRenderer::SetStencilShadowZFail(fReach * fReach > fDY * fDY + fDX * fDX + fDZ * fDZ);
+        RedRenderer::SetStencilShadowZFail(fReach * fReach > vOffset.y * vOffset.y + vOffset.x * vOffset.x + vOffset.z * vOffset.z);
     }
     else
     {

@@ -807,7 +807,7 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
 
             PblVector3 vFwd = pMe->GetMatrix().GetZAxis();
             PblVector3 vFwdXZ;
-            if (0.0001f > vFwd.x * vFwd.x + vFwd.z * vFwd.z)
+            if (0.0001f > vFwd.z * vFwd.z + vFwd.x * vFwd.x)
             {
                 vFwdXZ = PblVector3(1.0f, 0.0f, 0.0f);
             }
@@ -883,20 +883,21 @@ void UpdatePhysics(const Controllable* pMe, float fScale, const ControllableDest
     {
         AIUtil::CalculateHeadingControls(pMe, fScale, rDest, rHeading, fTurnRate, pfTurn, fPitchRate,
                                          pfPitch, false);
-        return;
     }
-
-    bool bFromEye = false;
-    if (pMe->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
+    else
     {
-        if (GetLowLevel(UnitControllerPtr(static_cast<const Controller*>(pMe->mCtrl)))->mFoldStatus ==
-            FOLD_UNFOLD)
+        bool bFromEye = false;
+        if (pMe->GetEntity()->IsRtti(EntityDroideka::rttiHashEntityDroideka))
         {
-            bFromEye = true;
+            if (GetLowLevel(UnitControllerPtr(static_cast<const Controller*>(pMe->mCtrl)))->mFoldStatus ==
+                FOLD_UNFOLD)
+            {
+                bFromEye = true;
+            }
         }
+        AIUtil::sCalculateTurnControls(pMe, fScale, rDest.mPos, fTurnRate, pfTurn, fPitchRate, pfPitch,
+                                       bFromEye);
     }
-    AIUtil::sCalculateTurnControls(pMe, fScale, rDest.mPos, fTurnRate, pfTurn, fPitchRate, pfPitch,
-                                   bFromEye);
 }
 }
 

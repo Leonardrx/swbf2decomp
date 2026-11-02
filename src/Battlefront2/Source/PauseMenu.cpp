@@ -498,10 +498,7 @@ bool PauseMenu::Update(float fDeltaTime)
         bStart = false;
         bPlayerList = false;
     }
-    if (bGameOver)
-    {
-        iViewport = 0;
-    }
+    iViewport = bGameOver ? 0 : iViewport;
 
     if ((PauseMenu::sPausingViewport == -1 || PauseMenu::sPausingViewport == iViewport) && !gAttractMode && !mVisible &&
         mDebounceTime <= 0.0f && !FLInputManager::s_instance.AnyMissing() && pSpawn->mMode != SpawnDisplay::eFINISHED &&

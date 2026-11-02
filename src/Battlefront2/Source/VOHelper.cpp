@@ -452,18 +452,17 @@ void _Play(VOType eType, const GameObject* pSpeaker, const GameObject* pTarget,
     }
 
     const GameObject* pVoice = pSpeaker;
-    const Controllable* pSpeakerCtrl = pSpeaker->GetControllable();
-    if (pSpeakerCtrl && pSpeakerCtrl->GetPilot())
+    VOSound* pSounds[64];
+    int iCount = 0;
+    if (pSpeaker->GetControllable() && pSpeaker->GetControllable()->GetPilot())
     {
-        pVoice = pSpeakerCtrl->GetPilot()->GetGameObject();
+        pVoice = pSpeaker->GetControllable()->GetPilot()->GetGameObject();
         if (!pVoice)
         {
             pVoice = pSpeaker;
         }
     }
 
-    VOSound* pSounds[64];
-    int iCount = 0;
     for (VOSound* pSound = pVoice->GetGameObjectClass()->mVOSoundList; pSound && iCount < 64;
          pSound = pSound->mNext)
     {

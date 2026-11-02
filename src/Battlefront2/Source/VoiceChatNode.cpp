@@ -490,16 +490,14 @@ bool VoiceChat::Node::DecoderReceiveAudioPacket(unsigned char stream,
 
     if (packet->mDiscontinuity && s.decoderInput != 0xFF)
     {
-        if (!bReceived && packet->mSize)
+        if (bReceived || !packet->mSize)
         {
-            return bReceived;
+            if (packet->mSize || mDecoder->ReceivePacket(s.decoderInput, packet))
+            {
+                DecoderInputFree(s.decoderInput, false);
+                bReceived = true;
+            }
         }
-        if (!packet->mSize && !mDecoder->ReceivePacket(s.decoderInput, packet))
-        {
-            return bReceived;
-        }
-        DecoderInputFree(s.decoderInput, false);
-        return true;
     }
     return bReceived;
 }

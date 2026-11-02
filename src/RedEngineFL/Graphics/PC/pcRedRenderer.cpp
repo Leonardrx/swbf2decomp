@@ -2584,8 +2584,8 @@ void RedRenderer::Init()
     GetClientRect(GetDesktopWindow(), &desktop);
 
     const int iWidth = rc.right - rc.left;
-    const int iX = (desktop.right - iWidth + desktop.left) / 2;
     const int iHeight = rc.bottom - rc.top;
+    const int iX = (desktop.right - iWidth + desktop.left) / 2;
     const int iY = (desktop.bottom - iHeight + desktop.top) / 2;
     SetWindowPos(hGlobalWnd, 0, iX, iY, iWidth, iHeight, uFlags);
 

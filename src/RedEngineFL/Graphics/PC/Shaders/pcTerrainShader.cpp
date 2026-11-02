@@ -444,7 +444,11 @@ void pcTerrainShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) con
         RedRenderer::pcSetFogForBlendMode(RedRenderer::FOGFORBLEND_MODULATE2X);
         RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
         RedRenderer::pcSetTexture(0, s_pDetailTexture);
-        SetWrapLinear(0);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         SetMipBias(0, kfDetailTextureMipBias);
         const PblVector4& vT0 = s_DetailTextureTransform[0];
         const PblVector4& vT1 = s_DetailTextureTransform[1];
@@ -546,7 +550,13 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
             }
             if (bShadow)
             {
-                SetShadowMapStage(3);
+                RedRenderer::pcSetTexture(3, s_pShadowMapTexture);
+                RedRenderer::pcSetTextureStageState(3, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+                RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSU, s_uiShadowMapWrapMode);
+                RedRenderer::pcSetSamplerState(3, D3DSAMP_ADDRESSV, s_uiShadowMapWrapMode);
+                RedRenderer::pcSetSamplerState(3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+                RedRenderer::pcSetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+                RedRenderer::pcSetSamplerState(3, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
             }
 
             pcRedVertexShaderConstantRegister* pRegs;
@@ -575,7 +585,13 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
         }
         else
         {
-            SetModulate2XBlend();
+            RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+            RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+            RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
+            RedRenderer::pcSetFogForBlendMode(RedRenderer::FOGFORBLEND_MODULATE2X);
+            RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+            RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+            RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
             RedRenderer::pcSetTexture(0, s_pDetailTexture);
             SetWrapLinear(0);
             SetMipBias(0, kfDetailTextureMipBias);
@@ -598,7 +614,13 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
         RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 0xf);
         if (uiState >= 13)
         {
-            SetShadowMapStage(2);
+            RedRenderer::pcSetTexture(2, s_pShadowMapTexture);
+            RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSU, s_uiShadowMapWrapMode);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, s_uiShadowMapWrapMode);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            RedRenderer::pcSetSamplerState(2, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         }
 
         pcRedVertexShaderConstantRegister* pRegs;
@@ -636,7 +658,11 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
                                         RedLight::GetGlobalAmbientLight()->m_color};
             RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &ambient[0].r, 2);
         }
-        SetWrapLinear(0);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        RedRenderer::pcSetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         SetMipBias(0, kfDetailTextureMipBias);
         RedRenderer::pcLoadFormat(s_pVertexInputFormat);
         return;
@@ -664,7 +690,8 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
         {
             RedRenderer::pcSetTexture(0, s_pNormalizationCubeMap);
             pRegs = RedRenderer::pcLockVertexShaderConstants(39, 2);
-            SetColor(pRegs[39], RedColorValue(RedColor::WHITE));
+            const RedColorValue white(RedColor::WHITE);
+            memcpy(&pRegs[39], &white, sizeof(white));
             Set(pRegs[40], -2.0f / s_fDetailFadeDistance, 2.0f, 0.0f, 0.0f);
             RedRenderer::pcUnlockVertexShaderConstants(pRegs);
             RedRenderer::pcSetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
@@ -675,7 +702,8 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
         {
             RedRenderer::pcSetTexture(0, s_pBumpLuminosityTexture);
             pRegs = RedRenderer::pcLockVertexShaderConstants(39, 4);
-            SetColor(pRegs[39], RedColorValue(RedColor::WHITE));
+            const RedColorValue white(RedColor::WHITE);
+            memcpy(&pRegs[39], &white, sizeof(white));
             Set(pRegs[40], -2.0f / s_fDetailFadeDistance, 2.0f, 0.0f, 0.0f);
             SetVector(pRegs[41], s_BumpLuminosityTextureTransform[0]);
             SetVector(pRegs[42], s_BumpLuminosityTextureTransform[1]);
@@ -700,7 +728,13 @@ void pcTerrainShader::Begin_Prog1(unsigned int uiState, unsigned int uiPass) con
         return;
     }
 
-    SetModulate2XBlend();
+    RedRenderer::pcSetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    RedRenderer::pcSetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+    RedRenderer::pcSetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
+    RedRenderer::pcSetFogForBlendMode(RedRenderer::FOGFORBLEND_MODULATE2X);
+    RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+    RedRenderer::pcSetRenderState(D3DRS_COLORWRITEENABLE, 7);
     const unsigned int uiNumLayers = (uiState & 1) ? 2 : 4;
     for (unsigned int i = 0; i < uiNumLayers; i++)
     {

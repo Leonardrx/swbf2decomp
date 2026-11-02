@@ -274,8 +274,8 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
 
     case FT_FLYINGV:
     {
-        const float fRow = (float)(iOrder / 2) + 0.25f;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
+        const float fRow = (float)(iOrder / 2) + 0.25f;
         const PblVector3 vBack = PblVector3(fSide, 0.0f, -1.0f) * fRow;
         return PblVector3(fSide * 0.75f + vBack.x, fSide * 0.0f + vBack.y, fSide * 0.0f + vBack.z);
     }
@@ -292,7 +292,9 @@ PblVector3 ReserveOffset(const GameObject* pTarget, const GameObject* pSelf, For
         const float fRow = (float)(iOrder / 2) + 0.25f;
         const PblVector3 vBack = PblVector3(0.0f, 0.0f, -1.0f) * fRow;
         const float fSide = (float)(((iOrder & 1) == 0) ? 1 : -1);
-        return vBack + (PblVector3(fSide * 0.75f, fSide * 0.0f, fSide * 0.0f) + vJitter);
+        const PblVector3 vSideOffset(fSide * 0.75f, fSide * 0.0f, fSide * 0.0f);
+        const PblVector3 vSum = vSideOffset + vJitter;
+        return vBack + vSum;
     }
 
     case FT_CIRCLE:

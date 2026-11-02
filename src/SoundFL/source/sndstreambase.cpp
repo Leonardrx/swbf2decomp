@@ -239,7 +239,11 @@ bool StreamBase::LoadSegments(PblFileChunk& chunk, Segment* pSegments,
 
             if (!bAlias)
             {
-                uiSize = bNoPadding ? uiLength : uiPadding + uiLength;
+                uiSize = uiLength;
+                if (!bNoPadding)
+                {
+                    uiSize = uiPadding + uiLength;
+                }
             }
             uiOffset += uiSize;
             new (&pSegments[uiCount], false) Segment(uiHashID, bAlias ? uiAliasOffset : uiOffset - uiSize,

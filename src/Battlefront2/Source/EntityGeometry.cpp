@@ -305,8 +305,7 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
             const PblVector3 vDelta = mCamera.GetTranslation() - mCamera.GetZAxis() * fNear - GetRenderPos();
             float fReach = _Sphere.w + fLength + fWidth * 1.33f;
             RedRenderer::SetStencilShadowLength(fLength);
-            RedRenderer::SetStencilShadowZFail(fReach * fReach >
-                                               vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
+            RedRenderer::SetStencilShadowZFail(SquaredLength(vDelta) < fReach * fReach);
             uFlags |= 0x10000;
             return true;
         }
@@ -1220,7 +1219,7 @@ void EntityGeometry::CreateChunkCluster(float fScale)
         float fDZ = vDelta.z;
         float fDistSq = fDX * fDX + fDY * fDY + fDZ * fDZ;
         float fUp = PblMath::Sqrt(fDistSq) * pClass->mChunkUpFactor[i];
-        PblVector3 vOut(fDX + 0.0f, fUp + fDY, fDZ + 0.0f);
+        PblVector3 vOut = vDelta + PblVector3(0.0f, fUp, 0.0f);
         PblVector3 vDir;
         D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vOut);
 
@@ -1250,7 +1249,7 @@ void EntityGeometry::CreateChunkCluster(float fScale)
         }
         else
         {
-            pClass->mChunkDescriptors[i]->mVelocity += vDir * fSpeed;
+            pClass->mChunkDescriptors[i]->mVelocity += fSpeed * vDir;
         }
         pClass->mChunkDescriptors[i]->mVelocity *= fScale;
 

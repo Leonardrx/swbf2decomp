@@ -165,8 +165,8 @@ int UnitCTFOffenseAgent::EventHandler(AI::EventInfo* pInfo)
                 const Controllable* pMe = mCtrl->mOwner;
                 const PblMatrix& flagMat = pFlagObject->GetMatrix();
                 const PblMatrix& myMat = pMe->GetMatrix();
-                float dx = myMat.m[3][0] - flagMat.m[3][0];
                 float dz = myMat.m[3][2] - flagMat.m[3][2];
+                float dx = myMat.m[3][0] - flagMat.m[3][0];
                 if (dx * dx + dz * dz < 100.0f)
                 {
                     return AI::EVT_NotHandled;

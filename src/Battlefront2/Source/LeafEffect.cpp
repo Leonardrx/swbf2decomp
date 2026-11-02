@@ -386,25 +386,40 @@ bool LeafParticleManager::Update(float fDeltaTime)
             GameObject* pObject;
             if (CollisionManager::GetObjectsInRect(vMin, vMax, &pObject, 1, NULL, 0x200) > 0)
             {
-                for (int i = 0; i < 20; ++i)
+                for (int i = 0; i < 10; ++i)
                 {
                     FallingLeafParticle* pLeaf = GetFreeLeaf();
-                    if (!pLeaf)
+                    if (pLeaf)
                     {
-                        continue;
+                        float fWindDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
+                        float fDirDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
+                        PblVector3 vSpawn;
+                        vSpawn.x = vPos.x - vDir.x * fDirDist - fWindDist * vWind.x;
+                        vSpawn.z = vPos.z - vDir.z * fDirDist - vWind.z * fWindDist;
+                        vSpawn.y = RedTerrain::GetInterpolatedHeight(vSpawn.x, vSpawn.z);
+                        PblVector3 vDrop(vSpawn.x + 0.0f,
+                                         PblRandom::_Global.GetFloat() + 1.0f + vSpawn.y,
+                                         vSpawn.z + 0.0f);
+                        pLeaf->RespawnLeaf(vDrop, NULL, LEAF_GROUNDED);
+                        pLeaf->AddWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
+                        pLeaf->SetConstantWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
                     }
-                    float fWindDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
-                    float fDirDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
-                    PblVector3 vSpawn;
-                    vSpawn.x = vPos.x - vDir.x * fDirDist - fWindDist * vWind.x;
-                    vSpawn.z = vPos.z - vDir.z * fDirDist - vWind.z * fWindDist;
-                    vSpawn.y = RedTerrain::GetInterpolatedHeight(vSpawn.x, vSpawn.z);
-                    PblVector3 vDrop(vSpawn.x + 0.0f,
-                                     PblRandom::_Global.GetFloat() + 1.0f + vSpawn.y,
-                                     vSpawn.z + 0.0f);
-                    pLeaf->RespawnLeaf(vDrop, NULL, LEAF_GROUNDED);
-                    pLeaf->AddWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
-                    pLeaf->SetConstantWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
+                    pLeaf = GetFreeLeaf();
+                    if (pLeaf)
+                    {
+                        float fWindDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
+                        float fDirDist = PblRandom::GetGlobalFloatRange(30.0f, 30.0f);
+                        PblVector3 vSpawn;
+                        vSpawn.x = vPos.x - vDir.x * fDirDist - fWindDist * vWind.x;
+                        vSpawn.z = vPos.z - vDir.z * fDirDist - vWind.z * fWindDist;
+                        vSpawn.y = RedTerrain::GetInterpolatedHeight(vSpawn.x, vSpawn.z);
+                        PblVector3 vDrop(vSpawn.x + 0.0f,
+                                         PblRandom::_Global.GetFloat() + 1.0f + vSpawn.y,
+                                         vSpawn.z + 0.0f);
+                        pLeaf->RespawnLeaf(vDrop, NULL, LEAF_GROUNDED);
+                        pLeaf->AddWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
+                        pLeaf->SetConstantWindVelocity(PblVector3(vWind.x * 5.0f, vWind.y * 5.0f, vWind.z * 5.0f));
+                    }
                 }
                 mGroundLeavesTimer = 0.0f;
             }

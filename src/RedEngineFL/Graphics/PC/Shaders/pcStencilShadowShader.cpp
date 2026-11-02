@@ -364,15 +364,21 @@ void pcStencilShadowShader::Render_Fixed(const RenderItem* pItem, unsigned int u
         static const RedColorValue backColor(0.2f, 0.2f, 1.0f, 0.3f);
         // GLOBAL: SWBF2 0x009c9d50
         static const RedColorValue frontColor(1.0f, 0.0f, 0.0f, 0.3f);
-        const RedColor factor = uiPass
-            ? RedColor((unsigned char)(int)(backColor.r * 255.0f),
-                       (unsigned char)(int)(backColor.g * 255.0f),
-                       (unsigned char)(int)(backColor.b * 255.0f),
-                       (unsigned char)(int)(backColor.a * 255.0f))
-            : RedColor((unsigned char)(int)(frontColor.r * 255.0f),
-                       (unsigned char)(int)(frontColor.g * 255.0f),
-                       (unsigned char)(int)(frontColor.b * 255.0f),
-                       (unsigned char)(int)(frontColor.a * 255.0f));
+        RedColor factor;
+        if (!uiPass)
+        {
+            factor = RedColor((unsigned char)(int)(frontColor.r * 255.0f),
+                              (unsigned char)(int)(frontColor.g * 255.0f),
+                              (unsigned char)(int)(frontColor.b * 255.0f),
+                              (unsigned char)(int)(frontColor.a * 255.0f));
+        }
+        else
+        {
+            factor = RedColor((unsigned char)(int)(backColor.r * 255.0f),
+                              (unsigned char)(int)(backColor.g * 255.0f),
+                              (unsigned char)(int)(backColor.b * 255.0f),
+                              (unsigned char)(int)(backColor.a * 255.0f));
+        }
         RedRenderer::pcSetRenderState(D3DRS_TEXTUREFACTOR, factor.GetARGB());
     }
 

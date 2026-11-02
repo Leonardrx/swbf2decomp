@@ -186,15 +186,13 @@ void UnitFollowAgent::EnterState()
         do
         {
             const GameObject* pTargetA = mTarget;
+            const CollisionObject& rTargetA = *pTargetA;
             const GameObject* pTargetB = mTarget;
 
             const PblVector3 vRandom = PblRandom::GetGlobalVector3();
-            const PblVector3 vPush((vRandom.x * 20.0f) * 0.2f, (vRandom.y * 20.0f) * 0.2f,
-                                   (vRandom.z * 20.0f) * 0.2f);
+            const PblVector3 vPush = (vRandom * 20.0f) * 0.2f;
 
-            const PblMatrix& rMatrix = pTargetA->GetMatrix();
-            const PblVector3 vRow((rMatrix.m[2][0] * 20.0f) * 0.5f, (rMatrix.m[2][1] * 20.0f) * 0.5f,
-                                  (rMatrix.m[2][2] * 20.0f) * 0.5f);
+            const PblVector3 vRow = (rTargetA.GetMatrix()[2] * 20.0f) * 0.5f;
 
             const PblVector3& rTargetPos = pTargetB->GetPosition();
             ++uTries;

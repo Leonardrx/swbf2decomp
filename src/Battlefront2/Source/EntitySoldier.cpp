@@ -8122,7 +8122,7 @@ void EntitySoldier::Move(float fDeltaTime, float fForward, float fStrafe, float 
     {
         fAcceleration *= 0.1f;
     }
-    float fMaxChange = fAcceleration * fDeltaTime;
+    fAcceleration *= fDeltaTime;
 
     float fSlopeFront = 0.0f;
     float fSlopeSide = 0.0f;
@@ -8141,22 +8141,22 @@ void EntitySoldier::Move(float fDeltaTime, float fForward, float fStrafe, float 
     }
 
     float fChangeFront = fForward - fFrontSpeed;
-    if (fChangeFront > fSlopeFront + fMaxChange)
+    if (fChangeFront > fSlopeFront + fAcceleration)
     {
-        fChangeFront = fSlopeFront + fMaxChange;
+        fChangeFront = fSlopeFront + fAcceleration;
     }
-    else if (fSlopeFront - fMaxChange > fChangeFront)
+    else if (fSlopeFront - fAcceleration > fChangeFront)
     {
-        fChangeFront = fSlopeFront - fMaxChange;
+        fChangeFront = fSlopeFront - fAcceleration;
     }
     float fChangeSide = fStrafe - fSideSpeed;
-    if (fChangeSide > fSlopeSide + fMaxChange)
+    if (fChangeSide > fSlopeSide + fAcceleration)
     {
-        fChangeSide = fSlopeSide + fMaxChange;
+        fChangeSide = fSlopeSide + fAcceleration;
     }
-    else if (fSlopeSide - fMaxChange > fChangeSide)
+    else if (fSlopeSide - fAcceleration > fChangeSide)
     {
-        fChangeSide = fSlopeSide - fMaxChange;
+        fChangeSide = fSlopeSide - fAcceleration;
     }
 
     mVelocity += vFront * fChangeFront;
@@ -8168,7 +8168,7 @@ void EntitySoldier::Move(float fDeltaTime, float fForward, float fStrafe, float 
     }
     else if (!(mFlags & flags_isGrounded))
     {
-        mVelocity.AddY(fDeltaTime * -GRAVITY_FORCE);
+        mVelocity.AddY(-GRAVITY_FORCE * fDeltaTime);
     }
 
     PblVector3 pos(mMatrix.GetTranslation());
@@ -9114,7 +9114,14 @@ void EntitySoldier::Kill()
         }
         if (!mVanishing)
         {
-            Trackable::TrackDeath(mPlayerId, mClass->GetHeroFlag() ? 0 : mDamageOwner.mCharacter);
+            if (mClass->GetHeroFlag())
+            {
+                Trackable::TrackDeath(mPlayerId, 0);
+            }
+            else
+            {
+                Trackable::TrackDeath(mPlayerId, mDamageOwner.mCharacter);
+            }
         }
     }
 

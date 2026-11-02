@@ -175,7 +175,11 @@ bool ConnectivityArc::IsPointInside(const PblVector3& v) const
     {
         return false;
     }
-    return Length(v - (B + t * M)) < (1.0f - t) * n1->w + n2->w * t;
+    if (Length(v - (B + t * M)) < (1.0f - t) * n1->w + n2->w * t)
+    {
+        return true;
+    }
+    return false;
 }
 
 // FUNCTION: SWBF2 0x00480a10
@@ -409,26 +413,19 @@ bool ConnectivityGraph::Read(PblFileChunk& chunk)
     {
         const ConnectivityNode* pN1 = mArcs[i].n1;
         const ConnectivityNode* pN2 = mArcs[i].n2;
-        const PblVector3 vDelta(pN2->x - pN1->x, pN2->y - pN1->y, pN2->z - pN1->z);
+        const PblVector3 vDelta = pN2->GetCenter() - pN1->GetCenter();
         PblVector3 vDir;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
 
         pN1 = mArcs[i].n1;
-        const PblVector3 vStart(pN1->x - vDir.x * pN1->w, pN1->y - vDir.y * pN1->w,
-                                pN1->z - vDir.z * pN1->w);
+        const PblVector3 vStart = pN1->GetCenter() - vDir * pN1->w;
         pN2 = mArcs[i].n2;
-        const PblVector3 vEnd(pN2->x + vDir.x * pN2->w, pN2->y + vDir.y * pN2->w,
-                              pN2->z + vDir.z * pN2->w);
-        mArcs[i].mBoundingCenter = PblVector3((vEnd.x + vStart.x) * 0.5f,
-                                              (vEnd.y + vStart.y) * 0.5f,
-                                              (vEnd.z + vStart.z) * 0.5f);
+        const PblVector3 vEnd = pN2->GetCenter() + vDir * pN2->w;
+        mArcs[i].mBoundingCenter = (vEnd + vStart) * 0.5f;
 
         pN1 = mArcs[i].n1;
         pN2 = mArcs[i].n2;
-        const PblVector3& vCenter = mArcs[i].mBoundingCenter;
-        float fRadius = PblMath::Sqrt((vStart.x - vCenter.x) * (vStart.x - vCenter.x)
-                              + (vStart.y - vCenter.y) * (vStart.y - vCenter.y)
-                              + (vStart.z - vCenter.z) * (vStart.z - vCenter.z));
+        float fRadius = Length(vStart - mArcs[i].mBoundingCenter);
         if (!(fRadius > pN1->w))
         {
             fRadius = pN1->w;

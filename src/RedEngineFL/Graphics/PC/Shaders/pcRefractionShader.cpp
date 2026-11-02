@@ -590,14 +590,8 @@ void pcRefractionShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPa
     case 3:
         RedRenderer::pcSetTexture(0, RedTexture::Find(m_material.bumpMapHash));
         RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(mBumpTransform));
-        if (m_refractionMap)
-        {
-            RedRenderer::pcSetTexture(1, m_refractionMap);
-        }
-        else
-        {
-            RedRenderer::pcSetTexture(1, RedRenderer::pcGetBuffer(PC_BUFFER_REFRACTION));
-        }
+        RedRenderer::pcSetTexture(1, m_refractionMap ? m_refractionMap
+                                                     : RedRenderer::pcGetBuffer(PC_BUFFER_REFRACTION));
         RedRenderer::pcFFSetTextureTransform(1, s_refractionTexMat);
         RedRenderer::pcSetTextureStageState(0, D3DTSS_BUMPENVMAT00, FloatBits_(s_bumpMat.m[0][0]));
         RedRenderer::pcSetTextureStageState(0, D3DTSS_BUMPENVMAT10, FloatBits_(s_bumpMat.m[1][0]));

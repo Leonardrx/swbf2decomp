@@ -572,8 +572,8 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
 
     const PblVector3& vVelocity = pOwner->GetGameObject()->GetVelocity();
     SOLDIERANIMATION eAnim = mSoldierState;
-    bool bLoop = false;
     mAnimPlaySpeed = 1.0f;
+    bool bLoop = false;
     float fBlend = 1.0f;
     float fSpeedSq = vVelocity.x * vVelocity.x + vVelocity.z * vVelocity.z;
 
@@ -648,23 +648,23 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
                 bLoop = false;
                 break;
             case SoldierState::JUMP:
-                bTransition = false;
                 bLoop = false;
                 eAnim = JUMP;
                 fTransitionTimer = 0.0f;
                 fTransitionTimerMax = 0.5f;
                 mTransitionAnim = JUMP_LAND;
+                bTransition = false;
                 break;
             case SoldierState::JET_JUMP:
             case SoldierState::JET_HOVER:
                 break;
             case SoldierState::FALL:
-                bTransition = false;
                 bLoop = true;
                 eAnim = FLAIL;
                 fTransitionTimer = 0.0f;
                 fTransitionTimerMax = 1.0f;
                 mTransitionAnim = HANDSDOWN;
+                bTransition = false;
                 break;
             default:
                 if (fSpeedSq < 0.1f)
@@ -1678,6 +1678,7 @@ void FirstPersonCameraManager::ViewBob(float fScale)
     vRot[1] = PblVector3(0.0f, 0.0f, 0.0f);
     vRot[2] = PblVector3(0.0f, 0.0f, 0.0f);
     vRot[3] = PblVector3(0.0f, 0.0f, 0.0f);
+    mIsBobbing = true;
     PblVector3 vRotSlope[4];
     vRotSlope[0] = PblVector3(0.0f, 0.0f, 0.0f);
     vRotSlope[1] = PblVector3(0.0f, 0.0f, 0.0f);
@@ -1688,6 +1689,5 @@ void FirstPersonCameraManager::ViewBob(float fScale)
     fTime[1] = 0.2f;
     fTime[2] = 0.2f;
     fTime[3] = 0.2f;
-    mIsBobbing = true;
     SetCameraPath(vPos, vPosSlope, vRot, vRotSlope, fTime, 4);
 }

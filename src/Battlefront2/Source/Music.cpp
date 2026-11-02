@@ -373,12 +373,12 @@ void Music::StopAll()
     for (;;)
     {
         PblListDoubleSorted::Node* pNode = itor.GetNode(&sMusicActive);
-        if (pNode == sMusicActive.GetTerminator())
+        Music* pMusic = (Music*)pNode->GetObjectA(&sMusicActive, offsetof(Music, mNode));
+        if (!pMusic)
         {
             break;
         }
 
-        Music* pMusic = (Music*)((char*)pNode - offsetof(Music, mNode));
         if (pMusic->mStream)
         {
             Snd::SourceTransport* pTransport = pMusic->mStream;

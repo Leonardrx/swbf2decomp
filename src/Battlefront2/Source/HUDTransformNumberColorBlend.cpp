@@ -50,7 +50,8 @@ void HUD::TransformNumberColorBlend::EventInput(const Event& event, void* const 
         break;
     }
     }
-    Event(pTransform->mEventClassOutput, &color).Send();
+    Event eventOut(pTransform->mEventClassOutput, &color);
+    eventOut.Send();
 }
 
 // FUNCTION: SWBF2 0x00568380

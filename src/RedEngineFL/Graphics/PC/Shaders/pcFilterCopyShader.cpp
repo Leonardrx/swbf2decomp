@@ -332,10 +332,10 @@ void pcFilterCopyShader::Render_Prog1(const RenderItem* pItem, unsigned int uiPa
                 const PblVector4 vWeight(fValue, fValue, fValue, fValue);
                 RedRenderer::pcGetDevice()->SetPixelShaderConstantF(i, vWeight, 1);
                 const RedTexture* pSrc = m_srcTex;
-                const float fOffsetV = m_samples[m_curSample].fOffsetY / (float)pSrc->m_uiHeight;
                 const float fOffsetU = m_samples[m_curSample].fOffsetX / (float)pSrc->m_uiWidth;
-                pRegs[40 + i].component[1] = fOffsetV;
+                const float fOffsetV = m_samples[m_curSample].fOffsetY / (float)pSrc->m_uiHeight;
                 pRegs[40 + i].component[0] = fOffsetU;
+                pRegs[40 + i].component[1] = fOffsetV;
             }
             pRegs[40 + i].component[3] = 0.0f;
             pRegs[40 + i].component[2] = 0.0f;

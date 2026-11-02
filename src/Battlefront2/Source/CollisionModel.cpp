@@ -346,10 +346,7 @@ bool CollisionModel::CheckForCollision(CollisionObject* pCollider, CollisionObje
             else
             {
                 PblMatrix otherMatrix = pOther->GetWorldMatrix(pReceiver->GetMatrix(), pReceiver->GetPose());
-                float dx = otherMatrix.m[3][0] - pMatrix->m[3][0];
-                float dy = otherMatrix.m[3][1] - pMatrix->m[3][1];
-                float dz = otherMatrix.m[3][2] - pMatrix->m[3][2];
-                float fDist2 = dx * dx + dy * dy + dz * dz;
+                float fDist2 = SquaredLength(otherMatrix.GetTranslation() - pMatrix->GetTranslation());
                 float fReach = ((CollisionBodyPrimitive*)pOther)->GetRadius() +
                                ((CollisionBodyPrimitive*)pBody)->GetRadius();
                 if (fDist2 > fReach * fReach)

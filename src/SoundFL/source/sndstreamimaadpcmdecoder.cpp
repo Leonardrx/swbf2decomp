@@ -277,8 +277,8 @@ void StreamIMAADPCMDecoder::Update()
                 }
             }
 
-            if (mOutputPacketIO.GetDataLeft(GetPacketSize()) == 0 || bLast ||
-                bDiscontinuity)
+            if (mOutputPacketIO.GetDataLeft(GetPacketSize()) == 0 ||
+                (bLast | bDiscontinuity))
             {
                 const unsigned int uiBytes = mOutputPacketIO.GetOffset();
                 const unsigned int uiSamples = uiBytes / (mNumChannels * 2);

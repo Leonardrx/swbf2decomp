@@ -2259,9 +2259,9 @@ void RedWater::pcRenderWaterSplashes()
             continue;
         }
 
-        unsigned int uiSeed = (unsigned int)(event.startTime * 4096.0f);
         PblVector3 vPos = event.worldPos;
         vPos.y = m_waterHeight + m_fWaterHeightOffset;
+        unsigned int uiSeed = (unsigned int)(event.startTime * 4096.0f);
         if (geometry == GEOMETRYMODE_COMPRESSED)
         {
             pcRenderSplash<CompressedWaterSplashVertex, 37506>(

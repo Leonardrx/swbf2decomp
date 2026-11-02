@@ -387,10 +387,8 @@ void pcSpecularLightingShader::PerPixelLighting(const RenderItem* pItem, unsigne
         }
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(42, 1);
-        pRegs[42].component[0] = -pLight->m_vDirection.x;
-        pRegs[42].component[1] = -pLight->m_vDirection.y;
-        pRegs[42].component[2] = -pLight->m_vDirection.z;
-        pRegs[42].component[3] = 0.0f;
+        pRegs[42].SetFloats(-pLight->m_vDirection.x, -pLight->m_vDirection.y,
+                            -pLight->m_vDirection.z, 0.0f);
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         const float fFactor = pLighting->pDirectionalFactor[i];
@@ -409,10 +407,11 @@ void pcSpecularLightingShader::PerPixelLighting(const RenderItem* pItem, unsigne
         }
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(42, 1);
+        const float fRadius = pLight->m_fRadiusInvSq;
         pRegs[42].component[0] = pLight->m_pos.x;
         pRegs[42].component[1] = pLight->m_pos.y;
         pRegs[42].component[2] = pLight->m_pos.z;
-        pRegs[42].component[3] = pLight->m_fRadiusInvSq;
+        pRegs[42].component[3] = fRadius;
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         colors[2] = pLight->m_color;
@@ -429,10 +428,11 @@ void pcSpecularLightingShader::PerPixelLighting(const RenderItem* pItem, unsigne
         }
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(42, 1);
+        const float fRadius = pLight->m_fRadiusInvSq;
         pRegs[42].component[0] = pLight->m_vPos.x;
         pRegs[42].component[1] = pLight->m_vPos.y;
         pRegs[42].component[2] = pLight->m_vPos.z;
-        pRegs[42].component[3] = pLight->m_fRadiusInvSq;
+        pRegs[42].component[3] = fRadius;
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         colors[2] = pLight->m_color;

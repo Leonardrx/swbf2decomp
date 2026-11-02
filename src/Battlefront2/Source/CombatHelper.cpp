@@ -208,7 +208,8 @@ void CombatHelper::EnterState()
         {
             GetLowLevel().SetNavigator_Stationary();
             const PblMatrix& mMe = GetMe()->GetMatrix();
-            PblVector3 vDelta = mTargetPos - mMe.GetTranslation();
+            PblVector3 vDelta(mTargetPos.x - mMe.m[3][0], mTargetPos.y - mMe.m[3][1],
+                              mTargetPos.z - mMe.m[3][2]);
             if (vDelta.x * vDelta.x + vDelta.z * vDelta.z < 100.0f)
             {
                 mTargetPos = AIUtil::GetSafeNormalXZ(vDelta) * 15.0f + mMe.GetTranslation();

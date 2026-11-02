@@ -214,7 +214,7 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
         state.pEnvMap = RedTexture::Find(m_sGlobalEnvMapHash);
     }
     state.envMapFactor = 1.0f;
-    state.bStaticLighting = bStatic;
+    state.bStaticLighting = bStatic != 0;
 
     if (!bStatic && !bNoShadowRegions)
     {
@@ -254,8 +254,8 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
                     }
                     if (fFactor > 0.0f)
                     {
-                        state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                         afDirectionalPriority[state.numDirectionalLights] = FLT_MAX;
+                        state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                         state.pDirectionalFactor[state.numDirectionalLights] = fFactor;
                         ++state.numDirectionalLights;
                     }
@@ -276,8 +276,8 @@ const RedLightingState* RedLight::GetLightingState(const PblBox& box, int iMaxOm
                 }
                 if (fFactor > 0.0f)
                 {
-                    state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                     afDirectionalPriority[state.numDirectionalLights] = FLT_MAX;
+                    state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                     state.pDirectionalFactor[state.numDirectionalLights] = fFactor;
                     ++state.numDirectionalLights;
                 }
@@ -654,13 +654,15 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
     }
 
     int iMaxSpotLights = 1;
-    if (RedRenderer::pcGetRenderOptions().mGraphicsTier == 0)
+    const bool bLowestTier = RedRenderer::pcGetRenderOptions().mGraphicsTier == 0;
+    if (bLowestTier)
     {
         iMaxOmniLights = 0;
         iMaxSpotLights = 0;
     }
 
-    float afDirectionalPriority[2] = { 0 };
+    float afDirectionalPriority[2];
+    memset(afDirectionalPriority, 0, sizeof(afDirectionalPriority));
     const PblMatrix& mCamera = RedRenderer::GetCamera()->GetMatrix();
     bool bDefault = true;
 
@@ -672,9 +674,8 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
         state.pEnvMap = RedTexture::Find(m_sGlobalEnvMapHash);
     }
     state.envMapFactor = 1.0f;
-    state.bStaticLighting = bStatic;
+    state.bStaticLighting = bStatic != 0;
 
-    bool bShadowed = false;
     if (!bStatic && !bNoShadowRegions)
     {
         RedAmbientLight ambient;
@@ -684,7 +685,6 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
         if (RedShadowRegion::GetShadowValues(sphere.GetCenter(), sphere.GetRadius(), afDirectional,
                                              ambient, uiEnvMapHash, fEnvMapFactor))
         {
-            bShadowed = true;
             bDefault = false;
             afDirectional[0] *= m_sGlobalDirectionalFactor[0];
             afDirectional[1] *= m_sGlobalDirectionalFactor[1];
@@ -701,8 +701,29 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
             state.pEnvMap = RedTexture::Find(uiEnvMapHash);
             state.envMapFactor = fEnvMapFactor;
         }
+        else
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                if (m_sGlobalDirectionals[i])
+                {
+                    float fFactor = m_sGlobalDirectionalFactor[i];
+                    if (fFactor < 1.0f)
+                    {
+                        bDefault = false;
+                    }
+                    if (fFactor > 0.0f)
+                    {
+                        afDirectionalPriority[state.numDirectionalLights] = FLT_MAX;
+                        state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
+                        state.pDirectionalFactor[state.numDirectionalLights] = fFactor;
+                        ++state.numDirectionalLights;
+                    }
+                }
+            }
+        }
     }
-    if (!bShadowed)
+    else
     {
         for (int i = 0; i < 2; ++i)
         {
@@ -715,8 +736,8 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
                 }
                 if (fFactor > 0.0f)
                 {
-                    state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                     afDirectionalPriority[state.numDirectionalLights] = FLT_MAX;
+                    state.pDirectionalLights[state.numDirectionalLights] = m_sGlobalDirectionals[i];
                     state.pDirectionalFactor[state.numDirectionalLights] = fFactor;
                     ++state.numDirectionalLights;
                 }
@@ -811,7 +832,8 @@ const RedLightingState* RedLight::GetLightingState(const PblSphere& sphere, int 
 
     if (iMaxOmniLights > 0)
     {
-        float afOmniPriority[4] = { 0 };
+        float afOmniPriority[4];
+        memset(afOmniPriority, 0, sizeof(afOmniPriority));
         if (iMaxOmniLights > 4)
         {
             iMaxOmniLights = 4;
@@ -1419,7 +1441,7 @@ void RedLight::UpdateAllVisibility(const RedCamera* pCamera, unsigned int uiView
         switch (pLight->m_eType)
         {
         case TYPE_DIRECTIONAL:
-            if (pLight->IsStatic() && !pLight->IsSpecularCaster())
+            if (it->IsStatic() && !it->IsSpecularCaster())
             {
                 s_VisibleDirectionalLightList.AddLast(&pLight->m_VisibleNode, pLight);
             }

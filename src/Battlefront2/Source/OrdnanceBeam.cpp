@@ -347,7 +347,16 @@ void OrdnanceBeam::Render(unsigned char, float, unsigned int)
 
     PblVector3 vMin;
     vMin.z = (vEnd.z > vStart.z ? vStart.z : vEnd.z);
-    vMin.y = (vEnd.y > vStart.y ? vStart.y : vEnd.y);
+    float fMinY;
+    if (vEnd.y > vStart.y)
+    {
+        fMinY = vStart.y;
+    }
+    else
+    {
+        fMinY = vEnd.y;
+    }
+    vMin.y = fMinY;
     vMin.x = (vEnd.x > vStart.x ? vStart.x : vEnd.x);
     vMin.x -= fExtent;
     vMin.y -= fExtent;

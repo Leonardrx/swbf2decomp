@@ -246,8 +246,7 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
     float fSize = (mSizeMax - mSizeMin) * rand.GetFloat() + mSizeMin;
     fScale = Min(fScale, 1.0f);
     fSize = fScale * fSize;
-    mParticle[sLeafParticleIndex].mSize = fSize;
-    ++sLeafParticleIndex;
+    mParticle[sLeafParticleIndex++].mSize = fSize;
 
     int iLength = Min((int)((float)(mVineLengthMax - mVineLengthMin) * rand.GetFloat() + (float)mVineLengthMin), iLeft);
 
@@ -272,10 +271,11 @@ void LeafPatchClass::CreateVineBranch(PblVector3 vPos, PblVector3 vDir, int iCou
 
     if (iLeft > 0)
     {
-        PblVector3 vBranch = Interpolate(vDir,
-                                         PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
-                                                    (rand.GetFloat() - rand.GetFloat()) * mVineZSpread),
-                                         0.8f);
+        PblVector3 vBranch;
+        vBranch = Interpolate(vDir,
+                              PblVector3((rand.GetFloat() - rand.GetFloat()) * mVineXSpread, 0.0f,
+                                         (rand.GetFloat() - rand.GetFloat()) * mVineZSpread),
+                              0.8f);
         vBranch = Normalize(vBranch);
         const int iSplit = (int)((rand.GetFloat() * 0.5f + 0.25f) * (float)iLeft);
         CreateVineBranch(vBranch * fSize * mVineSpread + vPos, vBranch, iSplit, rand);
@@ -467,9 +467,11 @@ LeafPatch::LeafPatch(LeafPatchClass* pClass, const PblMatrix& matrix)
     SetCollisionCenter(mMatrix.GetTranslation());
     SetCollisionRadius(mClass->mRadius);
 
-    PblVector3 vCenter;
-    D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mBoundingOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
-    SetRenderPos(vCenter);
+    {
+        PblVector3 vCenter;
+        D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vCenter), reinterpret_cast<const D3DXVECTOR3*>(&mClass->mBoundingOffset), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+        SetRenderPos(vCenter);
+    }
     SetRenderRadius(mClass->mBoundingRadius);
     static_cast<RedSceneObject*>(this)->Activate();
 

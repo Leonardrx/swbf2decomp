@@ -90,9 +90,9 @@ ListenerBase* ListenerBase::GetClosestListener(const ::PblVector3* pPos,
             ListenerBase& rListener = EngineBase::smListeners[i];
             if (rListener.mFlags & flags_enabled)
             {
-                pClosest = &rListener;
                 vDistance = *pPos - *rListener.mPos;
                 fDistanceLength = SquaredLength(vDistance);
+                pClosest = &rListener;
                 break;
             }
         }

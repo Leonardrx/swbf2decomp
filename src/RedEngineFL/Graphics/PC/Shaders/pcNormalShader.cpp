@@ -1018,12 +1018,14 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
     }
 
     case 4:
+    {
         if (uiPass)
         {
             bTexture = false;
             break;
         }
-        if ((pMaterial->materialFlags >> 1) & 1)
+        const bool bAlphaTest = ((pMaterial->materialFlags >> 1) & 1) != 0;
+        if (bAlphaTest)
         {
             RedRenderer::pcSetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
             RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
@@ -1034,6 +1036,7 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
         }
         RedRenderer::pcSetRenderState(D3DRS_ZWRITEENABLE, (pItem->flags & 0x20) ? FALSE : TRUE);
         break;
+    }
 
     default:
         bTexture = false;
@@ -1062,18 +1065,9 @@ void pcNormalShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) 
         if (pTransform)
         {
             PblMatrix mTransform = gMatrixIdentity;
-            mTransform.m[0][1] = (*pTransform)(0, 1);
-            mTransform.m[0][0] = (*pTransform)(0, 0);
-            mTransform.m[0][2] = 0.0f;
-            mTransform.m[0][3] = 0.0f;
-            mTransform.m[1][1] = (*pTransform)(1, 1);
-            mTransform.m[1][0] = (*pTransform)(1, 0);
-            mTransform.m[1][2] = 0.0f;
-            mTransform.m[1][3] = 0.0f;
-            mTransform.m[2][1] = (*pTransform)(2, 1);
-            mTransform.m[2][0] = (*pTransform)(2, 0);
-            mTransform.m[2][2] = 1.0f;
-            mTransform.m[2][3] = 0.0f;
+            mTransform.SetXAxis((*pTransform)(0, 0), (*pTransform)(0, 1), 0.0f, 0.0f);
+            mTransform.SetYAxis((*pTransform)(1, 0), (*pTransform)(1, 1), 0.0f, 0.0f);
+            mTransform.SetZAxis((*pTransform)(2, 0), (*pTransform)(2, 1), 1.0f, 0.0f);
             RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
             RedRenderer::pcFFSetTextureTransform(0, mTransform);
         }
@@ -1182,14 +1176,15 @@ void pcNormalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
     const RedTextureTransform& detail = pMaterial->detailTexTransform;
     pcRedVertexShaderConstantRegister* pRegs;
     if (!pTransform->m_bTransform && !detail.m_bTransform && !s_bTextureTransformPrev && !s_bDetailTextureTransformPrev &&
-        D3DCOLOR_ARGB(s_colorDiffusePrev.a, s_colorDiffusePrev.r, s_colorDiffusePrev.g,
-                      s_colorDiffusePrev.b) == D3DCOLOR_ARGB(color.a, color.r, color.g, color.b))
+        D3DCOLOR_ARGB(color.a, color.r, color.g, color.b) ==
+            D3DCOLOR_ARGB(s_colorDiffusePrev.a, s_colorDiffusePrev.r, s_colorDiffusePrev.g, s_colorDiffusePrev.b))
     {
         pRegs = RedRenderer::pcLockVertexShaderConstants(40, 1);
         if (bSeparate)
         {
+            const float fLightingScale = RedRenderer::GetLightingScale();
             pRegs[40].component[0] = 0.0f;
-            pRegs[40].component[1] = RedRenderer::GetLightingScale();
+            pRegs[40].component[1] = fLightingScale;
         }
         else
         {
@@ -1209,8 +1204,9 @@ void pcNormalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
         pRegs[39].SetFloats(color.r * kInv255, color.g * kInv255, color.b * kInv255, color.a * kInv255);
         if (bSeparate)
         {
+            const float fLightingScale = RedRenderer::GetLightingScale();
             pRegs[40].component[0] = 0.0f;
-            pRegs[40].component[1] = RedRenderer::GetLightingScale();
+            pRegs[40].component[1] = fLightingScale;
         }
         else
         {
@@ -1233,9 +1229,7 @@ void pcNormalShader::Render_Prog1(const RenderItem* pItem, unsigned int) const
         RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSV, pItem->pLightingState->pProjectedLight->GetProjectionTextureWrapMode());
         RedRenderer::pcSetSamplerState(2, D3DSAMP_ADDRESSW, pItem->pLightingState->pProjectedLight->GetProjectionTextureWrapMode());
         RedRenderer::pcSetTexture(2, RedTexture::Find(pItem->pLightingState->pProjectedLight->m_uiProjTexHash));
-        psConst.r = pItem->pLightingState->pProjectedLight->m_color.r;
-        psConst.g = pItem->pLightingState->pProjectedLight->m_color.g;
-        psConst.b = pItem->pLightingState->pProjectedLight->m_color.b;
+        psConst = pItem->pLightingState->pProjectedLight->m_color;
         psConst.a = (float)(int)pItem->pLightingState->pProjectedLight->IsShadowCaster();
         RedRenderer::pcGetDevice()->SetPixelShaderConstantF(1, &psConst.r, 1);
     }

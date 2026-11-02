@@ -656,6 +656,8 @@ void EntityWalkerClass::SetProperty(unsigned int uProperty, const char* pszValue
             sCurrentSection = 7;
             break;
         case 0xdbaa7975:
+            sCurrentSection = -1;
+            return;
         default:
             sCurrentSection = -1;
             return;
@@ -1228,7 +1230,7 @@ void EntityWalkerClass::SetProperty(unsigned int uProperty, const char* pszValue
             const RedSkeleton* pSkeleton = mModel->GetRedModel(0)->GetSkeleton();
             if (pSkeleton)
             {
-                for (unsigned int i = 0; i < 128; ++i)
+                for (int i = 0; i < 128; ++i)
                 {
                     if (pSkeleton->GetBoneNameHash(i) == mAttachHash)
                     {

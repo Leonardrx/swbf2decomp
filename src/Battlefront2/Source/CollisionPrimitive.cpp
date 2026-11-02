@@ -500,8 +500,9 @@ bool CollisionPrimitive::InitMeshCollision(const PblMatrix& matrix, const Collis
     D3DXVec3TransformNormal((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.m[1][0], (const D3DXMATRIX*)&sWorld2Collision);
     sPrimitiveInCollision[1] = vTransformed;
     sPrimitiveInCollision.m[1][3] = 0.0f;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vTransformed, (const D3DXVECTOR3*)&matrix.m[2][0], (const D3DXMATRIX*)&sWorld2Collision);
-    sPrimitiveInCollision[2] = vTransformed;
+    PblVector3 vRow2;
+    D3DXVec3TransformNormal((D3DXVECTOR3*)&vRow2, (const D3DXVECTOR3*)&matrix.m[2][0], (const D3DXMATRIX*)&sWorld2Collision);
+    sPrimitiveInCollision[2] = vRow2;
     sPrimitiveInCollision.m[2][3] = 0.0f;
     sPrimitiveInCollision.SetTranslation(sLocalPos);
 

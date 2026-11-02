@@ -361,9 +361,10 @@ void RedModel::Render(const PblMatrix* pMatrix, const RedPose* pPose, const RedC
     RedColor colorCopy = color;
 
     const PblMatrix& camMatrix = RedRenderer::GetCamera()->GetMatrix();
-    float fDistance = -(camMatrix.m[2][1] * (pMatrix->m[3][1] - camMatrix.m[3][1]) +
-                        camMatrix.m[2][0] * (pMatrix->m[3][0] - camMatrix.m[3][0]) +
-                        camMatrix.m[2][2] * (pMatrix->m[3][2] - camMatrix.m[3][2]));
+    const PblVector3 vDelta(pMatrix->m[3][0] - camMatrix.m[3][0], pMatrix->m[3][1] - camMatrix.m[3][1],
+                            pMatrix->m[3][2] - camMatrix.m[3][2]);
+    float fDistance = -(camMatrix.m[2][1] * vDelta.y + camMatrix.m[2][0] * vDelta.x +
+                        camMatrix.m[2][2] * vDelta.z);
     fDistance = Max(fDistance, 0.0f);
     fDistance -= RedRenderer::GetCamera()->GetNearPlane();
     float fRadius = _BoundingSphere.w;

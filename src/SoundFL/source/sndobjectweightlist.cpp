@@ -91,8 +91,9 @@ bool ObjectWeightList::ReadObjectWeights(PblFileChunk& chunk, unsigned int uiObj
     }
 
     const float fWeightSum = fTotal;
+    PblListSingle::Node* const pFirst = mHead.mNext;
     unsigned int uiCount = 0;
-    for (PblListSingle::Node* pNode = mHead.mNext; pNode != &mHead; pNode = pNode->mNext)
+    for (PblListSingle::Node* pCounted = pFirst; pCounted != &mHead; pCounted = pCounted->mNext)
     {
         ++uiCount;
     }
@@ -101,7 +102,7 @@ bool ObjectWeightList::ReadObjectWeights(PblFileChunk& chunk, unsigned int uiObj
         return false;
     }
 
-    PblListSingle::Node* pNode = mHead.mNext;
+    PblListSingle::Node* pNode = pFirst;
     while (pNode != &mHead)
     {
         ObjectWeight* const pWeight = reinterpret_cast<ObjectWeight*>(reinterpret_cast<char*>(pNode) - offsetof(ObjectWeight, mNode));

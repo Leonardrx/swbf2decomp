@@ -17,10 +17,11 @@ PblMatrix HUD::Element::CalculateGroupMatrix(HUD::ElementGroupBase* const pGroup
 {
     const HUD::Element* pElement = pGroup;
     PblMatrix result;
+    HUD::ElementGroupBase* const pParent = pElement->mGroup;
     const PblMatrix local = pElement->mElement->GetMatrix();
-    if (pElement->mGroup)
+    if (pParent)
     {
-        result = CalculateGroupMatrix(pElement->mGroup);
+        result = CalculateGroupMatrix(pParent);
         *(D3DXMATRIX*)&result = *(const D3DXMATRIX*)&local * *(const D3DXMATRIX*)&result;
     }
     else

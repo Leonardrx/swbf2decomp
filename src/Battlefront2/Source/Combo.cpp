@@ -134,9 +134,8 @@ bool Combo::Deflect::TestDeflect(const PblMatrix& mSoldier, const PblVector3& vF
     }
     const float fCosAngle = -DotProduct(vFacingDir, vDir);
     const bool bRight = vDir.z * vFacingDir.x - vFacingDir.z * vDir.x < 0.0f;
-    const unsigned int n = m_uiNumDeflectAnimations;
-    unsigned char all = 0;
-    for (unsigned int i = 0; i < n; ++i)
+        unsigned char all = 0;
+    for (unsigned int i = 0; i < m_uiNumDeflectAnimations; ++i)
     {
         all |= m_aDeflectAnim[i].uiDirections;
     }
@@ -214,7 +213,7 @@ bool Combo::Deflect::TestDeflect(const PblMatrix& mSoldier, const PblVector3& vF
     }
     unsigned int matches = 0;
     unsigned int chosen = 0;
-    for (unsigned int i = 0; i < n; ++i)
+    for (unsigned int i = 0; i < m_uiNumDeflectAnimations; ++i)
     {
         if (m_aDeflectAnim[i].uiDirections & mask)
         {
@@ -2540,7 +2539,8 @@ void Combo::ReadConfig(PblConfig& config)
                     PblConfig scope(config.ReadNextScope(), true);
                     if (pAnimData && eAnimation != SoldierAnimationBank::INVALID_COMBO_ANIMATION)
                     {
-                        if (!pAnimData->m_bReadFromConfig)
+                        const bool bReadFromConfig = pAnimData->m_bReadFromConfig;
+                        if (!bReadFromConfig)
                         {
                             pAnimData->ReadConfig(scope, pcName);
                         }
@@ -2548,9 +2548,13 @@ void Combo::ReadConfig(PblConfig& config)
                         {
                             SoldierAnimationData* pLower =
                                 SoldierAnimationData::Find(eAnimation, SoldierAnimType::LOWER);
-                            if (pLower && !pLower->m_bReadFromConfig)
+                            if (pLower)
                             {
-                                pLower->ConvertScope(*pAnimData);
+                                const bool bLowerReadFromConfig = pLower->m_bReadFromConfig;
+                                if (!bLowerReadFromConfig)
+                                {
+                                    pLower->ConvertScope(*pAnimData);
+                                }
                             }
                         }
                     }

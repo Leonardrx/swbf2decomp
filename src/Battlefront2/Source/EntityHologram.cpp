@@ -370,7 +370,7 @@ bool EntityHologram::Update(float fDeltaTime)
         {
             float fTilt = PblRandom::_Global.GetFloat();
             m_fTilt = fTilt * fTilt * 0.017453292f * kfHoloMaxTilt;
-            m_fRotateTimer = PblRandom::_Global.GetFloat() * PblMath::fTwoPi / pClass->m_fRotateRate;
+            m_fRotateTimer = PblRandom::_Global.GetFloat() * 6.2831855f / pClass->m_fRotateRate;
         }
         m_fPopTimer = 0.0f;
     }

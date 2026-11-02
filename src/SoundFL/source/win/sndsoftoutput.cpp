@@ -200,7 +200,7 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
 
     FreeMixBuffer();
 
-    mMixBuffer = AllocPerm(uiHalfPacket * 4
+    mMixBuffer = AllocPerm(uiMixBytes
                            + (uiHalfPacket + uiPacketSize * 2) * 4
                            + uiDMOBytes);
     if (!mMixBuffer)

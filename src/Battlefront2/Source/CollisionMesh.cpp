@@ -685,9 +685,9 @@ CollisionMeshCache* CollisionMesh::_GetTriHits(const PblVector3& vPos, float fRa
 {
     const CollisionMesh* pMesh = (const CollisionMesh*)this;
     RedStack stack;
+    list.Clear();
     CollisionMeshCache* pCache = NULL;
     bool bSearch = true;
-    list.Clear();
     if (pSoldier)
     {
         PblVector3* pVerts = (PblVector3*)stack.Alloc(100 * sizeof(PblVector3));

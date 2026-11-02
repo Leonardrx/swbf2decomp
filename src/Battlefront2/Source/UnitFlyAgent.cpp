@@ -80,7 +80,7 @@ void UnitFlyAgent::EnterState()
     {
         PblVector3 vFwd = mCtrl->mOwner->GetMatrix().GetZAxis();
         vFwd.y = 0.0f;
-        PblVector3 vDest = vPos + vFwd * 200.0f;
+        PblVector3 vDest = vFwd * 200.0f + vPos;
         vDest.y += 1.0f;
 
         AIPath* pPath = new AIPath();
@@ -119,6 +119,7 @@ void UnitFlyAgent::EnterState()
         const int iTeam = mCtrl->mOwner->GetGameObject()->GetTeam();
         bool bGood;
         PblVector3 vDest;
+        float fDistSq;
         do
         {
             CommandPostManager* pManager = CommandPostManager::Instance();
@@ -140,8 +141,9 @@ void UnitFlyAgent::EnterState()
                 bGood = true;
             }
             vDest = AIUtil::GetCommandPostPos(pPost);
+            fDistSq = SquaredLength(vDest - vPos);
             ++iTries;
-        } while (!bGood && SquaredLength(vDest - vPos) < 10000.0f && iTries < 10);
+        } while (!bGood && fDistSq < 10000.0f && iTries < 10);
 
         PblVector3 vGoto = vDest;
         vGoto.y += 20.0f;

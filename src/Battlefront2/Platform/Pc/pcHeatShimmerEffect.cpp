@@ -69,7 +69,7 @@ void HeatShimmerEffect::PlatformPostReadInit()
 
     const RedCamera* pCamera = RedRenderer::GetCamera();
     const float fHalfWidth = (float)tan((double)(pCamera->GetFOV() * 0.5f)) * 200.0f;
-    float fY = s_posY + s_height;
+    float fY = s_height + s_posY;
     const float fStartX = -fHalfWidth;
     const float fXStep = (fHalfWidth * 2.0f) / (float)s_tessellationX;
     const float fYStep = -((fY - s_height) / (float)s_tessellationY);

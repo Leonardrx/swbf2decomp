@@ -254,8 +254,9 @@ void EntitySquadron::RemoveFromSquadron()
 
         const PblVector3& vLeader = mFormation->GetPointPosition(mFormationSlot);
         EntityDistance* pDistance = pDistances;
+        PblListDouble::Itor it(mList);
         int i = 0;
-        for (PblListDouble::Itor it(mList); it.GetNode() != &mList.mTerminator; ++it, ++i)
+        for (; it.GetNode() != &mList.mTerminator; ++it, ++i)
         {
             if (i >= 10)
             {

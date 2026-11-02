@@ -611,9 +611,10 @@ unsigned short ShadowData::GenerateSilhouette(const PblMatrix* pMatrix, const Pb
         return 0;
     }
 
-    const float lx = pMatrix->m[0][0] * vLight.x + pMatrix->m[0][1] * vLight.y + pMatrix->m[0][2] * vLight.z;
-    const float ly = pMatrix->m[1][0] * vLight.x + pMatrix->m[1][1] * vLight.y + pMatrix->m[1][2] * vLight.z;
-    const float lz = pMatrix->m[2][0] * vLight.x + pMatrix->m[2][1] * vLight.y + pMatrix->m[2][2] * vLight.z;
+    const PblMatrix& m = *pMatrix;
+    const float lx = m.m[0][0] * vLight.x + m.m[0][1] * vLight.y + m.m[0][2] * vLight.z;
+    const float ly = m.m[1][0] * vLight.x + m.m[1][1] * vLight.y + m.m[1][2] * vLight.z;
+    const float lz = m.m[2][0] * vLight.x + m.m[2][1] * vLight.y + m.m[2][2] * vLight.z;
 
     for (unsigned short i = 0; i < _faceCount; ++i)
     {
@@ -914,8 +915,8 @@ void ShadowData::Read(PblFileChunk& chunk)
         {
             continue;
         }
-        int iCount = 0;
         unsigned short e = i;
+        int iCount = 0;
         do
         {
             ++iCount;

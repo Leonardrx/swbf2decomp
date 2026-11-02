@@ -296,38 +296,35 @@ bool CollideBoxSphere(const PblMatrix& matrix, float fWidth, float fDepth, float
     {
         iSideZ = 0;
     }
-    if (bInside)
+    if (!bInside)
     {
-        return false;
+        float fDX = 0.0f;
+        float fDY = 0.0f;
+        float fDZ = 0.0f;
+        if (iSideX)
+        {
+            fDX = (float)fabs((double)(vClamp.x - vLocal.x));
+        }
+        if (iSideY)
+        {
+            fDY = (float)fabs((double)(vClamp.y - vLocal.y));
+        }
+        if (iSideZ)
+        {
+            fDZ = (float)fabs((double)(vClamp.z - vLocal.z));
+        }
+        float fDist2 = fDX * fDX + fDY * fDY + fDZ * fDZ;
+        if (fSphereRadius * fSphereRadius > fDist2)
+        {
+            float fDist = (float)sqrt((double)fDist2);
+            fPenetration = fSphereRadius - fDist;
+            vNormal = vAxis[0] * ((float)iSideX * fDX) + vAxis[1] * ((float)iSideY * fDY) + vAxis[2] * ((float)iSideZ * fDZ);
+            float fInv = 1.0f / fDist;
+            vNormal = PblVector3(vNormal.x * fInv, vNormal.y * fInv, vNormal.z * fInv);
+            return true;
+        }
     }
-
-    float fDX = 0.0f;
-    float fDY = 0.0f;
-    float fDZ = 0.0f;
-    if (iSideX)
-    {
-        fDX = (float)fabs((double)(vClamp.x - vLocal.x));
-    }
-    if (iSideY)
-    {
-        fDY = (float)fabs((double)(vClamp.y - vLocal.y));
-    }
-    if (iSideZ)
-    {
-        fDZ = (float)fabs((double)(vClamp.z - vLocal.z));
-    }
-    float fDist2 = fDX * fDX + fDY * fDY + fDZ * fDZ;
-    if (!(fSphereRadius * fSphereRadius > fDist2))
-    {
-        return false;
-    }
-
-    float fDist = (float)sqrt((double)fDist2);
-    fPenetration = fSphereRadius - fDist;
-    vNormal = vAxis[0] * ((float)iSideX * fDX) + vAxis[1] * ((float)iSideY * fDY) + vAxis[2] * ((float)iSideZ * fDZ);
-    float fInv = 1.0f / fDist;
-    vNormal = PblVector3(vNormal.x * fInv, vNormal.y * fInv, vNormal.z * fInv);
-    return true;
+    return false;
 }
 }
 

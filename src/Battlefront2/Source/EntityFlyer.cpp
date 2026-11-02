@@ -1890,10 +1890,11 @@ bool EntityFlyer::UpdateIndirect(float fDeltaTime)
                 PblVector3 vDir;
                 if (CalculateDest(fDeltaTime, &dest, &vPos, &fSpeedScale, &vDir))
                 {
-                    dest.mHasDest = true;
                     dest.mPos = vPos;
+                    dest.mHasDest = true;
                     fPitch = mControlPitch;
-                    fTurn = mControlZoom.IsDown() ? 0.0f : mControlTurn;
+                    float fTurnIn = mControlZoom.IsDown() ? 0.0f : mControlTurn;
+                    fTurn = fTurnIn;
                     AIUtil::UpdatePhysics(this, fDeltaTime, dest, lowLevel.mHeading, GetFlyerMaxSpeed(),
                                mClass->mStrafeSpeed, mClass->mTurnRate, mClass->mPitchRate, &fThrust, &fStrafe,
                                &fTurn, &fPitch);
@@ -2615,7 +2616,11 @@ PblMatrix DirectionMatrix(const PblVector3& vDir, const PblVector3& vUp, const P
 // FUNCTION: SWBF2 0x004b1550
 void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
 {
-    if (mState == FLYING)
+    if (mState != FLYING)
+    {
+        FlipStop();
+        return;
+    }
     {
         float fFlipSpeed = mClass->mTrickFlipSpeed;
         if (mFlip != mFlipTarget)
@@ -2679,24 +2684,20 @@ void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
             if (0.0f > mRollTarget)
             {
                 mBankRollAngle = -(mBankRollAngle + 3.1415927f);
-                mRollTarget = -(mRollTarget + 3.1415927f);
                 mRoll = -(mRoll + 3.1415927f);
+                mRollTarget = -(mRollTarget + 3.1415927f);
             }
             else
             {
                 mBankRollAngle = -(mBankRollAngle - 3.1415927f);
-                mRollTarget = -(mRollTarget - 3.1415927f);
                 mRoll = -(mRoll - 3.1415927f);
+                mRollTarget = -(mRollTarget - 3.1415927f);
             }
         }
         else if (mInFlip && 0.01f > fabsf(mBankPitchAngleDelta))
         {
             mInFlip = false;
         }
-    }
-    else
-    {
-        FlipStop();
     }
 }
 

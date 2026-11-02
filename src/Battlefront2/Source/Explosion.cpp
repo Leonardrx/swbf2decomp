@@ -711,7 +711,7 @@ void ExplosionClass::CreateExplosion(const PblVector3& aPos, const DamageOwner& 
                 float dx = vTarget.x - aPos.x;
                 float dy = vTarget.y - aPos.y;
                 float dz = vTarget.z - aPos.z;
-                float length = sqrtf(dx * dx + dy * dy + dz * dz);
+                float length = PblMath::Sqrt(dx * dx + dy * dy + dz * dz);
                 if (length > 0.0001f)
                 {
                     float scale = pTarget->CalcRadiusEffect(length, mShakeRadius[0], mShakeRadius[1]);

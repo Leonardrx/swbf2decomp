@@ -950,7 +950,11 @@ bool EntityPathFollower::Branch(BranchParams& params, const PblVector3* const pP
 void EntityPathFollower::EndOfSegment(BranchParams& params, const PblVector3* const pPosition, bool bForceBranch,
                                       bool bSetupNext)
 {
-    bool bBranch = bForceBranch || (!mPath && !GetPointIsSet(2) && !GetPointIsSet(3));
+    bool bBranch = bForceBranch;
+    if (!bBranch)
+    {
+        bBranch |= !mPath && !GetPointIsSet(2) && !GetPointIsSet(3);
+    }
     bBranch |= mPath && (mIndex < 0 || mIndex >= mPath->GetNumPoints());
     if (!bBranch && mPath)
     {
@@ -975,11 +979,7 @@ void EntityPathFollower::EndOfSegment(BranchParams& params, const PblVector3* co
             {
                 PblVector3 vPosition = pPosition ? *pPosition : params.mMatrix.GetTranslation();
                 PblVector3 vTarget = pControllable->GetMatrix().GetTranslation();
-                if ((vTarget.x - vPosition.x) * (vTarget.x - vPosition.x) +
-                            (vTarget.y - vPosition.y) * (vTarget.y - vPosition.y) +
-                            (vTarget.z - vPosition.z) * (vTarget.z - vPosition.z) >
-                        160000.0f &&
-                    HeadTowards(vTarget, 150.0f, params))
+                if (SquaredLength(vTarget - vPosition) > 160000.0f && HeadTowards(vTarget, 150.0f, params))
                 {
                     return;
                 }

@@ -190,12 +190,8 @@ void Controller::UpdateTargetBubbleSize(float dt)
 
     float fShrink = AIDifficulty::GetTargetBubbleShrinkRate(
                         !AIUtil::IsPlayerTeam(GetTeam(mOwner->GetGameObject()))) * dt;
-    float fIncrease = fShrink;
-    if (mOwner->GetGameObject()->IsRtti(EntityFlyer::rttiHashEntityFlyer))
-    {
-        fIncrease *= 0.5f;
-    }
-    IncreaseTargetBubbleSize(fIncrease);
+    IncreaseTargetBubbleSize(mOwner->GetGameObject()->IsRtti(EntityFlyer::rttiHashEntityFlyer)
+                             ? fShrink * 0.5f : fShrink);
 
     mAvailableBubbleCharge = Clamp(mAvailableBubbleCharge - fShrink * 0.5f, 0.0f, 5.0f);
 

@@ -99,23 +99,24 @@ void WeaponCatapult::SetArmAngle(float fAngle)
     {
         return;
     }
-    if (pArm != &mArmPoseMatrix)
+    PblMatrix* pOut = &mArmPoseMatrix;
+    if (pArm != pOut)
     {
         mCatapultBuilding->mPose.Remove(mCatapultClass->mArmHash);
-        mCatapultBuilding->mPose.Store(mCatapultClass->mArmHash, &mArmPoseMatrix);
+        mCatapultBuilding->mPose.Store(mCatapultClass->mArmHash, pOut);
     }
 
     const PblVector3 vX = pArm->GetXAxis();
     const PblVector3 vUp(0.0f, 1.0f, 0.0f);
-    mArmPoseMatrix[0] = pArm->GetXAxis();
-    mArmPoseMatrix.m[0][3] = 0.0f;
-    mArmPoseMatrix[1] = PblVector3(vUp.y * vX.z - vUp.z * vX.y, vUp.z * vX.x - vUp.x * vX.z,
-                                   vUp.x * vX.y - vUp.y * vX.x);
-    mArmPoseMatrix.m[1][3] = 0.0f;
-    mArmPoseMatrix[2] = vUp;
-    mArmPoseMatrix.m[2][3] = 0.0f;
+    (*pOut)[0] = pArm->GetXAxis();
+    pOut->m[0][3] = 0.0f;
+    (*pOut)[1] = PblVector3(vUp.y * vX.z - vUp.z * vX.y, vUp.z * vX.x - vUp.x * vX.z,
+                            vUp.x * vX.y - vUp.y * vX.x);
+    pOut->m[1][3] = 0.0f;
+    (*pOut)[2] = vUp;
+    pOut->m[2][3] = 0.0f;
 
-    PblQuaternion qArm(mArmPoseMatrix);
+    PblQuaternion qArm(*pOut);
     const PblVector3 vOmega(fAngle, 0.0f, 0.0f);
     const float fLength = PblMath::Sqrt(vOmega.x * vOmega.x + vOmega.y * vOmega.y + vOmega.z * vOmega.z);
     if (fLength > 0.0001f)
@@ -125,14 +126,13 @@ void WeaponCatapult::SetArmAngle(float fAngle)
         qArm = qArm * PblQuaternion(vAxis, fLength);
     }
 
-    D3DXQUATERNION qUnit;
     PblMatrix mPose;
-    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mPose), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qArm)));
+    D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&mPose), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qArm), reinterpret_cast<const D3DXQUATERNION*>(&qArm)));
     mPose.m[3][0] = pArm->m[3][0];
     mPose.m[3][1] = pArm->m[3][1];
     mPose.m[3][2] = pArm->m[3][2];
     mPose.m[3][3] = 1.0f;
-    mArmPoseMatrix = mPose;
+    *pOut = mPose;
 }
 
 // FUNCTION: SWBF2 0x00681080

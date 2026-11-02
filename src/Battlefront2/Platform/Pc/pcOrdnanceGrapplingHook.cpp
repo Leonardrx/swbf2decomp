@@ -156,7 +156,7 @@ void OrdnanceGrapplingHook::Render(unsigned char ucViewport, float fDist, unsign
     D3DXVec3TransformCoord(reinterpret_cast<D3DXVECTOR3*>(&vEnd), reinterpret_cast<const D3DXVECTOR3*>(&mWeaponOffset), reinterpret_cast<const D3DXMATRIX*>(&mOwner->GetMatrix()));
     if (mState == HOOK_LIFTING)
     {
-        vEnd += mVelocity * mDeltaTime;
+        vEnd = vEnd + mVelocity * mDeltaTime;
     }
 
     PblVector3 vDirection = vEnd - vStart;
@@ -174,15 +174,7 @@ void OrdnanceGrapplingHook::Render(unsigned char ucViewport, float fDist, unsign
     }
     vDirection = vDirection / fLength;
 
-    int iSegments = (int)(fLength * 8.0f);
-    if (iSegments < 2)
-    {
-        iSegments = 2;
-    }
-    else if (iSegments > 80)
-    {
-        iSegments = 80;
-    }
+    int iSegments = Clamp((int)(fLength * 8.0f), 2, 80);
     if (iSegments < 2)
     {
         return;

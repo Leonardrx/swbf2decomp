@@ -118,7 +118,8 @@ float ParameterGraph::CalculateOutputValue(float fInput) const
     for (PblListSingleSorted::Itor itor(mControlPoints);
          itor.GetNode(&mControlPoints) != mControlPoints.GetTerminator(); ++itor)
     {
-        const ControlPoint* const pPoint = (const ControlPoint*)itor.GetNode(&mControlPoints)->GetObjectA(
+        PblListSingleSorted::Node* const pNode = itor.GetNode(&mControlPoints);
+        const ControlPoint* const pPoint = (const ControlPoint*)pNode->GetObjectA(
             &mControlPoints, offsetof(ControlPoint, mNode));
         if (pPoint->mNode.mSortValue > fInput)
         {

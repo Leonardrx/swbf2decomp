@@ -1006,12 +1006,12 @@ void pcWaterShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass) c
 
     if (uiPass == 0)
     {
-        const PblMatrix m(D3DXMATRIXA16(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f,
-                                        m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f,
-                                        m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f,
-                                        0.0f, 0.0f, 0.0f, 1.0f));
+        const D3DXMATRIXA16 m(m_diffuseMapTransform2(0, 0), m_diffuseMapTransform2(0, 1), 0.0f, 0.0f,
+                              m_diffuseMapTransform2(1, 0), m_diffuseMapTransform2(1, 1), 0.0f, 0.0f,
+                              m_diffuseMapTransform2(2, 0), m_diffuseMapTransform2(2, 1), 0.0f, 0.0f,
+                              0.0f, 0.0f, 0.0f, 1.0f);
         RedRenderer::pcSetTexture(0, m_diffuseMap2);
-        RedRenderer::pcFFSetTextureTransform(0, m);
+        RedRenderer::pcFFSetTextureTransform(0, reinterpret_cast<const PblMatrix&>(m));
         const RedColorValue blendValue(m_diffuseMapBlend, m_diffuseMapBlend, m_diffuseMapBlend, m_diffuseMapBlend);
         const RedColor blend((unsigned char)(int)(blendValue.r * 255.0f),
                              (unsigned char)(int)(blendValue.g * 255.0f),

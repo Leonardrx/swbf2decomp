@@ -155,7 +155,8 @@ void SkyDome::Render(int value)
             for (int j = 0; j < rDome.mNumEffectData; ++j)
             {
                 EffectData& rData = rDome.mEffectData[j];
-                if (rData.effect == 0)
+                ParticleEmitterObject* pEffect = rData.effect;
+                if (!pEffect)
                 {
                     continue;
                 }

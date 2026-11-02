@@ -204,9 +204,9 @@ void LensFlareEffect::PlatformInit()
             kuiFlareShader, 0x82, 0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
         s_pSampleShader = (pcSampleShader*)pcRedShader::Create(
             kuiSampleShader, 2, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        s_pSampleShader->SetInputTexture(s_sampleTex);
         s_pSampleShader->SetScale(1.0f / 255.0f);
         s_pSampleShader->SetOutputPosition(0.0f, 0.0f);
-        s_pSampleShader->SetInputTexture(s_sampleTex);
     }
     else
     {
@@ -237,9 +237,9 @@ void LensFlareEffect::PlatformInit()
             kuiFlareShader, 0x1082, 0, 0, 0x10040, RedColor::WHITE, RedColor::BLACK, 32.0f);
         s_pSampleShader = (pcSampleShader*)pcRedShader::Create(
             kuiSampleShader, 0x1002, 0, 0, 0, RedColor::WHITE, RedColor::BLACK, 32.0f);
+        s_pSampleShader->SetInputTexture(s_sampleTex);
         s_pSampleShader->SetScale(1.0f / 255.0f);
         s_pSampleShader->SetOutputPosition(0.0f, 0.0f);
-        s_pSampleShader->SetInputTexture(s_sampleTex);
     }
 
 }
@@ -439,51 +439,52 @@ void LensFlare::Emit<FlareVertex>(FlareVertex*& pVertices, const PblVector3& pos
     PblMath::SinCos(&fSin[0], &fCos[0], angle);
     PblMath::SinCos(&fSin[1], &fCos[1], 1.0472f - angle);
     const float size = _fSize * 2.0f;
-    PblVector3 vVert[6];
-    vVert[0] = pos + PblVector3(fCos[0] * size, fSin[0] * (size * 2.0f), 0.0f);
-    vVert[1] = pos + PblVector3((fCos[0] * -0.5f - fSin[0] * 0.866f) * size,
-                               (fCos[0] * 0.866f - fSin[0] * 0.5f) * (size * 2.0f), 0.0f);
-    vVert[2] = pos + PblVector3((fCos[0] * -0.5f - fSin[0] * -0.866f) * size,
-                               (fSin[0] * -0.5f - fCos[0] * 0.866f) * (size * 2.0f), 0.0f);
-    vVert[3] = pos + PblVector3(fCos[1] * (size * 3.5f), fSin[1] * size, 0.0f);
-    vVert[4] = pos + PblVector3((fCos[1] * -0.5f - fSin[1] * 0.866f) * (size * 3.5f),
-                               (fCos[1] * 0.866f - fSin[1] * 0.5f) * size, 0.0f);
-    vVert[5] = pos + PblVector3((fCos[1] * -0.5f - fSin[1] * -0.866f) * (size * 3.5f),
-                               (fSin[1] * -0.5f - fCos[1] * 0.866f) * size, 0.0f);
+    const float size2 = size * 2.0f;
+    const float size35 = size * 3.5f;
+    PblVector3 v0 = pos + PblVector3(fCos[0] * size, fSin[0] * size2, 0.0f);
+    PblVector3 v1 = pos + PblVector3((fCos[0] * -0.5f - fSin[0] * 0.866f) * size,
+                                     (fCos[0] * 0.866f - fSin[0] * 0.5f) * size2, 0.0f);
+    PblVector3 v2 = pos + PblVector3((fCos[0] * -0.5f - fSin[0] * -0.866f) * size,
+                                     (fSin[0] * -0.5f - fCos[0] * 0.866f) * size2, 0.0f);
+    PblVector3 v3 = pos + PblVector3(fCos[1] * size35, fSin[1] * size, 0.0f);
+    PblVector3 v4 = pos + PblVector3((fCos[1] * -0.5f - fSin[1] * 0.866f) * size35,
+                                     (fCos[1] * 0.866f - fSin[1] * 0.5f) * size, 0.0f);
+    PblVector3 v5 = pos + PblVector3((fCos[1] * -0.5f - fSin[1] * -0.866f) * size35,
+                                     (fSin[1] * -0.5f - fCos[1] * 0.866f) * size, 0.0f);
 
     RedColor faded(_color, (unsigned char)(int)((float)_color.a * fFade));
     RedColor black(RedColor::BLACK, 0);
-    pVertices[0].pos.SetPos(vVert[0].x, vVert[0].y, vVert[0].z);
+    pVertices[0].pos.SetPos(v0.x, v0.y, v0.z);
     pVertices[0].uv.SetUV(fU, fV);
     pVertices[0].color = black;
     pVertices[1] = pVertices[0];
-    pVertices[2].pos.SetPos(vVert[1].x, vVert[1].y, vVert[1].z);
+    pVertices[2].pos.SetPos(v1.x, v1.y, v1.z);
     pVertices[2].uv.SetUV(fU, fV);
     pVertices[2].color = black;
     pVertices[3].pos.SetPos(pos.x, pos.y, pos.z);
     pVertices[3].uv.SetUV(fU, fV);
     pVertices[3].color = faded;
-    pVertices[4].pos.SetPos(vVert[2].x, vVert[2].y, vVert[2].z);
+    pVertices[4].pos.SetPos(v2.x, v2.y, v2.z);
     pVertices[4].uv.SetUV(fU, fV);
     pVertices[4].color = black;
-    pVertices[5].pos.SetPos(vVert[0].x, vVert[0].y, vVert[0].z);
+    pVertices[5].pos.SetPos(v0.x, v0.y, v0.z);
     pVertices[5].uv.SetUV(fU, fV);
     pVertices[5].color = black;
     pVertices[6] = pVertices[5];
-    pVertices[7].pos.SetPos(vVert[3].x, vVert[3].y, vVert[3].z);
+    pVertices[7].pos.SetPos(v3.x, v3.y, v3.z);
     pVertices[7].uv.SetUV(fU, fV);
     pVertices[7].color = black;
     pVertices[8] = pVertices[7];
-    pVertices[9].pos.SetPos(vVert[4].x, vVert[4].y, vVert[4].z);
+    pVertices[9].pos.SetPos(v4.x, v4.y, v4.z);
     pVertices[9].uv.SetUV(fU, fV);
     pVertices[9].color = black;
     pVertices[10].pos.SetPos(pos.x, pos.y, pos.z);
     pVertices[10].uv.SetUV(fU, fV);
     pVertices[10].color = faded;
-    pVertices[11].pos.SetPos(vVert[5].x, vVert[5].y, vVert[5].z);
+    pVertices[11].pos.SetPos(v5.x, v5.y, v5.z);
     pVertices[11].uv.SetUV(fU, fV);
     pVertices[11].color = black;
-    pVertices[12].pos.SetPos(vVert[3].x, vVert[3].y, vVert[3].z);
+    pVertices[12].pos.SetPos(v3.x, v3.y, v3.z);
     pVertices[12].uv.SetUV(fU, fV);
     pVertices[12].color = black;
     pVertices[13] = pVertices[12];

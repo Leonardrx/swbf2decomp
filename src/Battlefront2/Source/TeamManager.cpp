@@ -122,10 +122,7 @@ int sGetObjectsInRange(const PblVector3& vPos, float fRange, GameObject** const 
                 continue;
             }
             const float fRadius = sTeamList[iTeam][i].mSphere.GetRadius() + fRange;
-            const float fDX = vPos.x - sTeamList[iTeam][i].mSphere.x;
-            const float fDY = vPos.y - sTeamList[iTeam][i].mSphere.y;
-            const float fDZ = vPos.z - sTeamList[iTeam][i].mSphere.z;
-            if (fRadius * fRadius > fDX * fDX + fDY * fDY + fDZ * fDZ)
+            if (fRadius * fRadius > SquaredLength(vPos - sTeamList[iTeam][i].mSphere.GetCenter()))
             {
                 ppObjects[iCount++] = pObject;
                 if (iCount == iMax)

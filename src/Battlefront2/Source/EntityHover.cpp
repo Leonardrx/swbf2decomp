@@ -1876,12 +1876,10 @@ bool EntityHover::Update(float fDeltaTime)
     PblVector3 vRight = mMatrix.GetXAxis();
     PblVector3 vUp = mMatrix.GetYAxis();
     Move(fDeltaTime, fThrust, fStrafe, fTurn, mBoost);
-    mYawValue -= vRight.x * mMatrix.m[2][0] + vRight.y * mMatrix.m[2][1] + vRight.z * mMatrix.m[2][2];
-    mPitchValue -= vUp.x * mMatrix.m[2][0] + vUp.y * mMatrix.m[2][1] + vUp.z * mMatrix.m[2][2];
-    mYawValue = mClass->mYawMin > mYawValue ? mClass->mYawMin
-                                            : (mYawValue > mClass->mYawMax ? mClass->mYawMax : mYawValue);
-    mPitchValue = mClass->mPitchMin > mPitchValue ? mClass->mPitchMin
-                                                  : (mPitchValue > mClass->mPitchMax ? mClass->mPitchMax : mPitchValue);
+    mYawValue -= mMatrix.m[2][0] * vRight.x + mMatrix.m[2][1] * vRight.y + mMatrix.m[2][2] * vRight.z;
+    mPitchValue -= mMatrix.m[2][0] * vUp.x + mMatrix.m[2][1] * vUp.y + mMatrix.m[2][2] * vUp.z;
+    mYawValue = Clamp(mYawValue, mClass->mYawMin, mClass->mYawMax);
+    mPitchValue = Clamp(mPitchValue, mClass->mPitchMin, mClass->mPitchMax);
 
     if (mObstacle)
     {
@@ -2737,8 +2735,10 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         {
             pEffectClass = FLEffect::s_EffectClasses.Find(mClass->mWakeEffect);
         }
-        if (pEffectClass && (mControlMove < 0.0f ? -mControlMove : mControlMove) +
-                                    (mControlStrafe < 0.0f ? -mControlStrafe : mControlStrafe) >
+        float fMoveInput = mControlMove;
+        float fStrafeInput = mControlStrafe;
+        if (pEffectClass && (fMoveInput < 0.0f ? -fMoveInput : fMoveInput) +
+                                    (fStrafeInput < 0.0f ? -fStrafeInput : fStrafeInput) >
                                 0.01f)
         {
             PblMatrix mPrimitive = mCollisionModel->GetLocalMatrix(mClass->mWakeEmitterPrimitives[i], GetPose());

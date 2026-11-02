@@ -74,12 +74,13 @@ void SetPropDistanceScale(float fValue)
 void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiFlags)
 {
     const RedCamera* pCamera = RedRenderer::GetCamera();
-    const PblMatrix& mCamera = pCamera->GetMatrix();
 
     int iNumObjects = 0;
+    const PblMatrix& mCamera = pCamera->GetMatrix();
+    const PblVector3 vForward = -mCamera.GetZAxis();
     const PblVector3 vCamPos = mCamera.GetTranslation();
     const PblVector3 vToCluster(_Sphere.x - vCamPos.x, 0.0f, _Sphere.z - vCamPos.z);
-    float fCamDist = DotProduct(vToCluster, -mCamera.GetZAxis());
+    float fCamDist = DotProduct(vToCluster, vForward);
     float fScale = 1.0f;
     if (!(1.0f > sGrassDistanceScale))
     {
@@ -112,8 +113,8 @@ void PropCluster::Render(unsigned char ucViewport, float fDist, unsigned int uiF
 
                 if (mLayers[i].mObjects.GetCount() > 0)
                 {
-                    mWasRenderedFlag |= 1 << CameraManager::sInstance->GetCameraIdForView(
-                                                 FLRenderer::GetCurrentViewport());
+                    CameraManager* pCameraManager = CameraManager::sInstance;
+                    mWasRenderedFlag |= 1 << pCameraManager->GetCameraIdForView(FLRenderer::GetCurrentViewport());
                     for (PblList<PropObject>::Itor it(mLayers[i].mObjects); (PropObject*)it; ++it)
                     {
                         it->Render(pCamera, fCamDist - mSize, uiFlags);

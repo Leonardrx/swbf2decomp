@@ -247,11 +247,10 @@ void HUD::ElementVehicleSeating::UpdateSeatingState(unsigned int uSeat, SeatingS
             {
                 float fDepth = mBackdrop.GetDepth();
                 fDepth *= Red3DModelElementLite::GetDepthMultiplier(true);
-                const float fInvDepth = 1.0f / fDepth;
-                const PblVector3 vPos = mHardpoint.GetTranslation();
-                vOffset.x = fInvDepth * vPos.x;
-                vOffset.y = -(fInvDepth * vPos.y);
-                vOffset.z = vPos.z;
+                const float fInvDepth = 1.0f / (float)fDepth;
+                vOffset = mHardpoint.GetTranslation();
+                vOffset.x = fInvDepth * vOffset.x;
+                vOffset.y = -(fInvDepth * vOffset.y);
             }
         }
         else

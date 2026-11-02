@@ -431,7 +431,8 @@ float CoverHelper::IsHintSuitable_Combat(const BaseHint* pHint) const
     if (DotProduct(vTargetToHint, vMeToTarget) < 0.0f)
     {
         PblVector3 vHintToTarget = vTarget - vHint;
-        if (DotProduct(pHint->GetZAxis(), AIUtil::GetSafeNormalXZ(vHintToTarget)) > fCosMax)
+        PblVector3 vFacing = AIUtil::GetSafeNormalXZ(vHintToTarget);
+        if (DotProduct(vFacing, pHint->GetZAxis()) > fCosMax)
         {
             float fMaxDist = GetMaxHintDist();
             float fDistSq = SquaredLengthXZ(vTargetToHint);

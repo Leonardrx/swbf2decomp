@@ -30,16 +30,16 @@ void SampleBank::LoadData(PblFileChunk& chunk, char const* pcName, unsigned int 
         {
             const unsigned int uiLength = mSamples[i].mAliasSample ? 0 : mSamples[i].mLength;
             void* pData;
-            if (uiLength)
+            if (!uiLength)
+            {
+                pData = 0;
+            }
+            else
             {
                 Engine::GetMixConfig();
                 pData = mSamples[i].mAddress;
                 pFile->Seek(iStart + puiOffsets[i], PblFile::SeekFromStart);
                 pFile->ReadData(pData, uiLength);
-            }
-            else
-            {
-                pData = 0;
             }
             mSamples[i].UploadData(pData, uiLength);
         }

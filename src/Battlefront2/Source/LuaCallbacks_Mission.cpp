@@ -3668,10 +3668,8 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
         {
             PblVector3 vFrom = pSegments[i - 1].getValue((float)j / 10.0f);
             PblVector3 vTo = pSegments[i - 1].getValue((float)(j + 1) / 10.0f);
-            float fDX = vTo.x - vFrom.x;
-            float fDY = vTo.y - vFrom.y;
-            float fDZ = vTo.z - vFrom.z;
-            fLength += PblMath::Sqrt(fDX * fDX + fDY * fDY + fDZ * fDZ);
+            PblVector3 vStep = vTo - vFrom;
+            fLength += PblMath::Sqrt(vStep.y * vStep.y + vStep.x * vStep.x + vStep.z * vStep.z);
             pKeys[(i - 1) * 10 + j + 1].length = fLength;
             pKeys[(i - 1) * 10 + j + 1].segmentIndex = i - 1;
         }

@@ -843,10 +843,7 @@ Entity* GodrayClass::Build(const EntityDesc& desc)
 
         const PblVector3 vOffset(PblRandom::_Global.GetFloat() - 0.5f, PblRandom::_Global.GetFloat() - 0.5f,
                                  PblRandom::_Global.GetFloat() - 0.5f);
-        const float fSpread = mSpreadRadius * 2.0f;
-        const PblVector3& vPos = desc.mMatrix.GetTranslation();
-        PblVector3 vGodrayPos = vOffset * fSpread + vPos;
-        GodrayManager::s_pInstance->AddGodray(godrayDesc, vGodrayPos);
+        GodrayManager::s_pInstance->AddGodray(godrayDesc, vOffset * (mSpreadRadius * 2.0f) + desc.mMatrix.GetTranslation());
     }
     return 0;
 }

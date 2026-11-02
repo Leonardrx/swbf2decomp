@@ -93,7 +93,9 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            if (SquaredLength(pToArc->n1->GetCenter() - vTo) < SquaredLength(pToArc->n2->GetCenter() - vTo))
+            const PblVector3 vDiffA = pToArc->n1->GetCenter() - vTo;
+            const PblVector3 vDiffB = pToArc->n2->GetCenter() - vTo;
+            if (SquaredLength(vDiffA) < SquaredLength(vDiffB))
             {
                 mDestNode = pToArc->n1;
             }
@@ -132,7 +134,9 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            if (SquaredLength(pFromArc->n1->GetCenter() - vFrom) < SquaredLength(pFromArc->n2->GetCenter() - vFrom))
+            const PblVector3 vDiffA = pFromArc->n1->GetCenter() - vFrom;
+            const PblVector3 vDiffB = pFromArc->n2->GetCenter() - vFrom;
+            if (SquaredLength(vDiffA) < SquaredLength(vDiffB))
             {
                 mCurDestNode = pFromArc->n2;
             }
@@ -193,7 +197,9 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
         }
         else
         {
-            if (SquaredLength(pFromArc->n1->GetCenter() - vFrom) < SquaredLength(pFromArc->n2->GetCenter() - vFrom))
+            const PblVector3 vDiffA = pFromArc->n1->GetCenter() - vFrom;
+            const PblVector3 vDiffB = pFromArc->n2->GetCenter() - vFrom;
+            if (SquaredLength(vDiffA) < SquaredLength(vDiffB))
             {
                 mCurDestNode = pFromArc->n2;
             }
@@ -219,7 +225,9 @@ bool ConnectivityGraphFollower::SetDestination(const ConnectivityGraph* pGraph,
     }
     else
     {
-        if (SquaredLength(pToArc->n1->GetCenter() - vTo) < SquaredLength(pToArc->n2->GetCenter() - vTo))
+        const PblVector3 vDiffA = pToArc->n1->GetCenter() - vTo;
+        const PblVector3 vDiffB = pToArc->n2->GetCenter() - vTo;
+        if (SquaredLength(vDiffA) < SquaredLength(vDiffB))
         {
             mDestNode = pToArc->n1;
         }

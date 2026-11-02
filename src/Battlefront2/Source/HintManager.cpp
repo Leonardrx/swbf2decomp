@@ -482,13 +482,13 @@ int RequestLandHints(const UnitController* pController, const PblVector3& vPos,
 {
     int iCount = RequestHintsCommon(BaseHint::HINT_LAND, pController, vPos, iArg3, iArg4, ppHints);
 
+    int i = 0;
     const int iTeam = pController->GetMe()->GetGameObject()->GetTeam();
 
-    int i = 0;
     if (iCount > 0)
     {
         const BaseHint** ppLast = &ppHints[iCount - 1];
-        while (i < iCount)
+        for (; i < iCount;)
         {
             const BaseHint* pHint = ppHints[i];
             const CommandPost* const pPost = pHint->GetCommandPost();

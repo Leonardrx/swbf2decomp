@@ -399,19 +399,18 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
             matrix.SetTranslation(mPosition);
             if (m_pLight->_fBeamLength > 0.0f)
             {
-                const PblVector3& vDir = desc.mDirection;
-                matrix[1] = vDir;
+                matrix[1] = desc.mDirection;
                 matrix.m[1][3] = 0.0f;
-                PblVector3 vFront = (-gVectorUnitY) + vDir * vDir.y;
+                PblVector3 vFront = (-gVectorUnitY) + desc.mDirection * desc.mDirection.y;
                 float fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
                 if (fLength2 <= 0.0001f)
                 {
-                    vFront = gVectorUnitZ - vDir * vDir.z;
+                    vFront = gVectorUnitZ - desc.mDirection * desc.mDirection.z;
                     fLength2 = vFront.x * vFront.x + vFront.y * vFront.y + vFront.z * vFront.z;
                 }
                 const float fInv = 1.0f / (float)sqrt((double)fLength2);
                 vFront = vFront * fInv;
-                matrix[0] = CrossProduct(vDir, vFront);
+                matrix[0] = CrossProduct(desc.mDirection, vFront);
                 matrix.m[0][3] = 0.0f;
                 matrix[2] = vFront;
                 matrix.m[2][3] = 0.0f;

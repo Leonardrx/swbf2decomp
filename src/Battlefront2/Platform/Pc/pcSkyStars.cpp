@@ -46,8 +46,8 @@ void SkyStars::_PlatformRenderField(const StarField& field, unsigned int,
     {
         float fCycle = m_fTwinkleTimer * m_fTwinkleFrequency;
         unsigned int uCycle = (unsigned int)fCycle;
-        unsigned int uSeed0 = uCycle ^ 0xc71c2830u;
         unsigned int uSeed1 = (uCycle + 1) ^ 0xc71c2830u;
+        unsigned int uSeed0 = uCycle ^ 0xc71c2830u;
         float fFraction = fCycle - (float)uCycle;
         Star* pVertex = pVertices;
         for (unsigned int i = 0; i < field.uiNumStars; ++i, ++pVertex)

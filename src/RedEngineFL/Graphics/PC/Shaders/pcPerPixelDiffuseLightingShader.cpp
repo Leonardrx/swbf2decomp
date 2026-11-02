@@ -441,9 +441,12 @@ void pcPerPixelDiffuseLightingShader::Render_Prog1(const RenderItem* pItem, unsi
         RedRenderer::pcUnlockVertexShaderConstants(pRegs);
 
         RedRenderer::pcSetTexture(1, RedTexture::Find(s_uiLightVolumeMapHash));
-        RedRenderer::pcSetTexture(2, RedTexture::Find(pLight->m_uiProjTexHash
-                                                          ? pLight->m_uiProjTexHash
-                                                          : s_uiDefaultSpotLightMapHash));
+        unsigned int uiSpotMapHash = pLight->m_uiProjTexHash;
+        if (!uiSpotMapHash)
+        {
+            uiSpotMapHash = s_uiDefaultSpotLightMapHash;
+        }
+        RedRenderer::pcSetTexture(2, RedTexture::Find(uiSpotMapHash));
         RedRenderer::pcSetTextureStageState(2, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_PROJECTED);
         RedRenderer::pcGetDevice()->SetPixelShaderConstantF(0, &colors[0].r, 1);
         pItem->pPrim->Draw();
