@@ -867,7 +867,7 @@ void PathFinder::sExpandNode(PathFinder::PathNode* pParent, const PblVector3& rP
     }
 
     float fPerp = DotProduct(rPos - sDestPos, sPerpVec);
-    if ((float)fabs((double)fPerp) > sPerpLength)
+    if (fabsf(fPerp) > sPerpLength)
     {
         return;
     }
@@ -1071,7 +1071,7 @@ AIPath* PathFinder::GetPathResult()
             for (const PathNode* pNode = sOpenList->Get(0); pNode; pNode = pNode->mParentNode)
             {
                 PblVector3 vPos = pNode->GetPos();
-                if ((float)fabs((double)vPos.y) < EPSILON)
+                if (fabsf(vPos.y) < EPSILON)
                 {
                     vPos.y = fLastY;
                 }

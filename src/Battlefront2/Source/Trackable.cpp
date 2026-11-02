@@ -700,7 +700,7 @@ void CameraTrackSetting::SetupAmbientShiftComponent(float& rShift, float& rTarge
         }
     }
 
-    if ((float)fabs((double)rTarget) > 0.0001f)
+    if (fabsf(rTarget) > 0.0001f)
     {
         rShift += rSpeed * (rTarget < 0.0f ? -1.0f : 1.0f) * fDeltaTime;
     }

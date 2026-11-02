@@ -1220,8 +1220,8 @@ static inline float Length2EstXZ(float fX, float fZ)
 {
     const float fLength2EstAlpha = 0.94805944f;
     const float fLength2EstBeta = 0.39269909f;
-    const float fA = (float)fabs((double)fX);
-    const float fB = (float)fabs((double)fZ);
+    const float fA = fabsf(fX);
+    const float fB = fabsf(fZ);
     return fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                    : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 }

@@ -183,7 +183,7 @@ void SkyObjectManager::SkyObjectClass::Render(int uiFlags)
         color.b = 0xFF;
         color.g = 0xFF;
         color.r = 0xFF;
-        color.a = (unsigned char)(int)(fabsf(obj.mAlpha) * 255.0f);
+        color.a = (unsigned char)(int)((float)fabs((double)obj.mAlpha) * 255.0f);
         if (mModel)
         {
             mModel->Render(&obj.mMatrix, 0, color, uiFlags | 0x20001, 0);

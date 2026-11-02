@@ -81,7 +81,7 @@ void HeatShimmerEffect::PlatformPostReadInit()
         {
             float fX = fStartX;
             const float fV = (float)y / (float)s_tessellationY;
-            float fFade = 1.0f - (float)fabs((double)(fV * 2.0f - 1.0f));
+            float fFade = 1.0f - fabsf(fV * 2.0f - 1.0f);
             unsigned char ucAlpha = (unsigned char)(int)(fFade * 255.0f);
             for (unsigned int x = 0; x <= s_tessellationX; ++x)
             {

@@ -99,7 +99,7 @@ void AudibleManager::UpdateAudience(Controller* pController)
             vDelta.x = vPos.x - vListener.x;
             vDelta.y = vPos.y - vListener.y;
             vDelta.z = vPos.z - vListener.z;
-            if (!(0.87f > (float)fabs((double)DotProduct(AIUtil::GetSafeNormal(vDelta), gVectorUnitY))) &&
+            if (!(0.87f > fabsf(DotProduct(AIUtil::GetSafeNormal(vDelta), gVectorUnitY))) &&
                 !(12.25f > vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z))
             {
                 continue;

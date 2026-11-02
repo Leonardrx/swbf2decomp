@@ -1685,8 +1685,8 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
 
     float fDelta = mSplineRoll - mCurRoll;
     float fAccel;
-    if ((float)fabs((double)fDelta) <
-        ((float)fabs((double)mRollVelocity) / pClass->mPathRollValues.mRollSpeed + 1.0f) *
+    if (fabsf(fDelta) <
+        (fabsf(mRollVelocity) / pClass->mPathRollValues.mRollSpeed + 1.0f) *
             pClass->mPathRollValues.mRollTolerance)
     {
         fAccel = -((0.0f > mRollVelocity ? -1.0f : 1.0f) * pClass->mPathRollValues.mRollAcceleration);

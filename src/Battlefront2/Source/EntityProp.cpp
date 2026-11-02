@@ -365,13 +365,13 @@ void EntityProp::UpdateSound()
         const float fLength2EstBeta = 0.39269909f;
 
         const PblVector3 vDelta = vPos - mPrevPos;
-        float fA = (float)fabs((double)vDelta.x);
-        float fB = (float)fabs((double)vDelta.y);
+        float fA = fabsf(vDelta.x);
+        float fB = fabsf(vDelta.y);
         float fEst = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                              : fA * fLength2EstBeta + fB * fLength2EstAlpha;
 
-        fA = (float)fabs((double)fEst);
-        fB = (float)fabs((double)vDelta.z);
+        fA = fabsf(fEst);
+        fB = fabsf(vDelta.z);
         fMove = fA > fB ? fA * fLength2EstAlpha + fB * fLength2EstBeta
                         : fA * fLength2EstBeta + fB * fLength2EstAlpha;
     }

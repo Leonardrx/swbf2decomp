@@ -297,7 +297,7 @@ float HUD::ElementBarBitmap::SetValue(const float fValue)
     const float fOldValue = mValue;
     const float fNewValue = HUD::ElementBar::SetValue(fValue);
 
-    if ((float)fabs((double)(fOldValue - fNewValue)) > 0.0001f)
+    if (fabsf(fOldValue - fNewValue) > 0.0001f)
     {
         float fU0, fV0, fU1, fV1;
         pBitmap->GetTexCoords(fU0, fV0, fU1, fV1);

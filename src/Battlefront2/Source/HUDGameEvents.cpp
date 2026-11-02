@@ -2277,7 +2277,7 @@ void HUD::GameEvents::UpdateEnergy(const Controllable* const pControllable, Play
     ev4.Send();
     const float fEnergyMax = pBar->m_pClass->m_fEnergyMax;
     const float fFraction = fEnergyMax > 0.0f ? pBar->m_fEnergy / fEnergyMax : 0.0f;
-    HUD::Event ev5(events.energyFraction, (float)fabs((double)fFraction));
+    HUD::Event ev5(events.energyFraction, fabsf(fFraction));
     ev5.Send();
     if (pBar->m_bOverheat)
     {
