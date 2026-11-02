@@ -3280,9 +3280,8 @@ GameObject* EntitySoldier::TryBoard(bool bArg, bool& rIsVehicle)
             const PblVector3 vMin(box._vMin.x - (GetCollisionRadius() + 0.5f),
                                   box._vMin.y - (GetCollisionRadius() + 0.5f),
                                   box._vMin.z - (GetCollisionRadius() + 0.5f));
-            const PblVector3 vMax(box._vMax.x + (GetCollisionRadius() + 0.5f),
-                                  box._vMax.y + (GetCollisionRadius() + 0.5f),
-                                  box._vMax.z + (GetCollisionRadius() + 0.5f));
+            const PblVector3 vMax = box._vMax + PblVector3(GetCollisionRadius() + 0.5f, GetCollisionRadius() + 0.5f,
+                                                           GetCollisionRadius() + 0.5f);
             const PblVector3 vLocal = apObjects[i]->GetMatrix().GetInverseFast().ApplyTransform(GetCollisionCenter());
             if (!(vLocal.x >= vMin.x && vMax.x >= vLocal.x && vLocal.y >= vMin.y && vMax.y >= vLocal.y &&
                   vLocal.z >= vMin.z && vMax.z >= vLocal.z))
@@ -3317,12 +3316,11 @@ GameObject* EntitySoldier::TryBoard(bool bArg, bool& rIsVehicle)
         const CollisionObject* pCollision = apObjects[i]->GetCollisionObject();
         float fPrio = TargetInfo::GetTargetPrio(mEyePoint, mEyeDir, pCollision->GetCollisionCenter(),
                                                 pCollision->GetCollisionRadius(), 1.0f, 5.0f, false);
-        if (fPrio < 0.0f || fBestPrio <= fPrio)
+        if (fPrio >= 0.0f && fBestPrio > fPrio)
         {
-            continue;
+            fBestPrio = fPrio;
+            pBest = pTerminal ? pTerminal : apObjects[i];
         }
-        fBestPrio = fPrio;
-        pBest = pTerminal ? pTerminal : apObjects[i];
     }
     if (!pBest)
     {
