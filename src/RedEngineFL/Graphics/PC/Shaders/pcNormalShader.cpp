@@ -577,12 +577,12 @@ void pcNormalShader::RenderZPrepass(const RenderItem* pItem) const
         }
         RedRenderer::pcSetRenderState(D3DRS_ALPHAREF, 0x7f);
 
-        RedColor color;
-        color.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
-        color.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
-        color.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
-        color.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
-        color = color * pItem->tweakColor;
+        RedColor materialColor;
+        materialColor.b = (unsigned char)(int)(pMaterial->diffuseColor.b * 255.0f);
+        materialColor.g = (unsigned char)(int)(pMaterial->diffuseColor.g * 255.0f);
+        materialColor.r = (unsigned char)(int)(pMaterial->diffuseColor.r * 255.0f);
+        materialColor.a = (unsigned char)(int)(pMaterial->diffuseColor.a * 255.0f);
+        const RedColor color = pItem->tweakColor * materialColor;
 
         pcRedVertexShaderConstantRegister* pRegs = RedRenderer::pcLockVertexShaderConstants(39, 3);
         pRegs[39].component[0] = color.r * kInv255;

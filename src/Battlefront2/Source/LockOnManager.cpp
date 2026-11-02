@@ -340,7 +340,7 @@ void LockOnManager::CalculateScreenCoordinates(Controllable* const pCtrl, RedCam
 
     if (fDot <= 0.0f || fAbsX > pThis->mSafeZone || fAbsY > pThis->mSafeZone)
     {
-        const float fScale = fAbsX < fAbsY ? pThis->mSafeZone / fAbsY : pThis->mSafeZone / fAbsX;
+        const float fScale = !(fAbsX >= fAbsY) ? pThis->mSafeZone / fAbsY : pThis->mSafeZone / fAbsX;
         *pScreenX *= fScale;
         *pScreenY *= fScale;
         *pOffScreen = true;

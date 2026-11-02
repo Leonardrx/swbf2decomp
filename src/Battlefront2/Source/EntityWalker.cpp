@@ -2926,7 +2926,7 @@ void EntityWalker::UpdateOrientation(float fDeltaTime)
         mLegPairs[i]->SetInterpolate(false);
     }
 
-    float fGravity = m_bIsJumping ? -9.8f : -29.4f;
+    float fGravity = m_bIsJumping ? -9.8f : -29.400002f;
     if (mLegPairCount > 1)
     {
         if (sBipedHack)
