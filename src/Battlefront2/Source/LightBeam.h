@@ -200,7 +200,7 @@ inline void LightBeam::SetHeadTailPosition(const PblVector3& vHead, const PblVec
 {
     PblVector3 vDelta = vTail - vHead;
     SetHeadPosition(vHead);
-    SetLength(sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z));
+    SetLength(PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z));
     if (_fLength > 0.0f)
     {
         float fInv = 1.0f / _fLength;

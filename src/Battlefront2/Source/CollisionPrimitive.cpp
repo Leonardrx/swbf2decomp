@@ -703,7 +703,7 @@ int CollisionPrimitive::GetClosestPoint(PblVector3& vMidPoint, float& fMaxDist, 
             float fX = vAxisPoint.x - vOutPos.x;
             float fY = vAxisPoint.y - vOutPos.y;
             float fZ = vAxisPoint.z - vOutPos.z;
-            if ((float)fabs(fX * ax + fY * ay + fZ * az) < 0.0001f && fRadius * fRadius > fX * fX + fY * fY + fZ * fZ)
+            if (fabsf(fX * ax + fY * ay + fZ * az) < 0.0001f && fRadius * fRadius > fX * fX + fY * fY + fZ * fZ)
             {
                 vClosestCylPoint = vAxisPoint;
                 vOutPoint = vOutPos;
@@ -847,9 +847,9 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
         float ux = a * m.m[0][0] + b * m.m[1][0] + c * m.m[2][0];
         float uy = a * m.m[0][1] + b * m.m[1][1] + c * m.m[2][1];
         float uz = a * m.m[0][2] + b * m.m[1][2] + c * m.m[2][2];
-        float fAbsX = (float)fabs(ux * m.m[0][0] + uy * m.m[0][1] + uz * m.m[0][2]);
-        float fAbsY = (float)fabs(ux * m.m[1][0] + uy * m.m[1][1] + uz * m.m[1][2]);
-        float fAbsZ = (float)fabs(ux * m.m[2][0] + uy * m.m[2][1] + uz * m.m[2][2]);
+        float fAbsX = fabsf(ux * m.m[0][0] + uy * m.m[0][1] + uz * m.m[0][2]);
+        float fAbsY = fabsf(ux * m.m[1][0] + uy * m.m[1][1] + uz * m.m[1][2]);
+        float fAbsZ = fabsf(ux * m.m[2][0] + uy * m.m[2][1] + uz * m.m[2][2]);
         int iAxis;
         float fSize, fAlong;
         if (fAbsX > fAbsY && fAbsX > fAbsZ)
@@ -878,7 +878,7 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
         {
             vCollisionDir = PblVector3(m.m[iAxis][0], m.m[iAxis][1], m.m[iAxis][2]);
         }
-        fCollisionOverlap = fSize - (float)fabs(fAlong);
+        fCollisionOverlap = fSize - fabsf(fAlong);
     }
     else if (mType == CYLINDER)
     {
@@ -887,7 +887,7 @@ bool CollisionPrimitive::CollideMesh(const PblMatrix& matrix, const CollisionMes
         float cz = vClosestCylPoint.z - vOutPoint.z;
         float fRadialOverlap = mRadius - PblMath::Sqrt(cx * cx + cy * cy + cz * cz);
         float fHalfHeight = mHeight * 0.5f;
-        float fAxial = (float)fabs((vOutPoint.x - sLocalPos.x) * m.m[1][0] + (vOutPoint.y - sLocalPos.y) * m.m[1][1] +
+        float fAxial = fabsf((vOutPoint.x - sLocalPos.x) * m.m[1][0] + (vOutPoint.y - sLocalPos.y) * m.m[1][1] +
                                    (vOutPoint.z - sLocalPos.z) * m.m[1][2]);
         float fCapOverlap = fHalfHeight - fAxial;
         PblVector3 vToCyl(cx, cy, cz);
