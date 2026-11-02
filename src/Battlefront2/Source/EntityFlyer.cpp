@@ -1378,6 +1378,8 @@ namespace EventManager
 
 extern PblVector3 gVectorZero;
 
+PblMatrix DirectionMatrix(const PblVector3& vDir, const PblVector3& vUp, const PblVector3& vPos);
+
 inline void* EntityFlyer::operator new(unsigned int uSize)
 {
     return sMemoryPool.Allocate(uSize);
@@ -1859,6 +1861,203 @@ void EntityFlyer::SetupController()
         AddController(pController, mPilot->mPlayerId < 0);
     }
     ClearControllable();
+}
+
+// FUNCTION: SWBF2 0x004b5010
+void EntityFlyer::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
+{
+    if (mClass->IsGuidedMissile() &&
+        (!mPilot || mEnergyBar.GetEnergy() <= 0.0f || mCrashTimer != 0.0f))
+    {
+        int iJoystick = GetJoystickIndex();
+        if (iJoystick >= 0)
+        {
+            ChaseCamera* pCamera = CameraManager::sInstance->mChaseCamera[iJoystick];
+            if (pCamera)
+            {
+                pCamera->ClearShake();
+            }
+        }
+        PblVector3 vCamera = rMatrix.GetTranslation();
+        const PblMatrix& mBody = GetMatrix();
+        PblVector3 vBack(-mBody.m[2][0], -mBody.m[2][1], -mBody.m[2][2]);
+        const PblVector3& vCenter = GetCollisionCenter();
+        if ((vCamera.y - vCenter.y) * vBack.y + (vCamera.x - vCenter.x) * vBack.x +
+                (vCamera.z - vCenter.z) * vBack.z - mClass->mGuidedMissileDeathCamMinDistance < 0.0f)
+        {
+            float fPullback = mClass->mGuidedMissileDeathCamPullbackSpeed * fDeltaTime;
+            const PblMatrix& mNow = GetMatrix();
+            PblVector3 vDir(-mNow.m[2][0], -mNow.m[2][1], -mNow.m[2][2]);
+            const GameObject* pIgnore = GetGameObject();
+            CollisionObject* pHit;
+            if (CollisionManager::RayHit(vCamera, vDir, fPullback, pHit, 0, &pIgnore, 1, 0x90, false) >= 1.0f)
+            {
+                rMatrix.SetTranslation(vDir * fPullback + vCamera);
+            }
+        }
+        return;
+    }
+
+    const PblMatrix& mTarget = GetSmoothedMatrix();
+    if (IsAlive() && (mTargetInfo.mIsAiming || (mTracker && mTracker->IsFirstPersonView())))
+    {
+        mTrickCameraInterpDir = 0.0f;
+        mTrickCameraInterpDetach = 0.0f;
+        const PblVector3 vBack(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z);
+        rMatrix = DirectionMatrix(vBack, mTarget.GetYAxis(), mEyePoint);
+        int iFirstPerson = GetFirstPersonIndex();
+        if (iFirstPerson >= 0 && !mTargetInfo.mIsAiming)
+        {
+            FirstPerson::UpdateCamera(iFirstPerson, rMatrix);
+        }
+    }
+    else
+    {
+        PblMatrix mUnbank;
+        mUnbank.SetRotateZ(-mBankRollAngle);
+        mUnbank.RotateX(-mBankPitchAngle);
+        PblMatrix mBody;
+        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mBody), reinterpret_cast<const D3DXMATRIX*>(&mUnbank), reinterpret_cast<const D3DXMATRIX*>(&mTarget));
+
+        if (mTowCableWalker != 0)
+        {
+            const PblVector3 vSavedOffset = mClass->mCameraSettings.mCameraTrackOffset;
+            PblVector3 vPos = mBody.GetTranslation();
+            const PblVector3& vWalker = mTowCableWalker->GetCollisionObject()->GetPosition();
+            PblVector3 vToCamera = vPos - vWalker;
+            vToCamera = Normalize(vToCamera);
+            const float fSide = vToCamera.x * mTarget.m[0][0] + vToCamera.y * mTarget.m[0][1] + vToCamera.z * mTarget.m[0][2];
+            PblVector3& vOffset = mClass->mCameraSettings.mCameraTrackOffset;
+            vOffset.y = 0.5f;
+            vOffset.z = 8.0f;
+            if (fSide > 0.0f)
+            {
+                vOffset.x = 2.0f;
+            }
+            else
+            {
+                vOffset.x = -2.0f;
+            }
+            const float fRadius = GetCollisionRadius();
+            mClass->mCameraSettings.mCameraTrackOffset *= fRadius;
+            mClass->mCameraSettings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody, mEyeDir, 1.0f, 1.0f, this);
+            mClass->mCameraSettings.mCameraTrackOffset = vSavedOffset;
+            mTrickCameraInterpDir = 0.0f;
+            mTrickCameraInterpDetach = 0.0f;
+        }
+        else
+        {
+            CameraTrackSetting settings = mClass->mCameraSettings;
+            if (mInFlip)
+            {
+                mTrickCameraInterpDir = 1.0f;
+                mTrickCameraDetach = 0.2f;
+                mTrickCameraInterpDetach = 1.0f;
+            }
+            else if (mSideRoll.x != 0.0f || mSideRoll.y != 0.0f)
+            {
+                mTrickCameraDetach = 0.48f;
+                mTrickCameraInterpDetach = 1.0f;
+            }
+            else if (mState == CRASHING || mState == CRASHED)
+            {
+                mTrickCameraDetach = 0.25f;
+                mTrickCameraInterpDetach = 1.0f;
+            }
+
+            if (mTrickCameraInterpDir > 0.0f)
+            {
+                settings.mCameraAimTension = (1.0f - mTrickCameraInterpDir) * 50.0f + mTrickCameraInterpDir * 20.0f;
+            }
+            else
+            {
+                settings.mCameraAimTension = FLT_MAX;
+            }
+            settings.mCameraTiltValue = 0.087665f;
+            if (FLRenderer::GetViewportCount() == 2)
+            {
+                settings.mCameraMoveTensionU *= 1.5f;
+                settings.mCameraMoveTensionD *= 1.5f;
+                settings.mCameraTrackCenter.y *= 0.6666667f;
+                settings.mCameraTrackOffset.y *= 0.6666667f;
+            }
+
+            const float fDetach = mTrickCameraDetach * mTrickCameraInterpDetach + (1.0f - mTrickCameraInterpDetach);
+            if (fDetach < 0.99f)
+            {
+                int iJoystick = GetJoystickIndex();
+                ChaseCamera* pCamera = iJoystick >= 0 ? CameraManager::sInstance->mChaseCamera[iJoystick] : 0;
+                if (pCamera)
+                {
+                    pCamera->mTimer = fDetach;
+                }
+                if (NetGame::IsEnabled())
+                {
+                    for (unsigned int i = 0; i < GameLoop::GetNumCameras(); ++i)
+                    {
+                        if (NetGame::GetSpectator(i) == mPlayerId)
+                        {
+                            ChaseCamera* pSpectator = CameraManager::sInstance->mChaseCamera[i];
+                            if (pSpectator)
+                            {
+                                pSpectator->mTimer = fDetach;
+                            }
+                        }
+                    }
+                }
+            }
+
+            const PblVector3 vAhead(0.0f, 0.0f, 5.0f);
+            const PblVector3 vAim = mTrickCameraInterpDir > 0.0f
+                                        ? Normalize(mBody.ApplyTransform(vAhead) - rMatrix.GetTranslation())
+                                        : mEyeDir;
+
+            if (mGetSpeedSpeed > 0.0001f)
+            {
+                settings.SetupAmbientShift(mBody, mAmbientShift, mAmbientShiftTarget, mAmbientShiftSpeed,
+                                           mAmbientShiftSpeedMax, fDeltaTime);
+            }
+            else
+            {
+                mAmbientShift.x = 0.0f;
+                mAmbientShift.y = 0.0f;
+                mAmbientShift.z = 0.0f;
+            }
+
+            const float fInterp = mTrickCameraInterpDir;
+            settings.SetupCameraTrackMatrix(this, rMatrix, fDeltaTime, mBody,
+                                            vAim * fInterp + mEyeDir * (1.0f - fInterp), 1.0f, 1.0f, this);
+
+            const float fDecay = fDeltaTime * 0.9f;
+            mTrickCameraInterpDir -= fDecay;
+            if (mTrickCameraInterpDir < 0.0f)
+            {
+                mTrickCameraInterpDir = 0.0f;
+            }
+            mTrickCameraInterpDetach -= fDecay;
+            if (mTrickCameraInterpDetach < 0.0f)
+            {
+                mTrickCameraInterpDetach = 0.0f;
+            }
+        }
+    }
+
+    if (!NetGame::IsEnabled())
+    {
+        const float fBlurStart = mClass->mBlurStartV;
+        const float fBlurEnd = mClass->mMaxFlyerSpeed > mClass->mBoostFlyerSpeed ? mClass->mMaxFlyerSpeed
+                                                                                 : mClass->mBoostFlyerSpeed;
+        const float fSpeed = mGetSpeedSpeed;
+        int iJoystick = GetJoystickIndex();
+        if (iJoystick >= 0 && fSpeed > fBlurStart)
+        {
+            const float fBlend = Clamp((fSpeed - fBlurStart) / (fBlurEnd - fBlurStart), 0.0f, 1.0f);
+            if (mClass->mBlurEffect * fBlend > 0.0f)
+            {
+                MotionBlurEffect::Start(0, mClass->mBlurEffect * fBlend, iJoystick);
+            }
+        }
+    }
 }
 
  
@@ -2611,7 +2810,6 @@ extern bool netIsLocalTurn;
 extern bool netIsLateTurn;
 extern PblVector3 gVectorZero;
 
-PblMatrix DirectionMatrix(const PblVector3& vDir, const PblVector3& vUp, const PblVector3& vPos);
 
 // FUNCTION: SWBF2 0x004b1550
 void EntityFlyer::FlipUpdate(float fDeltaTime, PblMatrix& rMatrix)
@@ -5487,6 +5685,12 @@ void EntityFlyer::Land()
     GetPosition();
 }
 
+// FUNCTION: SWBF2 0x004b3dd0
+CameraTrackSetting* EntityFlyer::GetCameraTrackSettings()
+{
+    return &mClass->mCameraSettings;
+}
+
 // FUNCTION: SWBF2 0x004b5b10
 void EntityFlyer::SetupInterpolatedCameraTrackMatrix(PblMatrix& rMatrix)
 {
@@ -5618,4 +5822,19 @@ void EntityFlyer::SetupCameraFOV(float& rFOV)
     {
         rFOV = GetDefaultFOV();
     }
+}
+
+// FUNCTION: SWBF2 0x004b5f00
+void EntityFlyer::SetupCameraZoomFactor(float& rZoom)
+{
+    if (mTargetInfo.mIsAiming && mWeaponIndex[0] >= 0)
+    {
+        Weapon* pWeapon = mWeapon[mWeaponIndex[0]];
+        if (pWeapon)
+        {
+            rZoom = pWeapon->mZoomTurnScale;
+            return;
+        }
+    }
+    rZoom = 1.0f;
 }
