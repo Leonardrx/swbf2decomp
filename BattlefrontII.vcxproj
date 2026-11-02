@@ -115,6 +115,10 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
+    <ClCompile Include="src\Battlefront2\Platform\Pc\pcFlashyTextElement.cpp">
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+    </ClCompile>
     <ClCompile Include="src\Battlefront2\Platform\Pc\pcFLJoystick.cpp">
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
@@ -816,6 +820,10 @@
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\FreeCamera.cpp">
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="src\Battlefront2\Source\FriendBuddyList.cpp">
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
@@ -1698,6 +1706,10 @@
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\TreeGridCache.cpp">
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="src\Battlefront2\Source\TreeLine.cpp">
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
@@ -2722,6 +2734,9 @@
     <ClCompile Include="src\Steam\gfGalaxy.cpp">
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="src\Zephyr\Source\PblPrintfWrapper.cpp">
+      <InlineFunctionExpansion Condition="'$(Configuration)'=='Release'">AnySuitable</InlineFunctionExpansion>
     </ClCompile>
     <ClCompile Include="src\Zephyr\Source\ZephyrAnim.cpp">
       <InlineFunctionExpansion Condition="'$(Configuration)'=='Release'">AnySuitable</InlineFunctionExpansion>

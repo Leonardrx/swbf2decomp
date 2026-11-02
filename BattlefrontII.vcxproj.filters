@@ -141,6 +141,9 @@
     <ClCompile Include="src\Battlefront2\Platform\Pc\pcDynamicSprite.cpp">
       <Filter>src\Battlefront2\Platform\Pc</Filter>
     </ClCompile>
+    <ClCompile Include="src\Battlefront2\Platform\Pc\pcFlashyTextElement.cpp">
+      <Filter>src\Battlefront2\Platform\Pc</Filter>
+    </ClCompile>
     <ClCompile Include="src\Battlefront2\Platform\Pc\pcFLJoystick.cpp">
       <Filter>src\Battlefront2\Platform\Pc</Filter>
     </ClCompile>
@@ -667,6 +670,9 @@
       <Filter>src\Battlefront2\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\FreeCamera.cpp">
+      <Filter>src\Battlefront2\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Battlefront2\Source\FriendBuddyList.cpp">
       <Filter>src\Battlefront2\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\Fsm.cpp">
@@ -1321,6 +1327,9 @@
       <Filter>src\Battlefront2\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\TreeGridCache.cpp">
+      <Filter>src\Battlefront2\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Battlefront2\Source\TreeLine.cpp">
       <Filter>src\Battlefront2\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Battlefront2\Source\TriggerRegionManager.cpp">
@@ -2264,6 +2273,9 @@
     </ClCompile>
     <ClCompile Include="src\Steam\gfSteamAuth.cpp">
       <Filter>src\Steam</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Zephyr\Source\PblPrintfWrapper.cpp">
+      <Filter>src\Zephyr\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Zephyr\Source\ZephyrAnim.cpp">
       <Filter>src\Zephyr\Source</Filter>
