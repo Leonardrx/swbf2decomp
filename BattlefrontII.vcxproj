@@ -2225,7 +2225,9 @@
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedSegment.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedStencilShadow.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedTexture.cpp" />
+    <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedFootprint.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexBuffer.cpp" />
+    <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexCache.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexFormat.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexShader.cpp" />
     <ClCompile Include="src\RedEngineFL\Graphics\RedAmbientLight.cpp" />

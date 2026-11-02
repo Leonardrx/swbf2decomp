@@ -16,4 +16,9 @@ void DisplayCountersByGroup()
 {
 }
 
+// FUNCTION: SWBF2 0x006f7450
+void Init()
+{
+}
+
 }

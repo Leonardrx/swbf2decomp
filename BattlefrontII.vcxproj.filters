@@ -1812,6 +1812,12 @@
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedTexture.cpp">
       <Filter>src\RedEngineFL\Graphics\PC</Filter>
     </ClCompile>
+    <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedFootprint.cpp">
+      <Filter>src\RedEngineFL\Graphics\PC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexCache.cpp">
+      <Filter>src\RedEngineFL\Graphics\PC</Filter>
+    </ClCompile>
     <ClCompile Include="src\RedEngineFL\Graphics\PC\pcRedVertexBuffer.cpp">
       <Filter>src\RedEngineFL\Graphics\PC</Filter>
     </ClCompile>

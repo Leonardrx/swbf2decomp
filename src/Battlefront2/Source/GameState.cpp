@@ -720,39 +720,6 @@ void GameState::_SetState(State* pState)
     }
 }
 
-namespace RedMissionLog
-{
-
-// FUNCTION: SWBF2 0x006cccc0
-void Init()
-{
-}
-}
-
-namespace RedProfile
-{
-
-// FUNCTION: SWBF2 0x006f7450
-void Init()
-{
-}
-}
-
-// FUNCTION: SWBF2 0x006b3ca0
-void RedRenderer::SetSky(bool)
-{
-}
-
-// FUNCTION: SWBF2 0x006f6ae0
-void RedVertexCache::Init()
-{
-}
-
-// FUNCTION: SWBF2 0x006f7460
-void RedFootprintManager::Init()
-{
-}
-
 namespace SaveGameManager
 {
     // GLOBAL: SWBF2 0x01eaf000
