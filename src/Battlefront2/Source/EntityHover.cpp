@@ -1924,7 +1924,7 @@ void EntityHover::Move(float fDeltaTime, float fThrust, float fStrafe, float fTu
     mUnbank.SetRotateZ(-mBankRollAngle);
     mUnbank.RotateX(-mBankPitchAngle);
     PblMatrix mBody;
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mBody), reinterpret_cast<const D3DXMATRIX*>(&mUnbank), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+    mBody = mUnbank * mMatrix;
 
     const GameObject* pIgnore = this;
     float fInput = fabsf(fStrafe) > fabsf(fThrust) ? fabsf(fStrafe) : fabsf(fThrust);
@@ -2325,7 +2325,7 @@ void EntityHover::Move(float fDeltaTime, float fThrust, float fStrafe, float fTu
     PblMatrix mBankRoll;
     mBank.SetRotateX(mBankPitchAngle);
     mBank.RotateZ(mBankRollAngle);
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mBankRoll), reinterpret_cast<const D3DXMATRIX*>(&mBank), reinterpret_cast<const D3DXMATRIX*>(&mNew));
+    mBankRoll = mBank * mNew;
     SetMatrix(mBankRoll);
 
     if (mGroundRatio > mGroundRatioPrev && mGroundRatio <= mClass->mSoundCloseToGroundHeight && !mCloseToGround)
@@ -2809,11 +2809,11 @@ bool EntityHover::PostCollisionUpdate(float fDeltaTime)
         GameObject* pSoldier = mPilot->GetGameObject();
         PblMatrix mInverse = GetMatrix().GetInverseFast();
         PblMatrix mSeat;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mSeat), reinterpret_cast<const D3DXMATRIX*>(&pSoldier->GetMatrix()), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+        mSeat = pSoldier->GetMatrix() * mInverse;
         PblMatrix mLocal = mSeat;
         PblMatrix mSmoothed = GetSmoothedMatrix();
         PblMatrix mRender;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mRender), reinterpret_cast<const D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mSmoothed));
+        mRender = mLocal * mSmoothed;
         pSoldier->SetRenderPos(mRender.GetTranslation());
     }
     return true;

@@ -3107,7 +3107,7 @@ void EntityDroideka::BuildWorldMatrices()
         mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity, mClass->mSpineIdx, kDirty);
         PblMatrix& rSpine = mZephyrSkeleton.m_pWorldMatrices[mClass->mSpineIdx];
         PblMatrix kSpine;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&kSpine), reinterpret_cast<const D3DXMATRIX*>(&kSpin), reinterpret_cast<const D3DXMATRIX*>(&rSpine));
+        kSpine = kSpin * rSpine;
         rSpine = kSpine;
 
         PblVector3 vCentre(0.0f - rSpine.m[3][0], mClass->mBallRadius - rSpine.m[3][1], 0.0f - rSpine.m[3][2]);
@@ -3146,7 +3146,7 @@ void EntityDroideka::BuildWorldMatrices()
         mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity, mClass->mSpineIdx, kDirty);
         PblMatrix& rSpine = mZephyrSkeleton.m_pWorldMatrices[mClass->mSpineIdx];
         PblMatrix kSpine;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&kSpine), reinterpret_cast<const D3DXMATRIX*>(&kTilt), reinterpret_cast<const D3DXMATRIX*>(&rSpine));
+        kSpine = kTilt * rSpine;
         rSpine = kSpine;
 
         float fYaw = atan2f(fSin6, fCos6);

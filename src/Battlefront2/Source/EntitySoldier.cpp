@@ -1549,7 +1549,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
         bReflected = true;
         uiReflectFlags = (uiFlags & ~0x10000) | 0x10000100;
         PblMatrix mTemp;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mWorld), reinterpret_cast<const D3DXMATRIX*>(&mReflection));
+        mTemp = mWorld * mReflection;
         mReflection = mTemp;
     }
 
@@ -1845,7 +1845,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
                     PblMatrix mFoot = mWorld;
                     if (const PblMatrix* pRightFoot = pose.Find(0x2f06fa86))
                     {
-                        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mFoot), reinterpret_cast<const D3DXMATRIX*>(pRightFoot), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
+                        mFoot = *pRightFoot * mWorld;
                     }
                     PblVector3 vRightFoot = mFoot.GetTranslation();
                     const PblMatrix* pLeftFoot = pose.Find(0x1af77461);
@@ -1853,7 +1853,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
                     {
                         pLeftFoot = &gMatrixIdentity;
                     }
-                    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mFoot), reinterpret_cast<const D3DXMATRIX*>(pLeftFoot), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
+                    mFoot = *pLeftFoot * mWorld;
                     PblVector3 vLeftFoot = mFoot.GetTranslation();
                     const PblVector3& vVelocity = GetVelocity();
                     float fSpeed2 = vVelocity.x * vVelocity.x + vVelocity.y * vVelocity.y + vVelocity.z * vVelocity.z;
@@ -2015,7 +2015,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
                 PblMatrix mChoke;
                 if (pBone)
                 {
-                    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mChoke), reinterpret_cast<const D3DXMATRIX*>(pBone), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
+                    mChoke = *pBone * mWorld;
                 }
                 else
                 {
@@ -2143,7 +2143,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
         if (mSoldierAnimatorLowRes->GetRootMatrixAnimation(*this, mRoot))
         {
             PblMatrix mTemp;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mRoot), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
+            mTemp = mRoot * mWorld;
             if (mState == SoldierState::FLY || mState == SoldierState::TUMBLE)
             {
                 mRoot = mTemp;
@@ -2334,7 +2334,7 @@ void EntitySoldier::Render(unsigned char ucLod, float fFade, unsigned int uiFlag
             if (const PblMatrix* pBone = pPose->Find(pFlag->GetCarriedSoldierBoneHash()))
             {
                 PblMatrix mFlag;
-                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mFlag), reinterpret_cast<const D3DXMATRIX*>(pBone), reinterpret_cast<const D3DXMATRIX*>(&mWorld));
+                mFlag = *pBone * mWorld;
                 reinterpret_cast<GameObject*>(pFlag)->SetMatrix(mFlag);
                 pFlag->RenderHelper(ucLod, fAlpha, uiModelFlags);
             }
@@ -5935,9 +5935,9 @@ bool EntitySoldier::Update(float fDeltaTime)
             PblMatrix mObject = mStandingOnObj->mCollisionModel->GetWorldMatrix(
                 mStandingOnBody, mStandingOnObj->GetMatrix(), mStandingOnObj->GetPose());
             PblMatrix mLocal;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mMatrix), reinterpret_cast<const D3DXMATRIX*>(&mLastVehicleMatrix));
+            mLocal = mMatrix * mLastVehicleMatrix;
             PblMatrix mNew;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mNew), reinterpret_cast<const D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mObject));
+            mNew = mLocal * mObject;
             const PblVector3& vUp = mMatrix.GetYAxis();
             const PblVector3& vFront = mNew.GetZAxis();
             if ((float)fabs((double)(vUp.y * vFront.y + vUp.x * vFront.x + vUp.z * vFront.z)) < 0.99f)

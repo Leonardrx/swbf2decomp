@@ -264,7 +264,7 @@ void pcTerrainShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) con
         mWorldToTexture.SetZAxis(0.0f, s_FarTextureTransform.y, 0.0f, 0.0f);
         mWorldToTexture.SetTranslation(s_FarTextureTransform.z, s_FarTextureTransform.w, 0.0f, 1.0f);
         PblMatrix mTexture;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mWorldToTexture));
+        mTexture = mCamera * mWorldToTexture;
         RedRenderer::pcFFSetTextureTransform(0, mTexture);
         RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
         RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
@@ -274,7 +274,7 @@ void pcTerrainShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) con
             RedRenderer::pcSetTexture(1, s_pFarDetailTexture);
             SetWrapLinear(1);
             mWorldToTexture = PblMatrix(PblVector3(s_FarDetailTextureTransform.x, 0.0f, 0.0f), PblVector3(0.0f, 0.0f, 0.0f), PblVector3(0.0f, s_FarDetailTextureTransform.y, 0.0f), PblVector3(s_FarDetailTextureTransform.z, s_FarDetailTextureTransform.w, 0.0f));
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mWorldToTexture));
+            mTexture = mCamera * mWorldToTexture;
             RedRenderer::pcFFSetTextureTransform(1, mTexture);
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
@@ -413,7 +413,7 @@ void pcTerrainShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) con
             mCamera.m[2][3] = 0.0f;
             PblMatrix mTexture;
             const PblMatrix mShadow(PblVector3(vU.x, vV.x, vW.x), PblVector3(vU.y, vV.y, vW.y), PblVector3(vU.z, vV.z, vW.z), PblVector3(vU.w, vV.w, vW.w));
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mShadow));
+            mTexture = mCamera * mShadow;
             RedRenderer::pcFFSetTextureTransform(1, mTexture);
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
             RedRenderer::pcSetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS,
@@ -458,7 +458,7 @@ void pcTerrainShader::Begin_Fixed(unsigned int uiState, unsigned int uiPass) con
         mCamera.m[2][3] = 0.0f;
         PblMatrix mTexture;
         const PblMatrix mDetail(PblVector3(vT0.x, vT1.x, 0.0f), PblVector3(vT0.y, vT1.y, 0.0f), PblVector3(vT0.z, vT1.z, 0.0f), PblVector3(vT0.w, vT1.w, 0.0f));
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mDetail));
+        mTexture = mCamera * mDetail;
         RedRenderer::pcFFSetTextureTransform(0, mTexture);
         RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
         RedRenderer::pcSetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
@@ -944,7 +944,7 @@ void pcTerrainShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass)
         const PblVector4& v1 = s_TextureTransform[uiLayer][1];
         const PblMatrix mLayer(PblVector3(v0.x, v1.x, 0.0f), PblVector3(v0.y, v1.y, 0.0f), PblVector3(v0.z, v1.z, 0.0f), PblVector3(v0.w, v1.w, 0.0f));
         PblMatrix mTexture;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mLayer));
+        mTexture = mCamera * mLayer;
         RedRenderer::pcFFSetTextureTransform(0, mTexture);
     }
     else if (uiPass == 0)
@@ -963,7 +963,7 @@ void pcTerrainShader::Render_Fixed(const RenderItem* pItem, unsigned int uiPass)
             const PblVector4& v1 = s_TextureTransform[uiLayer][1];
             const PblMatrix mLayer(PblVector3(v0.x, v1.x, 0.0f), PblVector3(v0.y, v1.y, 0.0f), PblVector3(v0.z, v1.z, 0.0f), PblVector3(v0.w, v1.w, 0.0f));
             PblMatrix mTexture;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTexture), reinterpret_cast<const D3DXMATRIX*>(&mCamera), reinterpret_cast<const D3DXMATRIX*>(&mLayer));
+            mTexture = mCamera * mLayer;
             RedRenderer::pcFFSetTextureTransform(i, mTexture);
         }
         if (uiNumLayers == 2)

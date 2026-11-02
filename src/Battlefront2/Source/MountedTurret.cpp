@@ -606,17 +606,17 @@ void MountedTurret::GetPilotMatrix(const PblMatrix& mIn, PblMatrix& mOut)
 
         if (pClass->mAnimatedPilotNodeFlag)
         {
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMatrix), reinterpret_cast<const D3DXMATRIX*>(pBone), reinterpret_cast<const D3DXMATRIX*>(&mIn));
+            mMatrix = *pBone * mIn;
         }
         else if (pBone)
         {
             PblMatrix mOffset;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&pClass->mPilotOffsetMatrix), reinterpret_cast<const D3DXMATRIX*>(pBone));
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMatrix), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&mIn));
+            mOffset = pClass->mPilotOffsetMatrix * *pBone;
+            mMatrix = mOffset * mIn;
         }
         else
         {
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMatrix), reinterpret_cast<const D3DXMATRIX*>(&pClass->mPilotOffsetMatrix), reinterpret_cast<const D3DXMATRIX*>(&mIn));
+            mMatrix = pClass->mPilotOffsetMatrix * mIn;
         }
 
         if (mOldRoot.m[3][3] != 0.0f)
