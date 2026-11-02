@@ -891,10 +891,10 @@ void SpawnDisplay::UpdateTimer()
     bool bCountdown = false;
     if (NetGame::IsEnabled() && NetGame::IsClient())
     {
-        unsigned int uTurn = NetGame::GetTurnNumber();
+        int iTurnsElapsed = (int)(NetGame::GetTurnNumber() - mBaseTurn);
         if (mLastSpawnTime > 0.0f)
         {
-            fTime = mBaseCycleTime - (float)(int)(uTurn - mBaseTurn) * netSecondsPerTurn;
+            fTime = mBaseCycleTime - (float)iTurnsElapsed * netSecondsPerTurn;
             if (fTime < 0.0f)
             {
                 fTime = 0.0f;

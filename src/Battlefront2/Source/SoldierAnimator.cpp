@@ -1114,14 +1114,15 @@ void SoldierAnimator::SetupPose(RedPose& pose)
     mActionTime += fDeltaTime;
     if (bRotate)
     {
+        const float kTwoPi = 6.2831855f;
         mRotAngle += mRotSpeed * fDeltaTime;
-        if (mRotAngle > PblMath::fTwoPi)
+        if (mRotAngle > kTwoPi)
         {
-            mRotAngle -= PblMath::fTwoPi;
+            mRotAngle -= kTwoPi;
         }
         else if (mRotAngle < 0.0f)
         {
-            mRotAngle += PblMath::fTwoPi;
+            mRotAngle += kTwoPi;
         }
     }
     else
@@ -1897,6 +1898,7 @@ static float _GetMovementAnimSpeed(const SoldierAnimation* pAnim, SoldierAnimTyp
 SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float fSide, float fForward, float& fAngle,
                                                                          float& fRate) const
 {
+    const float kHalfPi = 1.5707964f;
     float fMinSlideSpeed = 10.0f;
     if (mSkeletonScale != 1.0f)
     {
@@ -1950,12 +1952,12 @@ SoldierAnimType::MovementAnimation SoldierAnimator::GetMovementAnimation(float f
             if (fSide > 0.0f)
             {
                 eAnim = SoldierAnimType::WALK_RIGHT;
-                fAngle = UnitCircleNormalize(fAngle - PblMath::fHalfPi);
+                fAngle = UnitCircleNormalize(fAngle - kHalfPi);
             }
             else
             {
                 eAnim = SoldierAnimType::WALK_LEFT;
-                fAngle = UnitCircleNormalize(fAngle + PblMath::fHalfPi);
+                fAngle = UnitCircleNormalize(fAngle + kHalfPi);
             }
         }
         else if (fForward <= 0.0f)

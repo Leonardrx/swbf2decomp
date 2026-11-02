@@ -686,6 +686,7 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
             }
         }
 
+        float* pRaw = mRawInputFloat[iPort];
         for (int iAxis = 0; iAxis < 8; iAxis++)
         {
             float fAxis = _redJoystick[iPort]->m_fAxis[iAxis];
@@ -700,8 +701,8 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
                     fAxis = 1.0f;
                 }
             }
-            mRawInputFloat[iPort][48 + 2 * iAxis] = fAxis;
-            mRawInputFloat[iPort][49 + 2 * iAxis] = -fAxis;
+            pRaw[48 + 2 * iAxis] = fAxis;
+            pRaw[49 + 2 * iAxis] = -fAxis;
         }
 
         if (!mJoystickSensitivityX[mMode])
@@ -905,8 +906,9 @@ void RawControllerInputs::ReadLatest(float fDeltaTime)
     {
         const int iMouseY = _redMouse->m_Y;
         const int iMouseX = _redMouse->m_X;
-        m_pGuiInputs->mMouseCoords.mPosX = iMouseX;
-        m_pGuiInputs->mMouseCoords.mPosY = iMouseY;
+        MouseCoords& rCoords = m_pGuiInputs->mMouseCoords;
+        rCoords.mPosX = iMouseX;
+        rCoords.mPosY = iMouseY;
     }
 
     if (bAnyInput)
@@ -947,9 +949,8 @@ void RawControllerInputs::StandardInputProcess()
     {
         bScreenshot = _redKeyboard->IsKeyDown(DIK_SYSRQ);
     }
-    const bool bScreenshotPressed = !mScreenshotButtonState[0] && bScreenshot;
+    mScreenshotButtonState[1] = !mScreenshotButtonState[0] && bScreenshot;
     mScreenshotButtonState[0] = bScreenshot;
-    mScreenshotButtonState[1] = bScreenshotPressed;
 
     for (int iAction = 0; iAction < 43; iAction++)
     {

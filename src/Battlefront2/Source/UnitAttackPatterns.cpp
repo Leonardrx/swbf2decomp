@@ -797,10 +797,11 @@ void AttackPatterns::DoMelee()
     {
         const PblVector3& vPos = GetMe()->GetMatrix().GetTranslation();
         const PblVector3& vTarget = GetAttackHelper()->GetLastSeenTargetPos();
-        PblVector3 vJump = vTarget - vPos;
+        PblVector3 vJump;
+        vJump = vTarget - vPos;
         vJump.y = 0.0f;
-        const float dx = vJump.x;
         const float dz = vJump.z;
+        const float dx = vJump.x;
         vJump = Normalize(vJump);
         vJump.x *= 0.70710677f;
         vJump.y = 0.70710677f;

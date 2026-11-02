@@ -1263,24 +1263,26 @@ void EntityCloth::EnforceCollisions(const PblMatrix& mMatrix, const RedPose* pPo
     ClothCollision* pCollision = mData->m_pCollisionVolumes;
     for (unsigned int i = 0; i < mData->m_uiNumCollisionVolumes; ++i, ++pCollision)
     {
-        const PblMatrix* pBone = pPose ? pPose->Find(pCollision->parent) : 0;
+        const PblMatrix* pBone = 0;
+        if (pPose)
+        {
+            pBone = pPose->Find(pCollision->parent);
+        }
 
         PblMatrix mCollision;
         if (pBone)
         {
-            PblMatrix mTemp;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&pCollision->localMat), reinterpret_cast<const D3DXMATRIX*>(pBone));
+            const PblMatrix mTemp = pCollision->localMat * *pBone;
             const PblMatrix mInverse = mMatrix.GetInverseFast();
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mCollision), reinterpret_cast<const D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+            mCollision = mTemp * mInverse;
         }
         else
         {
             PblMatrix mBone = gMatrixIdentity;
             RedModel::_HashTable.Find(mData->m_uiModelHash)->GetBoneMatrix(pCollision->parent, mBone);
-            PblMatrix mTemp;
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&pCollision->localMat), reinterpret_cast<const D3DXMATRIX*>(&mBone));
+            const PblMatrix mTemp = pCollision->localMat * mBone;
             const PblMatrix mInverse = mMatrix.GetInverseFast();
-            D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mCollision), reinterpret_cast<const D3DXMATRIX*>(&mTemp), reinterpret_cast<const D3DXMATRIX*>(&mInverse));
+            mCollision = mTemp * mInverse;
         }
 
         const PblMatrix mLocal = mCollision;

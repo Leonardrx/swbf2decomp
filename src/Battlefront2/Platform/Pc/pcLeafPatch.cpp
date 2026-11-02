@@ -133,9 +133,9 @@ bool LeafPatchClass::RenderMaxDist(const PblMatrix& matrix, float& fDist,
     const PblMatrix& cam = RedRenderer::GetCamera()->_Matrix;
     const RedCamera* pCamera = RedRenderer::GetCamera();
     const PblVector3& vPos = matrix.GetTranslation();
-    const float distance = cam.m[2][1] * (cam.m[3][1] - vPos.y) +
-                           cam.m[2][0] * (cam.m[3][0] - vPos.x) +
-                           cam.m[2][2] * (cam.m[3][2] - vPos.z);
+    const PblVector3 vDelta = PblVector3(cam.m[3][0], cam.m[3][1], cam.m[3][2]) - vPos;
+    const float distance = cam.m[2][1] * vDelta.y + cam.m[2][0] * vDelta.x +
+                           cam.m[2][2] * vDelta.z;
     if (distance < -mBoundingRadius ||
         distance > pCamera->_fZoom * fMaxDist + mBoundingRadius)
     {

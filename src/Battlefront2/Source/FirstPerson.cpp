@@ -572,10 +572,10 @@ void FirstPersonRenderable::UpdateSoldier(const RedModel* pModel, Controllable* 
 
     const PblVector3& vVelocity = pOwner->GetGameObject()->GetVelocity();
     SOLDIERANIMATION eAnim = mSoldierState;
-    mAnimPlaySpeed = 1.0f;
     bool bLoop = false;
     float fBlend = 1.0f;
     float fSpeedSq = vVelocity.x * vVelocity.x + vVelocity.z * vVelocity.z;
+    mAnimPlaySpeed = 1.0f;
 
     if ((eAnim == SHOOT1 || eAnim == SHOOT2) &&
         !mZephyrPoseDynamic.m_bAnimFinished && !pWeapon->GetFiredFlag())

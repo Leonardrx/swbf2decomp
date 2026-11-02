@@ -1128,8 +1128,7 @@ bool AILowLevel::CalcHeadLookMatrix(const PblMatrix* pHead, PblMatrix* pOut)
             return false;
         }
 
-        PblMatrix mHead;
-        mHead = *pHead * GetMatrix();
+        const PblMatrix mHead = *pHead * GetMatrix();
         PblVector3 vFwd;
         D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vFwd), reinterpret_cast<const D3DXVECTOR3*>(&mHead.GetYAxis()));
         const PblVector3& vEye = pObj->GetControllable()->mEyePoint;

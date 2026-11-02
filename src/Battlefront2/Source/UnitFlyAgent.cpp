@@ -80,7 +80,8 @@ void UnitFlyAgent::EnterState()
     {
         PblVector3 vFwd = mCtrl->mOwner->GetMatrix().GetZAxis();
         vFwd.y = 0.0f;
-        PblVector3 vDest = vFwd * 200.0f + vPos;
+        PblVector3 vDest = vFwd * 200.0f;
+        vDest += vPos;
         vDest.y += 1.0f;
 
         AIPath* pPath = new AIPath();

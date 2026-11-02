@@ -110,7 +110,7 @@ void MapCamera::Update(float fDeltaTime)
         break;
     case ZOOM_NORMAL:
         mZoomNewDir = Normalize(sOffset[ZOOM_NORMAL]);
-        mZoomNewPos = mMoveCurPos + sOffset[mZoomLevel];
+        mZoomNewPos = sOffset[mZoomLevel] + mMoveCurPos;
         break;
     default:
         mZoomNewDir = mTarget[2];

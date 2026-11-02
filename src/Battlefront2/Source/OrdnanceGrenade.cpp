@@ -245,7 +245,6 @@ bool OrdnanceGrenade::CheckCollision()
     const PblVector3& vEnd = GetPosition();
     const PblVector3 vDelta = vEnd - vStart;
     const float fDist = PblMath::Sqrt(vDelta.x * vDelta.x + vDelta.y * vDelta.y + vDelta.z * vDelta.z);
-    bool bContinue = true;
     if (fDist > 0.0f)
     {
         const float fInv = 1.0f / fDist;
@@ -260,11 +259,11 @@ bool OrdnanceGrenade::CheckCollision()
                                                     mCheckStaticCollision ? 0x13BA : 0x132A, true);
         if (fHit < 1.0f)
         {
-            bContinue = !Collide(pHitObject, vDir * (fHit * fLength) + vStart, vNormal,
+            return !Collide(pHitObject, vDir * (fHit * fLength) + vStart, vNormal,
                             CollisionManager::GetLastRayHitBodyId());
         }
     }
-    return bContinue;
+    return true;
 }
 
 // FUNCTION: SWBF2 0x00600520

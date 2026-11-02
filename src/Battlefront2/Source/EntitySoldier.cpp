@@ -3693,7 +3693,14 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         !mFlyingInFirstPerson)
     {
         rMatrix = DirectionMatrix(-vAimDir, mAim.GetYAxis(), vEye);
-        rMatrix.SetTranslation(rMatrix.GetTranslation() - vAimDir * (mTargetInfo.mIsAiming ? 0.6f : 0.3f));
+        if (mTargetInfo.mIsAiming)
+        {
+            rMatrix.SetTranslation(rMatrix.GetTranslation() - vAimDir * 0.6f);
+        }
+        else
+        {
+            rMatrix.SetTranslation(rMatrix.GetTranslation() - vAimDir * 0.3f);
+        }
         int iFirstPerson = GetFirstPersonIndex();
         if (iFirstPerson >= 0 && !mTargetInfo.mIsAiming)
         {
@@ -3746,9 +3753,9 @@ void EntitySoldier::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
               mState == SoldierState::JUMP || mState == SoldierState::FALL))
     {
         const PblVector3& vForward = mMatrix.GetZAxis();
-        float fSpeed = mVelocity.y * vForward.y + mVelocity.x * vForward.x + mVelocity.z * vForward.z;
         float fSprint = mClass->mThrustFactor[SoldierState::SPRINT] * mClass->mMaxSpeed;
         float fFrom = (mClass->mMaxSpeed + fSprint) * 0.5f;
+        float fSpeed = mVelocity.y * vForward.y + mVelocity.x * vForward.x + mVelocity.z * vForward.z;
         if (fSpeed > fFrom)
         {
             MotionBlurEffect::Start(0, (fSpeed - fFrom) / (fSprint - fFrom) * mClass->m_fBlurEffect, iCam);
@@ -3767,7 +3774,14 @@ void EntitySoldier::SetupCameraTrackMatrixHUDTargeting(PblMatrix& rMatrix)
     {
         rMatrix = DirectionMatrix(PblVector3(-mEyeDir.x, -mEyeDir.y, -mEyeDir.z),
                                   GetMatrix().GetYAxis(), mEyePoint);
-        rMatrix.SetTranslation(rMatrix.GetTranslation() - mEyeDir * (mTargetInfo.mIsAiming ? 0.6f : 0.3f));
+        if (mTargetInfo.mIsAiming)
+        {
+            rMatrix.SetTranslation(rMatrix.GetTranslation() - mEyeDir * 0.6f);
+        }
+        else
+        {
+            rMatrix.SetTranslation(rMatrix.GetTranslation() - mEyeDir * 0.3f);
+        }
         return;
     }
     int iCamera = (mState == SoldierState::SPRINT) ? 3 : mStanceIndex;

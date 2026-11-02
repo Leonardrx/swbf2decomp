@@ -216,10 +216,14 @@ EntityProp::EntityProp(EntityPropClass* pClass, const EntityDesc& desc)
     const RedColor& cMin = pClass->mGeometryColorMin;
     const RedColor& cMax = pClass->mGeometryColorMax;
     PblVector4 vColor;
-    vColor.w = (cMax.a - cMin.a) * PblRandom::_Global.GetFloat() + cMin.a;
-    vColor.z = (cMax.b - cMin.b) * PblRandom::_Global.GetFloat() + cMin.b;
-    vColor.y = (cMax.g - cMin.g) * PblRandom::_Global.GetFloat() + cMin.g;
-    vColor.x = (cMax.r - cMin.r) * PblRandom::_Global.GetFloat() + cMin.r;
+    float fRandA = PblRandom::_Global.GetFloat();
+    float fRandB = PblRandom::_Global.GetFloat();
+    float fRandG = PblRandom::_Global.GetFloat();
+    float fRandR = PblRandom::_Global.GetFloat();
+    vColor.w = (cMax.a - cMin.a) * fRandA + cMin.a;
+    vColor.z = (cMax.b - cMin.b) * fRandB + cMin.b;
+    vColor.y = (cMax.g - cMin.g) * fRandG + cMin.g;
+    vColor.x = (cMax.r - cMin.r) * fRandR + cMin.r;
     if (pClass->mUseHSVFlag)
     {
         ConvertHSVtoRGB(&vColor.x, &vColor.y, &vColor.z, vColor.x, vColor.y, vColor.z);
@@ -350,13 +354,15 @@ void EntityProp::UpdateSound()
         return;
     }
 
-    PblVector3 vOffset;
-    D3DXVec3TransformNormal((D3DXVECTOR3*)&vOffset, (const D3DXVECTOR3*)&mClass->mSoundOffset,
-                            (const D3DXMATRIX*)&mMatrix);
     PblVector3 vPos;
-    vPos.x = mMatrix.m[3][0] + vOffset.x;
-    vPos.y = mMatrix.m[3][1] + vOffset.y;
-    vPos.z = mMatrix.m[3][2] + vOffset.z;
+    {
+        PblVector3 vOffset;
+        D3DXVec3TransformNormal((D3DXVECTOR3*)&vOffset, (const D3DXVECTOR3*)&mClass->mSoundOffset,
+                                (const D3DXMATRIX*)&mMatrix);
+        vPos.x = mMatrix.m[3][0] + vOffset.x;
+        vPos.y = mMatrix.m[3][1] + vOffset.y;
+        vPos.z = mMatrix.m[3][2] + vOffset.z;
+    }
 
     float fMove;
     if (bMovementSounds)

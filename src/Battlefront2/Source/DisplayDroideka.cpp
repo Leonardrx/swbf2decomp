@@ -41,12 +41,11 @@ void DroidekaElement::BuildWorldMatrices()
         PblQuaternion qRoll(mBallOrientation.GetCos(), mBallOrientation.GetSin(), 0.0f, 0.0f);
         kSpine.kQuat *= qRoll;
 
-        PblVector3 vCentre(0.0f - kSpine.kTrans.x, mClass->mBallRadius - kSpine.kTrans.y,
-                           0.0f - kSpine.kTrans.z);
+        PblVector3 vCentre = PblVector3(0.0f, mClass->mBallRadius, 0.0f) - kSpine.kTrans;
         mTranslationOffset = vCentre - kSpine.kQuat.RotateVector(vCentre);
-        kSpine.kTrans.x += mTranslationOffset.x;
-        kSpine.kTrans.y += mTranslationOffset.y;
-        kSpine.kTrans.z += mTranslationOffset.z;
+        kSpine.kTrans.x = mTranslationOffset.x + kSpine.kTrans.x;
+        kSpine.kTrans.y = mTranslationOffset.y + kSpine.kTrans.y;
+        kSpine.kTrans.z = mTranslationOffset.z + kSpine.kTrans.z;
     }
     else
     {
@@ -57,9 +56,9 @@ void DroidekaElement::BuildWorldMatrices()
         kRoot.kQuat *= qPitch;
 
         mTranslationOffset = mPivotOffset - qPitch.RotateVector(mPivotOffset);
-        kRoot.kTrans.x += mTranslationOffset.x;
-        kRoot.kTrans.y += mTranslationOffset.y;
-        kRoot.kTrans.z += mTranslationOffset.z;
+        kRoot.kTrans.x = mTranslationOffset.x + kRoot.kTrans.x;
+        kRoot.kTrans.y = mTranslationOffset.y + kRoot.kTrans.y;
+        kRoot.kTrans.z = mTranslationOffset.z + kRoot.kTrans.z;
     }
 
     mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity);

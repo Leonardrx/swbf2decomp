@@ -341,7 +341,7 @@ void EntityPathFollower::SmoothPath(BranchParams& params, const PblVector3* pTar
     bool bForce = fCosAngle >= 1.0f;
     PblVector3 vRel(pTarget->x - mOffset.x, pTarget->y - mOffset.y, pTarget->z - mOffset.z);
     const PblVector3& vPoint2 = GetPoint(2);
-    PblVector3 vDelta(vPoint2.x - vRel.x, vPoint2.y - vRel.y, vPoint2.z - vRel.z);
+    PblVector3 vDelta = vPoint2 - vRel;
     PblVector3 vDir;
     D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vDelta));
 
@@ -1689,11 +1689,11 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
         (fabsf(mRollVelocity) / pClass->mPathRollValues.mRollSpeed + 1.0f) *
             pClass->mPathRollValues.mRollTolerance)
     {
-        fAccel = -((0.0f > mRollVelocity ? -1.0f : 1.0f) * pClass->mPathRollValues.mRollAcceleration);
+        fAccel = -(pClass->mPathRollValues.mRollAcceleration * (0.0f > mRollVelocity ? -1.0f : 1.0f));
     }
     else
     {
-        fAccel = (0.0f > fDelta ? -1.0f : 1.0f) * pClass->mPathRollValues.mRollAcceleration;
+        fAccel = pClass->mPathRollValues.mRollAcceleration * (0.0f > fDelta ? -1.0f : 1.0f);
     }
 
     float fResp = Clamp(pClass->mPathRollValues.mRollAccelResp * fElapsed, 0.0f, 1.0f);
@@ -1706,8 +1706,8 @@ float EntityPathFollower::Roll(const EntityPathFollowerClass* const pClass, floa
 
     float fDamp = Clamp(pClass->mPathRollValues.mRollDampening * fElapsed, 0.0f, 1.0f);
     const float fRoll = (fTarget - mCurRoll) * fDamp + mCurRoll;
-    mYaw = fYaw;
     mCurRoll = fRoll;
+    mYaw = fYaw;
     return mCurRoll;
 }
 

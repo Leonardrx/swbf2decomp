@@ -5489,7 +5489,8 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
     float fHit = CollisionManager::RayHit(vStart, vNose, fLook, pHit, 0, &pIgnore, 1, 0x18, false);
     if (1.0f > fHit)
     {
-        float fTop = pHit->GetCollisionCenter().y + pHit->GetCollisionRadius();
+        const PblVector3& vHitCenter = pHit->GetCollisionCenter();
+        float fTop = pHit->GetCollisionRadius() + vHitCenter.y;
         float fMyY = GetMatrix().GetTranslation().y;
         if (fTop - fMyY > 0.0f)
         {
@@ -5514,7 +5515,9 @@ void EntityFlyer::RaiseHeight(const PblVector3& vPos, bool bTaper, PblVector3* p
         fGround = fHeight;
     }
 
-    float fHoriz = PblMath::Sqrt((pDest->x - vPos.x) * (pDest->x - vPos.x) + (pDest->z - vPos.z) * (pDest->z - vPos.z));
+    float fHx = pDest->x - vPos.x;
+    float fHz = pDest->z - vPos.z;
+    float fHoriz = PblMath::Sqrt(fHx * fHx + fHz * fHz);
     float fY = fHoriz * (fGround + 25.0f - vPos.y) / fLook + vPos.y;
     if (bTaper)
     {

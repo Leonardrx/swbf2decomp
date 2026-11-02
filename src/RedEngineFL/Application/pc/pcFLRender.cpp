@@ -856,8 +856,8 @@ void FLRenderer::AddReflectionObject(char reflectionID, const PblBox& box, bool 
     for (int i = 0; i < nPoints; i++)
     {
         const float fInvZ = 1.0f / pPoints[i].z;
-        pPoints[i].x = fInvZ * fScaleX * pPoints[i].x;
         pPoints[i].y = fInvZ * fScaleY * pPoints[i].y;
+        pPoints[i].x = fInvZ * fScaleX * pPoints[i].x;
         rScreenBox.AddPoint(pPoints[i]);
     }
 }

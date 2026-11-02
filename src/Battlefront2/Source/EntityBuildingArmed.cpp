@@ -437,9 +437,13 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
     {
         for (int i = 0; i < GetTurretCount(); ++i)
         {
-            if (GetTurretPtr(i) && !GetTrackable()->RenderTrackable(GetTurretPtr(i)->mPlayerId))
+            if (GetTurretPtr(i))
             {
-                return;
+                Trackable* pTrackable = GetTrackable();
+                if (!pTrackable->RenderTrackable(GetTurretPtr(i)->mPlayerId))
+                {
+                    return;
+                }
             }
         }
     }
@@ -510,7 +514,7 @@ void EntityBuildingArmed::Render(unsigned char uFlags, float fDist, unsigned int
 
         PblVector3 vOffset = mView.GetTranslation() - mView.GetZAxis() * fNear - GetRenderPos();
         float fReach = _Sphere.w + fLength + fWidth * 1.33f;
-        RedRenderer::SetStencilShadowZFail(fReach * fReach > vOffset.y * vOffset.y + vOffset.x * vOffset.x + vOffset.z * vOffset.z);
+        RedRenderer::SetStencilShadowZFail(fReach * fReach > SquaredLength(vOffset));
     }
     else
     {

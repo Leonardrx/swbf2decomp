@@ -160,6 +160,7 @@ void PatrolHelper::EnterState()
 
     case STATE_GUARD_HINT:
     {
+        GetMe()->GetGameObject();
         mOverrideDefaultFacePos = true;
         const PblVector3& vForward = mHint->GetZAxis();
         PblVector3 vLook(vForward.x * 10.0f, vForward.y * 10.0f, vForward.z * 10.0f);

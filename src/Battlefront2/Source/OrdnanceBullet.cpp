@@ -363,9 +363,9 @@ OrdnanceBullet::OrdnanceBullet(OrdnanceBulletClass* pClass, const OrdnanceDesc& 
     : Ordnance(pClass, desc),
       RedSceneObject(&((OrdnanceBulletClass*)mClass)->mLodData),
       mOldPosition(desc.mPosition),
-      mVelocity(Interpolate(
+      mVelocity(desc.mDirection * Interpolate(
           ((const OrdnanceBulletClass*)mClass)->mVelocity,
-          ((const OrdnanceBulletClass*)mClass->mNextCharge)->mVelocity, mRatio) * desc.mDirection),
+          ((const OrdnanceBulletClass*)mClass->mNextCharge)->mVelocity, mRatio)),
       mFinalCollision(0)
 {
     mFinalCollisionOnNextUpdate = false;

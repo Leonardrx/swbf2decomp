@@ -345,7 +345,8 @@ void UnitFollowAgent::UpdateStatePostVision(float dt)
                         if (GetMe()->GetGameObject()->GetAffiliationToMe(
                                 mTarget->mControllableList.GetFirst()->_pObject->mReticuleTarget[0]) < 0)
                         {
-                            mCtrl->mThreatManager.AddThreat(const_cast<GameObject*>(
+                            AI::UnitThreatManager& rThreats = mCtrl->mThreatManager;
+                            rThreats.AddThreat(const_cast<GameObject*>(
                                 static_cast<const GameObject*>(mTarget->GetControllable()->mReticuleTarget[0])));
                         }
                     }

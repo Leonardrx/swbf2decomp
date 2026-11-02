@@ -117,16 +117,14 @@ static unsigned int sTowCableCollisionMask;
 EntityWalkerClass::EntityWalkerClass(unsigned int uHash)
     : GameObjectClass(uHash)
 {
-    const PblVector3 vNoOffset(0.0f, 0.0f, 0.0f);
-
     m_bDynamicLighting = true;
     mHealthType = HEALTH_TYPE_VEHICLE;
     mPilotType = PILOT_VEHICLE;
     mLODClass = 1;
     mHoldForPlayer = true;
 
-    memset(mAnimObj, 0, sizeof(mAnimObj));
     mNumAnimObjs = 0;
+    memset(mAnimObj, 0, sizeof(mAnimObj));
 
     sCurrentSection = -1;
     sWeaponSection = 0;
@@ -211,6 +209,7 @@ EntityWalkerClass::EntityWalkerClass(unsigned int uHash)
 
     memset(mTurretClass, 0, sizeof(mTurretClass));
 
+    const PblVector3 vNoOffset(0.0f, 0.0f, 0.0f);
     mExplosion = 0;
     mExplosionOffset = vNoOffset;
     mFinalExplosion = 0;
@@ -4630,7 +4629,8 @@ void EntityWalker::SetupCameraTrackMatrix(PblMatrix& rMatrix, float fDeltaTime)
         mPrevAimerPos = vJoint;
     }
 
-    vEye += (vJoint - mPrevAimerPos) * mClass->mFPWalkScale * 2.0f;
+    PblVector3 vDelta(vJoint.x - mPrevAimerPos.x, vJoint.y - mPrevAimerPos.y, vJoint.z - mPrevAimerPos.z);
+    vEye += vDelta * mClass->mFPWalkScale * 2.0f;
     rMatrix = DirectionMatrix(PblVector3(-vAim.x, -vAim.y, -vAim.z),
                               matrix.GetYAxis(), vEye);
 

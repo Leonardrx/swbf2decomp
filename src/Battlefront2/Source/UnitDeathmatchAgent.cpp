@@ -113,6 +113,7 @@ void UnitDeathmatchAgent::EnterState()
 
     case STATE_RunEnemy:
     {
+        PblVector3 vDir;
         Character* pChar = mCtrl->mOwner->mCharacter;
         const Team* pTeam = Team::sTeams[pChar ? pChar->GetTeamNumber() : 3];
         int iEnemyTeam = 0;
@@ -144,7 +145,6 @@ void UnitDeathmatchAgent::EnterState()
             Controllable* pMe = GetMe();
             const PblVector3& vMyPos = pMe->GetMatrix().GetTranslation();
             const PblVector3 vDelta = vDest - vMyPos;
-            PblVector3 vDir;
             D3DXVec3Normalize((D3DXVECTOR3*)&vDir, (const D3DXVECTOR3*)&vDelta);
             float fRadius = pMe->GetGameObject()->GetCollisionRadius();
             vDest -= vDir * fRadius;
@@ -215,7 +215,8 @@ void UnitDeathmatchAgent::DoJetJumpStuff()
         }
         else
         {
-            mNextJumpTime = GameLoop::GetMissionTime() + 5.0f + PblRandom::GetGlobalFloat() * 10.0f;
+            const float fNow = GameLoop::GetMissionTime();
+            mNextJumpTime = fNow + 5.0f + PblRandom::GetGlobalFloat() * 10.0f;
         }
     }
 }

@@ -249,7 +249,7 @@ void HUD::ElementTarget::Target::Update(float fDeltaTime, HUD::ElementBitmap& bi
     bool bInterpolate = true;
     const bool bLocked = info.mLocked;
     const RedColor current = bitmap.m_color;
-    RedColor color = (mColorFriendly.a > 0 && info.mFriendly) ? mColorFriendly : m_color;
+    RedColor color = (mColorFriendly.a > 0 && info.mFriendly) ? RedColor(mColorFriendly) : RedColor(m_color);
     color.a = (unsigned char)(int)(mAlpha * 255.0f);
     if (color.a == 0)
     {

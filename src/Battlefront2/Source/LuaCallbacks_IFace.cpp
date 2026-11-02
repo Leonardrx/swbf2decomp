@@ -3765,14 +3765,17 @@ int ScriptCB_IFModel_SetAnimationBanks(lua_State* L)
 
     memset(sAnimationBankHashes, 0, sizeof(sAnimationBankHashes));
     int iNumArgs = lua_gettop(LuaHelper::mState);
-    unsigned int* pHash = sAnimationBankHashes;
-    for (int i = 0; iArg < iNumArgs + 1; ++iArg, ++i)
+    if (iArg < iNumArgs + 1)
     {
-        if (i >= 5)
+        unsigned int* pHash = sAnimationBankHashes;
+        for (int i = 0; iArg < iNumArgs + 1; ++iArg, ++i)
         {
-            return 0;
+            if (i >= 5)
+            {
+                return 0;
+            }
+            *pHash++ = PblHash(luaL_optlstring(LuaHelper::mState, iArg, "", 0));
         }
-        *pHash++ = PblHash(luaL_optlstring(LuaHelper::mState, iArg, "", 0));
     }
     static_cast<Red3DModelElement*>(pElement)->SetAnimationBanks(sAnimationBankHashes);
     return 0;

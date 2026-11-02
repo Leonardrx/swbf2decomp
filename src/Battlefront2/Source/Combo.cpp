@@ -228,8 +228,7 @@ bool Combo::Deflect::TestDeflect(const PblMatrix& mSoldier, const PblVector3& vF
     else if (matches > 1)
     {
         unsigned int pick = static_cast<unsigned int>(PblRandom::_Global.GetFloat() * matches);
-        const unsigned int uiNumAnimations = m_uiNumDeflectAnimations;
-        for (unsigned int i = 0; i < uiNumAnimations; ++i)
+        for (unsigned int i = 0; i < m_uiNumDeflectAnimations; ++i)
         {
             if (m_aDeflectAnim[i].uiDirections & mask)
             {

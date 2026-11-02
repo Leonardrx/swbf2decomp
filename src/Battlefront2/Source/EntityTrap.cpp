@@ -599,10 +599,7 @@ bool EntityTrap::Update(float fDeltaTime)
         }
         PblMatrix mOffset = gMatrixIdentity;
         mOffset.SetTranslation(mTrapClass->mTriggerOffset);
-        PblMatrix mLocal;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&mNode));
-        PblMatrix mWorld;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mWorld), reinterpret_cast<const D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+        PblMatrix mWorld = mOffset * mNode * mMatrix;
 
         PblVector3 vTrigger = mWorld.GetTranslation();
         if (RedTerrain::_bEnable)
@@ -706,10 +703,7 @@ bool EntityTrap::Update(float fDeltaTime)
         }
         PblMatrix mOffset(gMatrixIdentity);
         mOffset.SetTranslation(mTrapClass->mTriggerOffset);
-        PblMatrix mLocal;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(&mNode));
-        PblMatrix mWorld;
-        D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mWorld), reinterpret_cast<const D3DXMATRIX*>(&mLocal), reinterpret_cast<const D3DXMATRIX*>(&mMatrix));
+        PblMatrix mWorld = mOffset * mNode * mMatrix;
 
         PblVector3 vTrigger = mWorld.GetTranslation();
         if (RedTerrain::_bEnable)

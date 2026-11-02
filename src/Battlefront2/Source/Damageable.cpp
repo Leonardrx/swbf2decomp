@@ -390,8 +390,8 @@ void Damageable::ApplyDamageCommon(const DamageDesc& damage, unsigned int uFlags
             bDamaged = true;
             if (fShieldLost > mCurShield)
             {
-                fShieldLost = mCurShield;
                 fDamage -= mCurShield / damage.mShieldScale;
+                fShieldLost = mCurShield;
             }
             else
             {

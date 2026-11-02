@@ -307,9 +307,9 @@ void TerrainRenderable::Render(int value)
         }
         RedCamera farCamera(*pCamera);
         float fZoom = pCamera->GetZoom();
-        farCamera.SetNearFarPlane((uiFlags & 0x200000) ? FLRenderer::GetNearPlane() * fZoom
-                                                       : FLRenderer::GetNearSceneFadeStart() * fZoom,
-                                  m_fFarTerrainMaxDistance);
+        float fFarDistance = m_fFarTerrainMaxDistance;
+        farCamera.SetNearFarPlane(((uiFlags & 0x200000) ? FLRenderer::GetNearPlane() : FLRenderer::GetNearSceneFadeStart()) * fZoom,
+                                  fFarDistance);
     }
 
     float fNear, fFar, fWidth, fHeight;

@@ -148,7 +148,7 @@ void AttackPatterns::DoFlyStrafe()
         mOverrideFire = true;
     }
 
-    if (mOwner->GetLowLevel().IsAtDest())
+    if (GetCtrl()->GetLowLevel().IsAtDest())
     {
         GeneratePath();
         return;

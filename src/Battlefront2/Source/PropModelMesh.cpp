@@ -299,12 +299,12 @@ void PropObjectMesh::Render(const RedCamera* pCamera, float fDist, unsigned int 
                     return;
                 }
 
-                PblSphere sphere = pGeometry->_BoundingSphere;
-                PblVector3 vCenter;
-                D3DXVec3TransformCoord((D3DXVECTOR3*)&vCenter, (const D3DXVECTOR3*)&sphere,
+                const PblSphere sphere = pGeometry->_BoundingSphere;
+                PblSphere worldSphere = sphere;
+                D3DXVec3TransformCoord((D3DXVECTOR3*)&worldSphere, (const D3DXVECTOR3*)&sphere,
                                        (const D3DXMATRIX*)&mMatrix);
                 const RedCamera::VisibilityT eVis =
-                    pCamera->ClassifySphere(vCenter, sphere.GetRadius(), -1.0f);
+                    pCamera->ClassifySphere(worldSphere.GetCenter(), worldSphere.GetRadius(), -1.0f);
                 if (eVis == RedCamera::VISIBILITY_NONE)
                 {
                     return;

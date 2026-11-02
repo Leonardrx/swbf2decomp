@@ -298,9 +298,9 @@ bool CollideBoxSphere(const PblMatrix& matrix, float fWidth, float fDepth, float
     }
     if (!bInside)
     {
-        float fDX = 0.0f;
-        float fDY = 0.0f;
         float fDZ = 0.0f;
+        float fDY = 0.0f;
+        float fDX = 0.0f;
         if (iSideX)
         {
             fDX = (float)fabs((double)(vClamp.x - vLocal.x));

@@ -269,8 +269,9 @@ void EnableSceneAndInterface(bool bEnable)
         else
         {
             SpawnDisplay* pDisplay = SpawnDisplay::Instance(0);
+            Character* pCharacter = Character::FindPlayer(i);
             g_InGameMovieSpawnDisplayActive[i] = pDisplay->mMode == SpawnDisplay::eCHANGECLASS;
-            pDisplay->Hide(Character::FindPlayer(i));
+            pDisplay->Hide(pCharacter);
         }
     }
 }

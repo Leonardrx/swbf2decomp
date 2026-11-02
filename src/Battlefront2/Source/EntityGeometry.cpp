@@ -329,9 +329,9 @@ bool EntityGeometry::SetupShadow(const GameObject* pObject, const GameModel* pMo
             {
                 float fAlpha = 1.0f - RedRenderer::GetShadowIntensity();
                 float fDist = fHit * 5.0f;
-                PblVector3 vHit(vPos.x + vDown.x * fDist, vPos.y + vDown.y * fDist, vPos.z + vDown.z * fDist);
+                PblVector3 vHit = vPos + vDown * fDist;
                 const PblVector3& vDir = pLight->m_vDirection;
-                PblVector3 vShadowNormal(0.0f - vDir.x * 0.2f, 0.8f - vDir.y * 0.2f, 0.0f - vDir.z * 0.2f);
+                PblVector3 vShadowNormal = PblVector3(0.0f, 0.8f, 0.0f) - vDir * 0.2f;
                 float fStart = vPos.y - fRadius - vHit.y;
                 if (-vDir.x * vShadowNormal.x - vShadowNormal.z * vDir.z > -vDir.x * vNormal.x - vNormal.z * vDir.z)
                 {

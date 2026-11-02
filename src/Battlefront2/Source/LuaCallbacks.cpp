@@ -1384,14 +1384,17 @@ int ScriptCB_ShowMultipageText(lua_State*)
         int iPage = (int)luaL_checknumber(LuaHelper::mState, 2);
         RedTextElement* pTextElement = (RedTextElement*)RedInterfaceElement::Find(pcElement);
         const unsigned short* pusText = sPageStart[iPage - 1];
-        unsigned short ausEmpty[5];
         if (!pusText)
         {
+            unsigned short ausEmpty[5];
             ausEmpty[0] = 0;
             memset(&ausEmpty[1], 0, sizeof(ausEmpty) - sizeof(ausEmpty[0]));
-            pusText = ausEmpty;
+            pTextElement->SetText(ausEmpty, true);
         }
-        pTextElement->SetText(pusText, true);
+        else
+        {
+            pTextElement->SetText(pusText, true);
+        }
     }
     return 0;
 }

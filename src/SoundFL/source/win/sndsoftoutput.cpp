@@ -164,11 +164,7 @@ bool SoftOutput::SetOutputBufferSize(float fBufferMs, bool bRestart, bool bEffec
     if (uiChannels != format.GetNumChannels()
         || mRenderer.mFormat != format.GetFormat())
     {
-        if (!bRestart)
-        {
-            return false;
-        }
-        if (!SetOutputBufferSize(fBufferMs, false, true, 48000))
+        if (!bRestart || !SetOutputBufferSize(fBufferMs, false, true, 48000))
         {
             return false;
         }

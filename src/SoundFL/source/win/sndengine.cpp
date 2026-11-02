@@ -1083,11 +1083,11 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
 
         if (smMixConfig == mixConfig_DirectSoundHardware)
         {
-            DSBuffer a3DBuffers[40];
             DSBuffer a2DBuffers[33];
+            DSBuffer a3DBuffers[40];
 
-            unsigned int uiCount2D = 0;
             unsigned int uiCount3D = 0;
+            unsigned int uiCount2D = 0;
 
             uiCount3D = DSBuffer::CreateBuffers(true, false, 4, a3DBuffers,
                                                 uiNumVoices + 8, 0);
@@ -1325,6 +1325,7 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
 
     if (smDirectSound != 0)
     {
+        EngineBase::SpeakerConfig eSpeakers = EngineBase::speakerConfig_Stereo;
         unsigned long ulSpeakerConfig;
 
         smDirectSound->GetSpeakerConfig(&ulSpeakerConfig);
@@ -1334,7 +1335,6 @@ bool Engine::Open(HWND hwnd, MixConfig eMixConfig, bool bEnable,
             *pulWindowsSpeakerConfig = ulSpeakerConfig;
         }
 
-        EngineBase::SpeakerConfig eSpeakers = EngineBase::speakerConfig_Stereo;
         switch (ulSpeakerConfig)
         {
         case DSSPEAKER_MONO:

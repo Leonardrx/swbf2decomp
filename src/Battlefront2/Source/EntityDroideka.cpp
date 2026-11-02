@@ -3099,10 +3099,10 @@ void EntityDroideka::BuildWorldMatrices()
         qRoll._fS = mBallOrientation.mCos;
         PblQuaternion qSpin = qLean * qRoll;
 
-        PblQuaternion qUnit;
+        D3DXQUATERNION qUnit;
         PblMatrix kSpin;
-        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&kSpin), D3DXQuaternionNormalize(reinterpret_cast<D3DXQUATERNION*>(&qUnit), reinterpret_cast<const D3DXQUATERNION*>(&qSpin)));
-        kSpin.SetTranslation(gVectorZero);
+        D3DXMatrixRotationQuaternion(reinterpret_cast<D3DXMATRIX*>(&kSpin), D3DXQuaternionNormalize(&qUnit, reinterpret_cast<const D3DXQUATERNION*>(&qSpin)));
+        kSpin.SetTranslation(gVectorZero.x, gVectorZero.y, gVectorZero.z, 1.0f);
 
         mZephyrSkeleton.BuildWorldMatrices(gMatrixIdentity, mClass->mSpineIdx, kDirty);
         PblMatrix& rSpine = mZephyrSkeleton.m_pWorldMatrices[mClass->mSpineIdx];
@@ -3115,9 +3115,9 @@ void EntityDroideka::BuildWorldMatrices()
         D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vRotated), reinterpret_cast<const D3DXVECTOR3*>(&vCentre), reinterpret_cast<const D3DXMATRIX*>(&rSpine));
         mTranslationOffset =
             PblVector3(vCentre.x - vRotated.x, vCentre.y - vRotated.y, vCentre.z - vRotated.z);
-        rSpine.m[3][0] = mTranslationOffset.x + rSpine.m[3][0];
-        rSpine.m[3][1] = rSpine.m[3][1] + mTranslationOffset.y;
-        rSpine.m[3][2] = rSpine.m[3][2] + mTranslationOffset.z;
+        rSpine.m[3][0] = rSpine.m[3][0] + mTranslationOffset.x;
+        rSpine.m[3][1] = mTranslationOffset.y + rSpine.m[3][1];
+        rSpine.m[3][2] = mTranslationOffset.z + rSpine.m[3][2];
     }
     else
     {

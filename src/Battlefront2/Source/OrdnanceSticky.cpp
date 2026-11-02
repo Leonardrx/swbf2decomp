@@ -490,8 +490,7 @@ bool OrdnanceSticky::Collide(CollisionObject* pObject, const PblVector3& vPos,
             fSlow = fSlow < 1.0f ? fSlow : 1.0f;
             mVelocity -= mVelocity * fSlow;
 
-            const float fBounce = fDot * fRebound;
-            mVelocity -= fBounce * vNormal;
+            mVelocity -= (fDot * fRebound) * vNormal;
             if (mVelocity.x * mVelocity.x + mVelocity.y * mVelocity.y + mVelocity.z * mVelocity.z < 1.0f)
             {
                 ++mNumBounces;

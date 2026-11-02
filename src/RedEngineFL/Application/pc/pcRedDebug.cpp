@@ -268,8 +268,8 @@ void RedDebug::DrawCone(const PblMatrix& matrix, float fHeight, float fRadius0, 
     for (int i = 0; i < 8; i++)
     {
         const PblVector3& c0 = aCircle[i];
-        const int iNext = (i + 1) % 8;
         DrawLine3D(vBase + c0 * fRadius0, vTop + c0 * fRadius1, color);
+        const int iNext = (i + 1) % 8;
         DrawLine3D(vBase + c0 * fRadius0, vBase + aCircle[iNext] * fRadius0, color);
         DrawLine3D(vTop + c0 * fRadius1, vTop + aCircle[iNext] * fRadius1, color);
     }

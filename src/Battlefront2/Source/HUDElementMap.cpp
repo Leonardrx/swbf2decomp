@@ -1439,7 +1439,15 @@ void HUD::ElementMap::UpdateMarkerIcons()
         }
 
         RedColor color = marker.color;
-        const float fTime = (marker.flashAlpha || marker.pulseSize) ? fmodf(GameLoop::GetMissionTime(), 1.0f) : 0.0f;
+        float fTime;
+        if (marker.flashAlpha || marker.pulseSize)
+        {
+            fTime = fmodf(GameLoop::GetMissionTime(), 1.0f);
+        }
+        else
+        {
+            fTime = 0.0f;
+        }
         if (marker.flashAlpha)
         {
             color.a = (unsigned char)(int)((1.0f - fTime) * 255.0f);
@@ -1468,14 +1476,11 @@ void HUD::ElementMap::UpdateMarkerIcons()
             continue;
         }
 
-        float fScale = marker.scale;
-        if (marker.pulseSize)
-        {
-            fScale = fScale * fTime + marker.pulseStartScale;
-        }
+        const float fScale = marker.pulseSize ? marker.scale * fTime + marker.pulseStartScale : marker.scale;
         if (mMode == mode_Small)
         {
-            const float fAngle = PblMath::Atan2(-mPlayerDirection.x, mPlayerDirection.z);
+            const float fNegX = -mPlayerDirection.x;
+            const float fAngle = PblMath::Atan2(fNegX, mPlayerDirection.z);
             bitmap.SetMatrixPosRotScale(fX, fY, fAngle, fScale, fScale);
         }
         else if (sNorth != 0.0f)

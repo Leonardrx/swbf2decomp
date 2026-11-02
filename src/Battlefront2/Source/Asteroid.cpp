@@ -349,7 +349,8 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
             PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
             PblVector3 vDir;
             D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&vUnit));
-            float fRadius = PblRandom::GetSim().GetFloat() * pRegion->mSize.w;
+            const float fMaxRadius = pRegion->mSize.w;
+            float fRadius = fMaxRadius * PblRandom::GetSim().GetFloat();
             vPosition = vDir * fRadius;
             vPosition += pRegion->mMatrix.GetTranslation();
             break;
@@ -358,7 +359,7 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         case PblRegion::type_box_aligned:
         {
             PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
-            PblVector3 vLocal = pRegion->mSize * vUnit;
+            PblVector3 vLocal = vUnit * pRegion->mSize;
             vPosition = pRegion->mMatrix.ApplyTransform(vLocal);
             break;
         }
@@ -369,7 +370,8 @@ void AsteroidClass::FillRegion(const char* pcRegion, int iCount, PblVector3 vMin
         {
             PblVector3 vUnit = PblRandom::GetSim().GetVector3() * 2.0f - PblVector3(1.0f, 1.0f, 1.0f);
             float fLength = sqrtf(vUnit.x * vUnit.x + vUnit.z * vUnit.z);
-            float fRadius = PblRandom::GetSim().GetFloat() * pRegion->mSize.x;
+            const float fMaxRadius = pRegion->mSize.x;
+            float fRadius = fMaxRadius * PblRandom::GetSim().GetFloat();
             PblVector3 vLocal(vUnit.x / fLength * fRadius, pRegion->mSize.y * vUnit.y, vUnit.z / fLength * fRadius);
             vPosition = pRegion->mMatrix.ApplyTransform(vLocal);
             break;
@@ -450,9 +452,9 @@ void AsteroidClass::FillPath(const char* pcPath, float fDensity, int iCount,
     int iNumKeys = 10 * iNumPoints - 9;
     LengthEntryT* pKeys = new LengthEntryT[iNumKeys];
     PblHermiteVector3* pSegments = new PblHermiteVector3[iNumPoints - 1];
-    float fLength = 0.0f;
     pKeys[0].length = 0.0f;
     pKeys[0].segmentIndex = 0;
+    float fLength = 0.0f;
     for (int i = 1; i < iNumPoints; ++i)
     {
         PblMatrix mStart(pPath->GetPointRotation(i - 1), pPath->GetPointPosition(i - 1));
