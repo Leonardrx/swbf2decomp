@@ -24,7 +24,6 @@
 #include "PebbleFL/Common/PblMath.h"
 
 extern bool mSafeMode;
-extern eGAMELANGUAGE gForceLang;
 
 namespace PlayerProfile
 {
@@ -33,24 +32,6 @@ namespace PlayerProfile
 void SetSafeMode()
 {
     mSafeMode = true;
-}
-}
-
-namespace RedLocalizeDB
-{
-
-// FUNCTION: SWBF2 0x006c5b80
-void ForceLanguageID(int iLanguage)
-{
-    if (iLanguage == 5)
-    {
-        RedFont::sJapaneseOnly = true;
-        gForceLang = static_cast<eGAMELANGUAGE>(iLanguage);
-    }
-    else if (iLanguage >= -1 && iLanguage < 9)
-    {
-        gForceLang = static_cast<eGAMELANGUAGE>(iLanguage);
-    }
 }
 }
 

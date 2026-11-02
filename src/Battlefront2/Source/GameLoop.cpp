@@ -1885,17 +1885,6 @@ bool GetCanSwitchSides()
 }
 }
 
-// FUNCTION: SWBF2 0x00549eb0
-void HUD::Element::UpdateAll(float fDeltaTime)
-{
-    for (PblListDouble::Node* pNode = HUD::Element::sList.mTerminator.mNext;
-         pNode != &HUD::Element::sList.mTerminator; pNode = pNode->mNext)
-    {
-        HUD::Element* pElement = (HUD::Element*)((char*)pNode - offsetof(HUD::Element, mNode));
-        pElement->Update(fDeltaTime);
-    }
-}
-
 namespace HUD
 {
 namespace Manager

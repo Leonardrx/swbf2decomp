@@ -10,48 +10,6 @@
 #include "NetGame.h"
 #include "Trackable.h"
 
-// FUNCTION: SWBF2 0x0057acb0
-void LockOnManager::Target::InitCommon(GameObject* const pObject, unsigned int uTeamMask)
-{
-    obj = pObject;
-    teamMask = uTeamMask;
-    maxDistTrack = 10000.0f;
-    minDist = 100.0f;
-    maxDist = 10000.0f;
-    timer = 0.0f;
-}
-
-// FUNCTION: SWBF2 0x0057da40
-void LockOnManager::AddTargetCommon(GameObject* pActor, unsigned int uTeamMask)
-{
-    unsigned int i;
-    for (i = 0; i < 32; ++i)
-    {
-        LockOnManager::Target& target = LockOnManager::sTargetCommon[i];
-        GameObject* pObject = target.obj;
-        if (!pObject || pActor == pObject || !target.teamMask)
-        {
-            target.InitCommon(pActor, uTeamMask | target.teamMask);
-            break;
-        }
-    }
-    if (i >= 32)
-    {
-        return;
-    }
-    for (unsigned int j = 0; j < 4; ++j)
-    {
-        LockOnManager* pManager = LockOnManager::sLockOnManagers[j];
-        if (pManager)
-        {
-            LockOnManager::ClearPositionValid(pManager->mTargetCommonInfo, 32);
-            LockOnManager::ClearVisibilityChecked(pManager->mTargetCommonInfo, 32);
-        }
-    }
-    HUD::Event event(HUD::GameEvents::gTargetResetCommon, i);
-    event.Send();
-}
-
 namespace
 {
 

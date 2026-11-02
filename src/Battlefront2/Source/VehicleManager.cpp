@@ -323,3 +323,27 @@ void VehicleManager::Update()
         }
     }
 }
+
+// FUNCTION: SWBF2 0x0066e390
+int VehicleManager::RequestVehiclesInRange(const PblVector3& vPos, GameObject** ppOut, float fRadius, int iMax)
+{
+    const float fRadiusSq = fRadius * fRadius;
+    int iCount = 0;
+    for (int i = 0; i < VehicleManager::sVehicles->GetLength(); ++i)
+    {
+        GameObject* pObj = static_cast<GameObject*>((*VehicleManager::sVehicles)[i]);
+        const PblMatrix& m = static_cast<const CollisionObject*>(pObj)->GetMatrix();
+        const float dx = m.m[3][0] - vPos.x;
+        const float dy = m.m[3][1] - vPos.y;
+        const float dz = m.m[3][2] - vPos.z;
+        if (dx * dx + dy * dy + dz * dz < fRadiusSq)
+        {
+            ppOut[iCount++] = pObj;
+            if (iCount >= iMax)
+            {
+                break;
+            }
+        }
+    }
+    return iCount;
+}

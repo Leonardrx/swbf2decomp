@@ -9,6 +9,7 @@
 #include "PebbleFL/Common/PblHashTable.h"
 #include "PebbleFL/Common/PblUnicode.h"
 #include "RedEngineFL/Memory/RedMemory.h"
+#include "RedEngineFL/Interface/RedFont.h"
 
 // GLOBAL: SWBF2 0x00940bf0
 FLLocalizeEntry* mPatchLocalizeFile;
@@ -204,6 +205,20 @@ const unsigned short* Find(unsigned int uiHash, bool bNullIfMissing)
         return bNullIfMissing ? 0 : (const unsigned short*)L"[NULL]";
     }
     return pEntry->mData;
+}
+
+// FUNCTION: SWBF2 0x006c5b80
+void ForceLanguageID(int iLanguage)
+{
+    if (iLanguage == 5)
+    {
+        RedFont::sJapaneseOnly = true;
+        gForceLang = static_cast<eGAMELANGUAGE>(iLanguage);
+    }
+    else if (iLanguage >= -1 && iLanguage < 9)
+    {
+        gForceLang = static_cast<eGAMELANGUAGE>(iLanguage);
+    }
 }
 
 // FUNCTION: SWBF2 0x006c5bf0

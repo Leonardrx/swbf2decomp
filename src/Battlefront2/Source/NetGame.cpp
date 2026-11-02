@@ -11945,19 +11945,6 @@ void RestoreSessionRuleDefaults()
     netAwardsEnabled = savedAwardsEnabled;
 }
 
-// FUNCTION: SWBF2 0x006c22a0
-void RedTerrain::ProcessHoles(void (__cdecl *callback)(void*))
-{
-    if (!RedTerrain::_bTreeHoles)
-    {
-        return;
-    }
-    for (PblList<RedTerrain::Hole>::Itor it = RedTerrain::_HoleList.Begin(); it; ++it)
-    {
-        callback(it.operator RedTerrain::Hole*());
-    }
-}
-
 namespace AI
 {
 enum AIAffil

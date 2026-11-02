@@ -54,22 +54,6 @@ extern unsigned short sTempReturnString16[256];
 
 
 
-// FUNCTION: SWBF2 0x0053dc00
-void GameVoiceChat::Node::GetSendMask(Transport::Mask& mask, bool& enable, bool& maskExisting) const
-{
-    mask = mSendMask.mMask;
-    enable = mSendMask.mEnable;
-    maskExisting = mSendMask.mMaskExisting;
-}
-
-// FUNCTION: SWBF2 0x0053dc40
-void GameVoiceChat::Node::GetReceiveMask(Transport::Mask& mask, bool& enable, bool& maskExisting) const
-{
-    mask = mReceiveMask.mMask;
-    enable = mReceiveMask.mEnable;
-    maskExisting = mReceiveMask.mMaskExisting;
-}
-
 extern int hostPlayer;
 extern int netCurMaxPlayers;
 

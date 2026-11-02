@@ -366,6 +366,60 @@ void Music::IgnoreInactiveTime(bool bIgnore)
     sIgnoreInactiveTime = bIgnore;
 }
 
+// FUNCTION: SWBF2 0x005a9d10
+void Music::UpdateAll(float fDeltaTime)
+{
+    int i = 0;
+    PblListDoubleSorted::Itor itor(sMusicActive);
+    for (;;)
+    {
+        PblListDoubleSorted::Node* pNode = itor.GetNode(&sMusicActive);
+        if (pNode == sMusicActive.GetTerminator())
+        {
+            break;
+        }
+        ++itor;
+
+        Music* pMusic = (Music*)((char*)pNode - offsetof(Music, mNode));
+        if (i == 0)
+        {
+            if (!sMusicPlaying && (sInactiveTime >= sMinInactiveTime || sIgnoreInactiveTime)
+                && pMusic->mPlayStateCurrent != playState_starting
+                && pMusic->mPlayStateCurrent != playState_playing)
+            {
+                sInactiveTime = 0.0f;
+                pMusic->mPlayStateDesired = playState_playing;
+            }
+        }
+        else if (pMusic->mPlayStateCurrent != playState_stopping
+                 && pMusic->mPlayStateCurrent != playState_stopped
+                 && pMusic->mPlayStateCurrent != playState_pausing
+                 && pMusic->mPlayStateCurrent != playState_paused)
+        {
+            pMusic->Stop();
+        }
+        pMusic->Update(fDeltaTime);
+        ++i;
+    }
+
+    PblListDoubleSorted::Itor inactiveItor(sMusicInactive);
+    for (;;)
+    {
+        PblListDoubleSorted::Node* pNode = inactiveItor.GetNode(&sMusicInactive);
+        if (pNode == sMusicInactive.GetTerminator())
+        {
+            break;
+        }
+        ++inactiveItor;
+        ((Music*)((char*)pNode - offsetof(Music, mNode)))->Update(fDeltaTime);
+    }
+
+    if (!sMusicPlaying)
+    {
+        sInactiveTime += fDeltaTime;
+    }
+}
+
 // FUNCTION: SWBF2 0x005a9eb0
 void Music::StopAll()
 {

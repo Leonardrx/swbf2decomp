@@ -223,5 +223,59 @@ void AI::AIGoalManager::Destroy()
     mInstance = 0;
 }
 
+// FUNCTION: SWBF2 0x0043a250
+void AI::AIGoalManager::AssignUnit(Character* pChr)
+{
+    float fWeights[MAX_GOALS];
+    int iNumGoals = 0;
+    float fTotalWeight = 0.0f;
+    for (int i = 0; i < MAX_GOALS; i++)
+    {
+        AIGoal* pGoal = mGoals[i];
+        if (pGoal && pGoal->GetTeam() == pChr->mTeamNumber && pGoal->mEnabled)
+        {
+            ++iNumGoals;
+            fWeights[i] = pGoal->mWeight;
+            fTotalWeight += pGoal->mWeight;
+        }
+        else
+        {
+            fWeights[i] = 0.0f;
+        }
+    }
+
+    if (iNumGoals == 0 || fTotalWeight == 0.0f)
+    {
+        return;
+    }
+    if (fTotalWeight <= 0.0f)
+    {
+        fTotalWeight = 1.0f;
+    }
+
+    int iBest = -1;
+    float fBestRatio = 1e11f;
+    int iTeam = pChr->mTeamNumber;
+    int iNumMembers = Team::GetPtr(iTeam)->mMemberCount;
+    for (int i = 0; i < MAX_GOALS; i++)
+    {
+        AIGoal* pGoal = mGoals[i];
+        if (pGoal && pGoal->GetTeam() == iTeam && pGoal->mEnabled)
+        {
+            float fRatio = (float)pGoal->mUnitList.GetCount() /
+                           (fWeights[i] / fTotalWeight * (float)iNumMembers);
+            if (fRatio < fBestRatio)
+            {
+                fBestRatio = fRatio;
+                iBest = i;
+            }
+        }
+    }
+    if (iBest >= 0)
+    {
+        mGoals[iBest]->AddUnit(pChr);
+    }
+}
+
 // GLOBAL: SWBF2 0x01e2fdac
 AI::AIGoalManager* AI::AIGoalManager::mInstance;

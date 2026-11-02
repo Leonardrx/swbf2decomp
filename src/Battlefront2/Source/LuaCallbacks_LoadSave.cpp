@@ -1570,18 +1570,6 @@ int SaveFile::TimeToString(unsigned short* pusDest, int iYear, int iMonth, int i
     return PblUnicode::ustrncnv(pusDest, acStamp, 16);
 }
 
-// FUNCTION: SWBF2 0x004266b0
-void SaveFile::MakeMetagameFilename(unsigned short* pusDest, unsigned short const* pusSource)
-{
-    unsigned short ausStamp[16];
-    SYSTEMTIME localTime;
-    PblUnicode::ustrncpy(pusDest, pusSource, 128);
-    GetLocalTime(&localTime);
-    SaveFile::TimeToString(ausStamp, localTime.wYear, localTime.wMonth, localTime.wDay,
-               localTime.wHour, localTime.wMinute, localTime.wSecond);
-    PblUnicode::ustrlcat(pusDest, ausStamp, 128);
-}
-
 namespace Lua_Callbacks
 {
 

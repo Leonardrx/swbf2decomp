@@ -394,6 +394,20 @@ bool PointInVolume(const PblVector3& vPoint, const PblVector4* aPlanes, int iNum
     return true;
 }
 
+// FUNCTION: SWBF2 0x006c22a0
+void RedTerrain::ProcessHoles(void (__cdecl *callback)(void*))
+{
+    if (!_bTreeHoles)
+    {
+        return;
+    }
+    for (PblList<Hole>::Itor it = _HoleList.Begin(); it; ++it)
+    {
+        Hole* pHole = it;
+        callback(pHole);
+    }
+}
+
 // FUNCTION: SWBF2 0x006c22e0
 float RedTerrain::RayHit(const PblVector3& vStart, const PblVector3& vEnd, float fA, float fB)
 {

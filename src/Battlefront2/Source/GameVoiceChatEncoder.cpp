@@ -299,37 +299,6 @@ bool VoiceChat::Encoder::IsEnabled()
     return static_cast<GameVoiceChat::Encoder*>(this)->IsEnabled();
 }
 
-// FUNCTION: SWBF2 0x0053db70
-void GameVoiceChat::Node::SetID(unsigned int uChannel)
-{
-    void* pNode = this;
-    if (!((VoiceChat::Node*)pNode)->IsOpen())
-    {
-        return;
-    }
-
-    if (GameVoiceChat::IsSuspended())
-    {
-        GameVoiceChat::SetNodeID((GameVoiceChat::Node*)pNode, (unsigned char)uChannel);
-        return;
-    }
-
-    unsigned char ucChannel = (unsigned char)uChannel;
-    const bool bNoChannel = GameVoiceChat::IsBanned();
-    if (bNoChannel)
-    {
-        ((VoiceChat::Node*)pNode)->SetID(0xFF);
-        if (ucChannel != 0xFF)
-        {
-            GameVoiceChat::GetTransport()->SetLocalNode(ucChannel, false, false, false);
-        }
-    }
-    else
-    {
-        ((VoiceChat::Node*)pNode)->SetID(ucChannel);
-    }
-}
-
 // FUNCTION: SWBF2 0x0053d7c0
 VoiceChat::AudioPacket* GameVoiceChat::Encoder::GetData()
 {

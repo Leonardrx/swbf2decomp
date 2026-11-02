@@ -1,6 +1,7 @@
 #include "pcSaveFile.h"
 
 #include <stdio.h>
+#include <windows.h>
 
 #include "PebbleFL/Common/PblUnicode.h"
 
@@ -62,4 +63,16 @@ unsigned short const* SaveFile::GetGameName()
 int SaveFile::GetType()
 {
     return mType;
+}
+
+// FUNCTION: SWBF2 0x004266b0
+void SaveFile::MakeMetagameFilename(unsigned short* pusDest, unsigned short const* pusSource)
+{
+    unsigned short ausStamp[16];
+    SYSTEMTIME localTime;
+    PblUnicode::ustrncpy(pusDest, pusSource, 128);
+    GetLocalTime(&localTime);
+    SaveFile::TimeToString(ausStamp, localTime.wYear, localTime.wMonth, localTime.wDay,
+               localTime.wHour, localTime.wMinute, localTime.wSecond);
+    PblUnicode::ustrlcat(pusDest, ausStamp, 128);
 }
