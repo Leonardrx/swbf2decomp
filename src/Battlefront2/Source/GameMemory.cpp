@@ -48,6 +48,13 @@ int gTempGamespyBlock;
 
 char* gArtistHeapStart;
 
+// The next kHeapStartAlignment boundary at or after pAddress.
+static inline char* AlignHeapStart(const void* pAddress)
+{
+    return (char*)(((unsigned int)pAddress + (GameMemory::kHeapStartAlignment - 1)) &
+                   ~(GameMemory::kHeapStartAlignment - 1));
+}
+
 // FUNCTION: SWBF2 0x00533b20
 void GameMemory::InitApplicationMemory(char* pStart, char* pEnd)
 {
@@ -61,12 +68,12 @@ void GameMemory::InitApplicationMemory(char* pStart, char* pEnd)
         ApplicationHeap = 0;
     }
 
-    char* pAppEnd = gArenaStart + 0xF40000;
-    ApplicationHeap = RedCreateHeap(gArenaStart, pAppEnd, 0x10, "Application");
+    char* pAppEnd = gArenaStart + kApplicationHeapSize;
+    ApplicationHeap = RedCreateHeap(gArenaStart, pAppEnd, kHeapAlignment, "Application");
 
     GamespyHeapstart = pAppEnd;
-    GamespyHeapend = pAppEnd + 0x200000;
-    GamespyHeap = RedCreateHeap(pAppEnd, pAppEnd + 0x200000, 0x10, "Gamespy");
+    GamespyHeapend = pAppEnd + kGamespyHeapSize;
+    GamespyHeap = RedCreateHeap(pAppEnd, pAppEnd + kGamespyHeapSize, kHeapAlignment, "Gamespy");
 
     g_Heap3Start = GamespyHeapend;
     RedSetCurrentHeap(ApplicationHeap);
@@ -109,23 +116,23 @@ void GameMemory::BuildHeaps(bool bMission)
         ArtistHeap = 0;
     }
 
-    char* pLuaStart = (char*)(((unsigned int)g_Heap3Start + 0x3F) & 0xFFFFFFC0);
-    char* pLuaEnd = pLuaStart + 0x1000000;
-    LuaHeap = RedCreateHeap(pLuaStart, pLuaEnd, 4, "Lua");
+    char* pLuaStart = AlignHeapStart(g_Heap3Start);
+    char* pLuaEnd = pLuaStart + kLuaHeapSize;
+    LuaHeap = RedCreateHeap(pLuaStart, pLuaEnd, kLuaHeapAlignment, "Lua");
 
-    char* pArtistStart = (char*)(((unsigned int)pLuaEnd + 0x3F) & 0xFFFFFFC0);
+    char* pArtistStart = AlignHeapStart(pLuaEnd);
     gArtistHeapStart = pArtistStart;
-    ArtistHeap = RedCreateHeap(pArtistStart, pArtistStart + 0x2000, 0x10, "Artist");
+    ArtistHeap = RedCreateHeap(pArtistStart, pArtistStart + kArtistHeapSize, kHeapAlignment, "Artist");
 
-    char* pRunTimeStart = (char*)(((unsigned int)(pArtistStart + 0x2000) + 0x3F) & 0xFFFFFFC0);
-    RunTimeHeap = RedCreateHeap(pRunTimeStart, gArenaEnd, 0x10, "Runtime");
+    char* pRunTimeStart = AlignHeapStart(pArtistStart + kArtistHeapSize);
+    RunTimeHeap = RedCreateHeap(pRunTimeStart, gArenaEnd, kHeapAlignment, "Runtime");
     RedSetCurrentHeap(RunTimeHeap);
 
     LuaMemory::CreatePools(bMission);
 
-    gTempHeapBlock = RedAllocFromHeap(RunTimeHeap, 0x200000, 1);
-    TempLoadHeap = RedCreateHeap(gTempHeapBlock, (char*)gTempHeapBlock + 0x1FFF00,
-                                 0x10, "Temp");
+    gTempHeapBlock = RedAllocFromHeap(RunTimeHeap, kTempLoadBlockSize, 1);
+    TempLoadHeap = RedCreateHeap(gTempHeapBlock, (char*)gTempHeapBlock + kTempLoadHeapSize,
+                                 kHeapAlignment, "Temp");
     RedSetTempHeap(TempLoadHeap);
 }
 
