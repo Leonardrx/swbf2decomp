@@ -29,6 +29,14 @@ const RedTexture* RedMaskedBitmapElement::GetMaskTexture() const
     return RedTexture::Find(m_pInterfaceMaskedBitmapShader->m_bitmapMaskHash);
 }
 
+// FUNCTION: SWBF2 0x006f7db0
+RedMaskedBitmapElement::RedMaskedBitmapElement(const char* pcName)
+    : RedBitmapElement(pcName)
+{
+    m_pInterfaceMaskedBitmapShader = 0;
+    SetMaskTexCoords(0.0f, 1.0f, 0.0f, 1.0f);
+}
+
 // FUNCTION: SWBF2 0x006f7e00
 RedMaskedBitmapElement::RedMaskedBitmapElement()
 {

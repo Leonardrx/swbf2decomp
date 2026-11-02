@@ -328,26 +328,6 @@ bool EvaluateCheatCode(const char* pcName, char* pcResult)
     return false;
 }
 
-// FUNCTION: SWBF2 0x006f7610
-void RedBorderElement::GetBorderTexCoords(float& fU0, float& fV0, float& fU1, float& fV1, float& fBorderU,
-                                  float& fBorderV)
-{
-    fU0 = m_vertices[0].u;
-    fV0 = m_vertices[0].v;
-    fU1 = m_vertices[15].u;
-    fV1 = m_vertices[15].v;
-    fBorderU = m_vertices[5].u - fU0;
-    fBorderV = m_vertices[5].v - fV0;
-}
-
-// FUNCTION: SWBF2 0x006f7db0
-RedMaskedBitmapElement::RedMaskedBitmapElement(const char* pcName)
-    : RedBitmapElement(pcName)
-{
-    m_pInterfaceMaskedBitmapShader = 0;
-    SetMaskTexCoords(0.0f, 1.0f, 0.0f, 1.0f);
-}
-
 inline void Red3DModelElement::SetAnimationBanks(const unsigned int* puBanks)
 {
     EnsureAnimatorExists();

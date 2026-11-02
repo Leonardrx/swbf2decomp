@@ -1124,13 +1124,6 @@ bool tProfile::IsDirty(bool bNoCache)
 }
 }
 
-// FUNCTION: SWBF2 0x006c5b00
-void RedJoystick::SetDeadZoneScale(float f)
-{
-    mDeadZoneScale = f;
-    pc_device->EnumObjects(EnumObjectsCallback, this, 0);
-}
-
 // GLOBAL: SWBF2 0x00788140
 
 static const float sDeadZoneScaleByLevel[11] =

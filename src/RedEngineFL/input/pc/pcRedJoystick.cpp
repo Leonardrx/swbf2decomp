@@ -100,6 +100,13 @@ bool RedJoystick::pcCreateDevice(DIDEVICEINSTANCEA const* pInstance)
     return true;
 }
 
+// FUNCTION: SWBF2 0x006c5b00
+void RedJoystick::SetDeadZoneScale(float f)
+{
+    mDeadZoneScale = f;
+    pc_device->EnumObjects(EnumObjectsCallback, this, 0);
+}
+
 // FUNCTION: SWBF2 0x006c53a0
 BOOL CALLBACK EnumObjectsCallback(DIDEVICEOBJECTINSTANCEA const* pObject, void* pvRef)
 {
