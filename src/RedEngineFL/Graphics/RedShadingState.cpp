@@ -17,7 +17,7 @@ public:
 
 // GLOBAL: SWBF2 0x009acad8
 // RedShadingPose::Entry::sMemoryPool
-MemoryPool RedShadingPose::Entry::sMemoryPool("RedShadingPose::Entry", 0xc);
+MemoryPool RedShadingPose::Entry::sMemoryPool("RedShadingPose::Entry", sizeof(RedShadingPose::Entry));
 
 // SYNTHETIC: SWBF2 0x00408c40
 // `dynamic initializer for 'RedShadingState::sMemoryPool''
@@ -26,7 +26,7 @@ MemoryPool RedShadingPose::Entry::sMemoryPool("RedShadingPose::Entry", 0xc);
 
 // GLOBAL: SWBF2 0x009acb30
 // RedShadingState::sMemoryPool
-MemoryPool RedShadingState::sMemoryPool("RedShadingState", 0x20c);
+MemoryPool RedShadingState::sMemoryPool("RedShadingState", sizeof(RedShadingState));
 
 inline void* RedShadingPose::Entry::operator new(unsigned int uiSize)
 {

@@ -81,7 +81,7 @@
 
 // GLOBAL: SWBF2 0x01eb1080
 // EntityCloth::sMemoryPool
-MemoryPool EntityCloth::sMemoryPool("EntityCloth", 0x120);
+MemoryPool EntityCloth::sMemoryPool("EntityCloth", sizeof(EntityCloth));
 // SYNTHETIC: SWBF2 0x004023c0
 // `dynamic initializer for 'ClothData::sMemoryPool''
 // SYNTHETIC: SWBF2 0x00766de0
@@ -89,7 +89,7 @@ MemoryPool EntityCloth::sMemoryPool("EntityCloth", 0x120);
 
 // GLOBAL: SWBF2 0x01eb10d0
 // ClothData::sMemoryPool
-MemoryPool ClothData::sMemoryPool("ClothData", 0xa0);
+MemoryPool ClothData::sMemoryPool("ClothData", sizeof(ClothData));
 // SYNTHETIC: SWBF2 0x00402400
 // `dynamic initializer for 'ClothData::s_clothDataHashTable''
 

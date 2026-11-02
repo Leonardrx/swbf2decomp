@@ -13,7 +13,7 @@
 
 // GLOBAL: SWBF2 0x01eb9700
 // CommandWalker::sMemoryPool
-MemoryPool CommandWalker::sMemoryPool("CommandWalker", 0x2110);
+MemoryPool CommandWalker::sMemoryPool("CommandWalker", sizeof(CommandWalker));
 
 // SYNTHETIC: SWBF2 0x00402720
 // `dynamic initializer for 'CommandWalker::rttiHashCommandWalker''

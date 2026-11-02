@@ -10,7 +10,7 @@
 
 // GLOBAL: SWBF2 0x01f6dda8
 // ShieldEffect::sMemoryPool
-MemoryPool ShieldEffect::sMemoryPool("ShieldEffect", 0xF0);
+MemoryPool ShieldEffect::sMemoryPool("ShieldEffect", sizeof(ShieldEffect));
 
 // GLOBAL: SWBF2 0x01eaf060
 ShieldEffectManager* ShieldEffectManager::s_pInstance;

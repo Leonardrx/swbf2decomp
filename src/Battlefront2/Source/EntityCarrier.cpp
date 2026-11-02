@@ -260,7 +260,7 @@ const char EntityCarrier::rttiNameEntityCarrier[] = "EntityCarrier";
 
 // GLOBAL: SWBF2 0x01ebb8f0
 // EntityCarrier::sMemoryPool
-MemoryPool EntityCarrier::sMemoryPool("EntityCarrier", 0x1df0);
+MemoryPool EntityCarrier::sMemoryPool("EntityCarrier", sizeof(EntityCarrier));
 
 
 

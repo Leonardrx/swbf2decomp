@@ -81,7 +81,7 @@ const char EntityBuildingArmedDynamic::rttiNameEntityBuildingArmedDynamic[] = "E
 
 // GLOBAL: SWBF2 0x01ebb898
 // EntityBuildingArmedDynamic::sMemoryPool
-MemoryPool EntityBuildingArmedDynamic::sMemoryPool("EntityBuildingArmedDynamic", 0x6b0);
+MemoryPool EntityBuildingArmedDynamic::sMemoryPool("EntityBuildingArmedDynamic", sizeof(EntityBuildingArmedDynamic));
 
 
 

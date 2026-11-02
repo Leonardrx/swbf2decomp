@@ -33,7 +33,7 @@ void LightningBoltEffect::Create()
 
 // GLOBAL: SWBF2 0x01ec63c0
 // LightningBoltEffectObject::sMemoryPool
-MemoryPool LightningBoltEffectObject::sMemoryPool("LightningBoltEffectObject", 0x120);
+MemoryPool LightningBoltEffectObject::sMemoryPool("LightningBoltEffectObject", sizeof(LightningBoltEffectObject));
 
 namespace
 {

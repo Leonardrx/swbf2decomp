@@ -443,7 +443,7 @@ void GameObject::SetNetUniqueId(int iNetUniqueId)
 
 // GLOBAL: SWBF2 0x01ebbbb8
 // EntityDroid::sMemoryPool
-MemoryPool EntityDroid::sMemoryPool("EntityDroid", 0x460);
+MemoryPool EntityDroid::sMemoryPool("EntityDroid", sizeof(EntityDroid));
 
 
 

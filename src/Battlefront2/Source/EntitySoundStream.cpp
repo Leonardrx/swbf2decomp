@@ -81,7 +81,7 @@ const char EntitySoundStream::rttiNameEntitySoundStream[] = "EntitySoundStream";
 
 // GLOBAL: SWBF2 0x01ebc200
 // EntitySoundStream::sMemoryPool
-MemoryPool EntitySoundStream::sMemoryPool("EntitySoundStream", 0x10c);
+MemoryPool EntitySoundStream::sMemoryPool("EntitySoundStream", sizeof(EntitySoundStream));
 
 
 

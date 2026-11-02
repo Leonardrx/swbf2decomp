@@ -12,7 +12,7 @@
 
 // GLOBAL: SWBF2 0x01eb9750
 // ConnectivityGraphFollower::sMemoryPool
-MemoryPool ConnectivityGraphFollower::sMemoryPool("ConnectivityGraphFollower", 0x3c);
+MemoryPool ConnectivityGraphFollower::sMemoryPool("ConnectivityGraphFollower", sizeof(ConnectivityGraphFollower));
 
 static inline float DistSq(const PblVector3& a, const PblVector3& b)
 {

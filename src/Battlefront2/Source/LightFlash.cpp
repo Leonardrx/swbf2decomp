@@ -9,7 +9,7 @@
 
 // GLOBAL: SWBF2 0x01ec6370
 // LightFlash::sMemoryPool
-MemoryPool LightFlash::sMemoryPool("LightFlash", 0x150);
+MemoryPool LightFlash::sMemoryPool("LightFlash", sizeof(LightFlash));
 
 static inline RedColorValue ToColorValue(const RedColor& c)
 {

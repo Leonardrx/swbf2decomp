@@ -18,7 +18,7 @@
 
 // GLOBAL: SWBF2 0x01f9a7e0
 // WalkerLegPair::sMemoryPool
-MemoryPool WalkerLegPair::sMemoryPool("WalkerLegPair", 0x130);
+MemoryPool WalkerLegPair::sMemoryPool("WalkerLegPair", sizeof(WalkerLegPair));
 
 
 

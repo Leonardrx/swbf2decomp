@@ -7,4 +7,4 @@
 
 // GLOBAL: SWBF2 0x01ef5040
 // ParticleEmitterInfoData::sMemoryPool
-MemoryPool ParticleEmitterInfoData::sMemoryPool("ParticleEmitterInfoData", 0x80);
+MemoryPool ParticleEmitterInfoData::sMemoryPool("ParticleEmitterInfoData", sizeof(ParticleEmitterInfoData));

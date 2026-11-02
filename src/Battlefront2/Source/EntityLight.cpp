@@ -51,7 +51,7 @@ const char EntityLightClass::rttiNameEntityLightClass[] = "EntityLightClass";
 
 // GLOBAL: SWBF2 0x01ebbe38
 // EntityLight::sMemoryPool
-MemoryPool EntityLight::sMemoryPool("EntityLight", 0x2e0);
+MemoryPool EntityLight::sMemoryPool("EntityLight", sizeof(EntityLight));
 // SYNTHETIC: SWBF2 0x00402c20
 // `dynamic initializer for 'EntityLightClass::sLightClassTable''
 

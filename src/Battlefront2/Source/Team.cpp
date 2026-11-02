@@ -31,7 +31,7 @@ void Event<Team, float>::Callback::Trigger(Team& item, float& param);
 }
 
 // GLOBAL: SWBF2 0x01eafcd0
-Team* Team::sHostTeams[8];
+Team* Team::sHostTeams[Team::kMaxTeams];
 
 // GLOBAL: SWBF2 0x01eafca4
 Team* Team::sClientTeams[8];
@@ -75,7 +75,7 @@ void Team::CreateAll()
     sTeams[0] = new Team(0, 0, 0);
     sTeams[1] = new Team(1, 300, 12);
     sTeams[2] = new Team(2, 300, 12);
-    for (int i = 3; i < 8; ++i)
+    for (int i = 3; i < Team::kMaxTeams; ++i)
     {
         sTeams[i] = new Team(i, 300, 12);
         sTeams[i]->mMaxReinforcements = 0x7FFFFFFF;
@@ -97,7 +97,7 @@ void Team::CreateClient()
 // FUNCTION: SWBF2 0x00652f40
 void Team::DestroyAll()
 {
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < Team::kMaxTeams; ++i)
     {
         delete sTeams[i];
         sTeams[i] = 0;
@@ -136,7 +136,7 @@ void Team::CopyFromHost()
 {
     if (!netIsOneWorld)
     {
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < Team::kMaxTeams; ++i)
         {
             Team* pHost = sHostTeams[i];
             const int iClassCount = pHost->mClassCount;
@@ -168,7 +168,7 @@ void Team::CopyFromHost()
             sTeams[i]->SetSide(sHostTeams[i]->mSide);
             sTeams[i]->mMaxReinforcements = sHostTeams[i]->mMaxReinforcements;
             sTeams[i]->SetCurReinforcements(sHostTeams[i]->mCurReinforcements);
-            for (int j = 0; j < 8; ++j)
+            for (int j = 0; j < Team::kMaxTeams; ++j)
             {
                 sTeams[i]->mColor[j] = sHostTeams[i]->GetColor(j);
                 sTeams[i]->mAffiliation[j] = sHostTeams[i]->mAffiliation[j];
@@ -182,7 +182,7 @@ void Team::CopyFromHost()
 void Team::InitAll()
 {
     sWinningTeams = 0;
-    for (int i = 1; i < 8; ++i)
+    for (int i = 1; i < Team::kMaxTeams; ++i)
     {
         sTeams[i]->Init();
     }
@@ -191,7 +191,7 @@ void Team::InitAll()
 // FUNCTION: SWBF2 0x00653320
 void Team::InitialUpdateAll()
 {
-    for (int i = 1; i < 8; ++i)
+    for (int i = 1; i < Team::kMaxTeams; ++i)
     {
         sTeams[i]->InitialUpdate();
     }
@@ -251,13 +251,13 @@ Team::Team(int iTeamNumber, int iMemberLimit, int iClassLimit)
     mClassMinUnits = new int[mClassLimit];
     mClassMaxUnits = new int[mClassLimit];
 
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < Team::kMaxTeams; ++i)
     {
         mAffiliation[i] = 0;
     }
     if (mTeamNumber)
     {
-        for (int i = 1; i < 8; ++i)
+        for (int i = 1; i < Team::kMaxTeams; ++i)
         {
             mAffiliation[i] = (mTeamNumber == i) ? 1 : -1;
         }
@@ -391,7 +391,7 @@ void Team::InitialUpdate()
         }
     }
 
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < Team::kMaxTeams; ++i)
     {
         if (sTeams[i]->GetSide() == side_Locals && mAffiliation[i] == 0)
         {

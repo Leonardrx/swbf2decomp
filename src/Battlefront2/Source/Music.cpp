@@ -17,7 +17,7 @@
 
 // GLOBAL: SWBF2 0x01ecb1a8
 // Music::sMemoryPool
-MemoryPool Music::sMemoryPool("Music", 0x48);
+MemoryPool Music::sMemoryPool("Music", sizeof(Music));
 
 // SYNTHETIC: SWBF2 0x00404370
 // `dynamic initializer for 'Music::sMusicInactive''

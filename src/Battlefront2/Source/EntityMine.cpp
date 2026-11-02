@@ -176,7 +176,7 @@ const char EntityMine::rttiNameEntityMine[] = "EntityMine";
 
 // GLOBAL: SWBF2 0x01ebbf98
 // EntityMine::sMemoryPool
-MemoryPool EntityMine::sMemoryPool("EntityMine", 0x2a0);
+MemoryPool EntityMine::sMemoryPool("EntityMine", sizeof(EntityMine));
 
 // FUNCTION: SWBF2 0x004cf5e0
 EntityMine::EntityMine(EntityMineClass* pClass, const EntityDesc& desc)

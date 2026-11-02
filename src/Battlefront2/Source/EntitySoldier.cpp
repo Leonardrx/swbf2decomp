@@ -136,7 +136,7 @@ const char EntitySoldier::rttiNameEntitySoldier[] = "EntitySoldier";
 
 // GLOBAL: SWBF2 0x01ebc100
 // EntitySoldier::sMemoryPool
-MemoryPool EntitySoldier::sMemoryPool("EntitySoldier", 0xfd0);
+MemoryPool EntitySoldier::sMemoryPool("EntitySoldier", sizeof(EntitySoldier));
 
 // SYNTHETIC: SWBF2 0x00402d70
 // `dynamic initializer for 'EntitySoldierClass::rttiHashEntitySoldierClass''
@@ -156,7 +156,7 @@ const char EntitySoldierClass::rttiNameEntitySoldierClass[] = "EntitySoldierClas
 
 // GLOBAL: SWBF2 0x01ebc0a8
 // AcklayData::sMemoryPool
-MemoryPool AcklayData::sMemoryPool("AcklayData", 0x13d0);
+MemoryPool AcklayData::sMemoryPool("AcklayData", sizeof(AcklayData));
 
 // GLOBAL: SWBF2 0x01e51e04
 static int sWeaponSection;

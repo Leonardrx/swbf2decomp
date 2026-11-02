@@ -303,7 +303,7 @@ const char EntityWalker::rttiNameEntityWalker[] = "EntityWalker";
 // GLOBAL: SWBF2 0x01ebc260
 // EntityWalker::sMemoryPool
 // STRING: SWBF2 0x0079d7d4
-MemoryPool EntityWalker::sMemoryPool("EntityWalker", 0x2100);
+MemoryPool EntityWalker::sMemoryPool("EntityWalker", sizeof(EntityWalker));
 
 // FUNCTION: SWBF2 0x0047fb50
 const Controllable* EntityWalker::GetControllable() const

@@ -82,7 +82,7 @@ PblHashTable<FLEffectClass, 256> FLEffect::s_EffectClasses;
 
 // GLOBAL: SWBF2 0x01ebd960
 // FLEffectObject::s_OffsetMatrixPool
-MemoryPool FLEffectObject::s_OffsetMatrixPool("FLEffectObject::OffsetMatrix", 0x40);
+MemoryPool FLEffectObject::s_OffsetMatrixPool("FLEffectObject::OffsetMatrix", sizeof(PblMatrix));
 
 // FUNCTION: SWBF2 0x00526b20
 void FLEffect::InitAll(bool bMission)

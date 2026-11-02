@@ -80,7 +80,7 @@ namespace CombatUtil
 
 // GLOBAL: SWBF2 0x01f9a2c8
 // VisionManager::RayRequest::sMemoryPool
-MemoryPool VisionManager::RayRequest::sMemoryPool("RayRequest", 0x14);
+MemoryPool VisionManager::RayRequest::sMemoryPool("RayRequest", sizeof(VisionManager::RayRequest));
 
 namespace VisionManager
 {

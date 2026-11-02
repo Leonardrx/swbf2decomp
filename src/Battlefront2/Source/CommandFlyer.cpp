@@ -11,7 +11,7 @@
 
 // GLOBAL: SWBF2 0x01eb9648
 // CommandFlyer::sMemoryPool
-MemoryPool CommandFlyer::sMemoryPool("CommandFlyer", 0x1da0);
+MemoryPool CommandFlyer::sMemoryPool("CommandFlyer", sizeof(CommandFlyer));
 
 // SYNTHETIC: SWBF2 0x004026a0
 // `dynamic initializer for 'CommandFlyer::rttiHashCommandFlyer''

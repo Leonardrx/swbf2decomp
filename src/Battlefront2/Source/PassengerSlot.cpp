@@ -24,7 +24,7 @@
 
 // GLOBAL: SWBF2 0x01ef7ca0
 // PassengerSlot::sMemoryPool
-MemoryPool PassengerSlot::sMemoryPool("PassengerSlot", 0x1f0);
+MemoryPool PassengerSlot::sMemoryPool("PassengerSlot", sizeof(PassengerSlot));
 
 // SYNTHETIC: SWBF2 0x00405dc0
 // `dynamic initializer for 'PassengerSlot::rttiHashPassengerSlot''

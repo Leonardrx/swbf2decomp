@@ -75,7 +75,7 @@ const char OrdnanceClass::rttiNameOrdnanceClass[] = "OrdnanceClass";
 
 // GLOBAL: SWBF2 0x01ef25c0
 // Ordnance::sMemoryPool
-MemoryPool Ordnance::sMemoryPool("Ordnance", 0x98);
+MemoryPool Ordnance::sMemoryPool("Ordnance", sizeof(Ordnance));
 
 // FUNCTION: SWBF2 0x005f7e70
 OrdnanceClass::OrdnanceClass(unsigned int uHash)

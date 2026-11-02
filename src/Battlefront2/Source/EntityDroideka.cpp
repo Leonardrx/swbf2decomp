@@ -474,7 +474,7 @@ const char EntityDroideka::rttiNameEntityDroideka[] = "EntityDroideka";
 
 // GLOBAL: SWBF2 0x01ebbc08
 // EntityDroideka::sMemoryPool
-MemoryPool EntityDroideka::sMemoryPool("EntityDroideka", 0x1b70);
+MemoryPool EntityDroideka::sMemoryPool("EntityDroideka", sizeof(EntityDroideka));
 
 
 

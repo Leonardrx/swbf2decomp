@@ -57,7 +57,7 @@ const char OrdnanceTowCableClass::rttiNameOrdnanceTowCableClass[] = "OrdnanceTow
 
 // GLOBAL: SWBF2 0x01ef2670
 // OrdnanceTowCable::sMemoryPool
-MemoryPool OrdnanceTowCable::sMemoryPool("OrdnanceTowCable", 0x670);
+MemoryPool OrdnanceTowCable::sMemoryPool("OrdnanceTowCable", sizeof(OrdnanceTowCable));
 
 // GLOBAL: SWBF2 0x01eaed60
 unsigned int OrdnanceTowCable::sTextureHash;

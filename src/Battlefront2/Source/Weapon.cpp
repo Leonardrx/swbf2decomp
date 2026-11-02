@@ -1249,7 +1249,7 @@ GameSound WeaponClass::sWeaponChangeUnableSound;
 
 // GLOBAL: SWBF2 0x01f9a830
 // Weapon::sMemoryPool
-MemoryPool Weapon::sMemoryPool("Weapon", 0x110);
+MemoryPool Weapon::sMemoryPool("Weapon", sizeof(Weapon));
 
 // SYNTHETIC: SWBF2 0x00677650
 // Weapon::operator delete

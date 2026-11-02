@@ -55,7 +55,7 @@ const char EntitySoundClass::rttiNameEntitySoundClass[] = "EntitySoundClass";
 
 // GLOBAL: SWBF2 0x01ebc150
 // SoundSpaceRegion::sMemoryPool
-MemoryPool SoundSpaceRegion::sMemoryPool("SoundSpaceRegion", 0x70);
+MemoryPool SoundSpaceRegion::sMemoryPool("SoundSpaceRegion", sizeof(SoundSpaceRegion));
 
 // SYNTHETIC: SWBF2 0x00402de0
 // `dynamic initializer for 'EntitySound::sEntitySoundList''

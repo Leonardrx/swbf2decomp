@@ -34,7 +34,7 @@
 
 // GLOBAL: SWBF2 0x01f9a278
 // VehicleSpawn::VehicleTracker::sMemoryPool
-MemoryPool VehicleSpawn::VehicleTracker::sMemoryPool("VehicleSpawn::VehicleTracker", 0x1c);
+MemoryPool VehicleSpawn::VehicleTracker::sMemoryPool("VehicleSpawn::VehicleTracker", sizeof(VehicleSpawn::VehicleTracker));
 
 static inline int GetTeam(const GameObject* pObject)
 {

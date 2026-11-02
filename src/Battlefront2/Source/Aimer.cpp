@@ -23,7 +23,7 @@
 
 // GLOBAL: SWBF2 0x01eb0460
 // Aimer::sMemoryPool
-MemoryPool Aimer::sMemoryPool("Aimer", 0x220);
+MemoryPool Aimer::sMemoryPool("Aimer", sizeof(Aimer));
 
 extern PblVector3 gVectorZero;
 

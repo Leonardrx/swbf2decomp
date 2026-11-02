@@ -34,7 +34,7 @@ const char EntityDefenseGridTurret::rttiNameEntityDefenseGridTurret[] = "EntityD
 
 // GLOBAL: SWBF2 0x01ebb940
 // EntityDefenseGridTurret::sMemoryPool
-MemoryPool EntityDefenseGridTurret::sMemoryPool("EntityDefenseGridTurret", 0x6c0);
+MemoryPool EntityDefenseGridTurret::sMemoryPool("EntityDefenseGridTurret", sizeof(EntityDefenseGridTurret));
 
 inline void* EntityDefenseGridTurret::operator new(unsigned int uSize)
 {

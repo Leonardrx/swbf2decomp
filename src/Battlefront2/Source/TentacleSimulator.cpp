@@ -33,7 +33,7 @@ static const float gTentacleAngle = 0.52359879f;
 
 // GLOBAL: SWBF2 0x01f992e0
 // TentacleSimulator::sMemoryPool
-MemoryPool TentacleSimulator::sMemoryPool("TentacleSimulator", 0x268);
+MemoryPool TentacleSimulator::sMemoryPool("TentacleSimulator", sizeof(TentacleSimulator));
 
 // FUNCTION: SWBF2 0x00656e70
 void TentacleSimulator::EnforceBoxCollision(const PblMatrix& matrix, float fX, float fY, float fZ)

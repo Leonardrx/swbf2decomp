@@ -16,7 +16,7 @@
 
 // GLOBAL: SWBF2 0x01f9a790
 // WalkerBlend::sMemoryPool
-MemoryPool WalkerBlend::sMemoryPool("WalkerBlend", 76);
+MemoryPool WalkerBlend::sMemoryPool("WalkerBlend", sizeof(WalkerBlend));
 
 // SYNTHETIC: SWBF2 0x00406fc0
 // `dynamic initializer for 'WalkerBlendUnit::sMemoryPool''
@@ -25,7 +25,7 @@ MemoryPool WalkerBlend::sMemoryPool("WalkerBlend", 76);
 
 // GLOBAL: SWBF2 0x01f9a740
 // WalkerBlendUnit::sMemoryPool
-MemoryPool WalkerBlendUnit::sMemoryPool("WalkerBlendUnit", 4924);
+MemoryPool WalkerBlendUnit::sMemoryPool("WalkerBlendUnit", sizeof(WalkerBlendUnit));
 
 // FUNCTION: SWBF2 0x00675990
 WalkerBlend::WalkerBlend(int iTotal, ZephyrSkeleton<64>& rSkeleton)

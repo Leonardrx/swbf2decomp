@@ -222,7 +222,7 @@ const char MountedTurretClass::rttiNameMountedTurretClass[] = "MountedTurretClas
 
 // GLOBAL: SWBF2 0x01ecb158
 // MountedTurret::sMemoryPool
-MemoryPool MountedTurret::sMemoryPool("MountedTurret", 0x2c0);
+MemoryPool MountedTurret::sMemoryPool("MountedTurret", sizeof(MountedTurret));
 
 
 

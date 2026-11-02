@@ -27,7 +27,7 @@ bool DecalClass::IsBumped()
 
 // GLOBAL: SWBF2 0x01eb97b8
 // Decal::sMemoryPool
-MemoryPool Decal::sMemoryPool("Decal", 0x40);
+MemoryPool Decal::sMemoryPool("Decal", sizeof(Decal));
 
 // GLOBAL: SWBF2 0x01e30944
 DecalManager* DecalManager::s_pInstance;

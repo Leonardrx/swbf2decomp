@@ -51,7 +51,7 @@ const char EntityPortableTurret::rttiNameEntityPortableTurret[] = "EntityPortabl
 
 // GLOBAL: SWBF2 0x01ebbff0
 // EntityPortableTurret::sMemoryPool
-MemoryPool EntityPortableTurret::sMemoryPool("EntityPortableTurret", 0x6d0);
+MemoryPool EntityPortableTurret::sMemoryPool("EntityPortableTurret", sizeof(EntityPortableTurret));
 
 
 extern PblVector3 gVectorZero;

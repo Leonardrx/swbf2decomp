@@ -9,7 +9,7 @@
 
 // GLOBAL: SWBF2 0x01eb9810
 // EnergyBar::sMemoryPool
-MemoryPool EnergyBar::sMemoryPool("EnergyBar", 0xc);
+MemoryPool EnergyBar::sMemoryPool("EnergyBar", sizeof(EnergyBar));
 
 // FUNCTION: SWBF2 0x00491470
 void EnergyBarClass::Init(float fEnergyMax, float fEnergyOverheat)

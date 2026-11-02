@@ -93,7 +93,7 @@ const char EntityHover::rttiNameEntityHover[] = "EntityHover";
 
 // GLOBAL: SWBF2 0x01ebbdd8
 // EntityHover::sMemoryPool
-MemoryPool EntityHover::sMemoryPool("EntityHover", 0x1d10);
+MemoryPool EntityHover::sMemoryPool("EntityHover", sizeof(EntityHover));
 
 // SYNTHETIC: SWBF2 0x00402bb0
 // `dynamic initializer for 'EntityHoverClass::rttiHashEntityHoverClass''

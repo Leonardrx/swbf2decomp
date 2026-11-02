@@ -198,7 +198,7 @@ EntityClass* PowerupItemClass::Derive(unsigned int uHash)
 
 // GLOBAL: SWBF2 0x01efa1d8
 // PowerupItem::sMemoryPool
-MemoryPool PowerupItem::sMemoryPool("PowerupItem", 0x290);
+MemoryPool PowerupItem::sMemoryPool("PowerupItem", sizeof(PowerupItem));
 
 // SYNTHETIC: SWBF2 0x00405f80
 // `dynamic initializer for 'PowerupItem::rttiHashPowerupItem''

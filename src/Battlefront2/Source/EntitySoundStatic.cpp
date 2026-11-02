@@ -66,7 +66,7 @@ Entity* EntitySoundStaticClass::Build(const EntityDesc& desc)
 
 // GLOBAL: SWBF2 0x01ebc1a8
 // EntitySoundStatic::sMemoryPool
-MemoryPool EntitySoundStatic::sMemoryPool("EntitySoundStatic", 0x4c);
+MemoryPool EntitySoundStatic::sMemoryPool("EntitySoundStatic", sizeof(EntitySoundStatic));
 
 // SYNTHETIC: SWBF2 0x00402e40
 // `dynamic initializer for 'EntitySoundStatic::rttiHashEntitySoundStatic''

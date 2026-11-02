@@ -29,7 +29,7 @@
 
 // GLOBAL: SWBF2 0x01ec6090
 // BaseHint::sMemoryPool
-MemoryPool BaseHint::sMemoryPool("BaseHint", 0x40);
+MemoryPool BaseHint::sMemoryPool("BaseHint", sizeof(BaseHint));
 
 extern int WORLD_EXTENTS;
 

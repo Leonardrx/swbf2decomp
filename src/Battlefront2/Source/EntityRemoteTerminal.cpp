@@ -68,7 +68,7 @@ const char EntityRemoteTerminal::rttiNameEntityRemoteTerminal[] = "EntityRemoteT
 
 // GLOBAL: SWBF2 0x01ebc058
 // EntityRemoteTerminal::sMemoryPool
-MemoryPool EntityRemoteTerminal::sMemoryPool("EntityRemoteTerminal", 0x3f0);
+MemoryPool EntityRemoteTerminal::sMemoryPool("EntityRemoteTerminal", sizeof(EntityRemoteTerminal));
 
 namespace
 {

@@ -36,7 +36,7 @@ bool IsLodActive(int iLod);
 
 // GLOBAL: SWBF2 0x01ef5090
 // ParticleEmitterObject::sMemoryPool
-MemoryPool ParticleEmitterObject::sMemoryPool("ParticleEmitterObject", 0x110);
+MemoryPool ParticleEmitterObject::sMemoryPool("ParticleEmitterObject", sizeof(ParticleEmitterObject));
 
 // FUNCTION: SWBF2 0x0060b910
 ParticleEmitterInfoData* ParticleEmitterInfoData::Create()

@@ -409,7 +409,7 @@ PblHash EntityFlyer::rttiHashEntityFlyer("EntityFlyer");
 
 // GLOBAL: SWBF2 0x01ebbc68
 // EntityFlyer::sMemoryPool
-MemoryPool EntityFlyer::sMemoryPool("EntityFlyer", 0x1d90);
+MemoryPool EntityFlyer::sMemoryPool("EntityFlyer", sizeof(EntityFlyer));
 
 
 

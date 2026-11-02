@@ -40,7 +40,7 @@ bool g_InputRepeatEnable = true;
 
 // GLOBAL: SWBF2 0x01ebd9b0
 // GuiManager::Event::sMemoryPool
-MemoryPool GuiManager::Event::sMemoryPool("GuiManager::Event", 0x4c);
+MemoryPool GuiManager::Event::sMemoryPool("GuiManager::Event", sizeof(GuiManager::Event));
 
 // SYNTHETIC: SWBF2 0x00403970
 // `dynamic initializer for 'sInstances''

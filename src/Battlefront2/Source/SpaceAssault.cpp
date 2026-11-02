@@ -58,7 +58,7 @@ SpaceAssault* SpaceAssault::mInstance;
 
 // GLOBAL: SWBF2 0x01f6de48
 // SpaceAssault::ViewportData::sMemoryPool
-MemoryPool SpaceAssault::ViewportData::sMemoryPool("SpaceAssault::ViewportData", 0x2410);
+MemoryPool SpaceAssault::ViewportData::sMemoryPool("SpaceAssault::ViewportData", sizeof(SpaceAssault::ViewportData));
 
 // FUNCTION: SWBF2 0x0064b7c0
 SpaceAssault::ViewportData::ViewportData()

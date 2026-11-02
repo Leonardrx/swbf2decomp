@@ -11,7 +11,7 @@
 
 // GLOBAL: SWBF2 0x01eb96a8
 // CommandHover::sMemoryPool
-MemoryPool CommandHover::sMemoryPool("CommandHover", 0x1d20);
+MemoryPool CommandHover::sMemoryPool("CommandHover", sizeof(CommandHover));
 
 // SYNTHETIC: SWBF2 0x004026e0
 // `dynamic initializer for 'CommandHover::rttiHashCommandHover''

@@ -189,7 +189,7 @@ PblHashTable<ActiveRegion, 64> sMap;
 // GLOBAL: SWBF2 0x01eb01f8
 // ActiveRegion::sMemoryPool
 // STRING: SWBF2 0x00796adc
-MemoryPool ActiveRegion::sMemoryPool("ActiveRegion", 0x68);
+MemoryPool ActiveRegion::sMemoryPool("ActiveRegion", sizeof(ActiveRegion));
 
 ActiveRegion::~ActiveRegion()
 {

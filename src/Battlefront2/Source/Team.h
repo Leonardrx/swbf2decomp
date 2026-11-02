@@ -163,7 +163,8 @@ public:
 
     static Team** sTeams;
 
-    static Team* sHostTeams[8];
+    static const int kMaxTeams = 8;
+    static Team* sHostTeams[kMaxTeams];
     static Team* sClientTeams[8];
     static int sTeamMaxReinforcementsOverride[2];
 

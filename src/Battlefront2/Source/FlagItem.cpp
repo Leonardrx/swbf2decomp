@@ -359,7 +359,7 @@ const char FlagItemClass::rttiNameFlagItemClass[] = "FlagItemClass";
 
 // GLOBAL: SWBF2 0x01ebcfa0
 // FlagItem::sMemoryPool
-MemoryPool FlagItem::sMemoryPool("FlagItem", 0x450);
+MemoryPool FlagItem::sMemoryPool("FlagItem", sizeof(FlagItem));
 
 // GLOBAL: SWBF2 0x007eb888
 PblList<FlagItem> FlagItem::sHostList;

@@ -16,7 +16,7 @@
 
 // GLOBAL: SWBF2 0x01eb04b0
 // AmmoCounter::sMemoryPool
-MemoryPool AmmoCounter::sMemoryPool("AmmoCounter", 0x18);
+MemoryPool AmmoCounter::sMemoryPool("AmmoCounter", sizeof(AmmoCounter));
 
 // FUNCTION: SWBF2 0x00443680
 bool AmmoCounterClass::SetProperty(unsigned int uiHash, const char* pcValue)

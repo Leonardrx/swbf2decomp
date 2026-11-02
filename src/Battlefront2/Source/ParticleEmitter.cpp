@@ -15,7 +15,7 @@ extern SmallEffectLodData smallEffectLodData;
 
 // GLOBAL: SWBF2 0x01ef26c8
 // ParticleEmitter::sMemoryPool
-MemoryPool ParticleEmitter::sMemoryPool("ParticleEmitter", 0x40);
+MemoryPool ParticleEmitter::sMemoryPool("ParticleEmitter", sizeof(ParticleEmitter));
 
 // FUNCTION: SWBF2 0x00609ed0
 ParticleEmitterClass::ParticleEmitterClass()

@@ -28,7 +28,7 @@ const char AI::AIGoal::rttiNameAIGoal[] = "AIGoal";
 
 // GLOBAL: SWBF2 0x01eb0410
 // AI::AIGoal::sMemoryPool
-MemoryPool AI::AIGoal::sMemoryPool("AIGoal", 0x20);
+MemoryPool AI::AIGoal::sMemoryPool("AIGoal", sizeof(AI::AIGoal));
 
 
 
