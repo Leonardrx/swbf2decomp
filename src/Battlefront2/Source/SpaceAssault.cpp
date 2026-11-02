@@ -634,7 +634,7 @@ GameObject* SpaceAssault::GetRandomCritSys(const Team* pTeam, float fBias) const
     }
 
     float fRandom = AIUtil::GetRandomFloat(0.0f, 1.0f);
-    fRandom = (float)fmod((double)(fRandom * fRandom + fBias), 1.0);
+    fRandom = fmodf(fRandom * fRandom + fBias, 1.0f);
     int iPick = (int)(fRandom * (float)iCount);
     for (int i = 0; i < mNumCriticalSystems; ++i)
     {

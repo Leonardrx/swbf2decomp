@@ -341,9 +341,7 @@ Aimer::Aimer(AimerClass* pClass, const Controllable* pOwner, const PblMatrix* pP
 // FUNCTION: SWBF2 0x0043ce90
 const PblMatrix Aimer::GetMatrix() const
 {
-    PblMatrix mRot = PblMatrix(mMountRot, mMountPos);
-    PblMatrix mMount;
-    D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mRot), reinterpret_cast<const D3DXMATRIX*>(mParentMatrix));
+    const PblMatrix mMount = PblMatrix(mMountRot, mMountPos) * *mParentMatrix;
     return DirectionMatrix(mDirection, mMount[1], mMount[3]);
 }
 
@@ -382,7 +380,7 @@ void Aimer::SetupPose(const PblMatrix& mParent, RedPose& pose, bool bRecurse) co
             PblMatrix mMount;
             {
                 PblMatrix mOffset = PblMatrix(mClass->mOffsetRot, mOffsetPos);
-                D3DXMatrixMultiply(reinterpret_cast<D3DXMATRIX*>(&mMount), reinterpret_cast<const D3DXMATRIX*>(&mOffset), reinterpret_cast<const D3DXMATRIX*>(pParentBone));
+                mMount = mOffset * *pParentBone;
             }
             PblVector3 vDir;
             D3DXVec3TransformNormal(reinterpret_cast<D3DXVECTOR3*>(&vDir), reinterpret_cast<const D3DXVECTOR3*>(&mDirection), reinterpret_cast<const D3DXMATRIX*>(&mParent));
